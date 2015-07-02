@@ -26,43 +26,67 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 """
 
 class Reaction(models.Model):
-    reactants
-    products
-    kinetics
-
-class Species(models.Model):
-    # one each of these:
-    formula
-    primeID
-    # one or more:
-    names
-    thermos
-    # zero or more of these:
-    inchis
-
-class Thermo(models.Model):
-    source
-    temperature_range
-
-class KineticModel(models.Model):
-    # one of these
-    source # eg. citation
     
-    chemkin_reactions_file
-    chemkin_thermo_file
-    chemkin_transport_file
+    def __init__(self):
+        self.reactants = []
+        self.products=[]
+        
+    def add_reactant(self, reactant):
+        self.reactants.append(reactant)
     
-    # many of these
-    reactions
-    species
+    def add_product(self, product):
+        self.products.append(product)
+
+#     reactants
+#     products
+#     kinetics
+
+class Kinetics(models.Model):
+    reaction = models.ForeignKey(Reaction)
     
-class Source(model.Models):
-    year
-    publication
-    # several of these
-    authors
+    def __init__(self, A, n, E):
+        self.A = A
+        self.n=n
+        self.E=E  
 
-class Author(model.Models):
-    surname
-    forenames
+# class Species(models.Model):
+#     # one each of these:
+#     formula
+#     primeID
+#     # one or more:
+#     names
+#     thermos
+#     # zero or more of these:
+#     inchis
 
+# class Thermo(models.Model):
+#     source
+#     temperature_range
+# 
+# class KineticModel(models.Model):
+#     # one of these
+#     source # eg. citation
+#     
+#     chemkin_reactions_file
+#     chemkin_thermo_file
+#     chemkin_transport_file
+#     
+#     # many of these
+#     reactions
+#     species
+#     
+# class Source(model.Models):
+#     year
+#     publication
+#     doi
+#     # several of these
+#     authors
+# 
+# class Author(model.Models):
+#     surname
+#     forenames
+
+# class Element(models.Model):
+#     isotope massnumber
+#     isotope relativeatomicmass
+#     atomicmass uncertainty
