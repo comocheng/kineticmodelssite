@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-# from .models import Kinetics, Reaction
-# 
+from .models import Kinetics, Reaction
+
 # class ReactionInline(admin.TabularInline):
 #     model=Reaction
 #     extra=3
@@ -16,7 +16,7 @@ from django.contrib import admin
 #     list_filter=['pub_date']
 #     search_fields = ['question_text']
 # 
-# admin.site.register()
+admin.site.register(Reaction)
 # 
 # # Register your models here.
 
