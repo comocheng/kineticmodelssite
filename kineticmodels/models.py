@@ -26,16 +26,29 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 """
 
 class Reaction(models.Model):
+    rPrimeID=models.CharField(max_length=10)
+    reactant = models.CharField(max_length=50)
+    product=models.CharField(max_length=50)
     
-    def __init__(self):
-        self.reactants = []
-        self.products=[]
-        
-    def add_reactant(self, reactant):
-        self.reactants.append(reactant)
+    def __unicode__(self):
+        return self.rPrimeID
+        return self.reactant
+        return self.product
+
+    class Meta:
+        ordering = ('rPrimeID',)
     
-    def add_product(self, product):
-        self.products.append(product)
+    
+#     def __init__(self, primeID):
+#         self.primeID=primeID
+#         self.reactants = []
+#         self.products=[]
+#         
+#     def add_reactant(self, reactant):
+#         self.reactants.append(reactant)
+#     
+#     def add_product(self, product):
+#         self.products.append(product)
 
 #     reactants
 #     products
@@ -43,11 +56,23 @@ class Reaction(models.Model):
 
 class Kinetics(models.Model):
     reaction = models.ForeignKey(Reaction)
+    Avalue=models.FloatField()
+    nvalue=models.FloatField()
+    Evalue=models.FloatField()
     
-    def __init__(self, A, n, E):
-        self.A = A
-        self.n=n
-        self.E=E  
+    def __unicode__(self):
+        return self.Avalue
+        return self.nvalue
+        return self.Evalue
+    
+    class Meta:
+        ordering = ('Avalue',)
+    
+    
+#     def __init__(self, A, n, E):
+#         self.A = A
+#         self.n=n
+#         self.E=E
 
 # class Species(models.Model):
 #     # one each of these:
