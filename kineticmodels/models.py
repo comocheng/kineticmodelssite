@@ -24,22 +24,22 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 
 """
-# class Species(models.Model):
-#     sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
-#     formula = models.CharField(default='[insert formula]',max_length=50)
-#     names = models.CharField(default='[insert string of names seperated by underscore]',max_length=500)
-#     thermos=models.CharField(default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
-#     inchis=models.CharField(default='No InChI',max_length=500)
-#     
-#     def __unicode__(self):
-#         return self.sPrimeID
-#         return self.formula
-#         return self.names
-#         return self.thermos
-#         return self.inchis
-# 
-#     class Meta:
-#         ordering = ('sPrimeID',)
+class Species(models.Model):
+    sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
+    formula = models.CharField(default='[insert formula]',max_length=50)
+    names = models.CharField(default='[insert string of names seperated by underscore]',max_length=500)
+    thermos=models.CharField(default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
+    inchis=models.CharField(default='No InChI',max_length=500)
+    
+    def __unicode__(self):
+        return self.sPrimeID
+        return self.formula
+        return self.names
+        return self.thermos
+        return self.inchis
+
+    class Meta:
+        ordering = ('sPrimeID',)
 # one each of these:
 #     formula
 #     primeID
@@ -52,7 +52,7 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 # class Thermo(models.Model):
 #     source
 #     temperature_range
-# 
+
 
 class Reaction(models.Model):
 #     species = models.ManyToManyField(Species)
