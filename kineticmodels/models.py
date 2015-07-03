@@ -24,9 +24,38 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 
 """
+# class Species(models.Model):
+#     sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
+#     formula = models.CharField(default='[insert formula]',max_length=50)
+#     names = models.CharField(default='[insert string of names seperated by underscore]',max_length=500)
+#     thermos=models.CharField(default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
+#     inchis=models.CharField(default='No InChI',max_length=500)
+#     
+#     def __unicode__(self):
+#         return self.sPrimeID
+#         return self.formula
+#         return self.names
+#         return self.thermos
+#         return self.inchis
+# 
+#     class Meta:
+#         ordering = ('sPrimeID',)
+# one each of these:
+#     formula
+#     primeID
+# one or more:
+#     names
+#     thermos
+# zero or more of these:
+#     inchis
+
+# class Thermo(models.Model):
+#     source
+#     temperature_range
+# 
 
 class Reaction(models.Model):
-    species = models.ManyToManyField(Species)
+#     species = models.ManyToManyField(Species)
     rPrimeID=models.CharField(default='[insert primeID]',max_length=10)
     reactants = models.CharField(default='[insert string of names seperated by underscore]',max_length=50)
     products = models.CharField(default='[insert string of products seperated by underscore]',max_length=50)
@@ -75,41 +104,13 @@ class Kinetics(models.Model):
 #         self.n=n
 #         self.E=E
 
-class Species(models.Model):
-    sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
-    formula = models.CharField(default='[insert formula]',max_length=50)
-    names = models.CharField(default='[insert string of names seperated by underscore]',max_length=500)
-    thermos=models.CharField(default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
-    inchis=models.CharField(default='No InChI',max_length=500)
-    
-    def __unicode__(self):
-        return self.sPrimeID
-        return self.formula
-        return self.names
-        return self.thermos
-        return self.inchis
 
-    class Meta:
-        ordering = ('sPrimeID',)
-# one each of these:
-#     formula
-#     primeID
-# one or more:
-#     names
-#     thermos
-# zero or more of these:
-#     inchis
-
-# class Thermo(models.Model):
-#     source
-#     temperature_range
-# 
-class KineticModel(models.Model):
-    kinetics = models.ManyToManyField(Kinetics)
-    source=models.ForeignKey(Source)
-    chemkin_reactions_file=models.FileField()
-    chemkin_thermo_file=models.FileField()
-    chemkin_transport_file=models.FileField()
+# class KineticModel(models.Model):
+#     kinetics = models.ManyToManyField(Kinetics)
+# #     source=models.ForeignKey(Source)
+#     chemkin_reactions_file=models.FileField()
+#     chemkin_thermo_file=models.FileField()
+#     chemkin_transport_file=models.FileField()
     
 #     # one of these
 #     source # eg. citation
