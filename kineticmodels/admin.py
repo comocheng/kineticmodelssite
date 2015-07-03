@@ -18,6 +18,7 @@ from .models import Kinetics, Reaction, Species
 # 
 admin.site.register(Reaction)
 admin.site.register(Species)
+admin.site.register(Stoichiometry)
 
 # 
 # # Register your models here.
