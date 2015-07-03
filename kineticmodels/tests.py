@@ -5,12 +5,15 @@ from django.test import TestCase
 
 """How to add existing species to an existing reaction"""
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry
-
+r1=Reaction(rPrimeID='r100')
+r1.save()
+s1=Species(sPrimeID='s200',formula='H2O',names='water',thermos=100)
+s2=Species(sPrimeID='s201',formula='CO2',names='carbon dioxide',thermos=200)
 Reaction.objects.all()
 Species.objects.all()
-r1 = Reaction.objects.get(id=1)
-s1 = Species.objects.get(id=1)
-s2 = Species.objects.get(id=2)
+r1 = Reaction.objects.get(id=1) #optional
+s1 = Species.objects.get(id=1) #optional
+s2 = Species.objects.get(id=2) #optional
 s2.names
 
 st1=Stoichiometry.objects.create(species=s1,reaction=r1,stoichiometry=1.0)
