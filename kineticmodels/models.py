@@ -57,13 +57,9 @@ class Species(models.Model):
 class Reaction(models.Model):
     species = models.ManyToManyField(Species, through='Stoichiometry')
     rPrimeID=models.CharField(default='[insert primeID]',max_length=10)
-    reactants = models.CharField(default='[insert string of names seperated by underscore]',max_length=50)
-    products = models.CharField(default='[insert string of products seperated by underscore]',max_length=50)
     
     def __unicode__(self):
         return self.rPrimeID
-        return self.reactants
-        return self.products
 
     class Meta:
         ordering = ('rPrimeID',)
