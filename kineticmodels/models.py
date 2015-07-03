@@ -55,7 +55,7 @@ class Species(models.Model):
 
 
 class Reaction(models.Model):
-#     species = models.ManyToManyField(Species)
+    species = models.ManyToManyField(Species, through='Stoichiometry')
     rPrimeID=models.CharField(default='[insert primeID]',max_length=10)
     reactants = models.CharField(default='[insert string of names seperated by underscore]',max_length=50)
     products = models.CharField(default='[insert string of products seperated by underscore]',max_length=50)
@@ -98,6 +98,10 @@ class Kinetics(models.Model):
     class Meta:
         ordering = ('Avalue',)
     
+class Stoichiometry(models.Model):
+    species = models.ForeignKey(Species)
+    reaction = models.ForeignKey(Reaction)
+    stoichiometry = models.FloatField(default=0.0)
     
 #     def __init__(self, A, n, E):
 #         self.A = A
