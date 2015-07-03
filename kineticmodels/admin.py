@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Kinetics, Reaction
+from .models import Kinetics, Reaction, Species
 
 # class ReactionInline(admin.TabularInline):
 #     model=Reaction
@@ -17,6 +17,8 @@ from .models import Kinetics, Reaction
 #     search_fields = ['question_text']
 # 
 admin.site.register(Reaction)
+admin.site.register(Species)
+
 # 
 # # Register your models here.
 
