@@ -128,8 +128,9 @@ class Stoichiometry(models.Model):
 #     species
 #     
 class Source(models.Model):
-#     pub_date=models.DateField()
-    pub_date=models.CharField(default='',max_length=100)
+    pub_date=models.DateField()
+    pub_name=models.CharField(default='',max_length=300)
+#     pub_date=models.CharField(default='',max_length=100)
     doi=models.CharField(default='',max_length=80)
     
     def __unicode__(self):
