@@ -22,3 +22,8 @@ st1.save()
 st2.save()
 r1.species.all()
 s1.reaction_set.all()
+
+"""How to link a ForeignKey to its category"""
+#one reaction has multiple different kinetics
+r1.kinetics_set.create(Avalue=1000,Evalue=3000)
+#if a TypeError appears requesting a string (you provided a float), ignore it and check on the website if the kinetics was successfully added
