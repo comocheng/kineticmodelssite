@@ -127,16 +127,25 @@ class Stoichiometry(models.Model):
 #     reactions
 #     species
 #     
-# class Source(model.Models):
-#     year
-#     publication
-#     doi
-#     # several of these
-#     authors
-# 
-# class Author(model.Models):
-#     surname
-#     forenames
+class Source(models.Model):
+#     pub_date=models.DateField()
+    pub_date=models.CharField(default='',max_length=100)
+    doi=models.CharField(default='',max_length=80)
+    
+    def __unicode__(self):
+        return self.pub_date
+        return self.doi
+    
+    class Meta:
+        ordering = ('pub_date',)
+
+
+class Author(models.Model):
+    source=models.ForeignKey(Source)
+    name=models.CharField(default='[surname, firstname]',max_length=80)
+    
+    def __unicode__(self):
+        return self.name
 
 # class Element(models.Model):
 #     isotope massnumber

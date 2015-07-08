@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Kinetics, Reaction, Species, Stoichiometry
+from .models import Kinetics, Reaction, Species, Stoichiometry, Source, Author
 
 # class ReactionInline(admin.TabularInline):
 #     model=Reaction
@@ -20,7 +20,8 @@ admin.site.register(Reaction)
 admin.site.register(Species)
 admin.site.register(Stoichiometry)
 admin.site.register(Kinetics)
-
+admin.site.register(Source)
+admin.site.register(Author)
 # 
 # # Register your models here.
 
