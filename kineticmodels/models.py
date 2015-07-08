@@ -87,9 +87,9 @@ class Kinetics(models.Model):
     Evalue=models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return self.Avalue
-        return self.nvalue
-        return self.Evalue
+        return unicode(self.Avalue)
+        return unicode(self.nvalue)
+        return unicode(self.Evalue)
     
     class Meta:
         ordering = ('Avalue',)
@@ -98,6 +98,10 @@ class Stoichiometry(models.Model):
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
     stoichiometry = models.FloatField(default=0.0)
+    
+    def __unicode__(self):
+        return unicode(self.stoichiometry)
+        
     
 #     def __init__(self, A, n, E):
 #         self.A = A
