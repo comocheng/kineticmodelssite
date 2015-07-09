@@ -25,11 +25,11 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 """
 class Species(models.Model):
-    sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
-    formula = models.CharField(blank=True,default='[insert formula]',max_length=50)
+    sPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
+    formula = models.CharField(blank=True,max_length=50)
     names = models.CharField(blank=True,default='[insert string of names seperated by underscore]',max_length=500)
     thermos=models.CharField(blank=True,default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
-    inchis=models.CharField(blank=True,default='No InChI',max_length=500)
+    inchis=models.CharField('InChI',blank=True,max_length=500)
     
     def __unicode__(self):
         return self.sPrimeID
@@ -56,7 +56,7 @@ class Species(models.Model):
 
 class Reaction(models.Model):
     species = models.ManyToManyField(Species, through='Stoichiometry')
-    rPrimeID=models.CharField(default='[insert primeID]',max_length=10)
+    rPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
     
     def __unicode__(self):
         return self.rPrimeID
@@ -82,19 +82,20 @@ class Reaction(models.Model):
 
 class Kinetics(models.Model):
     reaction = models.ForeignKey(Reaction)
-    Avalue=models.FloatField(default=0.0)
-    nvalue=models.FloatField(default=0.0)
-    Evalue=models.FloatField(default=0.0)
+    A_value=models.FloatField(default=0.0)
+    n_value=models.FloatField(default=0.0)
+    E_value=models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return unicode(self.Avalue)
-        return unicode(self.nvalue)
-        return unicode(self.Evalue)
+        return unicode(self.A_value)
+        return unicode(self.n_value)
+        return unicode(self.E_value)
     
     class Meta:
-        ordering = ('Avalue',)
+        ordering = ('A_value',)
     
 class Stoichiometry(models.Model):
+#     id = models.IntegerField(primary_key=True)
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
     stoichiometry = models.FloatField(default=0.0)
@@ -108,13 +109,36 @@ class Stoichiometry(models.Model):
 #         self.n=n
 #         self.E=E
 
+class Source(models.Model):
+#     pub_date=models.DateField('%Y-%m-%d',primary_key=True) #default=
+    pub_date=models.CharField('Date of Publication',default='YYYY-MM-DD',max_length=10,primary_key=True)
+    pub_name=models.CharField('Publication Name',max_length=300)
+    doi=models.CharField(blank=True,max_length=80)
+    
+    def __unicode__(self):
+        return self.pub_date
+        return self.pub_name
+        return self.doi
+    
+#     class Meta:
+#         ordering = ('pub_date',)
 
-# class KineticModel(models.Model):
-#     kinetics = models.ManyToManyField(Kinetics)
-# #     source=models.ForeignKey(Source)
-#     chemkin_reactions_file=models.FileField()
-#     chemkin_thermo_file=models.FileField()
-#     chemkin_transport_file=models.FileField()
+
+class Author(models.Model):
+    source=models.ForeignKey(Source)
+    name=models.CharField(default='[insert surname, firstname]',max_length=80,primary_key=True)
+    
+    def __unicode__(self):
+        return self.name
+
+class KineticModel(models.Model):
+    kinetics = models.ManyToManyField(Kinetics)
+#     reaction=kinetics something
+#     species=reaction something
+    source=models.ForeignKey(Source)
+    chemkin_reactions_file=models.FileField()
+    chemkin_thermo_file=models.FileField()
+    chemkin_transport_file=models.FileField()
     
 #     # one of these
 #     source # eg. citation
@@ -127,27 +151,7 @@ class Stoichiometry(models.Model):
 #     reactions
 #     species
 #     
-class Source(models.Model):
-    pub_date=models.DateField(default='%Y-%m-%d')
-#     pub_date=models.CharField(default='YYYY-MM-DD',max_length=10)
-    pub_name=models.CharField(default='',max_length=300)
-    doi=models.CharField(default='',max_length=80)
-    
-    def __unicode__(self):
-        return self.pub_date
-        return self.pub_name
-        return self.doi
-    
-    class Meta:
-        ordering = ('pub_date',)
 
-
-class Author(models.Model):
-    source=models.ForeignKey(Source)
-    name=models.CharField(default='[surname, firstname]',max_length=80)
-    
-    def __unicode__(self):
-        return self.name
 
 # class Element(models.Model):
 #     isotope massnumber
