@@ -95,7 +95,6 @@ class Kinetics(models.Model):
         ordering = ('A_value',)
     
 class Stoichiometry(models.Model):
-#     id = models.IntegerField(primary_key=True)
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
     stoichiometry = models.FloatField(default=0.0)
@@ -131,14 +130,26 @@ class Author(models.Model):
     def __unicode__(self):
         return self.name
 
-class KineticModel(models.Model):
-    kinetics = models.ManyToManyField(Kinetics)
+class KinModel(models.Model):
+#     modelID=models.CharField(default='',max_length=100)
+    kinetics = models.ManyToManyField(Kinetics, through='Comment')
 #     reaction=kinetics something
 #     species=reaction something
-    source=models.ForeignKey(Source)
+#     source=models.ForeignKey(Source)
     chemkin_reactions_file=models.FileField()
     chemkin_thermo_file=models.FileField()
     chemkin_transport_file=models.FileField()
+    
+    def __unicode__(self):
+        return self.modelID
+    
+class Comment(models.Model):
+    kinetics = models.ForeignKey(Kinetics)
+    kinmodel = models.ForeignKey(KinModel)
+    comment = models.CharField(blank=True,max_length=1000)
+    
+    def __unicode__(self):
+        return self.comment
     
 #     # one of these
 #     source # eg. citation
