@@ -26,10 +26,10 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 """
 class Species(models.Model):
     sPrimeID=models.CharField(default='[insert primeID]',max_length=10)
-    formula = models.CharField(default='[insert formula]',max_length=50)
-    names = models.CharField(default='[insert string of names seperated by underscore]',max_length=500)
-    thermos=models.CharField(default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
-    inchis=models.CharField(default='No InChI',max_length=500)
+    formula = models.CharField(blank=True,default='[insert formula]',max_length=50)
+    names = models.CharField(blank=True,default='[insert string of names seperated by underscore]',max_length=500)
+    thermos=models.CharField(blank=True,default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
+    inchis=models.CharField(blank=True,default='No InChI',max_length=500)
     
     def __unicode__(self):
         return self.sPrimeID
@@ -128,13 +128,14 @@ class Stoichiometry(models.Model):
 #     species
 #     
 class Source(models.Model):
-    pub_date=models.DateField()
+    pub_date=models.DateField(default='%Y-%m-%d')
+#     pub_date=models.CharField(default='YYYY-MM-DD',max_length=10)
     pub_name=models.CharField(default='',max_length=300)
-#     pub_date=models.CharField(default='',max_length=100)
     doi=models.CharField(default='',max_length=80)
     
     def __unicode__(self):
         return self.pub_date
+        return self.pub_name
         return self.doi
     
     class Meta:
