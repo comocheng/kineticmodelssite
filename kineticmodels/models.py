@@ -40,6 +40,7 @@ class Species(models.Model):
 
     class Meta:
         ordering = ('sPrimeID',)
+        verbose_name_plural = "Species"
 # one each of these:
 #     formula
 #     primeID
@@ -101,6 +102,9 @@ class Stoichiometry(models.Model):
     
     def __unicode__(self):
         return unicode(self.stoichiometry)
+    
+    class Meta:
+        verbose_name_plural = 'Stoichiometries'
         
     
 #     def __init__(self, A, n, E):
@@ -119,8 +123,8 @@ class Source(models.Model):
         return self.pub_name
         return self.doi
     
-#     class Meta:
-#         ordering = ('pub_date',)
+    class Meta:
+        ordering = ('pub_date',)
 
 
 class Author(models.Model):
@@ -131,7 +135,7 @@ class Author(models.Model):
         return self.name
 
 class KinModel(models.Model):
-#     modelID=models.CharField(default='',max_length=100)
+    modelID=models.CharField(default='',max_length=100)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
 #     reaction=kinetics something
 #     species=reaction something
@@ -142,6 +146,9 @@ class KinModel(models.Model):
     
     def __unicode__(self):
         return self.modelID
+    
+    class Meta:
+        verbose_name_plural = "Kinetic Models"
     
 class Comment(models.Model):
     kinetics = models.ForeignKey(Kinetics)
