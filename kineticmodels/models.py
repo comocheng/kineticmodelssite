@@ -90,7 +90,12 @@ class Kinetics(models.Model):
     
     class Meta:
         ordering = ('A_value',)
-    
+
+#     def __init__(self, A, n, E):
+#         self.A = A
+#         self.n=n
+#         self.E=E
+
 class Stoichiometry(models.Model):
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
@@ -102,11 +107,7 @@ class Stoichiometry(models.Model):
     class Meta:
         verbose_name_plural = 'Stoichiometries'
         
-    
-#     def __init__(self, A, n, E):
-#         self.A = A
-#         self.n=n
-#         self.E=E
+
 
 class Source(models.Model):
 #     pub_date=models.DateField('%Y-%m-%d',primary_key=True) #default=
