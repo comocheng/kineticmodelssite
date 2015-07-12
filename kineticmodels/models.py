@@ -32,11 +32,7 @@ class Species(models.Model):
     inchis=models.CharField('InChI',blank=True,max_length=500)
     
     def __unicode__(self):
-        return self.sPrimeID
-        return self.formula
-        return self.names
-        return self.thermos
-        return self.inchis
+        return u"<Species {s.id} {s.formula!r}>".format(s=self)
 
     class Meta:
         ordering = ('sPrimeID',)
