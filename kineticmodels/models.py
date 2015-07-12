@@ -25,10 +25,10 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 """
 class Species(models.Model):
-    sPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
+    sPrimeID = models.CharField('PrIMe ID', max_length=10)
     formula = models.CharField(blank=True,max_length=50)
     names = models.CharField(blank=True,default='[insert string of names seperated by underscore]',max_length=500)
-    thermos=models.CharField(blank=True,default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
+    thermos = models.CharField(blank=True, default='[insert string of thermos seperated by underscore]', max_length=500)  #make field of float or decimal lists somehow
     inchis=models.CharField('InChI',blank=True,max_length=500)
     
     def __unicode__(self):
