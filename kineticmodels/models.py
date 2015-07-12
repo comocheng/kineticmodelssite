@@ -32,7 +32,7 @@ class Species(models.Model):
     inchis=models.CharField('InChI',blank=True,max_length=500)
     
     def __unicode__(self):
-        return u"<Species {s.id} {s.formula!r}>".format(s=self)
+        return u"{s.id} {s.formula!s}".format(s=self)
 
     class Meta:
         ordering = ('sPrimeID',)
@@ -65,7 +65,7 @@ class Reaction(models.Model):
     rPrimeID = models.CharField('PrIMe ID', max_length=10)
     
     def __unicode__(self):
-        return u"<Reaction {s.id}>".format(s=self)
+        return u"{s.id}".format(s=self)
 
     class Meta:
         ordering = ('rPrimeID',)
@@ -99,7 +99,7 @@ class Kinetics(models.Model):
     E_value=models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return u"<Kinetics {s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}>".format(s=self)
+        return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(s=self)
     
     class Meta:
         ordering = ('A_value',)
@@ -123,8 +123,8 @@ class Stoichiometry(models.Model):
     stoichiometry = models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return (u"<Stiochiometry {s.id} of species {s.species} "
-                "in reaction {s.reaction} is {s.stoichiometry}>").format(s=self)
+        return (u"{s.id} species {s.species} "
+                "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
         return unicode(self.stoichiometry)
     
     class Meta:
@@ -178,7 +178,7 @@ class KinModel(models.Model):
     chemkin_transport_file=models.FileField()
     
     def __unicode__(self):
-        return self.modelID
+        return u"{s.id} {s.modelID}".format(s=self)
     
     class Meta:
         verbose_name_plural = "Kinetic Models"
