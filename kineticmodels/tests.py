@@ -4,7 +4,7 @@ from django.test import TestCase
 
 
 """How to add existing species to an existing reaction"""
-from kineticmodels.models import Kinetics, Reaction, Stoichiometry
+from kineticmodels.models import Kinetics, Reaction, Stoichiometry, Species
 r1=Reaction(rPrimeID='r100')
 r1.save()
 s1=Species(sPrimeID='s200',formula='H2O',names='water',thermos=100)
