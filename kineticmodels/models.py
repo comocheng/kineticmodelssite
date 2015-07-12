@@ -53,7 +53,7 @@ class Species(models.Model):
 
 class Reaction(models.Model):
     species = models.ManyToManyField(Species, through='Stoichiometry')
-    rPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
+    rPrimeID = models.CharField('PrIMe ID', max_length=10)
     
     def __unicode__(self):
         return self.rPrimeID
