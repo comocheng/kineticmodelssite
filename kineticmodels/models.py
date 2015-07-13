@@ -31,6 +31,12 @@ class Species(models.Model):
     thermos = models.CharField(blank=True, default='[insert string of thermos seperated by underscore]', max_length=500)  #make field of float or decimal lists somehow
     inchis=models.CharField('InChI',blank=True,max_length=500)
     
+    def products(self):
+        return self.filter(stoichiometry__stoichiometry__gt=0)
+    def reactants(self):
+        return self.filter(stoichiometry__stoichiometry__lt=0)
+
+
     def __unicode__(self):
         return u"{s.id} {s.formula!s}".format(s=self)
 
