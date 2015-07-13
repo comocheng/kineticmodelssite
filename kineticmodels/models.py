@@ -25,18 +25,20 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 """
 class Species(models.Model):
-    sPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
+    sPrimeID = models.CharField('PrIMe ID', max_length=10)
     formula = models.CharField(blank=True,max_length=50)
     names = models.CharField(blank=True,default='[insert string of names seperated by underscore]',max_length=500)
-    thermos=models.CharField(blank=True,default='[insert string of thermos seperated by underscore]',max_length=500) #make field of float or decimal lists somehow
+    thermos = models.CharField(blank=True, default='[insert string of thermos seperated by underscore]', max_length=500)  #make field of float or decimal lists somehow
     inchis=models.CharField('InChI',blank=True,max_length=500)
     
+    def products(self):
+        return self.filter(stoichiometry__stoichiometry__gt=0)
+    def reactants(self):
+        return self.filter(stoichiometry__stoichiometry__lt=0)
+
+
     def __unicode__(self):
-        return self.sPrimeID
-        return self.formula
-        return self.names
-        return self.thermos
-        return self.inchis
+        return u"{s.id} {s.formula!s}".format(s=self)
 
     class Meta:
         ordering = ('sPrimeID',)
@@ -56,15 +58,23 @@ class Species(models.Model):
 
 
 class Reaction(models.Model):
+    """
+    A chemical reaction, with several species, has a rate in one or more models.
+    
+    Should have:
+     * species (linked via stoichiometry)
+     * prime ID
+    """
+    #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
-    rPrimeID=models.CharField('PrIMe ID',max_length=10,primary_key=True)
+    #: The PrIMe ID, if it is known
+    rPrimeID = models.CharField('PrIMe ID', max_length=10)
     
     def __unicode__(self):
-        return self.rPrimeID
+        return u"{s.id}".format(s=self)
 
     class Meta:
         ordering = ('rPrimeID',)
-    
     
 #     def __init__(self, primeID):
 #         self.primeID=primeID
@@ -82,35 +92,51 @@ class Reaction(models.Model):
 #     kinetics
 
 class Kinetics(models.Model):
+    """
+    A reaction rate expression.
+    
+    For now let's keep things simple, and only use 3-parameter Arrhenius
+    Must belong to a single reaction.
+    May occur in several models, linked via a comment.
+    """
     reaction = models.ForeignKey(Reaction)
     A_value=models.FloatField(default=0.0)
     n_value=models.FloatField(default=0.0)
     E_value=models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return unicode(self.A_value)
-        return unicode(self.n_value)
-        return unicode(self.E_value)
+        return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(s=self)
     
     class Meta:
         ordering = ('A_value',)
-    
+
+#     def __init__(self, A, n, E):
+#         self.A = A
+#         self.n=n
+#         self.E=E
+
 class Stoichiometry(models.Model):
+    """
+    How many times a species is created in a reaction.
+    
+    Reactants have negative stoichiometries, products have positive.
+    eg. in the reaction A <=> 2B  the stoichiometry of A is -1 and of B is +2
+    In elementary reactions these are always integers, but chemkin allows floats,
+    so we do too.
+    """
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
     stoichiometry = models.FloatField(default=0.0)
     
     def __unicode__(self):
+        return (u"{s.id} species {s.species} "
+                "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
         return unicode(self.stoichiometry)
     
     class Meta:
         verbose_name_plural = 'Stoichiometries'
         
-    
-#     def __init__(self, A, n, E):
-#         self.A = A
-#         self.n=n
-#         self.E=E
+
 
 class Source(models.Model):
 #     pub_date=models.DateField('%Y-%m-%d',primary_key=True) #default=
@@ -135,6 +161,19 @@ class Author(models.Model):
         return self.name
 
 class KinModel(models.Model):
+    """
+    A kinetic model.
+    
+    Should have one of these:
+     * source # eg. citation
+     * chemkin_reactions_file
+     * chemkin_thermo_file
+     * chemkin_transport_file
+
+    And many of these:
+     * species, liked via species name?
+     * kinetics, each of which have a unique reaction, linked through comments
+    """
     modelID=models.CharField(default='',max_length=100)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
 #     reaction=kinetics something
@@ -145,30 +184,25 @@ class KinModel(models.Model):
     chemkin_transport_file=models.FileField()
     
     def __unicode__(self):
-        return self.modelID
+        return u"{s.id} {s.modelID}".format(s=self)
     
     class Meta:
         verbose_name_plural = "Kinetic Models"
     
 class Comment(models.Model):
+    """
+    The comment that a kinetic model made about a kinetics entry it used.
+    
+    There may not have been a comment, eg. it may be an empty string,
+    but an entry in this table or the existence of this object
+    links that kinetics entry with that kinetic model.
+    """
     kinetics = models.ForeignKey(Kinetics)
     kinmodel = models.ForeignKey(KinModel)
     comment = models.CharField(blank=True,max_length=1000)
     
     def __unicode__(self):
         return self.comment
-    
-#     # one of these
-#     source # eg. citation
-#     
-#     chemkin_reactions_file
-#     chemkin_thermo_file
-#     chemkin_transport_file
-#     
-#     # many of these
-#     reactions
-#     species
-#     
 
 
 # class Element(models.Model):
