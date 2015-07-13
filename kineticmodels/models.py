@@ -23,6 +23,66 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 
 
+PrIMe Fields to Include:
+Bibliography
+    *****in catalog******
+    year
+    authors
+    source title
+    journal name
+    journal volume
+    page numbers
+Data Attributes
+    ******in catalog*******
+    lots of stuff
+    ******in instrumentalModels/catalog******
+    lots of stuff
+Datasets
+    ******in catalog********
+    lots of stuff, but only within two xmls
+    *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
+    lots of stuff
+Elements
+    ******in catalog********
+    atomic number
+    element symbol
+    element name
+    atomic mass
+    mass number
+    
+Experiments
+    ******in catalog*******
+    lots of stuff
+Models
+Optimization Variables
+Reactions
+    *****in catalog******
+    species involved w/stoichiometries
+    ******in data********
+    a value
+    a value uncertainty
+    n value
+    e value
+    bibliography
+Species
+    *****in catalog*******
+    InChI
+    CAS number
+    formula
+    names (very optional)
+    *****in data*******
+    Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
+    Tref (units K)
+    Pref (units Pa)
+    dfH (units J/mol)
+    Polynomial 1:
+        lower/upper temp bounds (units K)
+        coefficients 1 thru 7
+    Polynomial 2:
+        lower/upper temp bounds (units K)
+        coefficients 1 thru 7
+Targets
+
 """
 class Species(models.Model):
     sPrimeID = models.CharField('PrIMe ID', max_length=10)
@@ -200,9 +260,11 @@ class Comment(models.Model):
     kinetics = models.ForeignKey(Kinetics)
     kinmodel = models.ForeignKey(KinModel)
     comment = models.CharField(blank=True,max_length=1000)
+    is_reverse = models.BooleanField(default=False, help_text='Is this the rate for the reverse reaction?')
     
     def __unicode__(self):
         return self.comment
+        return self.is_reverse
 
 
 # class Element(models.Model):
