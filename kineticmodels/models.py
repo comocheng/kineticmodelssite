@@ -122,7 +122,7 @@ Species
     formula
     Fuel ID (sometimes)
     names (very optional)
-    *****in data*******
+    *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
     Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
     Tref (units K)
     Pref (units Pa)
@@ -146,11 +146,11 @@ Targets
 
 """
 class Species(models.Model):
-    sPrimeID = models.CharField('PrIMe ID', max_length=10)
+    sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True,max_length=50)
-    names = models.CharField(blank=True,default='[insert string of names seperated by underscore]',max_length=500)
-    thermos = models.CharField(blank=True, default='[insert string of thermos seperated by underscore]', max_length=500)  #make field of float or decimal lists somehow
-    inchis=models.CharField('InChI',blank=True,max_length=500)
+    thermos = models.CharField(blank=True, help_text='format: string of thermos seperated by underscore', max_length=500)  #make field of float or decimal lists somehow
+    inchi=models.CharField('InChI',blank=True,max_length=500)
+    CAS=models.CharField('CAS Registry Number',blank=True,max_length=400)
     
     def products(self):
         return self.filter(stoichiometry__stoichiometry__gt=0)
@@ -164,14 +164,16 @@ class Species(models.Model):
     class Meta:
         ordering = ('sPrimeID',)
         verbose_name_plural = "Species"
-# one each of these:
-#     formula
-#     primeID
-# one or more:
-#     names
-#     thermos
-# zero or more of these:
-#     inchis
+        
+class SpecName(models.Model):
+    species=models.ForeignKey(Species)
+    name=models.CharField(blank=True,max_length=200)
+    
+    def __unicode__(self):
+        return self.name
+        
+    class Meta:
+        verbose_name_plural = "Alternative Species Names"
 
 # class Thermo(models.Model):
 #     source
@@ -196,21 +198,7 @@ class Reaction(models.Model):
 
     class Meta:
         ordering = ('rPrimeID',)
-    
-#     def __init__(self, primeID):
-#         self.primeID=primeID
-#         self.reactants = []
-#         self.products=[]
-#         
-#     def add_reactant(self, reactant):
-#         self.reactants.append(reactant)
-#     
-#     def add_product(self, product):
-#         self.products.append(product)
 
-#     reactants
-#     products
-#     kinetics
 
 class Kinetics(models.Model):
     """
@@ -231,10 +219,6 @@ class Kinetics(models.Model):
     class Meta:
         ordering = ('A_value',)
 
-#     def __init__(self, A, n, E):
-#         self.A = A
-#         self.n=n
-#         self.E=E
 
 class Stoichiometry(models.Model):
     """
@@ -256,27 +240,32 @@ class Stoichiometry(models.Model):
     
     class Meta:
         verbose_name_plural = 'Stoichiometries'
-        
 
 
 class Source(models.Model):
-#     pub_date=models.DateField('%Y-%m-%d',primary_key=True) #default=
-    pub_date=models.CharField('Date of Publication',default='YYYY-MM-DD',max_length=10,primary_key=True)
+    bPrimeID=models.CharField('Prime ID',max_length=9,default='',primary_key=True)
+    pub_year=models.CharField('Year of Publication',default='',max_length=4)
     pub_name=models.CharField('Publication Name',max_length=300)
-    doi=models.CharField(blank=True,max_length=80)
+    journal_name=models.CharField(blank=True,max_length=300)
+    jour_vol_num=models.IntegerField('Journal Volume Number',null=True,blank=True)
+    page_numbers=models.CharField(blank=True,help_text='[page #]-[page #]',max_length=100)
+    doi=models.CharField(blank=True,max_length=80) #not in PrIMe
     
     def __unicode__(self):
-        return self.pub_date
+        return self.pub_year
         return self.pub_name
+        return self.journal_name
+        return self.jour_vol_num
+        return self.page_numbers
         return self.doi
     
     class Meta:
-        ordering = ('pub_date',)
+        ordering = ('bPrimeID',)
 
 
 class Author(models.Model):
     source=models.ForeignKey(Source)
-    name=models.CharField(default='[insert surname, firstname]',max_length=80,primary_key=True)
+    name=models.CharField(help_text='format: surname, firstname',max_length=80,primary_key=True)
     
     def __unicode__(self):
         return self.name
@@ -295,7 +284,7 @@ class KinModel(models.Model):
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
     """
-    modelID=models.CharField(default='',max_length=100)
+    model_name=models.CharField(default='',max_length=200)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
 #     reaction=kinetics something
 #     species=reaction something
