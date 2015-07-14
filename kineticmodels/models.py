@@ -179,10 +179,15 @@ class SpecName(models.Model):
     class Meta:
         verbose_name_plural = "Alternative Species Names"
 
-# class Thermo(models.Model):
-#     source
-#     temperature_range
-
+class Thermo(models.Model):
+    """
+    A thermochemistry polynomial set
+    
+    What Kinetics is to Reaction, Thermo is to Species.
+    """
+    species = models.ForeignKey(Species)
+    #Trange
+    #polynomial1
 
 class Reaction(models.Model):
     """
@@ -214,6 +219,7 @@ class Kinetics(models.Model):
     """
     reaction = models.ForeignKey(Reaction)
     A_value=models.FloatField(default=0.0)
+    A_value_uncertainty=models.FloatField(blank=True,null=True)
     n_value=models.FloatField(default=0.0)
     E_value=models.FloatField(default=0.0)
     
@@ -291,6 +297,7 @@ class KinModel(models.Model):
     """
     model_name=models.CharField(default='',max_length=200)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
+    thermos = models.ManyToManyField(Thermo, through='ThermoComment')
 #     reaction=kinetics something
 #     species=reaction something
 #     source=models.ForeignKey(Source)
@@ -320,6 +327,21 @@ class Comment(models.Model):
     def __unicode__(self):
         return self.comment
         return self.is_reverse
+
+class ThermoComment(models.Model):
+    """
+    The comment that a kinetic model made about a thermo entry it used.
+    
+    There may not have been a comment, eg. it may be an empty string,
+    but an entry in this table or the existence of this object
+    links that thermo entry with that kinetic model.
+    """
+    thermo = models.ForeignKey(Thermo)
+    kinmodel = models.ForeignKey(KinModel)
+    comment = models.CharField(blank=True,max_length=1000)
+    
+    def __unicode__(self):
+        return self.comment
 
 
 # class Element(models.Model):
