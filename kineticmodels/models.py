@@ -143,6 +143,10 @@ Targets
     target value and subcategories/values
     description
     
+    Add this to a lot of the models to make entries on the form have to be unique (avoid duplicates):
+        class Meta:
+        unique_together = ["title", "state", "name"] <-whatever the fields are that should not have multiple of the same combination
+    
 
 """
 class Species(models.Model):
@@ -217,7 +221,7 @@ class Kinetics(models.Model):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(s=self)
     
     class Meta:
-        ordering = ('A_value',)
+        verbose_name_plural = "Kinetics"
 
 
 class Stoichiometry(models.Model):
@@ -252,12 +256,13 @@ class Source(models.Model):
     doi=models.CharField(blank=True,max_length=80) #not in PrIMe
     
     def __unicode__(self):
-        return self.pub_year
-        return self.pub_name
-        return self.journal_name
-        return self.jour_vol_num
-        return self.page_numbers
-        return self.doi
+        return u"{s.pub_year} {s.pub_name}".format(s=self)
+#         return self.pub_year
+#         return self.pub_name
+#         return self.journal_name
+#         return self.jour_vol_num
+#         return self.page_numbers
+#         return self.doi
     
     class Meta:
         ordering = ('bPrimeID',)
@@ -289,12 +294,12 @@ class KinModel(models.Model):
 #     reaction=kinetics something
 #     species=reaction something
 #     source=models.ForeignKey(Source)
-    chemkin_reactions_file=models.FileField()
-    chemkin_thermo_file=models.FileField()
-    chemkin_transport_file=models.FileField()
+    chemkin_reactions_file=models.FileField(blank=True)
+    chemkin_thermo_file=models.FileField(blank=True)
+    chemkin_transport_file=models.FileField(blank=True)
     
     def __unicode__(self):
-        return u"{s.id} {s.modelID}".format(s=self)
+        return u"{s.id} {s.model_name}".format(s=self)
     
     class Meta:
         verbose_name_plural = "Kinetic Models"
