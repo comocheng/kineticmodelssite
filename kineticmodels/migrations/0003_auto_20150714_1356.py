@@ -7,13 +7,12 @@ from django.db import models, migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('kineticmodels', '0012_auto_20150714_1238'),
+        ('kineticmodels', '0002_auto_20150714_1349'),
     ]
 
     operations = [
-        migrations.RenameField(
-            model_name='kinmodel',
-            old_name='modelID',
-            new_name='model_name',
+        migrations.AlterModelOptions(
+            name='kinetics',
+            options={'verbose_name_plural': 'Kinetics'},
         ),
     ]
