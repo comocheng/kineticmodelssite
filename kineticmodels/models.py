@@ -23,6 +23,10 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 
 
+#What will we do with all the extra .zip, .pdf, .hdf, and .mat files tied to models, sources, etc. on PrIMe?
+#Basically everything has a bibliography tied to it, so I stopped listing it partway through
+#Accordingly, probably biblio should be highest in the hierarchy because it has everything as a subcategory
+
 PrIMe Fields to Include:
 Bibliography
     *****in catalog******
@@ -34,14 +38,32 @@ Bibliography
     page numbers
 Data Attributes
     ******in catalog*******
-    lots of stuff
+    experiment
+    features
+        indicators/observables properties
+            property values (i.e. temp, pressure)
+    data attribute values
+        indicators/observables properties
+            property values (i.e. temp, pressure)
+            for time value: upper/lower bounds
+    description
     ******in instrumentalModels/catalog******
-    lots of stuff
+    title (preferred key)
+    keywords (instrument used)
+    property values (i.e. residence time, energy control)
+    variable components (many layers, quite confusing)
+    description/additional info
 Datasets
-    ******in catalog********
-    lots of stuff, but only within two xmls
+    ******in catalog******** (only two xmls)
+    dataset title
+    model
+    surrogate models
+    dataset website
     *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
-    lots of stuff
+    model
+    optimization variables with formulas and bounds
+    coefficient values with variable links
+    description
 Elements
     ******in catalog********
     atomic number
@@ -49,12 +71,40 @@ Elements
     element name
     atomic mass
     mass number
-    
+    isotopes (for every isotope:)
+        atomic mass value
+        atomic mass uncertainty
 Experiments
     ******in catalog*******
-    lots of stuff
+    bibliographies (sometimes multiple)
+    apparatuses
+        apparatus property values
+    common property values
+        initial species composition values
+    data groups
+        properties
+            data points (about 2-4 coordinates each)
+    additional info
 Models
+    ******in catalog*******
+    model name
+    species involved
+        thermo
+        transport
+    reactions involved
+        kinetics
+    additional info
 Optimization Variables
+    ******in catalog********
+    reaction
+    kinetics
+    equation
+    description
+    ********in data********** (take the xml that ends in 1, not 0)
+    bibliography
+    equation
+    upper bound
+    lower bound
 Reactions
     *****in catalog******
     species involved w/stoichiometries
@@ -66,9 +116,11 @@ Reactions
     bibliography
 Species
     *****in catalog*******
+    bibliography
     InChI
     CAS number
     formula
+    Fuel ID (sometimes)
     names (very optional)
     *****in data*******
     Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
@@ -82,6 +134,15 @@ Species
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
 Targets
+    ********in catalog*********** (components frequently vary)
+    bibliography
+    experiment
+    features
+        indicators/observables properties
+        methods/method types
+    target value and subcategories/values
+    description
+    
 
 """
 class Species(models.Model):
