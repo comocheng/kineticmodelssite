@@ -252,6 +252,23 @@ class Polynomial(models.Model):
         return self.coefficient_6
         return self.coefficient_7
         
+class Transport(models.Model):
+    species = models.ForeignKey(Species)
+    geometry=models.FloatField(blank=True,default=0.0)
+    depth=models.FloatField('Potential Well Depth',blank=True,help_text='units: K',default=0.0)
+    diameter=models.FloatField('Collision Diameter',blank=True,help_text='units: Angstroms',default=0.0)
+    dipole_moment=models.FloatField(blank=True,help_text='units: Debye',default=0.0)
+    polarizability=models.FloatField(blank=True,help_text='units: cubic Angstroms',default=0.0)
+    rot_relax=models.FloatField('Rotational Relaxation',blank=True,default=0.0)
+    
+    def __unicode__(self):
+        return u"{s.id} {s.species}".format(s=self)
+        return self.geometry
+        return self.depth
+        return self.diameter
+        return self.dipole
+        return self.polarizability
+        return self.rot_relax
 
 class Reaction(models.Model):
     """
@@ -335,6 +352,7 @@ class KinModel(models.Model):
     model_name=models.CharField(default='',max_length=200,unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
+    transport=models.ManyToManyField(Transport)
 #     reaction=kinetics something
 #     species=reaction something
 #     source=models.ForeignKey(Source)
