@@ -208,16 +208,6 @@ class SpecName(models.Model):
     class Meta:
         verbose_name_plural = "Alternative Species Names"
 
-#     Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
-#     Tref (units K)
-#     Pref (units Pa)
-#     dfH (units J/mol)
-#     Polynomial 1:
-#         lower/upper temp bounds (units K)
-#         coefficients 1 thru 7
-#     Polynomial 2:
-#         lower/upper temp bounds (units K)
-#         coefficients 1 thru 7
         
 class Thermo(models.Model):
     """
@@ -239,6 +229,27 @@ class Thermo(models.Model):
 
 class Polynomial(models.Model):
     thermo=models.ForeignKey(Thermo)
+    lower_temp_bound=models.FloatField(help_text='units: K',default=0.0)
+    upper_temp_bound=models.FloatField(help_text='units: K',default=0.0)
+    coefficient_1=models.FloatField(default=0.0)
+    coefficient_2=models.FloatField(default=0.0)
+    coefficient_3=models.FloatField(default=0.0)
+    coefficient_4=models.FloatField(default=0.0)
+    coefficient_5=models.FloatField(default=0.0)
+    coefficient_6=models.FloatField(default=0.0)
+    coefficient_7=models.FloatField(default=0.0)
+    
+    def __unicode__(self):
+        return u"{s.thermo}".format(s=self)
+        return self.lower_temp_bound
+        return self.upper_temp_bound
+        return self.coefficient_1
+        return self.coefficient_2
+        return self.coefficient_3
+        return self.coefficient_4
+        return self.coefficient_5
+        return self.coefficient_6
+        return self.coefficient_7
 
 class Reaction(models.Model):
     """
