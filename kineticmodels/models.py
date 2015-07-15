@@ -169,6 +169,7 @@ class Source(models.Model):
     
     class Meta:
         ordering = ('bPrimeID',)
+        unique_together = ["pub_year", "pub_name"]
 
 
 class Author(models.Model):
@@ -240,7 +241,7 @@ class Polynomial(models.Model):
     coefficient_7=models.FloatField(default=0.0)
     
     def __unicode__(self):
-        return u"{s.thermo}".format(s=self)
+        return u"{s.id} {s.thermo}".format(s=self)
         return self.lower_temp_bound
         return self.upper_temp_bound
         return self.coefficient_1
@@ -250,6 +251,7 @@ class Polynomial(models.Model):
         return self.coefficient_5
         return self.coefficient_6
         return self.coefficient_7
+        
 
 class Reaction(models.Model):
     """
@@ -262,7 +264,7 @@ class Reaction(models.Model):
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
-    rPrimeID = models.CharField('PrIMe ID', max_length=10)
+    rPrimeID = models.CharField('PrIMe ID', max_length=10, unique=True)
     
     def __unicode__(self):
         return u"{s.id}".format(s=self)
@@ -312,6 +314,7 @@ class Stoichiometry(models.Model):
     
     class Meta:
         verbose_name_plural = 'Stoichiometries'
+        unique_together = ["species","reaction","stoichiometry"]
 
 
 
@@ -329,7 +332,7 @@ class KinModel(models.Model):
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
     """
-    model_name=models.CharField(default='',max_length=200)
+    model_name=models.CharField(default='',max_length=200,unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
 #     reaction=kinetics something
