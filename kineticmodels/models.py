@@ -36,55 +36,55 @@ Bibliography
     journal name
     journal volume
     page numbers
-Data Attributes
-    ******in catalog*******
-    experiment
-    features
-        indicators/observables properties
-            property values (i.e. temp, pressure)
-    data attribute values
-        indicators/observables properties
-            property values (i.e. temp, pressure)
-            for time value: upper/lower bounds
-    description
-    ******in instrumentalModels/catalog******
-    title (preferred key)
-    keywords (instrument used)
-    property values (i.e. residence time, energy control)
-    variable components (many layers, quite confusing)
-    description/additional info
-Datasets
-    ******in catalog******** (only two xmls)
-    dataset title
-    model
-    surrogate models
-    dataset website
-    *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
-    model
-    optimization variables with formulas and bounds
-    coefficient values with variable links
-    description
-Elements
-    ******in catalog********
-    atomic number
-    element symbol
-    element name
-    atomic mass
-    mass number
-    isotopes (for every isotope:)
-        atomic mass value
-        atomic mass uncertainty
-Experiments
-    ******in catalog*******
-    bibliographies (sometimes multiple)
-    apparatuses
-        apparatus property values
-    common property values
-        initial species composition values
-    data groups
-        properties
-            data points (about 2-4 coordinates each)
-    additional info
+# Data Attributes
+#     ******in catalog*******
+#     experiment
+#     features
+#         indicators/observables properties
+#             property values (i.e. temp, pressure)
+#     data attribute values
+#         indicators/observables properties
+#             property values (i.e. temp, pressure)
+#             for time value: upper/lower bounds
+#     description
+#     ******in instrumentalModels/catalog******
+#     title (preferred key)
+#     keywords (instrument used)
+#     property values (i.e. residence time, energy control)
+#     variable components (many layers, quite confusing)
+#     description/additional info
+# Datasets
+#     ******in catalog******** (only two xmls)
+#     dataset title
+#     model
+#     surrogate models
+#     dataset website
+#     *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
+#     model
+#     optimization variables with formulas and bounds
+#     coefficient values with variable links
+#     description
+# Elements
+#     ******in catalog********
+#     atomic number
+#     element symbol
+#     element name
+#     atomic mass
+#     mass number
+#     isotopes (for every isotope:)
+#         atomic mass value
+#         atomic mass uncertainty
+# Experiments
+#     ******in catalog*******
+#     bibliographies (sometimes multiple)
+#     apparatuses
+#         apparatus property values
+#     common property values
+#         initial species composition values
+#     data groups
+#         properties
+#             data points (about 2-4 coordinates each)
+#     additional info
 Models
     ******in catalog*******
     model name
@@ -94,17 +94,17 @@ Models
     reactions involved
         kinetics
     additional info
-Optimization Variables
-    ******in catalog********
-    reaction
-    kinetics
-    equation
-    description
-    ********in data********** (take the xml that ends in 1, not 0)
-    bibliography
-    equation
-    upper bound
-    lower bound
+# Optimization Variables
+#     ******in catalog********
+#     reaction
+#     kinetics
+#     equation
+#     description
+#     ********in data********** (take the xml that ends in 1, not 0)
+#     bibliography
+#     equation
+#     upper bound
+#     lower bound
 Reactions
     *****in catalog******
     species involved w/stoichiometries
@@ -120,7 +120,7 @@ Species
     InChI
     CAS number
     formula
-    Fuel ID (sometimes)
+    Fuel ID (N/A for now)
     names (very optional)
     *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
     Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
@@ -133,15 +133,15 @@ Species
     Polynomial 2:
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
-Targets
-    ********in catalog*********** (components frequently vary)
-    bibliography
-    experiment
-    features
-        indicators/observables properties
-        methods/method types
-    target value and subcategories/values
-    description
+# Targets
+#     ********in catalog*********** (components frequently vary)
+#     bibliography
+#     experiment
+#     features
+#         indicators/observables properties
+#         methods/method types
+#     target value and subcategories/values
+#     description
     
     Add this to a lot of the models to make entries on the form have to be unique (avoid duplicates):
         class Meta:
@@ -149,7 +149,37 @@ Targets
     
 
 """
+class Source(models.Model):
+    bPrimeID=models.CharField('Prime ID',max_length=9,default='',primary_key=True)
+    pub_year=models.CharField('Year of Publication',default='',max_length=4)
+    pub_name=models.CharField('Publication Name',max_length=300)
+    journal_name=models.CharField(blank=True,max_length=300)
+    jour_vol_num=models.IntegerField('Journal Volume Number',null=True,blank=True)
+    page_numbers=models.CharField(blank=True,help_text='[page #]-[page #]',max_length=100)
+    doi=models.CharField(blank=True,max_length=80) #not in PrIMe
+    
+    def __unicode__(self):
+        return u"{s.pub_year} {s.pub_name}".format(s=self)
+#         return self.pub_year
+#         return self.pub_name
+#         return self.journal_name
+#         return self.jour_vol_num
+#         return self.page_numbers
+#         return self.doi
+    
+    class Meta:
+        ordering = ('bPrimeID',)
+
+
+class Author(models.Model):
+    source=models.ForeignKey(Source)
+    name=models.CharField(help_text='format: surname, firstname',max_length=80,primary_key=True)
+    
+    def __unicode__(self):
+        return self.name
+
 class Species(models.Model):
+    source=models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True,max_length=50)
     thermos = models.CharField(blank=True, help_text='format: string of thermos seperated by underscore', max_length=500)  #make field of float or decimal lists somehow
@@ -252,34 +282,6 @@ class Stoichiometry(models.Model):
         verbose_name_plural = 'Stoichiometries'
 
 
-class Source(models.Model):
-    bPrimeID=models.CharField('Prime ID',max_length=9,default='',primary_key=True)
-    pub_year=models.CharField('Year of Publication',default='',max_length=4)
-    pub_name=models.CharField('Publication Name',max_length=300)
-    journal_name=models.CharField(blank=True,max_length=300)
-    jour_vol_num=models.IntegerField('Journal Volume Number',null=True,blank=True)
-    page_numbers=models.CharField(blank=True,help_text='[page #]-[page #]',max_length=100)
-    doi=models.CharField(blank=True,max_length=80) #not in PrIMe
-    
-    def __unicode__(self):
-        return u"{s.pub_year} {s.pub_name}".format(s=self)
-#         return self.pub_year
-#         return self.pub_name
-#         return self.journal_name
-#         return self.jour_vol_num
-#         return self.page_numbers
-#         return self.doi
-    
-    class Meta:
-        ordering = ('bPrimeID',)
-
-
-class Author(models.Model):
-    source=models.ForeignKey(Source)
-    name=models.CharField(help_text='format: surname, firstname',max_length=80,primary_key=True)
-    
-    def __unicode__(self):
-        return self.name
 
 class KinModel(models.Model):
     """
