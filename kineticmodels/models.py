@@ -182,7 +182,6 @@ class Species(models.Model):
     source=models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True,max_length=50)
-    thermos = models.CharField(blank=True, help_text='format: string of thermos seperated by underscore', max_length=500)  #make field of float or decimal lists somehow
     inchi=models.CharField('InChI',blank=True,max_length=500)
     CAS=models.CharField('CAS Registry Number',blank=True,max_length=400)
     
@@ -209,6 +208,17 @@ class SpecName(models.Model):
     class Meta:
         verbose_name_plural = "Alternative Species Names"
 
+#     Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
+#     Tref (units K)
+#     Pref (units Pa)
+#     dfH (units J/mol)
+#     Polynomial 1:
+#         lower/upper temp bounds (units K)
+#         coefficients 1 thru 7
+#     Polynomial 2:
+#         lower/upper temp bounds (units K)
+#         coefficients 1 thru 7
+        
 class Thermo(models.Model):
     """
     A thermochemistry polynomial set
@@ -216,8 +226,19 @@ class Thermo(models.Model):
     What Kinetics is to Reaction, Thermo is to Species.
     """
     species = models.ForeignKey(Species)
-    #Trange
-    #polynomial1
+    preferred_key=models.CharField(blank=True,help_text='i.e. T 11/97, or J 3/65',max_length=20)
+    tref=models.FloatField('Reference State Temperature',blank=True,help_text='units: K',default=0.0)
+    pref=models.FloatField('Reference State Pressure',blank=True,help_text='units: Pa',default=0.0)
+    dfH=models.FloatField('Enthalpy of Formation',blank=True,help_text='units: J/mol',default=0.0)
+    
+    def __unicode__(self):
+        return self.preferred_key
+        return self.tref
+        return self.pref
+        return self.dfH
+
+class Polynomial(models.Model):
+    thermo=models.ForeignKey(Thermo)
 
 class Reaction(models.Model):
     """
@@ -299,7 +320,7 @@ class KinModel(models.Model):
     """
     model_name=models.CharField(default='',max_length=200)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
-    thermos = models.ManyToManyField(Thermo, through='ThermoComment')
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment')
 #     reaction=kinetics something
 #     species=reaction something
 #     source=models.ForeignKey(Source)
