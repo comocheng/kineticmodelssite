@@ -216,6 +216,7 @@ class Thermo(models.Model):
     
     What Kinetics is to Reaction, Thermo is to Species.
     """
+    source=models.ForeignKey(Source)
     species = models.ForeignKey(Species)
     preferred_key=models.CharField(blank=True,help_text='i.e. T 11/97, or J 3/65',max_length=20)
     tref=models.FloatField('Reference State Temperature',blank=True,help_text='units: K',default=0.0)
@@ -253,6 +254,7 @@ class Polynomial(models.Model):
         return self.coefficient_7
         
 class Transport(models.Model):
+    source=models.ForeignKey(Source)
     species = models.ForeignKey(Species)
     geometry=models.FloatField(blank=True,default=0.0)
     depth=models.FloatField('Potential Well Depth',blank=True,help_text='units: K',default=0.0)
@@ -278,6 +280,7 @@ class Reaction(models.Model):
      * species (linked via stoichiometry)
      * prime ID
     """
+    source=models.ForeignKey(Source)
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
@@ -298,6 +301,7 @@ class Kinetics(models.Model):
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     """
+    source=models.ForeignKey(Source)
     reaction = models.ForeignKey(Reaction)
     A_value=models.FloatField(default=0.0)
     A_value_uncertainty=models.FloatField(blank=True,null=True)
@@ -333,7 +337,15 @@ class Stoichiometry(models.Model):
         verbose_name_plural = 'Stoichiometries'
         unique_together = ["species","reaction","stoichiometry"]
 
-
+# Models
+#     ******in catalog*******
+#     model name
+#     species involved
+#         thermo
+#         transport
+#     reactions involved
+#         kinetics
+#     additional info
 
 class KinModel(models.Model):
     """
@@ -349,13 +361,14 @@ class KinModel(models.Model):
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
     """
+    source=models.ForeignKey(Source)
     model_name=models.CharField(default='',max_length=200,unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
     transport=models.ManyToManyField(Transport)
+    additional_info=models.CharField(max_length=1000)
 #     reaction=kinetics something
 #     species=reaction something
-#     source=models.ForeignKey(Source)
     chemkin_reactions_file=models.FileField(blank=True)
     chemkin_thermo_file=models.FileField(blank=True)
     chemkin_transport_file=models.FileField(blank=True)
