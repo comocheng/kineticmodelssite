@@ -103,6 +103,15 @@ PrIMe Fields for objects we are not yet including:
 
 """
 
+class Author(models.Model):
+    """
+    An author of a Source, i.e. a person who published it.
+    """
+    name = models.CharField(help_text='format: surname, firstname',
+                            max_length=80,
+                            primary_key=True)
+    def __unicode__(self):
+        return unicode(self.name)
 
 class Source(models.Model):
     """
@@ -132,6 +141,7 @@ class Source(models.Model):
     page_numbers = models.CharField(blank=True,
                                     help_text='[page #]-[page #]',
                                     max_length=100)
+    authors = models.ManyToManyField(Author, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  #not in PrIMe
 
     def __unicode__(self):
@@ -142,17 +152,21 @@ class Source(models.Model):
         unique_together = ["pub_year", "pub_name"]
 
 
-class Author(models.Model):
+
+class Authorship(models.Model):
     """
-    An author of a Source, i.e. a person who published it.
+    Who authored what paper.
+    
+    This allows many-to-many join between Sources (publications)
+    and Authors, keeping track of author ordering on each publication.
     """
     source = models.ForeignKey(Source)
-    name = models.CharField(help_text='format: surname, firstname',
-                            max_length=80,
-                            primary_key=True)
+    author = models.ForeignKey(Author)
+    order = models.IntegerField('Order of authorship')
 
     def __unicode__(self):
-        return self.name
+        return (u"{s.id} author {s.author} "
+                "was # {s.order} in {s.source}").format(s=self)
 
 
 class Species(models.Model):
