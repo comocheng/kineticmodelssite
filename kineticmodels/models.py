@@ -150,6 +150,11 @@ Species
 
 """
 class Source(models.Model):
+    """
+    A source, or bibliography item.
+    
+    This is equivalent of a 'bibliography' entry in PrIMe.
+    """
     bPrimeID=models.CharField('Prime ID',max_length=9,default='',primary_key=True)
     pub_year=models.CharField('Year of Publication',default='',max_length=4)
     pub_name=models.CharField('Publication Name',max_length=300)
@@ -173,6 +178,9 @@ class Source(models.Model):
 
 
 class Author(models.Model):
+    """
+    An author of a Source, i.e. a person who published it.
+    """
     source=models.ForeignKey(Source)
     name=models.CharField(help_text='format: surname, firstname',max_length=80,primary_key=True)
     
@@ -180,6 +188,9 @@ class Author(models.Model):
         return self.name
 
 class Species(models.Model):
+    """
+    A chemical species.
+    """
     source=models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True,max_length=50)
@@ -200,6 +211,9 @@ class Species(models.Model):
         verbose_name_plural = "Species"
         
 class SpecName(models.Model):
+    """
+    A Species Name
+    """
     species=models.ForeignKey(Species)
     name=models.CharField(blank=True,max_length=200)
     
@@ -230,6 +244,9 @@ class Thermo(models.Model):
         return self.dfH
 
 class Polynomial(models.Model):
+    """
+    A single polynomical that makes part of a Thermo object
+    """
     thermo=models.ForeignKey(Thermo)
     lower_temp_bound=models.FloatField(help_text='units: K',default=0.0)
     upper_temp_bound=models.FloatField(help_text='units: K',default=0.0)
@@ -254,6 +271,9 @@ class Polynomial(models.Model):
         return self.coefficient_7
         
 class Transport(models.Model):
+    """
+    Some Transport data for a species
+    """
     source=models.ForeignKey(Source)
     species = models.ForeignKey(Species)
     geometry=models.FloatField(blank=True,default=0.0)
