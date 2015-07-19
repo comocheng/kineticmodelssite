@@ -165,12 +165,6 @@ class Source(models.Model):
     
     def __unicode__(self):
         return u"{s.pub_year} {s.pub_name}".format(s=self)
-#         return self.pub_year
-#         return self.pub_name
-#         return self.journal_name
-#         return self.jour_vol_num
-#         return self.page_numbers
-#         return self.doi
     
     class Meta:
         ordering = ('bPrimeID',)
@@ -238,10 +232,7 @@ class Thermo(models.Model):
     dfH=models.FloatField('Enthalpy of Formation',blank=True,help_text='units: J/mol',default=0.0)
     
     def __unicode__(self):
-        return self.preferred_key
-        return self.tref
-        return self.pref
-        return self.dfH
+        return unicode(self.id)
 
 class Polynomial(models.Model):
     """
@@ -260,15 +251,7 @@ class Polynomial(models.Model):
     
     def __unicode__(self):
         return u"{s.id} {s.thermo}".format(s=self)
-        return self.lower_temp_bound
-        return self.upper_temp_bound
-        return self.coefficient_1
-        return self.coefficient_2
-        return self.coefficient_3
-        return self.coefficient_4
-        return self.coefficient_5
-        return self.coefficient_6
-        return self.coefficient_7
+
         
 class Transport(models.Model):
     """
@@ -285,12 +268,6 @@ class Transport(models.Model):
     
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)
-        return self.geometry
-        return self.depth
-        return self.diameter
-        return self.dipole
-        return self.polarizability
-        return self.rot_relax
 
 class Reaction(models.Model):
     """
@@ -351,7 +328,6 @@ class Stoichiometry(models.Model):
     def __unicode__(self):
         return (u"{s.id} species {s.species} "
                 "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
-        return unicode(self.stoichiometry)
     
     class Meta:
         verbose_name_plural = 'Stoichiometries'
@@ -413,8 +389,7 @@ class Comment(models.Model):
     is_reverse = models.BooleanField(default=False, help_text='Is this the rate for the reverse reaction?')
     
     def __unicode__(self):
-        return self.comment
-        return self.is_reverse
+        return unicode(self.comment)
 
 class ThermoComment(models.Model):
     """
@@ -429,7 +404,7 @@ class ThermoComment(models.Model):
     comment = models.CharField(blank=True,max_length=1000)
     
     def __unicode__(self):
-        return self.comment
+        return unicode(self.comment)
 
 
 # class Element(models.Model):
