@@ -312,11 +312,14 @@ class Reaction(models.Model):
      * species (linked via stoichiometry)
      * prime ID
      
+    It will be linked into various kinetic models and sources
+    via the kinetics objects.
+    There will not be a unique source for each reaction.
+     
     This is the equivalent of 'Reactions' in PrIMe, which contain:
     *****in catalog******
     species involved w/stoichiometries
     """
-    source = models.ForeignKey(Source)
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
