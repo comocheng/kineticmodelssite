@@ -147,7 +147,7 @@ class Source(models.Model):
 
     class Meta:
         ordering = ('bPrimeID', )
-        unique_together = ["pub_year", "pub_name"]
+        #unique_together = ["pub_year", "pub_name"]
 
 
 
