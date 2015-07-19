@@ -339,6 +339,7 @@ class Kinetics(models.Model):
     For now let's keep things simple, and only use 3-parameter Arrhenius
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
+    May not have a unique source.
     
     This is the equivalent of the 'rk' data within 'Reactions/data'
     in PrIMe, which contain:
@@ -349,7 +350,6 @@ class Kinetics(models.Model):
     e value
     bibliography
     """
-    source = models.ForeignKey(Source)
     reaction = models.ForeignKey(Reaction)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
