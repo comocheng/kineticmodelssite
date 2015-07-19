@@ -26,15 +26,7 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 #Basically everything has a bibliography tied to it, so I stopped listing it partway through
 #Accordingly, probably biblio should be highest in the hierarchy because it has everything as a subcategory
 
-PrIMe Fields to Include:
-Bibliography
-    *****in catalog******
-    year
-    authors
-    source title
-    journal name
-    journal volume
-    page numbers
+PrIMe Fields for objects we are not yet including:
 # Data Attributes
 #     ******in catalog*******
 #     experiment
@@ -84,15 +76,6 @@ Bibliography
 #         properties
 #             data points (about 2-4 coordinates each)
 #     additional info
-Models
-    ******in catalog*******
-    model name
-    species involved
-        thermo
-        transport
-    reactions involved
-        kinetics
-    additional info
 # Optimization Variables
 #     ******in catalog********
 #     reaction
@@ -104,34 +87,6 @@ Models
 #     equation
 #     upper bound
 #     lower bound
-Reactions
-    *****in catalog******
-    species involved w/stoichiometries
-    ******in data********
-    a value
-    a value uncertainty
-    n value
-    e value
-    bibliography
-Species
-    *****in catalog*******
-    bibliography
-    InChI
-    CAS number
-    formula
-    Fuel ID (N/A for now)
-    names (very optional)
-    *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
-    Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
-    Tref (units K)
-    Pref (units Pa)
-    dfH (units J/mol)
-    Polynomial 1:
-        lower/upper temp bounds (units K)
-        coefficients 1 thru 7
-    Polynomial 2:
-        lower/upper temp bounds (units K)
-        coefficients 1 thru 7
 # Targets
 #     ********in catalog*********** (components frequently vary)
 #     bibliography
@@ -141,11 +96,10 @@ Species
 #         methods/method types
 #     target value and subcategories/values
 #     description
-    
+
     Add this to a lot of the models to make entries on the form have to be unique (avoid duplicates):
         class Meta:
         unique_together = ["title", "state", "name"] <-whatever the fields are that should not have multiple of the same combination
-    
 
 """
 
@@ -154,7 +108,14 @@ class Source(models.Model):
     """
     A source, or bibliography item.
     
-    This is equivalent of a 'bibliography' entry in PrIMe.
+    This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
+    *****in catalog******
+    year
+    authors
+    source title
+    journal name
+    journal volume
+    page numbers
     """
     bPrimeID = models.CharField('Prime ID',
                                 max_length=9,
@@ -197,6 +158,15 @@ class Author(models.Model):
 class Species(models.Model):
     """
     A chemical species.
+    
+    This is the equivalent of 'Species' in PrIMe, which contain:
+    *****in catalog*******
+    bibliography
+    InChI
+    CAS number
+    formula
+    Fuel ID (N/A for now)
+    names (very optional)
     """
     source = models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
@@ -237,6 +207,20 @@ class Thermo(models.Model):
     A thermochemistry polynomial set
     
     What Kinetics is to Reaction, Thermo is to Species.
+    
+    This is the equivalent of the 'th' data within 'Species/data' in PrIMe,
+    which contain:
+    *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
+    Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
+    Tref (units K)
+    Pref (units Pa)
+    dfH (units J/mol)
+    Polynomial 1:
+        lower/upper temp bounds (units K)
+        coefficients 1 thru 7
+    Polynomial 2:
+        lower/upper temp bounds (units K)
+        coefficients 1 thru 7
     """
     source = models.ForeignKey(Source)
     species = models.ForeignKey(Species)
@@ -315,6 +299,10 @@ class Reaction(models.Model):
     Should have:
      * species (linked via stoichiometry)
      * prime ID
+     
+    This is the equivalent of 'Reactions' in PrIMe, which contain:
+    *****in catalog******
+    species involved w/stoichiometries
     """
     source = models.ForeignKey(Source)
     #: The reaction has many species, linked through Stoichiometry table
@@ -336,6 +324,15 @@ class Kinetics(models.Model):
     For now let's keep things simple, and only use 3-parameter Arrhenius
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
+    
+    This is the equivalent of the 'rk' data within 'Reactions/data'
+    in PrIMe, which contain:
+    *****in data********
+    a value
+    a value uncertainty
+    n value
+    e value
+    bibliography
     """
     source = models.ForeignKey(Source)
     reaction = models.ForeignKey(Reaction)
@@ -397,6 +394,16 @@ class KinModel(models.Model):
     And many of these:
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
+     
+    This is the equivalent of 'Models' in PrIMe, which contain:
+    ******in catalog*******
+    model name
+    species involved
+        thermo
+        transport
+    reactions involved
+        kinetics
+    additional info
     """
     source = models.ForeignKey(Source)
     model_name = models.CharField(default='', max_length=200, unique=True)
