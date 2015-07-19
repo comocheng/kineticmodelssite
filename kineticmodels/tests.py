@@ -4,19 +4,22 @@ from django.test import TestCase
 
 """How to add existing species to an existing reaction"""
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-                                 Species, KinModel, Comment
+                                 Species, KinModel, Comment, \
+                                 Source, Author, Authorship
+
 
 
 class ReactionTestCase(TestCase):
     def setUp(self):
         r1 = Reaction.objects.create(rPrimeID='r001')
         r1.kinetics_set.create(A_value=1000, n_value=0, E_value=3000)
-        s1 = Species(sPrimeID='s001', formula='H2O', names='water', thermos=100)
+        s1 = Species(sPrimeID='s001', formula='H2O',)
         s1.save()
-        s2 = Species(sPrimeID='s002', formula='CO2', names='carbon dioxide', thermos=200)
+        s2 = Species(sPrimeID='s002', formula='CO2',)
         s2.save()
-        m1 = KinModel.objects.create()
-
+        b1 = Source.objects.create()
+        m1 = KinModel(source=b1, model_name="the first model")
+        m1.save()
     def test_there_is_a_reaction(self):
         Reaction.objects.all()
         r1 = Reaction.objects.get(id=1)
@@ -30,7 +33,7 @@ class ReactionTestCase(TestCase):
 
     def test_can_get_species(self):
         s2 = Species.objects.get(id=2)
-        self.assertEqual(s2.names, 'carbon dioxide')
+        self.assertEqual(s2.formula, 'CO2')
 
     def test_species_from_reaction(self):
         r1 = Reaction.objects.get(id=1)
@@ -47,9 +50,10 @@ class ReactionTestCase(TestCase):
 
     def test_add_kinetics_to_model(self):
         """How to add an existing kinetics to an existing model"""
-        m1 = KinModel.objects.create()
+        b2 = Source.objects.create()
+        m2 = KinModel.objects.create(source=b2, model_name="another model")
         k1 = Kinetics.objects.get(id=1)
-        c1 = Comment(kinetics=k1, kinmodel=m1, comment="Made up out of nowhere")
+        c1 = Comment(kinetics=k1, kinmodel=m2, comment="Made up out of nowhere")
         c1.save()
         
     def test_get_reactions_containing_species(self):
