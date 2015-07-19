@@ -180,7 +180,6 @@ class Species(models.Model):
     Fuel ID (N/A for now)
     names (very optional)
     """
-    source = models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True, max_length=50)
     inchi = models.CharField('InChI', blank=True, max_length=500)
