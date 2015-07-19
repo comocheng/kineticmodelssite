@@ -108,8 +108,7 @@ class Author(models.Model):
     An author of a Source, i.e. a person who published it.
     """
     name = models.CharField(help_text='format: surname, firstname',
-                            max_length=80,
-                            primary_key=True)
+                            max_length=80)
     def __unicode__(self):
         return unicode(self.name)
 
@@ -128,8 +127,7 @@ class Source(models.Model):
     """
     bPrimeID = models.CharField('Prime ID',
                                 max_length=9,
-                                default='',
-                                primary_key=True)
+                                default='')
     pub_year = models.CharField('Year of Publication',
                                 default='',
                                 max_length=4)
