@@ -1,7 +1,6 @@
 from django.db import models
 
 # Create your models here.
-
 """
 Reaction r1 'A -> B'
   kinetics according to model m1: (rate k1)
@@ -149,25 +148,36 @@ Species
     
 
 """
+
+
 class Source(models.Model):
     """
     A source, or bibliography item.
     
     This is equivalent of a 'bibliography' entry in PrIMe.
     """
-    bPrimeID=models.CharField('Prime ID',max_length=9,default='',primary_key=True)
-    pub_year=models.CharField('Year of Publication',default='',max_length=4)
-    pub_name=models.CharField('Publication Name',max_length=300)
-    journal_name=models.CharField(blank=True,max_length=300)
-    jour_vol_num=models.IntegerField('Journal Volume Number',null=True,blank=True)
-    page_numbers=models.CharField(blank=True,help_text='[page #]-[page #]',max_length=100)
-    doi=models.CharField(blank=True,max_length=80) #not in PrIMe
-    
+    bPrimeID = models.CharField('Prime ID',
+                                max_length=9,
+                                default='',
+                                primary_key=True)
+    pub_year = models.CharField('Year of Publication',
+                                default='',
+                                max_length=4)
+    pub_name = models.CharField('Publication Name', max_length=300)
+    journal_name = models.CharField(blank=True, max_length=300)
+    jour_vol_num = models.IntegerField('Journal Volume Number',
+                                       null=True,
+                                       blank=True)
+    page_numbers = models.CharField(blank=True,
+                                    help_text='[page #]-[page #]',
+                                    max_length=100)
+    doi = models.CharField(blank=True, max_length=80)  #not in PrIMe
+
     def __unicode__(self):
         return u"{s.pub_year} {s.pub_name}".format(s=self)
-    
+
     class Meta:
-        ordering = ('bPrimeID',)
+        ordering = ('bPrimeID', )
         unique_together = ["pub_year", "pub_name"]
 
 
@@ -175,99 +185,128 @@ class Author(models.Model):
     """
     An author of a Source, i.e. a person who published it.
     """
-    source=models.ForeignKey(Source)
-    name=models.CharField(help_text='format: surname, firstname',max_length=80,primary_key=True)
-    
+    source = models.ForeignKey(Source)
+    name = models.CharField(help_text='format: surname, firstname',
+                            max_length=80,
+                            primary_key=True)
+
     def __unicode__(self):
         return self.name
+
 
 class Species(models.Model):
     """
     A chemical species.
     """
-    source=models.ForeignKey(Source)
+    source = models.ForeignKey(Source)
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
-    formula = models.CharField(blank=True,max_length=50)
-    inchi=models.CharField('InChI',blank=True,max_length=500)
-    CAS=models.CharField('CAS Registry Number',blank=True,max_length=400)
-    
+    formula = models.CharField(blank=True, max_length=50)
+    inchi = models.CharField('InChI', blank=True, max_length=500)
+    CAS = models.CharField('CAS Registry Number', blank=True, max_length=400)
+
     def products(self):
         return self.filter(stoichiometry__stoichiometry__gt=0)
+
     def reactants(self):
         return self.filter(stoichiometry__stoichiometry__lt=0)
-
 
     def __unicode__(self):
         return u"{s.id} {s.formula!s}".format(s=self)
 
     class Meta:
-        ordering = ('sPrimeID',)
+        ordering = ('sPrimeID', )
         verbose_name_plural = "Species"
-        
+
+
 class SpecName(models.Model):
     """
     A Species Name
     """
-    species=models.ForeignKey(Species)
-    name=models.CharField(blank=True,max_length=200)
-    
+    species = models.ForeignKey(Species)
+    name = models.CharField(blank=True, max_length=200)
+
     def __unicode__(self):
         return self.name
-        
+
     class Meta:
         verbose_name_plural = "Alternative Species Names"
 
-        
+
 class Thermo(models.Model):
     """
     A thermochemistry polynomial set
     
     What Kinetics is to Reaction, Thermo is to Species.
     """
-    source=models.ForeignKey(Source)
+    source = models.ForeignKey(Source)
     species = models.ForeignKey(Species)
-    preferred_key=models.CharField(blank=True,help_text='i.e. T 11/97, or J 3/65',max_length=20)
-    tref=models.FloatField('Reference State Temperature',blank=True,help_text='units: K',default=0.0)
-    pref=models.FloatField('Reference State Pressure',blank=True,help_text='units: Pa',default=0.0)
-    dfH=models.FloatField('Enthalpy of Formation',blank=True,help_text='units: J/mol',default=0.0)
-    
+    preferred_key = models.CharField(blank=True,
+                                     help_text='i.e. T 11/97, or J 3/65',
+                                     max_length=20)
+    tref = models.FloatField('Reference State Temperature',
+                             blank=True,
+                             help_text='units: K',
+                             default=0.0)
+    pref = models.FloatField('Reference State Pressure',
+                             blank=True,
+                             help_text='units: Pa',
+                             default=0.0)
+    dfH = models.FloatField('Enthalpy of Formation',
+                            blank=True,
+                            help_text='units: J/mol',
+                            default=0.0)
+
     def __unicode__(self):
         return unicode(self.id)
+
 
 class Polynomial(models.Model):
     """
     A single polynomical that makes part of a Thermo object
     """
-    thermo=models.ForeignKey(Thermo)
-    lower_temp_bound=models.FloatField(help_text='units: K',default=0.0)
-    upper_temp_bound=models.FloatField(help_text='units: K',default=0.0)
-    coefficient_1=models.FloatField(default=0.0)
-    coefficient_2=models.FloatField(default=0.0)
-    coefficient_3=models.FloatField(default=0.0)
-    coefficient_4=models.FloatField(default=0.0)
-    coefficient_5=models.FloatField(default=0.0)
-    coefficient_6=models.FloatField(default=0.0)
-    coefficient_7=models.FloatField(default=0.0)
-    
+    thermo = models.ForeignKey(Thermo)
+    lower_temp_bound = models.FloatField(help_text='units: K', default=0.0)
+    upper_temp_bound = models.FloatField(help_text='units: K', default=0.0)
+    coefficient_1 = models.FloatField(default=0.0)
+    coefficient_2 = models.FloatField(default=0.0)
+    coefficient_3 = models.FloatField(default=0.0)
+    coefficient_4 = models.FloatField(default=0.0)
+    coefficient_5 = models.FloatField(default=0.0)
+    coefficient_6 = models.FloatField(default=0.0)
+    coefficient_7 = models.FloatField(default=0.0)
+
     def __unicode__(self):
         return u"{s.id} {s.thermo}".format(s=self)
 
-        
+
 class Transport(models.Model):
     """
     Some Transport data for a species
     """
-    source=models.ForeignKey(Source)
+    source = models.ForeignKey(Source)
     species = models.ForeignKey(Species)
-    geometry=models.FloatField(blank=True,default=0.0)
-    depth=models.FloatField('Potential Well Depth',blank=True,help_text='units: K',default=0.0)
-    diameter=models.FloatField('Collision Diameter',blank=True,help_text='units: Angstroms',default=0.0)
-    dipole_moment=models.FloatField(blank=True,help_text='units: Debye',default=0.0)
-    polarizability=models.FloatField(blank=True,help_text='units: cubic Angstroms',default=0.0)
-    rot_relax=models.FloatField('Rotational Relaxation',blank=True,default=0.0)
-    
+    geometry = models.FloatField(blank=True, default=0.0)
+    depth = models.FloatField('Potential Well Depth',
+                              blank=True,
+                              help_text='units: K',
+                              default=0.0)
+    diameter = models.FloatField('Collision Diameter',
+                                 blank=True,
+                                 help_text='units: Angstroms',
+                                 default=0.0)
+    dipole_moment = models.FloatField(blank=True,
+                                      help_text='units: Debye',
+                                      default=0.0)
+    polarizability = models.FloatField(blank=True,
+                                       help_text='units: cubic Angstroms',
+                                       default=0.0)
+    rot_relax = models.FloatField('Rotational Relaxation',
+                                  blank=True,
+                                  default=0.0)
+
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)
+
 
 class Reaction(models.Model):
     """
@@ -277,17 +316,17 @@ class Reaction(models.Model):
      * species (linked via stoichiometry)
      * prime ID
     """
-    source=models.ForeignKey(Source)
+    source = models.ForeignKey(Source)
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
     rPrimeID = models.CharField('PrIMe ID', max_length=10, unique=True)
-    
+
     def __unicode__(self):
         return u"{s.id}".format(s=self)
 
     class Meta:
-        ordering = ('rPrimeID',)
+        ordering = ('rPrimeID', )
 
 
 class Kinetics(models.Model):
@@ -298,16 +337,17 @@ class Kinetics(models.Model):
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     """
-    source=models.ForeignKey(Source)
+    source = models.ForeignKey(Source)
     reaction = models.ForeignKey(Reaction)
-    A_value=models.FloatField(default=0.0)
-    A_value_uncertainty=models.FloatField(blank=True,null=True)
-    n_value=models.FloatField(default=0.0)
-    E_value=models.FloatField(default=0.0)
-    
+    A_value = models.FloatField(default=0.0)
+    A_value_uncertainty = models.FloatField(blank=True, null=True)
+    n_value = models.FloatField(default=0.0)
+    E_value = models.FloatField(default=0.0)
+
     def __unicode__(self):
-        return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(s=self)
-    
+        return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
+            s=self)
+
     class Meta:
         verbose_name_plural = "Kinetics"
 
@@ -324,14 +364,14 @@ class Stoichiometry(models.Model):
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
     stoichiometry = models.FloatField(default=0.0)
-    
+
     def __unicode__(self):
         return (u"{s.id} species {s.species} "
                 "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
-    
+
     class Meta:
         verbose_name_plural = 'Stoichiometries'
-        unique_together = ["species","reaction","stoichiometry"]
+        unique_together = ["species", "reaction", "stoichiometry"]
 
 # Models
 #     ******in catalog*******
@@ -342,6 +382,7 @@ class Stoichiometry(models.Model):
 #     reactions involved
 #         kinetics
 #     additional info
+
 
 class KinModel(models.Model):
     """
@@ -357,24 +398,25 @@ class KinModel(models.Model):
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
     """
-    source=models.ForeignKey(Source)
-    model_name=models.CharField(default='',max_length=200,unique=True)
+    source = models.ForeignKey(Source)
+    model_name = models.CharField(default='', max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
-    transport=models.ManyToManyField(Transport)
-    additional_info=models.CharField(max_length=1000)
-#     reaction=kinetics something
-#     species=reaction something
-    chemkin_reactions_file=models.FileField(blank=True)
-    chemkin_thermo_file=models.FileField(blank=True)
-    chemkin_transport_file=models.FileField(blank=True)
-    
+    transport = models.ManyToManyField(Transport)
+    additional_info = models.CharField(max_length=1000)
+    #     reaction=kinetics something
+    #     species=reaction something
+    chemkin_reactions_file = models.FileField(blank=True)
+    chemkin_thermo_file = models.FileField(blank=True)
+    chemkin_transport_file = models.FileField(blank=True)
+
     def __unicode__(self):
         return u"{s.id} {s.model_name}".format(s=self)
-    
+
     class Meta:
         verbose_name_plural = "Kinetic Models"
-    
+
+
 class Comment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
@@ -385,11 +427,14 @@ class Comment(models.Model):
     """
     kinetics = models.ForeignKey(Kinetics)
     kinmodel = models.ForeignKey(KinModel)
-    comment = models.CharField(blank=True,max_length=1000)
-    is_reverse = models.BooleanField(default=False, help_text='Is this the rate for the reverse reaction?')
-    
+    comment = models.CharField(blank=True, max_length=1000)
+    is_reverse = models.BooleanField(
+        default=False,
+        help_text='Is this the rate for the reverse reaction?')
+
     def __unicode__(self):
         return unicode(self.comment)
+
 
 class ThermoComment(models.Model):
     """
@@ -401,11 +446,10 @@ class ThermoComment(models.Model):
     """
     thermo = models.ForeignKey(Thermo)
     kinmodel = models.ForeignKey(KinModel)
-    comment = models.CharField(blank=True,max_length=1000)
-    
+    comment = models.CharField(blank=True, max_length=1000)
+
     def __unicode__(self):
         return unicode(self.comment)
-
 
 # class Element(models.Model):
 #     isotope massnumber
