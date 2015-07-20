@@ -135,8 +135,10 @@ def main(top_root):
     """
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
-        if '.git' in dirs:
-            dirs.remove('.git')
+        for skipdir in ['.git', 'data', '_attic']:
+            if skipdir in dirs:
+                print "skipping {}".format(os.path.join(root,skipdir))
+                dirs.remove(skipdir)
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
             print "skipping for now, to test the Species importer..."
