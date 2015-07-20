@@ -7,7 +7,7 @@ the Django database.
 """
 
 import os
-from xml.etree import cElementTree as ElementTree  # cElementTree is C implementation of xml.etree.ElementTree
+from xml.etree import ElementTree  # cElementTree is C implementation of xml.etree.ElementTree, but works differently!
 from xml.parsers.expat import ExpatError  # XML formatting errors
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kineticssite.settings")
@@ -25,6 +25,8 @@ def main(top_root):
     """
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
+        if '.git' in dirs:
+            dirs.remove('.git')
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
             import_bibliography(root, files)
@@ -66,7 +68,7 @@ def import_bibliography_file(filepath):
     dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
 
     # There seems to always be a year in every prime record, so assume it exists:
-    dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
+    dj_item.pub_year = bibitem.findtext('prime:year', namespaces=ns, default='')
 
     "ToDo: should now extract the other data from the bibitem tree, and add to the dj_item, like examples above"
     dj_item.save()
@@ -75,7 +77,9 @@ def import_bibliography_file(filepath):
         number = index + 1
         print "author {} is {}".format(number, author.text)
         dj_author, created = Author.objects.get_or_create(name=author.text)
-        Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
+        authorship, created = Authorship.objects.get_or_create(source=dj_item, order=number)
+        authorship.author = dj_author
+        authorship.save()
 
 
 if __name__ == "__main__":
