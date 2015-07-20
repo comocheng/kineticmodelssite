@@ -126,9 +126,8 @@ class SpeciesImporter(Importer):
             else:
                 # it's just a random name
                 pass
-        
-        
-        import ipdb; ipdb.set_trace()
+        dj_item.save()
+        #import ipdb; ipdb.set_trace()
 
 def main(top_root):
     """
