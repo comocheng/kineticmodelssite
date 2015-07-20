@@ -112,7 +112,7 @@ class SpeciesImporter(Importer):
     def import_elementtree_root(self, species):
         ns = self.ns
         primeID = species.attrib.get("primeID")
-        dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)
+        dj_item, created = Source.objects.get_or_create(sPrimeID=primeID)
         print list(species)
         identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
         for name in identifier.findall('prime:name', namespaces=ns):
