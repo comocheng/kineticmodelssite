@@ -86,13 +86,15 @@ class BibliographyImporter(Importer):
         dj_item.source_title = bibitem.findtext('prime:title', namespaces=ns, default='')
       
         # Some might give a volume number:
-        dj_item.jour_vol_num = bibitem.findtext('prime:volume', namespaces=ns, default='')
+        volume = bibitem.find('prime:volume', namespaces=ns)
+        if volume is not None:
+            dj_item.jour_vol_num = int(volume.text)
     
         # Some might give page numbers:
         dj_item.page_numbers = bibitem.findtext('prime:pages', namespaces=ns, default='')
 
         # No sources in PrIMe will come with Digital Object Identifiers, but we should include this for future importing:
-        dj_item.doi = bibitem.findtext('prime:', namespaces=ns, default='')
+        dj_item.doi = ''
     
         dj_item.save()
 
