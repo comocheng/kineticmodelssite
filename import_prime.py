@@ -163,8 +163,8 @@ def main(top_root):
                 dirs.remove(skipdir)
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
-            print "skipping for now, to test the Species importer..."
-            continue
+            #print "skipping for now, to test the Species importer..."
+            #continue
             BibliographyImporter(root).import_all()
         elif root.endswith('depository/species/catalog'):
             print "We have found the depository/species/catalog which we can import!"
