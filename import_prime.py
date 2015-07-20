@@ -117,11 +117,11 @@ class SpeciesImporter(Importer):
         identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
         for name in identifier.findall('prime:name', namespaces=ns):
             if 'type' in name.attrib:
-                if name.attrib['type']='formula':
+                if name.attrib['type'] == 'formula':
                     dj_item.formula = name.text
-                elif name.attrib['type']='CASRegistryNumber':
+                elif name.attrib['type'] == 'CASRegistryNumber':
                     dj_item.CAS = name.text
-                elif name.attrib['type']='InChI':
+                elif name.attrib['type'] == 'InChI':
                     dj_item.inchi = name.text
             else:
                 # it's just a random name
