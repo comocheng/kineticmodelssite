@@ -89,6 +89,16 @@ class BibliographyImporter(Importer):
             dj_author, created = Author.objects.get_or_create(name=author.text)
             Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
 
+class SpeciesImporter(Importer):
+    """
+    To import chemical species
+    """
+    def import_elementtree_root(self, species):
+        ns = self.ns
+        primeID = species.attrib.get("primeID")
+        dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)
+        print list(species)
+        import ipdb; ipdb.set_trace()
 
 def main(top_root):
     """
@@ -98,7 +108,12 @@ def main(top_root):
     for root, dirs, files in os.walk(top_root):
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
+            #print "skipping for now, to test the Species importer..."
+            #continue
             BibliographyImporter(root).import_all()
+        elif root.endswith('depository/species/catalog'):
+            print "We have found the depository/species/catalog which we can import!"
+            SpeciesImporter(root).import_all()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
