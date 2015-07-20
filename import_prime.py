@@ -63,17 +63,15 @@ def import_bibliography_file(filepath):
     dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
 
     # There may or may not be a journal, so have to cope with it being None
-    journal = bibitem.find('prime:journal', ns)
-    if journal is not None:
-        dj_item.journal_name = journal.text
+    dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
 
     # There seems to always be a year in every prime record, so assume it exists:
-    dj_item.pub_year = bibitem.find('prime:year', ns).text
+    dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
 
     "ToDo: should now extract the other data from the bibitem tree, and add to the dj_item, like examples above"
     dj_item.save()
 
-    for index, author in enumerate(bibitem.findall('prime:author', ns)):
+    for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
         number = index + 1
         print "author {} is {}".format(number, author.text)
         dj_author, created = Author.objects.get_or_create(name=author.text)
