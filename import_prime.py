@@ -129,6 +129,17 @@ class SpeciesImporter(Importer):
         dj_item.save()
         #import ipdb; ipdb.set_trace()
 
+class ReactionsImporter(Importer):
+    """
+    To import chemical reactions
+    """
+    def import_elementtree_root(self, reaction):
+        ns = self.ns
+        primeID = reaction.attrib.get("primeID")
+        dj_item, created = Reaction.objects.get_or_create(rPrimeID=primeID)
+        print list(reaction)
+        #import ipdb; ipdb.set_trace()
+
 def main(top_root):
     """
     The main function. Give it the path to the top of the database mirror
@@ -147,6 +158,9 @@ def main(top_root):
         elif root.endswith('depository/species/catalog'):
             print "We have found the depository/species/catalog which we can import!"
             SpeciesImporter(root).import_all()
+        elif root.endswith('depository/reactions/catalog'):
+            print "We have found the depository/reactions/catalog which we can import!"
+            ReactionsImporter(root).import_all()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
