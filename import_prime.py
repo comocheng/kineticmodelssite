@@ -162,15 +162,15 @@ def main(top_root):
                 print "skipping {}".format(os.path.join(root,skipdir))
                 dirs.remove(skipdir)
         if root.endswith('depository/bibliography/catalog'):
-            print "We have found the depository/bibliography/catalog which we can import!"
+            print "We have found the Bibliography which we can import!"
             #print "skipping for now, to test the Species importer..."
             #continue
             BibliographyImporter(root).import_all()
         elif root.endswith('depository/species/catalog'):
-            print "We have found the depository/species/catalog which we can import!"
+            print "We have found the Species which we can import!"
             SpeciesImporter(root).import_all()
         elif root.endswith('depository/reactions/catalog'):
-            print "We have found the depository/reactions/catalog which we can import!"
+            print "We have found the Reactions which we can import!"
             ReactionsImporter(root).import_all()
         else:
             # so far nothing else is implemented
