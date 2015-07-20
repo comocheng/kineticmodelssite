@@ -35,7 +35,7 @@ class BibliographyTestCase(TestCase):
         self.assertTrue(created)
         paper = Source(journal_name="J Phys Chem",
                        pub_year='2015',
-                       pub_name='Awesome',
+                       source_title='Awesome',
                        )
         paper.save()
         for index, author in enumerate([author1, author2]):
