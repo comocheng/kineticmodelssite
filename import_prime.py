@@ -64,11 +64,23 @@ def import_bibliography_file(filepath):
     primeID = bibitem.attrib.get("primeID")
     dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
 
+    # Every source should have a title:
+    dj_item.source_title = bibitem.findtext('prime:title', namespaces=ns, default='')
+
     # There may or may not be a journal, so have to cope with it being None
     dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
 
     # There seems to always be a year in every prime record, so assume it exists:
     dj_item.pub_year = bibitem.findtext('prime:year', namespaces=ns, default='')
+    
+    # Some might give a volume number:
+    dj_item.jour_vol_num = bibitem.findtext('prime:volume', namespaces=ns, default='')
+    
+    # Some might give page numbers:
+    dj_item.page_numbers = bibitem.findtext('prime:pages', namespaces=ns, default='')
+    
+    # No sources in PrIMe will come with Digital Object Identifiers, but we should include this for future importing:
+    dj_item.doi = bibitem.findtext('prime:', namespaces=ns, default='')
 
     "ToDo: should now extract the other data from the bibitem tree, and add to the dj_item, like examples above"
     dj_item.save()
