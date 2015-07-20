@@ -114,6 +114,17 @@ class SpeciesImporter(Importer):
         primeID = species.attrib.get("primeID")
         dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)
         print list(species)
+        identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
+        for name in identifier.findall('prime:name', namespaces=ns):
+            if 'type' in name.attrib:
+                if name.attrib['type']='formula':
+                    dj_item.formula = name.text
+                elif ...
+            else:
+                # it's just a random name
+                pass
+        
+        
         import ipdb; ipdb.set_trace()
 
 def main(top_root):
@@ -126,8 +137,8 @@ def main(top_root):
             dirs.remove('.git')
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
-            #print "skipping for now, to test the Species importer..."
-            #continue
+            print "skipping for now, to test the Species importer..."
+            continue
             BibliographyImporter(root).import_all()
         elif root.endswith('depository/species/catalog'):
             print "We have found the depository/species/catalog which we can import!"
