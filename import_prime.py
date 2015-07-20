@@ -119,7 +119,10 @@ class SpeciesImporter(Importer):
             if 'type' in name.attrib:
                 if name.attrib['type']='formula':
                     dj_item.formula = name.text
-                elif ...
+                elif name.attrib['type']='CASRegistryNumber':
+                    dj_item.CAS = name.text
+                elif name.attrib['type']='InChI':
+                    dj_item.inchi = name.text
             else:
                 # it's just a random name
                 pass
