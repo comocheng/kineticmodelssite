@@ -143,7 +143,7 @@ class Source(models.Model):
     doi = models.CharField(blank=True, max_length=80)  #not in PrIMe
 
     def __unicode__(self):
-        return u"{s.pub_year} {s.pub_name}".format(s=self)
+        return u"{s.pub_year} {s.source_title}".format(s=self)
 
     class Meta:
         ordering = ('bPrimeID', )
