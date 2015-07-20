@@ -1,13 +1,63 @@
 from django.test import TestCase
 
-# Create your tests here.
-
-"""How to add existing species to an existing reaction"""
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Species, KinModel, Comment, \
                                  Source, Author, Authorship
 
 
+class BibliographyTestCase(TestCase):
+    """Testing the bibliograpmy (source) items"""
+
+    def setUp(self):
+        b1 = Source()
+        b1.bPrimeID = 'b001'
+        b1.save()
+        a1 = Author()
+        a1.name = 'West, Richard'
+        a1.save()
+        Authorship.objects.create(source=b1, author=a1, order=1)
+
+    def test_there_is_a_source(self):
+        "Is there a source and can we select it?"
+        b1 = Source.objects.get(id=1)
+        self.assertEqual(b1.bPrimeID, 'b001')
+
+    def test_make_new_source_same_author(self):
+        """
+        Check we can make a new source with two authors, one existing
+        
+        This shows how to make a new source, and add authors.
+        Also, how to find authors of a source, and sources by an author.
+        """
+        author1, created = Author.objects.get_or_create(name='West, Richard')
+        self.assertFalse(created)
+        author2, created = Author.objects.get_or_create(name='Einstein, Albert')
+        self.assertTrue(created)
+        paper = Source(journal_name="J Phys Chem",
+                       pub_year='2015',
+                       pub_name='Awesome',
+                       )
+        paper.save()
+        for index, author in enumerate([author1, author2]):
+            Authorship.objects.create(source=paper, author=author, order=index + 1)
+        self.assertEqual(repr(paper.authors.all().order_by('authorship__order')),
+                        repr([author1, author2])
+                        )
+        self.assertEqual(repr(author2.source_set.all()),
+                         repr([paper])
+                         )
+
+    def test_get_by_prime_id(self):
+        "Can we select an item by its PrimeID?"
+        b1 = Source.objects.get(bPrimeID='b001')
+        self.assertEqual(b1.id, 1)
+
+    def test_get_or_create_by_prime_id(self):
+        "Can we get an object by prime id if it wasn't there?"
+        b1, created = Source.objects.get_or_create(bPrimeID='b002')
+        self.assertTrue(created)
+        self.assertGreater(b1.id, 1)
+        self.assertEqual(b1.bPrimeID, 'b002')
 
 class ReactionTestCase(TestCase):
     def setUp(self):
