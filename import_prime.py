@@ -136,8 +136,19 @@ class ReactionsImporter(Importer):
     def import_elementtree_root(self, reaction):
         ns = self.ns
         primeID = reaction.attrib.get("primeID")
-        dj_item, created = Reaction.objects.get_or_create(rPrimeID=primeID)
-        print list(reaction)
+        dj_reaction, created = Reaction.objects.get_or_create(rPrimeID=primeID)
+        reactants = reaction.find('prime:reactants', namespaces=ns).findall('prime:speciesLink', namespaces=ns)
+        stoichiometry_already_in_database = Stoichiometry.objects.all().filter(reaction=dj_reaction).exists()
+
+        for reactant in reactants:
+            species_primeID = reactant.attrib['primeID']
+            dj_species, created = Species.objects.get_or_create(sPrimeID=species_primeID)
+            stoichiometry = float(reactant.text)
+            print "Stoichiometry of {} is {}".format(species_primeID, stoichiometry)
+            dj_stoich, created = Stoichiometry.objects.get_or_create(species=dj_species, reaction=dj_reaction, stoichiometry=stoichiometry)
+            if stoichiometry_already_in_database:
+                assert not created, "Stoichiometry change detected! probably a mistake?"
+
         #import ipdb; ipdb.set_trace()
 
 def main(top_root):
