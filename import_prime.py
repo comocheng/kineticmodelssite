@@ -7,7 +7,7 @@ the Django database.
 """
 
 import os
-from xml.etree import cElementTree as ElementTree  # cElementTree is C implementation of xml.etree.ElementTree
+from xml.etree import ElementTree  # cElementTree is C implementation of xml.etree.ElementTree, but behaves differently!
 from xml.parsers.expat import ExpatError  # XML formatting errors
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kineticssite.settings")
@@ -18,6 +18,77 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Species, KinModel, Comment, \
                                  Source, Author, Authorship
 
+class Importer():
+    """
+    A default importer, imports nothing in particular. 
+    
+    Make subclasses of this to import specific things.
+    This just contains generic parts common to all.
+    """
+    def __init__(self, directory_path):
+        self.directory_path = directory_path
+        self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
+
+    def import_all(self):
+        """
+        Import everything.
+        """
+        print "Importing directory {}".format(self.directory_path)
+        for root, dirs, files in os.walk(self.directory_path):
+            if root == self.directory_path:
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    self.import_file(full_path)
+
+    def import_file(self, file_path):
+        """
+        Import a single file
+        """
+        print "Parsing file {}".format(file_path)
+        try:
+            tree = ElementTree.parse(file_path)
+        except ExpatError as e:
+            print "[XML] Error (line %d): %d" % (e.lineno, e.code)
+            print "[XML] Offset: %d" % (e.offset)
+            raise
+        except IOError as e:
+            print "[XML] I/O Error %d: %s" % (e.errno, e.strerror)
+            raise
+        root = tree.getroot()
+        self.import_elementtree_root(root)
+
+    def import_elementtree_root(self, root):
+        """
+        Import from an ElementTree.Element which is the root of the document.
+        
+        This method should be overridden in subclasses of this Importer class.
+        """
+        raise NotImplementedError("Should define this in a subclass")
+
+class BibliographyImporter(Importer):
+    """
+    To import Bibliography items
+    """
+    def import_elementtree_root(self, bibitem):
+        ns = self.ns
+        primeID = bibitem.attrib.get("primeID")
+        dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
+
+        # There may or may not be a journal, so have to cope with it being None
+        dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
+
+        # There seems to always be a year in every prime record, so assume it exists:
+        dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
+
+        "ToDo: should now extract the other data from the bibitem tree, and add to the dj_item, like examples above"
+        dj_item.save()
+
+        for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
+            number = index + 1
+            print "author {} is {}".format(number, author.text)
+            dj_author, created = Author.objects.get_or_create(name=author.text)
+            Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
+
 
 def main(top_root):
     """
@@ -27,55 +98,10 @@ def main(top_root):
     for root, dirs, files in os.walk(top_root):
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the depository/bibliography/catalog which we can import!"
-            import_bibliography(root, files)
+            BibliographyImporter(root).import_all()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
-
-def import_bibliography(root, files):
-    "Import the list of bibliography files 'files' in the folder 'root'."
-    for file in files:
-        filepath = os.path.join(root, file)
-        import_bibliography_file(filepath)
-
-def import_bibliography_file(filepath):
-    """
-    Import the bibliography file from the given filepath, into Django database
-    
-    Parsing the XML file, using Element Tree method
-    see https://docs.python.org/2/library/xml.etree.elementtree.html for details
-    """
-    print "Parsing file {}".format(filepath)
-
-    try:
-        tree = ElementTree.parse(filepath)
-    except ExpatError as e:
-        print "[XML] Error (line %d): %d" % (e.lineno, e.code)
-        print "[XML] Offset: %d" % (e.offset)
-        raise
-    except IOError as e:
-        print "[XML] I/O Error %d: %s" % (e.errno, e.strerror)
-        raise
-
-    ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
-    bibitem = tree.getroot()
-    primeID = bibitem.attrib.get("primeID")
-    dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
-
-    # There may or may not be a journal, so have to cope with it being None
-    dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
-
-    # There seems to always be a year in every prime record, so assume it exists:
-    dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
-
-    "ToDo: should now extract the other data from the bibitem tree, and add to the dj_item, like examples above"
-    dj_item.save()
-
-    for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
-        number = index + 1
-        print "author {} is {}".format(number, author.text)
-        dj_author, created = Author.objects.get_or_create(name=author.text)
-        Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
 
 
 if __name__ == "__main__":
