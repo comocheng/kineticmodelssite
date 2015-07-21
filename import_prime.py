@@ -15,7 +15,7 @@ import django
 django.setup()
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-                                 Species, KinModel, Comment, \
+                                 Species, KinModel, Comment, SpecName, \
                                  Source, Author, Authorship
 
 class Importer():
@@ -128,7 +128,7 @@ class SpeciesImporter(Importer):
                     dj_item.inchi = name.text
             else:
                 # it's just a random name
-                pass
+                SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
 
