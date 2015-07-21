@@ -29,16 +29,16 @@ class Importer():
         self.directory_path = directory_path
         self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
 
-    def import_all(self):
+    def import_catalog(self):
         """
-        Import everything.
+        Import all xml files in the catalog directory.
         """
-        print "Importing directory {}".format(self.directory_path)
-        for root, dirs, files in os.walk(self.directory_path):
-            if root == self.directory_path:
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    self.import_file(full_path)
+        catalog_path = os.path.join(self.directory_path, 'catalog')
+        assert os.path.isdir(catalog_path), "{} isn't a directory!".format(catalog_path)
+        print "Importing xml files from directory {}".format(catalog_path)
+        for file in sorted([f for f in os.listdir(catalog_path) if f.endswith('.xml')]):
+            full_path = os.path.join(catalog_path, file)
+            self.import_file(full_path)
 
     def import_file(self, file_path):
         """
@@ -188,24 +188,25 @@ def main(top_root):
     """
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
-        for skipdir in ['.git', 'data', '_attic']:
-            if skipdir in dirs:
-                print "skipping {}".format(os.path.join(root,skipdir))
-                dirs.remove(skipdir)
-        if root.endswith('depository/bibliography/catalog'):
+        if root.endswith('depository/bibliography'):
             print "We have found the Bibliography which we can import!"
             #print "skipping for now, to test the next importer..."; continue
-            BibliographyImporter(root).import_all()
-        elif root.endswith('depository/species/catalog'):
+            BibliographyImporter(root).import_catalog()
+        elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
-            SpeciesImporter(root).import_all()
-        elif root.endswith('depository/reactions/catalog'):
+            SpeciesImporter(root).import_catalog()
+        elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
-            ReactionsImporter(root).import_all()
+            ReactionsImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
+        # Remove these before iterating further into them
+        for skipdir in ['.git', 'data', '_attic', 'catalog']:
+            if skipdir in dirs:
+                print "skipping {}".format(os.path.join(root, skipdir))
+                dirs.remove(skipdir)
 
 if __name__ == "__main__":
     import argparse
