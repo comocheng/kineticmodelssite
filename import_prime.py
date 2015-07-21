@@ -170,14 +170,14 @@ def main(top_root):
                 dirs.remove(skipdir)
         if root.endswith('depository/bibliography/catalog'):
             print "We have found the Bibliography which we can import!"
-            #print "skipping for now, to test the Species importer..."
-            #continue
+            print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_all()
         elif root.endswith('depository/species/catalog'):
             print "We have found the Species which we can import!"
             SpeciesImporter(root).import_all()
         elif root.endswith('depository/reactions/catalog'):
             print "We have found the Reactions which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             ReactionsImporter(root).import_all()
         else:
             # so far nothing else is implemented
