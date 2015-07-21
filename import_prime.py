@@ -170,44 +170,52 @@ class ThermoImporter(Importer):
 
     def import_elementtree_root(self, thermo):
         ns = self.ns
-        primeID = thermo.attrib.get("primeID")
-        dj_item, created = Thermo.objects.get_or_create(thpPrimeID=primeID)
-        #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
-        dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
-        # find species primeID
+        # Get the Prime ID for the thermo polynomial
+        thpPrimeID = thermo.attrib.get("primeID")
+        # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = thermo.find('prime:speciesLink', namespaces=ns)
-        sPrimeID=specieslink.attrib['primeID']
+        sPrimeID = specieslink.attrib['primeID']
         species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
-        dj_item.species = species
-        #find dfH:
+        # Now get (or create) the django Thermo object for that species and polynomial
+        dj_thermo, created = Thermo.objects.get_or_create(thpPrimeID=thpPrimeID, species=species)
+
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliogrpahy_link = thermo.find('prime:bibliographyLink', namespaces=ns)
+        bPrimeID = bibliogrpahy_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_thermo.source = source
+
+        # Now give the Thermo object its other properties
+        dj_thermo.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
+
         dfH = thermo.find('prime:dfH', namespaces=ns)
-        if dfH is not None:
-            dj_item.dfH = dfH.text
+        if dfH is not None and dfH.text.strip():
+            dj_thermo.dfH = float(dfH.text)
         reference=thermo.find('prime:referenceState', namespaces=ns)
         Tref=reference.find('prime:Tref',namespaces=ns)
         if Tref is not None:
-            dj_item.tref=Tref.text
+            dj_thermo.tref = float(Tref.text)
         Pref=reference.find('prime:Pref',namespaces=ns)
         if Pref is not None:
-            dj_item.pref=Pref.text
+            dj_thermo.pref = float(Pref.text)
         for i, polynomial in enumerate(thermo.findall('prime:polynomial', namespaces=ns)):
             polynomial_number = i + 1
             for j, coefficient in enumerate(polynomial.findall('prime:coefficient', namespaces=ns)):
                 coefficient_number = j + 1
                 assert coefficient_number == int(coefficient.attrib['id'])
                 value = float(coefficient.text)
-                #dj_item.coefficient_1_1 = value
-                setattr(dj_item,'coefficient_{0}_{1}'.format(
-                    coefficient_number, polynomial_number), value)
-            range = polynomial.find('prime:validRange', namespaces=ns)
-            for bound in range.findall('prime:bound',namespaces=ns):
+                #Equivalent of: dj_item.coefficient_1_1 = value
+                setattr(dj_thermo,
+                        'coefficient_{0}_{1}'.format(coefficient_number, polynomial_number),
+                        value)
+            temperature_range = polynomial.find('prime:validRange', namespaces=ns)
+            for bound in temperature_range.findall('prime:bound', namespaces=ns):
                 if bound.attrib['kind'] == 'lower':
-                    setattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
+                    setattr(dj_thermo, 'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
                 if bound.attrib['kind'] == 'upper':
-                    setattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
-        assert dj_item.upper_temp_bound_1==dj_item.lower_temp_bound_2 # temperatures match in the middle
-        dj_item.save()
-            
+                    setattr(dj_thermo, 'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
+        assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
+        dj_thermo.save()
         
     
 class ReactionsImporter(Importer):
