@@ -42,7 +42,11 @@ class Importer():
         data_path = os.path.join(self.directory_path, 'data')
         assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
         print "Importing from directories within {}".format(data_path)
-        for directory in sorted([d for d in os.listdir(data_path) if os.path.isdir(d)]):
+        directories = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
+        for skipdir in ['_attic']:
+            if skipdir in directories:
+                directories.remove(skipdir)
+        for directory in sorted(directories):
             directory_path = os.path.join(data_path, directory)
             for file in sorted([f for f in os.listdir(directory_path) if (
                                     f.endswith('.xml') and 
