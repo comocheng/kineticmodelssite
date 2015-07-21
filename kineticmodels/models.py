@@ -233,7 +233,7 @@ class Thermo(models.Model):
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
     """
-    source = models.ForeignKey(Source)
+    source = models.ForeignKey(Source, null=True)
     species = models.ForeignKey(Species)
     thpPrimeID = models.CharField(blank=True, max_length=11)
     preferred_key = models.CharField(blank=True,
