@@ -98,12 +98,15 @@ class BibliographyImporter(Importer):
     
         dj_item.save()
 
+        authorship_already_in_database = Authorship.objects.all().filter(source=dj_item).exists()
         for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
             number = index + 1
             print u"author {} is {}".format(number, author.text)
             dj_author, created = Author.objects.get_or_create(name=author.text)
             Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
             "ToDo: make this check for changes and delete old Authorship entries if needed"
+            if authorship_already_in_database:
+                assert not created, "Authorship change detected, and probably not handled correctly"
 
 class SpeciesImporter(Importer):
     """
