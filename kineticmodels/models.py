@@ -250,29 +250,29 @@ class Thermo(models.Model):
                             blank=True,
                             help_text='units: J/mol',
                             default=0.0)
+    #polynomial 1
+    lower_temp_bound_1 = models.FloatField('Polynomial 1 Lower Temp Bound', help_text='units: K', default=0.0)
+    upper_temp_bound_1 = models.FloatField('Polynomial 1 Upper Temp Bound', help_text='units: K', default=0.0)
+    coefficient_1_1 = models.FloatField('Polynomial 1 Coefficient 1', default=0.0)
+    coefficient_2_1 = models.FloatField('Polynomial 1 Coefficient 2', default=0.0)
+    coefficient_3_1 = models.FloatField('Polynomial 1 Coefficient 3', default=0.0)
+    coefficient_4_1 = models.FloatField('Polynomial 1 Coefficient 4', default=0.0)
+    coefficient_5_1 = models.FloatField('Polynomial 1 Coefficient 5', default=0.0)
+    coefficient_6_1 = models.FloatField('Polynomial 1 Coefficient 6', default=0.0)
+    coefficient_7_1 = models.FloatField('Polynomial 1 Coefficient 7', default=0.0)
+    #polynomial 2_1
+    lower_temp_bound_2 = models.FloatField('Polynomial 2 Lower Temp Bound', help_text='units: K', default=0.0)
+    upper_temp_bound_2 = models.FloatField('Polynomial 2 Upper Temp Bound', help_text='units: K', default=0.0)
+    coefficient_1_2 = models.FloatField('Polynomial 2 Coefficient 1', default=0.0)
+    coefficient_2_2 = models.FloatField('Polynomial 2 Coefficient 2', default=0.0)
+    coefficient_3_2 = models.FloatField('Polynomial 2 Coefficient 3', default=0.0)
+    coefficient_4_2 = models.FloatField('Polynomial 2 Coefficient 4', default=0.0)
+    coefficient_5_2 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
+    coefficient_6_2 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
+    coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
 
     def __unicode__(self):
         return unicode(self.id)
-
-
-class Polynomial(models.Model):
-    """
-    A single polynomical that makes part of a Thermo object
-    """
-    thermo = models.ForeignKey(Thermo)
-    lower_temp_bound = models.FloatField(help_text='units: K', default=0.0)
-    upper_temp_bound = models.FloatField(help_text='units: K', default=0.0)
-    coefficient_1 = models.FloatField(default=0.0)
-    coefficient_2 = models.FloatField(default=0.0)
-    coefficient_3 = models.FloatField(default=0.0)
-    coefficient_4 = models.FloatField(default=0.0)
-    coefficient_5 = models.FloatField(default=0.0)
-    coefficient_6 = models.FloatField(default=0.0)
-    coefficient_7 = models.FloatField(default=0.0)
-
-    def __unicode__(self):
-        return u"{s.id} {s.thermo}".format(s=self)
-
 
 class Transport(models.Model):
     """
