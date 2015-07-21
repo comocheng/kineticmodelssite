@@ -139,6 +139,7 @@ class ThermoImporter(Importer):
     def import_elementtree_root(self, thermo):
         ns = self.ns
         print list(species)
+        dj_item = Thermo()
         #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
         dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
         #find dfH:
@@ -152,6 +153,23 @@ class ThermoImporter(Importer):
         Pref=reference.find('prime:Pref',namespaces=ns)
         if Pref is not None:
             dj_item.pref=Pref.text
+        for i, polynomial in enumerate(identifier.findall('prime:polynomial', namespaces=ns)):
+            polynomial_number = i + 1
+            for j, coefficient in enumerate(polynomial.findall('prime:coefficient', namespaces=ns)):
+                coefficient_number = j + 1
+                assert coefficient_number == int(coefficient.attrib['id'])
+                value = float(coefficient.text)
+                #dj_item.coefficient_1_1 = value
+                getattr(dj_item,'coefficient_{0}_{1}'.format(
+                    coefficient_number, polynomial_number)
+                    ) = value
+            
+            
+            getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number)) = value
+        assert dj_item. # temperatures match in the middle
+        dj_item.save()
+            
+        
     
 class ReactionsImporter(Importer):
     """
