@@ -16,6 +16,7 @@ django.setup()
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Species, KinModel, Comment, SpecName, \
+                                 Thermo, ThermoComment, \
                                  Source, Author, Authorship
 
 class Importer():
@@ -25,20 +26,46 @@ class Importer():
     Make subclasses of this to import specific things.
     This just contains generic parts common to all.
     """
+    
+    "Override this in subclasses:"
+    prime_ID_prefix = 'none' # eg. 'thp' for thermo polynomials
+    
     def __init__(self, directory_path):
         self.directory_path = directory_path
         self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
 
-    def import_all(self):
+    def import_data(self):
         """
-        Import everything.
+        Import everything beginning with the prime_ID_prefix in subdirectories
+        of the data directory
         """
-        print "Importing directory {}".format(self.directory_path)
-        for root, dirs, files in os.walk(self.directory_path):
-            if root == self.directory_path:
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    self.import_file(full_path)
+        data_path = os.path.join(self.directory_path, 'data')
+        assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
+        print "Importing from directories within {}".format(data_path)
+        directories = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
+        for skipdir in ['_attic']:
+            if skipdir in directories:
+                directories.remove(skipdir)
+        for directory in sorted(directories):
+            directory_path = os.path.join(data_path, directory)
+            for file in sorted([f for f in os.listdir(directory_path) if (
+                                    f.endswith('.xml') and 
+                                    f.startswith(self.__class__.prime_ID_prefix)
+                                )]):
+                full_path = os.path.join(directory_path, file)
+                self.import_file(full_path)
+
+
+    def import_catalog(self):
+        """
+        Import all xml files in the catalog directory.
+        """
+        catalog_path = os.path.join(self.directory_path, 'catalog')
+        assert os.path.isdir(catalog_path), "{} isn't a directory!".format(catalog_path)
+        print "Importing xml files from directory {}".format(catalog_path)
+        for file in sorted([f for f in os.listdir(catalog_path) if f.endswith('.xml')]):
+            full_path = os.path.join(catalog_path, file)
+            self.import_file(full_path)
 
     def import_file(self, file_path):
         """
@@ -128,6 +155,9 @@ class SpeciesImporter(Importer):
                     dj_item.inchi = name.text
             else:
                 # it's just a random name
+                if not name.text:
+                    print "Warning! Blank species name in species {}".format(primeID)
+                    continue
                 SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
@@ -136,9 +166,10 @@ class ThermoImporter(Importer):
     """
     To import the thermodynamic data of a species (can be multiple for each species)
     """
+    prime_ID_prefix = 'thp'
+
     def import_elementtree_root(self, thermo):
         ns = self.ns
-        print list(species)
         dj_item = Thermo()
         #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
         dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
@@ -153,22 +184,21 @@ class ThermoImporter(Importer):
         Pref=reference.find('prime:Pref',namespaces=ns)
         if Pref is not None:
             dj_item.pref=Pref.text
-        for i, polynomial in enumerate(identifier.findall('prime:polynomial', namespaces=ns)):
+        for i, polynomial in enumerate(thermo.findall('prime:polynomial', namespaces=ns)):
             polynomial_number = i + 1
             for j, coefficient in enumerate(polynomial.findall('prime:coefficient', namespaces=ns)):
                 coefficient_number = j + 1
                 assert coefficient_number == int(coefficient.attrib['id'])
                 value = float(coefficient.text)
                 #dj_item.coefficient_1_1 = value
-                getattr(dj_item,'coefficient_{0}_{1}'.format(
-                    coefficient_number, polynomial_number)
-                    ) = value
+                setattr(dj_item,'coefficient_{0}_{1}'.format(
+                    coefficient_number, polynomial_number), value)
             range = polynomial.find('prime:validRange', namespaces=ns)
             for bound in range.findall('prime:bound',namespaces=ns):
                 if bound.attrib['kind'] == 'lower':
-                    getattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number))= float(bound.text)
+                    setattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
                 if bound.attrib['kind'] == 'upper':
-                    getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number))= float(bound.text)
+                    setattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
 #             t1=float(reference.find('prime:Tref',namespaces=ns).text)
 #             getattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number)) = t1
 #             t2=float(reference.find('prime:Tref',namespaces=ns).text)
@@ -210,24 +240,26 @@ def main(top_root):
     """
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
-        for skipdir in ['.git', 'data', '_attic']:
-            if skipdir in dirs:
-                print "skipping {}".format(os.path.join(root,skipdir))
-                dirs.remove(skipdir)
-        if root.endswith('depository/bibliography/catalog'):
+        if root.endswith('depository/bibliography'):
             print "We have found the Bibliography which we can import!"
             #print "skipping for now, to test the next importer..."; continue
-            BibliographyImporter(root).import_all()
-        elif root.endswith('depository/species/catalog'):
+            BibliographyImporter(root).import_catalog()
+        elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
-            SpeciesImporter(root).import_all()
-        elif root.endswith('depository/reactions/catalog'):
+            ThermoImporter(root).import_data()
+            SpeciesImporter(root).import_catalog()
+        elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
-            ReactionsImporter(root).import_all()
+            ReactionsImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
+        # Remove these before iterating further into them
+        for skipdir in ['.git', 'data', '_attic', 'catalog']:
+            if skipdir in dirs:
+                print "skipping {}".format(os.path.join(root, skipdir))
+                dirs.remove(skipdir)
 
 if __name__ == "__main__":
     import argparse
