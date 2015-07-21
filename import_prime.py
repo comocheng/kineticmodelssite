@@ -173,6 +173,11 @@ class ThermoImporter(Importer):
         dj_item = Thermo()
         #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
         dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
+        # find species primeID
+        specieslink = thermo.find('prime:speciesLink', namespaces=ns)
+        sPrimeID=specieslink.attrib['primeID']
+        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
+        dj_item.species = species
         #find dfH:
         dfH = thermo.find('prime:dfH', namespaces=ns)
         if dfH is not None:
@@ -199,11 +204,7 @@ class ThermoImporter(Importer):
                     setattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
                 if bound.attrib['kind'] == 'upper':
                     setattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
-#             t1=float(reference.find('prime:Tref',namespaces=ns).text)
-#             getattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number)) = t1
-#             t2=float(reference.find('prime:Tref',namespaces=ns).text)
-#             getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number)) = t2
-        assert dj_item.upper_temp_bound_1=dj_item.lower_temp_bound_2 # temperatures match in the middle
+        assert dj_item.upper_temp_bound_1==dj_item.lower_temp_bound_2 # temperatures match in the middle
         dj_item.save()
             
         
