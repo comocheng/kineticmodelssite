@@ -25,9 +25,31 @@ class Importer():
     Make subclasses of this to import specific things.
     This just contains generic parts common to all.
     """
+    
+    "Override this in subclasses:"
+    prime_ID_prefix = 'none' # eg. 'thp' for thermo polynomials
+    
     def __init__(self, directory_path):
         self.directory_path = directory_path
         self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
+
+    def import_data(self):
+        """
+        Import everything beginning with the prime_ID_prefix in subdirectories
+        of the data directory
+        """
+        data_path = os.path.join(self.directory_path, 'data')
+        assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
+        print "Importing from directories within {}".format(data_path)
+        for directory in sorted([d for d in os.listdir(data_path) if os.path.isdir(d)]):
+            directory_path = os.path.join(data_path, directory)
+            for file in sorted([f for f in os.listdir(directory_path) if (
+                                    f.endswith('.xml') and 
+                                    f.startswith(self.__class__.prime_ID_prefix)
+                                )]):
+                full_path = os.path.join(directory_path, file)
+                self.import_file(full_path)
+
 
     def import_catalog(self):
         """
