@@ -235,6 +235,7 @@ class Thermo(models.Model):
     """
     source = models.ForeignKey(Source)
     species = models.ForeignKey(Species)
+    thpPrimeID = models.CharField(blank=True, max_length=11)
     preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
