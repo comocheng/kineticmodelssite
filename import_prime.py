@@ -131,7 +131,28 @@ class SpeciesImporter(Importer):
                 SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
-
+        
+class ThermoImporter(Importer):
+    """
+    To import the thermodynamic data of a species (can be multiple for each species)
+    """
+    def import_elementtree_root(self, thermo):
+        ns = self.ns
+        print list(species)
+        #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
+        dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
+        #find dfH:
+        dfH = thermo.find('prime:dfH', namespaces=ns)
+        if dfH is not None:
+            dj_item.dfH = dfH.text
+        reference=thermo.find('prime:referenceState', namespaces=ns)
+        Tref=reference.find('prime:Tref',namespaces=ns)
+        if Tref is not None:
+            dj_item.tref=Tref.text
+        Pref=reference.find('prime:Pref',namespaces=ns)
+        if Pref is not None:
+            dj_item.pref=Pref.text
+    
 class ReactionsImporter(Importer):
     """
     To import chemical reactions
