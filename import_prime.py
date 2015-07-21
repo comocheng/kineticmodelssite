@@ -128,6 +128,9 @@ class SpeciesImporter(Importer):
                     dj_item.inchi = name.text
             else:
                 # it's just a random name
+                if not name.text:
+                    print "Warning! Blank species name in species {}".format(primeID)
+                    continue
                 SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
