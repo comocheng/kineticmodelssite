@@ -131,11 +131,11 @@ class Source(models.Model):
     pub_year = models.CharField('Year of Publication',
                                 default='',
                                 max_length=4)
-    source_title = models.CharField(default='',max_length=300)
+    source_title = models.CharField(default='', max_length=300)
     journal_name = models.CharField(blank=True, max_length=300)
-    jour_vol_num = models.IntegerField('Journal Volume Number',
-                                       null=True,
-                                       blank=True)
+    jour_vol_num = models.CharField('Journal Volume Number',
+                                       blank=True,
+                                       max_length=10)
     page_numbers = models.CharField(blank=True,
                                     help_text='[page #]-[page #]',
                                     max_length=100)

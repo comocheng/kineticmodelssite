@@ -88,7 +88,7 @@ class BibliographyImporter(Importer):
         # Some might give a volume number:
         volume = bibitem.find('prime:volume', namespaces=ns)
         if volume is not None:
-            dj_item.jour_vol_num = int(volume.text)
+            dj_item.jour_vol_num = volume.text
     
         # Some might give page numbers:
         dj_item.page_numbers = bibitem.findtext('prime:pages', namespaces=ns, default='')
