@@ -100,7 +100,7 @@ class BibliographyImporter(Importer):
 
         for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
             number = index + 1
-            print "author {} is {}".format(number, author.text)
+            print u"author {} is {}".format(number, author.text)
             dj_author, created = Author.objects.get_or_create(name=author.text)
             Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
             "ToDo: make this check for changes and delete old Authorship entries if needed"
