@@ -170,7 +170,8 @@ class ThermoImporter(Importer):
 
     def import_elementtree_root(self, thermo):
         ns = self.ns
-        dj_item = Thermo()
+        primeID = thermo.attrib.get("primeID")
+        dj_item, created = Thermo.objects.get_or_create(thpPrimeID=primeID)
         #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
         dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
         # find species primeID
