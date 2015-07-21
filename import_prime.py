@@ -15,7 +15,7 @@ import django
 django.setup()
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-                                 Species, KinModel, Comment, \
+                                 Species, KinModel, Comment, SpecName, \
                                  Source, Author, Authorship
 
 class Importer():
@@ -88,7 +88,7 @@ class BibliographyImporter(Importer):
         # Some might give a volume number:
         volume = bibitem.find('prime:volume', namespaces=ns)
         if volume is not None:
-            dj_item.jour_vol_num = int(volume.text)
+            dj_item.jour_vol_num = volume.text
     
         # Some might give page numbers:
         dj_item.page_numbers = bibitem.findtext('prime:pages', namespaces=ns, default='')
@@ -98,12 +98,15 @@ class BibliographyImporter(Importer):
     
         dj_item.save()
 
+        authorship_already_in_database = Authorship.objects.all().filter(source=dj_item).exists()
         for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
             number = index + 1
-            print "author {} is {}".format(number, author.text)
+            print u"author {} is {}".format(number, author.text)
             dj_author, created = Author.objects.get_or_create(name=author.text)
             Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
             "ToDo: make this check for changes and delete old Authorship entries if needed"
+            if authorship_already_in_database:
+                assert not created, "Authorship change detected, and probably not handled correctly"
 
 class SpeciesImporter(Importer):
     """
@@ -112,7 +115,7 @@ class SpeciesImporter(Importer):
     def import_elementtree_root(self, species):
         ns = self.ns
         primeID = species.attrib.get("primeID")
-        dj_item, created = Source.objects.get_or_create(sPrimeID=primeID)
+        dj_item, created = Species.objects.get_or_create(sPrimeID=primeID)
         print list(species)
         identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
         for name in identifier.findall('prime:name', namespaces=ns):
@@ -125,7 +128,7 @@ class SpeciesImporter(Importer):
                     dj_item.inchi = name.text
             else:
                 # it's just a random name
-                pass
+                SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
 
@@ -136,8 +139,23 @@ class ReactionsImporter(Importer):
     def import_elementtree_root(self, reaction):
         ns = self.ns
         primeID = reaction.attrib.get("primeID")
-        dj_item, created = Reaction.objects.get_or_create(rPrimeID=primeID)
-        print list(reaction)
+        dj_reaction, created = Reaction.objects.get_or_create(rPrimeID=primeID)
+        reactants = reaction.find('prime:reactants', namespaces=ns).findall('prime:speciesLink', namespaces=ns)
+        stoichiometry_already_in_database = Stoichiometry.objects.all().filter(reaction=dj_reaction).exists()
+
+        for reactant in reactants:
+            species_primeID = reactant.attrib['primeID']
+            dj_species, created = Species.objects.get_or_create(sPrimeID=species_primeID)
+            stoichiometry = float(reactant.text)
+            print "Stoichiometry of {} is {}".format(species_primeID, stoichiometry)
+            dj_stoich, created = Stoichiometry.objects.get_or_create(
+                species=dj_species,
+                reaction=dj_reaction,
+                stoichiometry=stoichiometry
+                )
+            # This test currently broken or finds false failures:
+            #if stoichiometry_already_in_database:
+            #    assert not created, "Stoichiometry change detected! probably a mistake?"
         #import ipdb; ipdb.set_trace()
 
 def main(top_root):
@@ -151,15 +169,15 @@ def main(top_root):
                 print "skipping {}".format(os.path.join(root,skipdir))
                 dirs.remove(skipdir)
         if root.endswith('depository/bibliography/catalog'):
-            print "We have found the depository/bibliography/catalog which we can import!"
-            print "skipping for now, to test the Species importer..."
-            continue
+            print "We have found the Bibliography which we can import!"
+            #print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_all()
         elif root.endswith('depository/species/catalog'):
-            print "We have found the depository/species/catalog which we can import!"
+            print "We have found the Species which we can import!"
             SpeciesImporter(root).import_all()
         elif root.endswith('depository/reactions/catalog'):
-            print "We have found the depository/reactions/catalog which we can import!"
+            print "We have found the Reactions which we can import!"
+            #print "skipping for now, to test the next importer..."; continue
             ReactionsImporter(root).import_all()
         else:
             # so far nothing else is implemented
