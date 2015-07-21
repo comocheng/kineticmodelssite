@@ -163,10 +163,17 @@ class ThermoImporter(Importer):
                 getattr(dj_item,'coefficient_{0}_{1}'.format(
                     coefficient_number, polynomial_number)
                     ) = value
-            
-            
-            getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number)) = value
-        assert dj_item. # temperatures match in the middle
+            range = polynomial.find('prime:validRange', namespaces=ns)
+            for bound in range.findall('prime:bound',namespaces=ns):
+                if bound.attrib['kind'] == 'lower':
+                    getattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number))= float(bound.text)
+                if bound.attrib['kind'] == 'upper':
+                    getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number))= float(bound.text)
+#             t1=float(reference.find('prime:Tref',namespaces=ns).text)
+#             getattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number)) = t1
+#             t2=float(reference.find('prime:Tref',namespaces=ns).text)
+#             getattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number)) = t2
+        assert dj_item.upper_temp_bound_1=dj_item.lower_temp_bound_2 # temperatures match in the middle
         dj_item.save()
             
         
