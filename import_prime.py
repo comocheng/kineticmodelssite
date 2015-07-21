@@ -161,6 +161,8 @@ class ThermoImporter(Importer):
     """
     To import the thermodynamic data of a species (can be multiple for each species)
     """
+    prime_ID_prefix = 'thp'
+
     def import_elementtree_root(self, thermo):
         ns = self.ns
         print list(species)
@@ -216,6 +218,7 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
+            ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
         elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
