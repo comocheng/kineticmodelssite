@@ -295,7 +295,10 @@ class KineticsImporter(Importer):
     def import_elementtree_root(self, kin):
         ns = self.ns
         # Get the Prime ID for the kinetics
-        rkPrimeID = kin.attrib.get("primeID")
+        if kin.attrib.get("primeID") != 'rk00000000':
+            rkPrimeID = kin.attrib.get("primeID")
+        else:
+            return
         # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
         reactionlink = kin.find('prime:reactionLink', namespaces=ns)
         rPrimeID = reactionlink.attrib['primeID']
