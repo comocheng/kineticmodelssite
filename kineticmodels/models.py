@@ -354,7 +354,8 @@ class Kinetics(models.Model):
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(default=0.0)
+    E_value = models.FloatField(blank=True,null=True)
+    E_value_uncertainty = models.FloatField(blank=True, null=True)
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
