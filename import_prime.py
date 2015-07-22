@@ -285,6 +285,33 @@ class ReactionsImporter(Importer):
             #if stoichiometry_already_in_database:
             #    assert not created, "Stoichiometry change detected! probably a mistake?"
         #import ipdb; ipdb.set_trace()
+        
+class KineticsImporter(Importer):
+    """
+    To import the kinetics data of a reaction (can be multiple for each species)
+    """
+    prime_ID_prefix = 'rk'
+
+    def import_elementtree_root(self, kin):
+        ns = self.ns
+        # Get the Prime ID for the kinetics
+        rkPrimeID = kin.attrib.get("primeID")
+        # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
+        reactionlink = kin.find('prime:reactionLink', namespaces=ns)
+        rPrimeID = reactionlink.attrib['primeID']
+        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
+        # Now get (or create) the django Thermo object for that species and polynomial
+        dj_kin, created = Kinetics.objects.get_or_create(
+            rkPrimeID=rkPrimeID,
+            reaction=reaction)
+
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliography_link = kin.find('prime:bibliographyLink',
+                                        namespaces=ns)
+        bPrimeID = bibliography_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_kin.source = source
+
 
 def main(top_root):
     """
