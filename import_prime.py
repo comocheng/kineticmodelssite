@@ -19,6 +19,7 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Thermo, ThermoComment, \
                                  Source, Author, Authorship
 
+
 class Importer():
     """
     A default importer, imports nothing in particular. 
@@ -26,10 +27,10 @@ class Importer():
     Make subclasses of this to import specific things.
     This just contains generic parts common to all.
     """
-    
+
     "Override this in subclasses:"
-    prime_ID_prefix = 'none' # eg. 'thp' for thermo polynomials
-    
+    prime_ID_prefix = 'none'  # eg. 'thp' for thermo polynomials
+
     def __init__(self, directory_path):
         self.directory_path = directory_path
         self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
@@ -42,7 +43,8 @@ class Importer():
         data_path = os.path.join(self.directory_path, 'data')
         assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
         print "Importing from directories within {}".format(data_path)
-        directories = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
+        directories = [d for d in os.listdir(data_path)
+                       if os.path.isdir(os.path.join(data_path, d))]
         for skipdir in ['_attic']:
             if skipdir in directories:
                 directories.remove(skipdir)
@@ -55,7 +57,6 @@ class Importer():
                 full_path = os.path.join(directory_path, file)
                 self.import_file(full_path)
 
-
     def import_catalog(self):
         """
         Import all xml files in the catalog directory.
@@ -63,7 +64,8 @@ class Importer():
         catalog_path = os.path.join(self.directory_path, 'catalog')
         assert os.path.isdir(catalog_path), "{} isn't a directory!".format(catalog_path)
         print "Importing xml files from directory {}".format(catalog_path)
-        for file in sorted([f for f in os.listdir(catalog_path) if f.endswith('.xml')]):
+        for file in sorted([f for f in os.listdir(catalog_path)
+                            if f.endswith('.xml')]):
             full_path = os.path.join(catalog_path, file)
             self.import_file(full_path)
 
@@ -92,58 +94,73 @@ class Importer():
         """
         raise NotImplementedError("Should define this in a subclass")
 
+
 class BibliographyImporter(Importer):
     """
     To import Bibliography items
     """
+
     def import_elementtree_root(self, bibitem):
         ns = self.ns
         primeID = bibitem.attrib.get("primeID")
         dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
 
         # There may or may not be a journal, so have to cope with it being None
-        dj_item.journal_name = bibitem.findtext('prime:journal', namespaces=ns, default='')
+        dj_item.journal_name = bibitem.findtext('prime:journal',
+                                                namespaces=ns,
+                                                default='')
 
         # There seems to always be a year in every prime record, so assume it exists:
         #dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
         # In an older mirror, not everything has a year, so we need to cope with it being None:
-        dj_item.pub_year = bibitem.findtext('prime:year', namespaces=ns, default='')
- 
+        dj_item.pub_year = bibitem.findtext('prime:year',
+                                            namespaces=ns,
+                                            default='')
+
         # Every source should have a title:
-        dj_item.source_title = bibitem.findtext('prime:title', namespaces=ns, default='')
-      
+        dj_item.source_title = bibitem.findtext('prime:title',
+                                                namespaces=ns,
+                                                default='')
+
         # Some might give a volume number:
         volume = bibitem.find('prime:volume', namespaces=ns)
         if volume is not None:
             dj_item.jour_vol_num = volume.text
-    
-        # Some might give page numbers:
-        dj_item.page_numbers = bibitem.findtext('prime:pages', namespaces=ns, default='')
+
+    # Some might give page numbers:
+        dj_item.page_numbers = bibitem.findtext('prime:pages',
+                                                namespaces=ns,
+                                                default='')
 
         # No sources in PrIMe will come with Digital Object Identifiers, but we should include this for future importing:
         dj_item.doi = ''
-    
+
         dj_item.save()
 
-        authorship_already_in_database = Authorship.objects.all().filter(source=dj_item).exists()
-        for index, author in enumerate(bibitem.findall('prime:author', namespaces=ns)):
+        authorship_already_in_database = Authorship.objects.all().filter(
+            source=dj_item).exists()
+        for index, author in enumerate(bibitem.findall('prime:author',
+                                                       namespaces=ns)):
             number = index + 1
             print u"author {} is {}".format(number, author.text)
             dj_author, created = Author.objects.get_or_create(name=author.text)
-            Authorship.objects.get_or_create(source=dj_item, author=dj_author, order=number)
+            Authorship.objects.get_or_create(source=dj_item,
+                                             author=dj_author,
+                                             order=number)
             "ToDo: make this check for changes and delete old Authorship entries if needed"
             if authorship_already_in_database:
                 assert not created, "Authorship change detected, and probably not handled correctly"
+
 
 class SpeciesImporter(Importer):
     """
     To import chemical species
     """
+
     def import_elementtree_root(self, species):
         ns = self.ns
         primeID = species.attrib.get("primeID")
         dj_item, created = Species.objects.get_or_create(sPrimeID=primeID)
-        print list(species)
         identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
         for name in identifier.findall('prime:name', namespaces=ns):
             if 'type' in name.attrib:
@@ -161,7 +178,8 @@ class SpeciesImporter(Importer):
                 SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         #import ipdb; ipdb.set_trace()
-        
+
+
 class ThermoImporter(Importer):
     """
     To import the thermodynamic data of a species (can be multiple for each species)
@@ -170,67 +188,99 @@ class ThermoImporter(Importer):
 
     def import_elementtree_root(self, thermo):
         ns = self.ns
-        primeID = thermo.attrib.get("primeID")
-        dj_item, created = Thermo.objects.get_or_create(thpPrimeID=primeID)
-        #need to find way to incorporate either direct tie to species or species primeID (in child SpeciesLink)
-        dj_item.preferred_key = thermo.findtext('prime:preferredKey', namespaces=ns, default='')
-        # find species primeID
+        # Get the Prime ID for the thermo polynomial
+        thpPrimeID = thermo.attrib.get("primeID")
+        # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = thermo.find('prime:speciesLink', namespaces=ns)
-        sPrimeID=specieslink.attrib['primeID']
+        sPrimeID = specieslink.attrib['primeID']
         species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
-        dj_item.species = species
-        #find dfH:
+        # Now get (or create) the django Thermo object for that species and polynomial
+        dj_thermo, created = Thermo.objects.get_or_create(
+            thpPrimeID=thpPrimeID,
+            species=species)
+
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliogrpahy_link = thermo.find('prime:bibliographyLink',
+                                        namespaces=ns)
+        bPrimeID = bibliogrpahy_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_thermo.source = source
+
+        # Now give the Thermo object its other properties
+        dj_thermo.preferred_key = thermo.findtext('prime:preferredKey',
+                                                  namespaces=ns,
+                                                  default='')
+
         dfH = thermo.find('prime:dfH', namespaces=ns)
-        if dfH is not None:
-            dj_item.dfH = dfH.text
-        reference=thermo.find('prime:referenceState', namespaces=ns)
-        Tref=reference.find('prime:Tref',namespaces=ns)
+        if dfH is not None and dfH.text.strip():
+            dj_thermo.dfH = float(dfH.text)
+        reference = thermo.find('prime:referenceState', namespaces=ns)
+        Tref = reference.find('prime:Tref', namespaces=ns)
         if Tref is not None:
-            dj_item.tref=Tref.text
-        Pref=reference.find('prime:Pref',namespaces=ns)
+            dj_thermo.tref = float(Tref.text)
+        Pref = reference.find('prime:Pref', namespaces=ns)
         if Pref is not None:
-            dj_item.pref=Pref.text
-        for i, polynomial in enumerate(thermo.findall('prime:polynomial', namespaces=ns)):
+            dj_thermo.pref = float(Pref.text)
+        for i, polynomial in enumerate(thermo.findall('prime:polynomial',
+                                                      namespaces=ns)):
             polynomial_number = i + 1
             for j, coefficient in enumerate(polynomial.findall('prime:coefficient', namespaces=ns)):
                 coefficient_number = j + 1
                 assert coefficient_number == int(coefficient.attrib['id'])
                 value = float(coefficient.text)
-                #dj_item.coefficient_1_1 = value
-                setattr(dj_item,'coefficient_{0}_{1}'.format(
-                    coefficient_number, polynomial_number), value)
-            range = polynomial.find('prime:validRange', namespaces=ns)
-            for bound in range.findall('prime:bound',namespaces=ns):
+                #Equivalent of: dj_item.coefficient_1_1 = value
+                setattr(dj_thermo,
+                        'coefficient_{0}_{1}'.format(coefficient_number, polynomial_number),
+                        value)
+            temperature_range = polynomial.find('prime:validRange', namespaces=ns)
+            for bound in temperature_range.findall('prime:bound', namespaces=ns):
                 if bound.attrib['kind'] == 'lower':
-                    setattr(dj_item,'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
+                    setattr(dj_thermo,
+                            'lower_temp_bound_{0}'.format(polynomial_number),
+                            float(bound.text))
                 if bound.attrib['kind'] == 'upper':
-                    setattr(dj_item,'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
-        assert dj_item.upper_temp_bound_1==dj_item.lower_temp_bound_2 # temperatures match in the middle
-        dj_item.save()
-            
-        
-    
+                    setattr(dj_thermo,
+                            'upper_temp_bound_{0}'.format(polynomial_number),
+                            float(bound.text))
+        if i == 0:
+            print("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
+            print("Probably the temperature range was too small."
+                  "We will make up a second one with no T range.")
+            dj_thermo.lower_temp_bound_2 = dj_thermo.upper_temp_bound_1
+            dj_thermo.upper_temp_bound_2 = dj_thermo.upper_temp_bound_1
+            for j in range(1, 8):
+                setattr(dj_thermo, 'coefficient_{0}_2'.format(j), 0.0)
+
+        assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
+        dj_thermo.save()
+
+
 class ReactionsImporter(Importer):
     """
     To import chemical reactions
     """
+
     def import_elementtree_root(self, reaction):
         ns = self.ns
         primeID = reaction.attrib.get("primeID")
         dj_reaction, created = Reaction.objects.get_or_create(rPrimeID=primeID)
-        reactants = reaction.find('prime:reactants', namespaces=ns).findall('prime:speciesLink', namespaces=ns)
-        stoichiometry_already_in_database = Stoichiometry.objects.all().filter(reaction=dj_reaction).exists()
+        reactants = reaction.find('prime:reactants',
+                                  namespaces=ns).findall('prime:speciesLink',
+                                                         namespaces=ns)
+        stoichiometry_already_in_database = Stoichiometry.objects.all().filter(
+            reaction=dj_reaction).exists()
 
         for reactant in reactants:
             species_primeID = reactant.attrib['primeID']
-            dj_species, created = Species.objects.get_or_create(sPrimeID=species_primeID)
+            dj_species, created = Species.objects.get_or_create(
+                sPrimeID=species_primeID)
             stoichiometry = float(reactant.text)
-            print "Stoichiometry of {} is {}".format(species_primeID, stoichiometry)
+            print "Stoichiometry of {} is {}".format(species_primeID,
+                                                     stoichiometry)
             dj_stoich, created = Stoichiometry.objects.get_or_create(
                 species=dj_species,
                 reaction=dj_reaction,
-                stoichiometry=stoichiometry
-                )
+                stoichiometry=stoichiometry)
             # This test currently broken or finds false failures:
             #if stoichiometry_already_in_database:
             #    assert not created, "Stoichiometry change detected! probably a mistake?"
@@ -248,8 +298,8 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
-            ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
+            ThermoImporter(root).import_data()
         elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
@@ -263,11 +313,15 @@ def main(top_root):
                 print "skipping {}".format(os.path.join(root, skipdir))
                 dirs.remove(skipdir)
 
+
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Import PRIME database mirror into Django.')
-    parser.add_argument('root', metavar='root', nargs=1,
-                       help='location of the mirror on the local filesystem')
+    parser = argparse.ArgumentParser(
+        description='Import PRIME database mirror into Django.')
+    parser.add_argument('root',
+                        metavar='root',
+                        nargs=1,
+                        help='location of the mirror on the local filesystem')
     args = parser.parse_args()
     top_root = os.path.normpath(os.path.abspath(args.root[0]))  # strip eg. a trailing '/'
     main(top_root)
