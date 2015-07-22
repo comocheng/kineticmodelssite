@@ -298,8 +298,8 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
-            ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
+            ThermoImporter(root).import_data()
         elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
