@@ -317,7 +317,7 @@ class KineticsImporter(Importer):
         if coefficient.attrib['direction']=='reverse':
             dj_kin.is_reverse=True
         expression=coefficient.find('prime:expression', namespaces=ns)
-        assert expression.attrib['form'] == 'arrhenius', "Equation form is not arrhenius!"
+        assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
         for parameter in expression.findall('prime:parameter', namespaces=ns):
             if parameter.attrib['name'] == 'a':
                 value=parameter.find('prime:value', namespaces=ns)
