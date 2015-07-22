@@ -299,7 +299,7 @@ class KineticsImporter(Importer):
         # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
         reactionlink = kin.find('prime:reactionLink', namespaces=ns)
         rPrimeID = reactionlink.attrib['primeID']
-        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
+        reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
         # Now get (or create) the django Thermo object for that species and polynomial
         dj_kin, created = Kinetics.objects.get_or_create(
             rkPrimeID=rkPrimeID,
@@ -313,13 +313,13 @@ class KineticsImporter(Importer):
         dj_kin.source = source
 
         # Now give the Kinetics object its other properties
-        coefficient=identifier.find('prime:rateCoefficient', namespaces=ns)
+        coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
         if coefficient.attrib['direction']=='reverse':
             dj_kin.is_reverse=True
-        expression=identifier.find('prime:expression', namespaces=ns)
+        expression=coefficient.find('prime:expression', namespaces=ns)
         assert expression.attrib['form'] == 'arrhenius', "Equation form is not arrhenius!"
         for parameter in expression.findall('prime:parameter', namespaces=ns):
-            if name.attrib['name'] == 'a':
+            if parameter.attrib['name'] == 'a':
                 value=parameter.find('prime:value', namespaces=ns)
                 dj_kin.A_value=float(value.text)
                 try:
@@ -327,10 +327,10 @@ class KineticsImporter(Importer):
                     dj_kin.A_value_uncertainty=float(uncertainty.text)
                 except:
                     pass
-            elif name.attrib['name'] == 'n':
+            elif parameter.attrib['name'] == 'n':
                 value=parameter.find('prime:value', namespaces=ns)
                 dj_kin.n_value=float(value.text)
-            elif name.attrib['name'] == 'e':
+            elif parameter.attrib['name'] == 'e':
                 value=parameter.find('prime:value', namespaces=ns)
                 dj_kin.E_value=float(value.text)
                 try:
@@ -357,6 +357,7 @@ def main(top_root):
         elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
+            KineticsImporter(root).import_data()
             ReactionsImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
