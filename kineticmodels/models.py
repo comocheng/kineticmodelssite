@@ -361,6 +361,9 @@ class Kinetics(models.Model):
     is_reverse = models.BooleanField(
         default=False,
         help_text='Is this the rate for the reverse reaction?')
+    lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
+    upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
+
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
