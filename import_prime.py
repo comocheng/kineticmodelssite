@@ -214,6 +214,15 @@ class ThermoImporter(Importer):
                     setattr(dj_thermo, 'lower_temp_bound_{0}'.format(polynomial_number), float(bound.text))
                 if bound.attrib['kind'] == 'upper':
                     setattr(dj_thermo, 'upper_temp_bound_{0}'.format(polynomial_number), float(bound.text))
+        if i == 0:
+            print("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
+            print("Probably the temperature range was too small."
+                  "We will make up a second one with no T range.")
+            dj_thermo.lower_temp_bound_2 = dj_thermo.upper_temp_bound_1
+            dj_thermo.upper_temp_bound_2 = dj_thermo.upper_temp_bound_1
+            for j in range(1, 8):
+                setattr(dj_thermo, 'coefficient_{0}_2'.format(j), 0.0)
+
         assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
         dj_thermo.save()
         
