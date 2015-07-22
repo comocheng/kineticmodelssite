@@ -338,6 +338,13 @@ class KineticsImporter(Importer):
                     dj_kin.E_value_uncertainty=float(uncertainty.text)
                 except:
                     pass
+        temperature_range = kin.find('prime:validRange', namespaces=ns)
+        if temperature_range is not None:
+            for bound in temperature_range.findall('prime:bound', namespaces=ns):
+                if bound.attrib['kind'] == 'lower':
+                    dj_kin.lower_temp_bound=float(bound.text)
+                if bound.attrib['kind'] == 'upper':
+                    dj_kin.upper_temp_bound=float(bound.text)
         dj_kin.save()
 
 def main(top_root):
