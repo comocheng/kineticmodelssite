@@ -200,9 +200,9 @@ class ThermoImporter(Importer):
             species=species)
 
         # Start by finding the source link, and looking it up in the bibliography
-        bibliogrpahy_link = thermo.find('prime:bibliographyLink',
+        bibliography_link = thermo.find('prime:bibliographyLink',
                                         namespaces=ns)
-        bPrimeID = bibliogrpahy_link.attrib['primeID']
+        bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_thermo.source = source
 
