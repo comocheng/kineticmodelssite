@@ -312,6 +312,33 @@ class KineticsImporter(Importer):
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_kin.source = source
 
+        # Now give the Kinetics object its other properties
+        coefficient=identifier.find('prime:rateCoefficient', namespaces=ns)
+        if coefficient.attrib['direction']=='reverse':
+            dj_kin.is_reverse=True
+        expression=identifier.find('prime:expression', namespaces=ns)
+        assert expression.attrib['form'] == 'arrhenius', "Equation form is not arrhenius!"
+        for parameter in expression.findall('prime:parameter', namespaces=ns):
+            if name.attrib['name'] == 'a':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_kin.A_value=float(value.text)
+                try:
+                    uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                    dj_kin.A_value_uncertainty=float(uncertainty.text)
+                except:
+                    pass
+            elif name.attrib['name'] == 'n':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_kin.n_value=float(value.text)
+            elif name.attrib['name'] == 'e':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_kin.E_value=float(value.text)
+                try:
+                    uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                    dj_kin.E_value_uncertainty=float(uncertainty.text)
+                except:
+                    pass
+        dj_kin.save()
 
 def main(top_root):
     """
