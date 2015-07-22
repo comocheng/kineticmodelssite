@@ -356,6 +356,9 @@ class Kinetics(models.Model):
     n_value = models.FloatField(default=0.0)
     E_value = models.FloatField(blank=True,null=True)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
+    is_reverse = models.BooleanField(
+        default=False,
+        help_text='Is this the rate for the reverse reaction?')
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
@@ -451,9 +454,6 @@ class Comment(models.Model):
     kinetics = models.ForeignKey(Kinetics)
     kinmodel = models.ForeignKey(KinModel)
     comment = models.CharField(blank=True, max_length=1000)
-    is_reverse = models.BooleanField(
-        default=False,
-        help_text='Is this the rate for the reverse reaction?')
 
     def __unicode__(self):
         return unicode(self.comment)
