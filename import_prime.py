@@ -297,7 +297,7 @@ class KineticsImporter(Importer):
         # Get the Prime ID for the kinetics
         if kin.attrib.get("primeID") != 'rk00000000':
             rkPrimeID = kin.attrib.get("primeID")
-        else:
+        else: 
             return
         # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
         reactionlink = kin.find('prime:reactionLink', namespaces=ns)
@@ -307,48 +307,52 @@ class KineticsImporter(Importer):
         dj_kin, created = Kinetics.objects.get_or_create(
             rkPrimeID=rkPrimeID,
             reaction=reaction)
+        
+        try:
+            # Start by finding the source link, and looking it up in the bibliography
+            bibliography_link = kin.find('prime:bibliographyLink',
+                                            namespaces=ns)
+            bPrimeID = bibliography_link.attrib['primeID']
+            source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+            dj_kin.source = source
 
-        # Start by finding the source link, and looking it up in the bibliography
-        bibliography_link = kin.find('prime:bibliographyLink',
-                                        namespaces=ns)
-        bPrimeID = bibliography_link.attrib['primeID']
-        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        dj_kin.source = source
-
-        # Now give the Kinetics object its other properties
-        coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
-        if coefficient.attrib['direction']=='reverse':
-            dj_kin.is_reverse=True
-        expression=coefficient.find('prime:expression', namespaces=ns)
-        assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
-        for parameter in expression.findall('prime:parameter', namespaces=ns):
-            if parameter.attrib['name'] == 'a':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_kin.A_value=float(value.text)
-                try:
-                    uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                    dj_kin.A_value_uncertainty=float(uncertainty.text)
-                except:
-                    pass
-            elif parameter.attrib['name'] == 'n':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_kin.n_value=float(value.text)
-            elif parameter.attrib['name'] == 'e':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_kin.E_value=float(value.text)
-                try:
-                    uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                    dj_kin.E_value_uncertainty=float(uncertainty.text)
-                except:
-                    pass
-        temperature_range = kin.find('prime:validRange', namespaces=ns)
-        if temperature_range is not None:
-            for bound in temperature_range.findall('prime:bound', namespaces=ns):
-                if bound.attrib['kind'] == 'lower':
-                    dj_kin.lower_temp_bound=float(bound.text)
-                if bound.attrib['kind'] == 'upper':
-                    dj_kin.upper_temp_bound=float(bound.text)
-        dj_kin.save()
+            # Now give the Kinetics object its other properties
+            coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
+            if coefficient.attrib['direction']=='reverse':
+                dj_kin.is_reverse=True
+            expression=coefficient.find('prime:expression', namespaces=ns)
+            assert expression.attrib['form'] == 'arrhenius', "Equation form is not arrhenius!"
+            for parameter in expression.findall('prime:parameter', namespaces=ns):
+                if parameter.attrib['name'] == 'a':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.A_value=float(value.text)
+                    try:
+                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.A_value_uncertainty=float(uncertainty.text)
+                    except:
+                        pass
+                elif parameter.attrib['name'] == 'n':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.n_value=float(value.text)
+                elif parameter.attrib['name'] == 'e':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.E_value=float(value.text)
+                    try:
+                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.E_value_uncertainty=float(uncertainty.text)
+                    except:
+                        pass
+            temperature_range = kin.find('prime:validRange', namespaces=ns)
+            if temperature_range is not None:
+                for bound in temperature_range.findall('prime:bound', namespaces=ns):
+                    if bound.attrib['kind'] == 'lower':
+                        dj_kin.lower_temp_bound=float(bound.text)
+                    if bound.attrib['kind'] == 'upper':
+                        dj_kin.upper_temp_bound=float(bound.text)
+            dj_kin.save()
+        except:
+            with open("fail.txt", "a") as myfile:
+                myfile.write("\n"+rPrimeID+"   "+rkPrimeID)
 
 def main(top_root):
     """
