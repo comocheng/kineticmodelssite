@@ -331,6 +331,8 @@ class KineticsImporter(Importer):
 
         # Now give the Kinetics object its other properties
         coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
+        if coefficient is None:
+            raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
         if coefficient.attrib['direction']=='reverse':
             dj_kin.is_reverse=True
         relunc=coefficient.find('prime:uncertainty', namespaces=ns)
@@ -338,9 +340,10 @@ class KineticsImporter(Importer):
             dj_kin.relative_uncertainty=float(relunc.text)
         allexpression=coefficient.findall('prime:expression', namespaces=ns)
         if len(allexpression) != 1:
-            raise PrimeError("Not one and only one Arrhenius expression")
+            raise PrimeError("Expected one Arrhenius expression but got {}".format(len(allexpression)))
         for expression in allexpression:
-            assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
+            assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+                "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
             for parameter in expression.findall('prime:parameter', namespaces=ns):
                 if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
                     value=parameter.find('prime:value', namespaces=ns)
