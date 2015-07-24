@@ -324,6 +324,9 @@ class Reaction(models.Model):
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
     rPrimeID = models.CharField('PrIMe ID', max_length=10, unique=True)
+    is_reversible = models.BooleanField(
+        default=True,
+        help_text='Is this reaction reversible?')
 
     def __unicode__(self):
         return u"{s.id}".format(s=self)
