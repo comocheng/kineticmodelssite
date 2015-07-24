@@ -320,28 +320,9 @@ class KineticsImporter(Importer):
             coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
             if coefficient.attrib['direction']=='reverse':
                 dj_kin.is_reverse=True
-            expression=coefficient.find('prime:expression', namespaces=ns)
-            assert expression.attrib['form'] == 'arrhenius', "Equation form is not arrhenius!"
-            for parameter in expression.findall('prime:parameter', namespaces=ns):
-                if parameter.attrib['name'] == 'a':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.A_value=float(value.text)
-                    try:
-                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.A_value_uncertainty=float(uncertainty.text)
-                    except:
-                        pass
-                elif parameter.attrib['name'] == 'n':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.n_value=float(value.text)
-                elif parameter.attrib['name'] == 'e':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.E_value=float(value.text)
-                    try:
-                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.E_value_uncertainty=float(uncertainty.text)
-                    except:
-                        pass
+            relunc=coefficient.find('prime:uncertainty', namespaces=ns)
+            if relunc is not None:
+                dj_kin.relative_uncertainty=float(relunc.text)
             temperature_range = kin.find('prime:validRange', namespaces=ns)
             if temperature_range is not None:
                 for bound in temperature_range.findall('prime:bound', namespaces=ns):
