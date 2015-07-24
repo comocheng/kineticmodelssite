@@ -255,7 +255,7 @@ class ThermoImporter(Importer):
         dj_thermo.save()
 
 
-class ReactionsImporter(Importer):
+class ReactionImporter(Importer):
     """
     To import chemical reactions
     """
@@ -360,6 +360,28 @@ class KineticsImporter(Importer):
             with open("fail.txt", "a") as myfile:
                 myfile.write("\n"+rPrimeID+"   "+rkPrimeID)
 
+class ModelImporter(Importer):
+    """
+    To import kinetic models
+    """
+    def import_elementtree_root(self, mod):
+        ns = self.ns
+        primeID = mod.attrib.get("primeID")
+        dj_mod, created = KinModel.objects.get_or_create(mPrimeID=primeID)
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliography_link = mod.find('prime:bibliographyLink',
+                                        namespaces=ns)
+        bPrimeID = bibliography_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_mod.source = source
+        dj_mod.model_name = mod.findtext('prime:preferredKey',
+                                                namespaces=ns,
+                                                default='')
+        species_set=mod.find('prime:speciesSet', namespaces=ns)
+        specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
+        for species in specieslink:
+            
+
 def main(top_root):
     """
     The main function. Give it the path to the top of the database mirror
@@ -378,7 +400,10 @@ def main(top_root):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
             KineticsImporter(root).import_data()
-            ReactionsImporter(root).import_catalog()
+            ReactionImporter(root).import_catalog()
+#         elif root.endswith('depository/models'):
+#             print "We have found the Kinetic Models which we can import!"
+#             ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
