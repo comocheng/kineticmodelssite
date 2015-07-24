@@ -323,6 +323,10 @@ class KineticsImporter(Importer):
             relunc=coefficient.find('prime:uncertainty', namespaces=ns)
             if relunc is not None:
                 dj_kin.relative_uncertainty=float(relunc.text)
+            allexpression=coefficient.findall('prime:expression', namespaces=ns)
+#             import ipdb; ipdb.set_trace()
+#             assert len(allexpression) == 1, "More than one equation!"
+            for expression in allexpression:
                 assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
                 for parameter in expression.findall('prime:parameter', namespaces=ns):
                     if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
