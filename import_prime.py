@@ -7,6 +7,8 @@ the Django database.
 """
 
 import os
+import traceback
+import time
 from xml.etree import ElementTree  # cElementTree is C implementation of xml.etree.ElementTree, but works differently!
 from xml.parsers.expat import ExpatError  # XML formatting errors
 
@@ -19,6 +21,8 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Thermo, ThermoComment, \
                                  Source, Author, Authorship
 
+class PrimeError(Exception):
+    pass
 
 class Importer():
     """
@@ -69,22 +73,32 @@ class Importer():
             full_path = os.path.join(catalog_path, file)
             self.import_file(full_path)
 
+
+    
     def import_file(self, file_path):
         """
         Import a single file
         """
+        def save_error(message):
+            with open('errors.txt', "a") as errors:
+                errors.write("{0}\t{1}\n".format(file_path, message))
+        
         print "Parsing file {}".format(file_path)
         try:
             tree = ElementTree.parse(file_path)
         except ExpatError as e:
-            print "[XML] Error (line %d): %d" % (e.lineno, e.code)
-            print "[XML] Offset: %d" % (e.offset)
-            raise
+            save_error("[XML] Error (line %d): %d" % (e.lineno, e.code))
+            save_error("[XML] Offset: %d" % (e.offset))
         except IOError as e:
-            print "[XML] I/O Error %d: %s" % (e.errno, e.strerror)
-            raise
-        root = tree.getroot()
-        self.import_elementtree_root(root)
+            save_error("[XML] I/O Error %d: %s" % (e.errno, e.strerror))
+        
+        try:
+            root = tree.getroot()
+            self.import_elementtree_root(root)
+        except Exception as e:
+            save_error(traceback.format_exc())
+            
+
 
     def import_elementtree_root(self, root):
         """
@@ -308,57 +322,54 @@ class KineticsImporter(Importer):
             rkPrimeID=rkPrimeID,
             reaction=reaction)
         
-        try:
-            # Start by finding the source link, and looking it up in the bibliography
-            bibliography_link = kin.find('prime:bibliographyLink',
-                                            namespaces=ns)
-            bPrimeID = bibliography_link.attrib['primeID']
-            source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-            dj_kin.source = source
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliography_link = kin.find('prime:bibliographyLink',
+                                        namespaces=ns)
+        bPrimeID = bibliography_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_kin.source = source
 
-            # Now give the Kinetics object its other properties
-            coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
-            if coefficient.attrib['direction']=='reverse':
-                dj_kin.is_reverse=True
-            relunc=coefficient.find('prime:uncertainty', namespaces=ns)
-            if relunc is not None:
-                dj_kin.relative_uncertainty=float(relunc.text)
-            allexpression=coefficient.findall('prime:expression', namespaces=ns)
-            if len(allexpression)!=1:
-                raise
-            for expression in allexpression:
-                assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
-                for parameter in expression.findall('prime:parameter', namespaces=ns):
-                    if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
-                        value=parameter.find('prime:value', namespaces=ns)
-                        dj_kin.A_value=float(value.text)
-                        try:
-                            uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                            dj_kin.A_value_uncertainty=float(uncertainty.text)
-                        except:
-                            pass
-                    elif parameter.attrib['name'] == 'n':
-                        value=parameter.find('prime:value', namespaces=ns)
-                        dj_kin.n_value=float(value.text)
-                    elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
-                        value=parameter.find('prime:value', namespaces=ns)
-                        dj_kin.E_value=float(value.text)
-                        try:
-                            uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                            dj_kin.E_value_uncertainty=float(uncertainty.text)
-                        except:
-                            pass
-            temperature_range = kin.find('prime:validRange', namespaces=ns)
-            if temperature_range is not None:
-                for bound in temperature_range.findall('prime:bound', namespaces=ns):
-                    if bound.attrib['kind'] == 'lower':
-                        dj_kin.lower_temp_bound=float(bound.text)
-                    if bound.attrib['kind'] == 'upper':
-                        dj_kin.upper_temp_bound=float(bound.text)
-            dj_kin.save()
-        except:
-            with open("fail.txt", "a") as myfile:
-                myfile.write("\n"+rPrimeID+"   "+rkPrimeID)
+        # Now give the Kinetics object its other properties
+        coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
+        if coefficient.attrib['direction']=='reverse':
+            dj_kin.is_reverse=True
+        relunc=coefficient.find('prime:uncertainty', namespaces=ns)
+        if relunc is not None:
+            dj_kin.relative_uncertainty=float(relunc.text)
+        allexpression=coefficient.findall('prime:expression', namespaces=ns)
+        if len(allexpression) != 1:
+            raise PrimeError("Not one and only one Arrhenius expression")
+        for expression in allexpression:
+            assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
+            for parameter in expression.findall('prime:parameter', namespaces=ns):
+                if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.A_value=float(value.text)
+                    try:
+                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.A_value_uncertainty=float(uncertainty.text)
+                    except:
+                        pass
+                elif parameter.attrib['name'] == 'n':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.n_value=float(value.text)
+                elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
+                    value=parameter.find('prime:value', namespaces=ns)
+                    dj_kin.E_value=float(value.text)
+                    try:
+                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.E_value_uncertainty=float(uncertainty.text)
+                    except:
+                        pass
+        temperature_range = kin.find('prime:validRange', namespaces=ns)
+        if temperature_range is not None:
+            for bound in temperature_range.findall('prime:bound', namespaces=ns):
+                if bound.attrib['kind'] == 'lower':
+                    dj_kin.lower_temp_bound=float(bound.text)
+                if bound.attrib['kind'] == 'upper':
+                    dj_kin.upper_temp_bound=float(bound.text)
+        dj_kin.save()
+
 
 class ModelImporter(Importer):
     """
@@ -380,12 +391,14 @@ class ModelImporter(Importer):
         species_set=mod.find('prime:speciesSet', namespaces=ns)
         specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
         for species in specieslink:
-            
+            pass
 
 def main(top_root):
     """
     The main function. Give it the path to the top of the database mirror
     """
+    with open('errors.txt', "w") as errors:
+        errors.write("Restarting import at "+time.strftime("%D %T"))
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
         if root.endswith('depository/bibliography'):
