@@ -394,8 +394,14 @@ class ModelImporter(Importer):
         species_set=mod.find('prime:speciesSet', namespaces=ns)
         specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
         for species in specieslink:
-            pass
-
+#             sPrimeID = species.attrib.get("primeID")
+        reaction_set=mod.find('prime:reactionSet', namespaces=ns)
+        reactionlink=reaction_set.findall('prime:reactionLink', namespaces=ns)
+        for reaction in reactionlink:
+#             rPrimeID = reaction.attrib.get("primeID")
+#             if reaction.attrib['reversible']=='false':
+#                 dj_kin.is_reversible=False
+        
 def main(top_root):
     """
     The main function. Give it the path to the top of the database mirror
