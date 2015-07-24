@@ -353,6 +353,7 @@ class Kinetics(models.Model):
     reaction = models.ForeignKey(Reaction)
     source = models.ForeignKey(Source, null=True)
     rkPrimeID = models.CharField(blank=True, max_length=10)
+    relative_uncertainty = models.FloatField(blank=True, null=True)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
