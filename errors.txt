@@ -1,0 +1,784 @@
+Restarting import at 07/24/15 15:00:10/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00000311/rk00000002.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00000315/rk00000004.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00000345/rk00000007.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001278/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001282/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001282/rk00000021.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001336/rk00000017.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001337/rk00000024.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001439/rk00000020.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001498/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001499/rk00000009.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001529/rk00000012.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001536/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] == 'arrhenius' or expression.attrib['form'] == 'Arrhenius', "Equation form is not arrhenius!"
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001538/rk00000008.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001655/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001660/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001661/rk00000026.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00001662/rk00000014.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002085/rk00000064.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002086/rk00000012.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002163/rk00000018.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002385/rk00000020.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002402/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00002700/rk00000035.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00003116/rk00000017.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00003125/rk00000007.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00003133/rk00000006.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00003134/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00006137/rk00000034.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00006137/rk00000052.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00006186/rk00000093.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00006999/rk00000015.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00009454/rk00000025.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00009454/rk00000028.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00009454/rk00000038.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00009536/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00009568/rk00000014.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00010238/rk00000041.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00010503/rk00000028.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00010564/rk00000031.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00010875/rk00000036.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00010887/rk00000047.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011282/rk00000018.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011402/rk00000028.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000008.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000016.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000025.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000030.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000034.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000036.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000038.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011821/rk00000041.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011842/rk00000043.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011842/rk00000046.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011842/rk00000049.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011869/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011870/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011871/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011981/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011982/rk00000016.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011997/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011998/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00011999/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012000/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012001/rk00000005.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 343, in import_elementtree_root
+    assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
+AssertionError: Equation form is not arrhenius!
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012011/rk00000006.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012023/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012023/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012023/rk00000023.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012133/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012186/rk00000091.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012202/rk00000028.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00012710/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013602/rk00000013.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000031.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000042.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000043.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000058.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000068.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013690/rk00000076.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013692/rk00000048.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013692/rk00000051.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013758/rk00000012.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013764/rk00000015.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013764/rk00000017.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013764/rk00000025.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013764/rk00000027.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013767/rk00000050.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013767/rk00000053.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013792/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013869/rk00000023.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013869/rk00000026.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013869/rk00000034.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013922/rk00000007.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013923/rk00000003.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00013926/rk00000009.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00014304/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00014325/rk00000034.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00014762/rk00000027.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00014762/rk00000041.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Not one and only one Arrhenius expression")
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00014991/rk00000015.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00015408/rk00000013.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00016041/rk00000019.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00016434/rk00000013.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00016528/rk00000011.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017214/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017241/rk00000006.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017257/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017270/rk00000002.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 341, in import_elementtree_root
+    raise PrimeError("Expected one Arrhenius expression but got {}".format(len(allexpression)))
+PrimeError: Not one and only one Arrhenius expression
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017294/rk00000010.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/reactions/data/r00017305/rk00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 334, in import_elementtree_root
+    if coefficient.attrib['direction']=='reverse':
+AttributeError: 'NoneType' object has no attribute 'attrib'
+
