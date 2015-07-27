@@ -391,6 +391,16 @@ class ModelImporter(Importer):
         dj_mod.model_name = mod.findtext('prime:preferredKey',
                                                 namespaces=ns,
                                                 default='')
+        #parse additional info
+        additionalinfo = mod.find('prime:additionalDataItem', namespaces=ns)
+        info=additionalinfo.text
+        description=additionalinfo.attrib.get('description')
+        if description!='Model description':
+            if info is not None:
+                dj_mod.additional_info = description+" = "+info
+            else:
+                dj_mod.additional_info = description
+        #parse species links
         species_set=mod.find('prime:speciesSet', namespaces=ns)
         specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
         for species in specieslink:
