@@ -279,8 +279,9 @@ class Transport(models.Model):
     """
     Some Transport data for a species
     """
-    source = models.ForeignKey(Source)
+    source = models.ForeignKey(Source, null=True)
     species = models.ForeignKey(Species)
+    trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
     depth = models.FloatField('Potential Well Depth',
                               blank=True,
