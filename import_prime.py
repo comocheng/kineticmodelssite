@@ -394,11 +394,22 @@ class ModelImporter(Importer):
         species_set=mod.find('prime:speciesSet', namespaces=ns)
         specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
         for species in specieslink:
-#             sPrimeID = species.attrib.get("primeID")
+            sPrimeID = species.attrib.get("primeID")
+            thermolink = species.find('prime:thermodynamicDataLink', namespaces=ns)
+            thpPrimeID = thermolink.attrib.get("primeID")
+            transportlink = species.find('prime:transportDataLink', namespaces=ns)
+            if transportlink is not None:
+                trPrimeID = transportlink.attrib.get("primeID")
+            
+        #parse reaction links
         reaction_set=mod.find('prime:reactionSet', namespaces=ns)
         reactionlink=reaction_set.findall('prime:reactionLink', namespaces=ns)
         for reaction in reactionlink:
-#             rPrimeID = reaction.attrib.get("primeID")
+            rPrimeID = reaction.attrib.get("primeID")
+            reversible = reaction.attrib.get("reversible")
+            kineticslink = reaction.find('prime:reactionRateLink', namespaces=ns)
+            rkPrimeID = kineticslink.attrib.get("primeID")
+            
 #             if reaction.attrib['reversible']=='false':
 #                 dj_kin.is_reversible=False
         
@@ -423,9 +434,9 @@ def main(top_root):
             #print "skipping for now, to test the next importer..."; continue
             KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
-#         elif root.endswith('depository/models'):
-#             print "We have found the Kinetic Models which we can import!"
-#             ModelImporter(root).import_catalog()
+        elif root.endswith('depository/models'):
+            print "We have found the Kinetic Models which we can import!"
+            ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
             print "Skipping {}".format(root)
