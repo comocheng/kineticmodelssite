@@ -293,7 +293,28 @@ class TransportImporter(Importer):
         bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_trans.source = source
-
+        # Now give the Transport object its other properties
+        expression = trans.find('prime:expression', namespace=ns)
+        for parameter in expression.findall('prime:parameter', namespaces=ns):
+            if parameter.attrib['name'] == 'geometry':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.geometry=float(value.text)
+            elif parameter.attrib['name'] == 'potentialWellDepth':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.depth=float(value.text)
+            elif parameter.attrib['name'] == 'collisionDiameter':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.diameter=float(value.text)
+            elif parameter.attrib['name'] == 'dipoleMoment':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.dipole_moment=float(value.text)
+            elif parameter.attrib['name'] == 'polarizability':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.polarizability=float(value.text)
+            elif parameter.attrib['name'] == 'rotationalRelaxation':
+                value=parameter.find('prime:value', namespaces=ns)
+                dj_trans.rot_relax=float(value.text)
+        dj_trans.save
 
 class ReactionImporter(Importer):
     """
