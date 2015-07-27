@@ -268,6 +268,32 @@ class ThermoImporter(Importer):
         assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
         dj_thermo.save()
 
+class TransportImporter(Importer):
+    """
+    To import the transport data of a species
+    """
+    prime_ID_prefix = 'tr'
+    
+    def import_elementtree_root(self, trans):
+        ns = self.ns
+        # Get the Prime ID for the thermo polynomial
+        trPrimeID = trans.attrib.get("primeID")
+        # Get the Prime ID for the species to which it belongs, and get (or create) the species
+        specieslink = trans.find('prime:speciesLink', namespaces=ns)
+        sPrimeID = specieslink.attrib['primeID']
+        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
+        # Now get (or create) the django Thermo object for that species and polynomial
+        dj_trans, created = Thermo.objects.get_or_create(
+            trPrimeID=trPrimeID,
+            species=species)
+
+        # Start by finding the source link, and looking it up in the bibliography
+        bibliography_link = trans.find('prime:bibliographyLink',
+                                        namespaces=ns)
+        bPrimeID = bibliography_link.attrib['primeID']
+        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
+        dj_trans.source = source
+
 
 class ReactionImporter(Importer):
     """
