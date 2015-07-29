@@ -282,8 +282,8 @@ class TransportImporter(Importer):
         specieslink = trans.find('prime:speciesLink', namespaces=ns)
         sPrimeID = specieslink.attrib['primeID']
         species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
-        # Now get (or create) the django Thermo object for that species and polynomial
-        dj_trans, created = Thermo.objects.get_or_create(
+        # Now get (or create) the django Transport object for that species
+        dj_trans, created = Transport.objects.get_or_create(
             trPrimeID=trPrimeID,
             species=species)
 
@@ -364,7 +364,7 @@ class KineticsImporter(Importer):
         reactionlink = kin.find('prime:reactionLink', namespaces=ns)
         rPrimeID = reactionlink.attrib['primeID']
         reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
-        # Now get (or create) the django Thermo object for that species and polynomial
+        # Now get (or create) the django Kinetics object for that reaction
         dj_kin, created = Kinetics.objects.get_or_create(
             rkPrimeID=rkPrimeID,
             reaction=reaction)
@@ -484,9 +484,9 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith('depository/species'):
             print "We have found the Species which we can import!"
-            SpeciesImporter(root).import_catalog()
-            ThermoImporter(root).import_data()
             TransportImporter(root).import_data()
+            SpeciesImporter(root).import_catalog()
+#             ThermoImporter(root).import_data()
         elif root.endswith('depository/reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
