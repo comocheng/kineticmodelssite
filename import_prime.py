@@ -203,7 +203,10 @@ class ThermoImporter(Importer):
     def import_elementtree_root(self, thermo):
         ns = self.ns
         # Get the Prime ID for the thermo polynomial
-        thpPrimeID = thermo.attrib.get("primeID")
+        if thermo.attrib.get("primeID") != 'thp00000000':
+            thpPrimeID = thermo.attrib.get("primeID")
+        else: 
+            return
         # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = thermo.find('prime:speciesLink', namespaces=ns)
         sPrimeID = specieslink.attrib['primeID']
@@ -276,8 +279,11 @@ class TransportImporter(Importer):
     
     def import_elementtree_root(self, trans):
         ns = self.ns
-        # Get the Prime ID for the thermo polynomial
-        trPrimeID = trans.attrib.get("primeID")
+        # Get the Prime ID for the transport data
+        if trans.attrib.get("primeID") != 'tr00000000':
+            trPrimeID = trans.attrib.get("primeID")
+        else: 
+            return
         # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = trans.find('prime:speciesLink', namespaces=ns)
         sPrimeID = specieslink.attrib['primeID']
