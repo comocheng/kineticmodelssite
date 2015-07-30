@@ -162,9 +162,9 @@ def main(top_root):
 #                 print "skipping {}".format(os.path.join(root, skipdir))
 #                 dirs.remove(skipdir)
     for 
-        with open('exporterrors.xml', "w") as file:
+        with open(primeID+'.xml', "a") as file:
             file.write("Restarting import at "+time.strftime("%D %T"))
-            #send enter this file into PrIMe database
+            #send this file into PrIMe database
 
 
 # if __name__ == "__main__":
