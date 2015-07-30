@@ -1,0 +1,371 @@
+Restarting import at 07/29/15 09:29:50/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00000049/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00000208/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002295/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002305/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002431/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002432/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002447/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002559/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002577/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002656/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002703/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00002784/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00003017/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00003657/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00003749/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009010/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009012/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009015/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009065/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009076/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009089/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009173/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009174/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009193/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009219/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009312/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009315/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009317/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009318/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009319/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009325/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009352/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009358/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009360/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009800/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009809/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009856/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009881/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009882/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00009927/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010069/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010071/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010076/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010102/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010103/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010227/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010231/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010234/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010245/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010246/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010285/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010295/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
+/Users/dgreen18/Code/warehouse.primekinetics.org/depository/species/data/s00010451/tr00000001.xml	Traceback (most recent call last):
+  File "import_prime.py", line 97, in import_file
+    self.import_elementtree_root(root)
+  File "import_prime.py", line 293, in import_elementtree_root
+    dj_trans, created = Transport.objects.get_or_create(
+NameError: global name 'Transport' is not defined
+
