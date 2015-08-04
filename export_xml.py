@@ -99,6 +99,7 @@ class xmlSpecies():
             symvariables["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
             symvariables["child5-{0}".format(n)].attrib["symbol"]=symbol
             symvariables["child5-{0}".format(n)].text=str(atomdict[sym])
+        print etree.tostring(root, pretty_print=True)
             
 class xmlReaction():
     
@@ -161,9 +162,9 @@ def main(top_root):
 #             if skipdir in dirs:
 #                 print "skipping {}".format(os.path.join(root, skipdir))
 #                 dirs.remove(skipdir)
-    for 
-        with open(primeID+'.xml', "a") as file:
-            file.write("Restarting import at "+time.strftime("%D %T"))
+    for primeID in objects:
+        with open(primeID+'.xml', "w+") as file:
+            file.write(print etree.tostring(root, pretty_print=True))
             #send this file into PrIMe database
 
 
