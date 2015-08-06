@@ -62,6 +62,12 @@ class xmlSpecies():
     #         child42.attrib["source"] = source
             child4_formula.attrib["type"]=type
             child4_formula.text="HO
+        #make list l of all names for species
+        l=['a','b','c','d','e']
+        d={}
+        for i, name in list(enumerate(l)):
+            d["child4-{0}".format(i)]=etree.SubElement(child4, 'name')
+            d["child4-{0}".format(i)].text=name
             
 #         child43=etree.SubElement(child4, 'name')
 # #         child43.attrib["source"] = source
