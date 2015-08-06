@@ -52,41 +52,41 @@ class xmlSpecies():
         child4=etree.SubElement(root, 'chemicalIdentifier')
         if CAS is not None:
             type="CASRegistryNumber"
-            child41=etree.SubElement(child4, 'name')
+            child4_CAS=etree.SubElement(child4, 'name')
     #         child41.attrib["source"] = source
-            child41.attrib["type"]=type
-            child41.text="3352-57-6"
+            child4_CAS.attrib["type"]=type
+            child4_CAS.text="3352-57-6"
         if formula is not None:
-        type="formula"
-#         child42=etree.SubElement(child4, 'name')
-# #         child42.attrib["source"] = source
-#         child42.attrib["type"]=type
-#         child42.text="HO
-        child43=etree.SubElement(child4, 'name')
-#         child43.attrib["source"] = source
-        child43.text="&middot;OH"
-        child44=etree.SubElement(child4, 'name')
-#         child44.attrib["source"] = source
-        child44.text="hydroxy radical"
-        child45=etree.SubElement(child4, 'name')
-#         child45.attrib["source"] = source
-        child45.text="hydroxyl"
-        child46=etree.SubElement(child4, 'name')
-#         child46.attrib["source"] = source
-        child46.text="hydroxyl radical"
-        child47=etree.SubElement(child4, 'name')
-#         child47.attrib["source"] = source
-        child47.text="oh"
-        child48=etree.SubElement(child4, 'name')
-        child48.text="hidroksil"
-        child49=etree.SubElement(child4, 'name')
-        child49.text="hidroksi radikal"
+            type="formula"
+            child4_formula=etree.SubElement(child4, 'name')
+    #         child42.attrib["source"] = source
+            child4_formula.attrib["type"]=type
+            child4_formula.text="HO
+            
+#         child43=etree.SubElement(child4, 'name')
+# #         child43.attrib["source"] = source
+#         child43.text="&middot;OH"
+#         child44=etree.SubElement(child4, 'name')
+# #         child44.attrib["source"] = source
+#         child44.text="hydroxy radical"
+#         child45=etree.SubElement(child4, 'name')
+# #         child45.attrib["source"] = source
+#         child45.text="hydroxyl"
+#         child46=etree.SubElement(child4, 'name')
+# #         child46.attrib["source"] = source
+#         child46.text="hydroxyl radical"
+#         child47=etree.SubElement(child4, 'name')
+# #         child47.attrib["source"] = source
+#         child47.text="oh"
+#         child48=etree.SubElement(child4, 'name')
+#         child48.text="hidroksil"
+#         child49=etree.SubElement(child4, 'name')
+#         child49.text="hidroksi radikal"
         if inchi is not None:
             type="InChI"
-            child410=etree.SubElement(child4, 'name')
-            child410.attrib["type"]=type
-            child410.text="InChI=1/HO/h1H"
-        
+            child4_inchi=etree.SubElement(child4, 'name')
+            child4_inchi.attrib["type"]=type
+            child4_inchi.text="InChI=1/HO/h1H"
         child5=etree.SubElement(root, 'chemicalComposition')
         atomdict={}
         for atom in mol.atoms:
