@@ -18,6 +18,36 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Thermo, ThermoComment, \
                                  Source, Author, Authorship
 
+class xmlSource():
+    
+    def print_source_xml(self):
+        xmlns="http://purl.org/NET/prime/"
+        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        bPrimeID="b00010102"
+        schemaLocation="http://warehouse.primekinetics.org/schema/bibliography.xsd"
+        NSMAP = {None: xmlns, 'xsi': xsi}
+        root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
+        root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
+        # root.attrib["{" + xmlns + "}xsi"] = xsi
+        root.attrib["primeID"] = primeID
+        authordict={}
+        for n in range(len(authorlist)): #authorlist should be in order of authorship
+            authordict[["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
+            authordict[["childauthor{0}".format(n)].text=authorlist[n]
+        childyear = etree.SubElement(root, 'year')
+        childyear.text = pub_year
+        childtitle = etree.SubElement(root, 'title')
+        childtitle.text = source_title
+        childjournal = etree.SubElement(root, 'journal')
+        childjournal.text = journal_name
+        childvolume = etree.SubElement(root, 'volume')
+        childvolume.text = jour_vol_num
+        childpages = etree.SubElement(root, 'pages')
+        childpages.text = page_numbers
+        childdoi = etree.SubElement(root, 'doi')
+        childdoi.text = doi
+        print etree.tostring(root, pretty_print=True)
+
 class xmlSpecies():
     
     def print_species_xml(self):
@@ -141,7 +171,7 @@ class xmlReaction():
     def print_reaction_xml(self):
         xmlns="http://purl.org/NET/prime/"
         xsi="http://www.w3.org/2001/XMLSchema-instance"
-        primeID="r00000011"
+        rPrimeID="r00000011"
         schemaLocation="http://warehouse.primekinetics.org/schema/reaction.xsd"
         NSMAP = {None: xmlns}
         root = etree.Element('{' + xmlns + '}reaction', nsmap=NSMAP)
