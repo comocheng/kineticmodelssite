@@ -94,7 +94,6 @@ class xmlSpecies():
             child4_inchi.attrib["type"]=type
             child4_inchi.text="InChI=1/HO/h1H"
         child5=etree.SubElement(root, 'chemicalComposition')
-        atomdict={}
         form=[]
         count=[]
         for i in range(len(formula)):
@@ -114,8 +113,11 @@ class xmlSpecies():
                     count.append(formula[i-1:i+1])
                 else:
                     form.append(formula[i])
-        
-                
+        atomdict={}
+        for n in range(len(form)):
+            atomdict["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
+            atomdict["child5-{0}".format(n)].attrib["symbol"]=form[n]
+            atomdict["child5-{0}".format(n)].text=count[n]
 #         atomdict={}
 #         for atom in mol.atoms:
 #             symbol = atom.symbol
