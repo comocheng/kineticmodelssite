@@ -95,21 +95,43 @@ class xmlSpecies():
             child4_inchi.text="InChI=1/HO/h1H"
         child5=etree.SubElement(root, 'chemicalComposition')
         atomdict={}
-        for atom in mol.atoms:
-            symbol = atom.symbol
-            if symbol in atomdict:
-                atomdict[symbol]+=1
-            else:
-                atomdict[symbol]=1
-        symlist=[]
-        for k in atomdict.keys():
-            symlist.append[k]
-        symvariables={}
-        for n in range(len(symlist)):
-            symbol=symlist[n]
-            symvariables["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
-            symvariables["child5-{0}".format(n)].attrib["symbol"]=symbol
-            symvariables["child5-{0}".format(n)].text=str(atomdict[sym])
+        form=[]
+        count=[]
+        for i in range(len(formula)):
+            if formula[i] in string.letters:
+                if formula[i+1] in string.letters:
+                    continue
+                elif formula[i-1] in string.letters:
+                    form.append(formula[i-1:i+1])
+                else:
+                    form.append(formula[i])
+            elif formula[i] in string.digits:
+                if formula[i+1] in string.digits:
+                    continue
+                elif formula[i-2] in string.digits and formula[i-1] in string.digits:
+                    count.append(formula[i-2:i+1])
+                elif formula[i-1] in string.digits:
+                    count.append(formula[i-1:i+1])
+                else:
+                    form.append(formula[i])
+        
+                
+#         atomdict={}
+#         for atom in mol.atoms:
+#             symbol = atom.symbol
+#             if symbol in atomdict:
+#                 atomdict[symbol]+=1
+#             else:
+#                 atomdict[symbol]=1
+#         symlist=[]
+#         for k in atomdict.keys():
+#             symlist.append[k]
+#         symvariables={}
+#         for n in range(len(symlist)):
+#             symbol=symlist[n]
+#             symvariables["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
+#             symvariables["child5-{0}".format(n)].attrib["symbol"]=symbol
+#             symvariables["child5-{0}".format(n)].text=str(atomdict[sym])
         print etree.tostring(root, pretty_print=True)
             
 class xmlReaction():
