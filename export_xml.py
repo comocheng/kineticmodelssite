@@ -148,20 +148,26 @@ class xmlReaction():
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
         root.attrib["primeID"] = primeID
-        child1=etree.SubElement(root,'copyright')
-        child1.text="primekinetics.org 2005"
+#         child1=etree.SubElement(root,'copyright')
+#         child1.text="primekinetics.org 2005"
         child2=etree.SubElement(root,'reactants')
-        preferredKey="C10H11"
-        primeID="s00000275"
-        child21=etree.SubElement(child2,'speciesLink')
-        child21.attrib["preferredKey"]=preferredKey
-        child21.attrib["primeID"]=primeID
-        child21.text="-1"
-        primeID="s00000276"
-        child22=etree.SubElement(child2,'speciesLink')
-        child22.attrib["preferredKey"]=preferredKey
-        child22.attrib["primeID"]=primeID
-        child22.text="1"
+        stoichdict={}
+        for n in range(len(specieslist)):
+            stoichdict["child2-{0}".format(n)]=etree.SubElement(child2,'speciesLink')
+            stoichdict["child2-{0}".format(n)].attrib['preferredKey']=specieslist[n]
+            stoichdict["child2-{0}".format(n)].attrib['primeID']=specieslist[n]<-PrimeID
+            stoichdict["child2-{0}".format(n)].text=specieslist[n]<-Stoichiometry
+#         preferredKey="C10H11"
+#         primeID="s00000275"
+#         child21=etree.SubElement(child2,'speciesLink')
+#         child21.attrib["preferredKey"]=preferredKey
+#         child21.attrib["primeID"]=primeID
+#         child21.text="-1"
+#         primeID="s00000276"
+#         child22=etree.SubElement(child2,'speciesLink')
+#         child22.attrib["preferredKey"]=preferredKey
+#         child22.attrib["primeID"]=primeID
+#         child22.text="1"
         print etree.tostring(root, pretty_print=True)
 
 def main(top_root):
