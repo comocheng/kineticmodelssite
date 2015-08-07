@@ -64,10 +64,10 @@ class xmlSpecies():
             child4_formula.text="HO
         #make list l of all names for species
         l=['a','b','c','d','e']
-        d={}
+        namedict={}
         for i, name in list(enumerate(l)):
-            d["child4-{0}".format(i)]=etree.SubElement(child4, 'name')
-            d["child4-{0}".format(i)].text=name
+            namedict["child4-{0}".format(i)]=etree.SubElement(child4, 'name')
+            namedict["child4-{0}".format(i)].text=name
             
 #         child43=etree.SubElement(child4, 'name')
 # #         child43.attrib["source"] = source
