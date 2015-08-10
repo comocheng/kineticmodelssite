@@ -29,7 +29,7 @@ class xmlSource():
         root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
-        root.attrib["primeID"] = primeID
+        root.attrib["primeID"] = bPrimeID
         authordict={}
         for n in range(len(authorlist)): #authorlist should be in order of authorship
             authordict[["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
@@ -62,7 +62,7 @@ class xmlSpecies():
         root = etree.Element('{' + xmlns + '}chemicalSpecies', nsmap=NSMAP)
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
-        root.attrib["primeID"] = primeID
+        root.attrib["primeID"] = sPrimeID
 #         child1=etree.SubElement(root,'copyright')
 #         child1.text="primekinetics.org 2005"
         bibliography="b00014319"
@@ -177,7 +177,7 @@ class xmlReaction():
         root = etree.Element('{' + xmlns + '}reaction', nsmap=NSMAP)
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
-        root.attrib["primeID"] = primeID
+        root.attrib["primeID"] = rPrimeID
 #         child1=etree.SubElement(root,'copyright')
 #         child1.text="primekinetics.org 2005"
         child2=etree.SubElement(root,'reactants')
@@ -185,7 +185,7 @@ class xmlReaction():
         for n in range(len(specieslist)):
             stoichdict["child2-{0}".format(n)]=etree.SubElement(child2,'speciesLink')
             stoichdict["child2-{0}".format(n)].attrib['preferredKey']=specieslist[n]
-            stoichdict["child2-{0}".format(n)].attrib['primeID']=specieslist[n]<-PrimeID
+            stoichdict["child2-{0}".format(n)].attrib['primeID']=specieslist[n]<-sPrimeID
             stoichdict["child2-{0}".format(n)].text=specieslist[n]<-Stoichiometry
 #         preferredKey="C10H11"
 #         primeID="s00000275"
