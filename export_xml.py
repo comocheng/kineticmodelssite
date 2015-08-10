@@ -286,8 +286,55 @@ class xmlThermo():
 class xmlTransport():
     
     def print_transport_xml(self):
-    
-            
+        xmlns="http://purl.org/NET/prime/"
+        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        trPrimeID="tr00010102"
+        schemaLocation="http://warehouse.primekinetics.org/schema/transportCoefficients.xsd"
+        NSMAP = {None: xmlns, 'xsi': xsi}
+        root = etree.Element('{' + xmlns + '}transportCoefficients', nsmap=NSMAP)
+        root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
+        # root.attrib["{" + xmlns + "}xsi"] = xsi
+        root.attrib["primeID"] = trPrimeID
+        child1 = etree.SubElement(root, 'preferredKey')
+        child1.attrib['group'] = "prime"
+        child1.text = modelname #(i.e. 'GRI-Mech 3.0')
+        child2 = etree.SubElement(root, 'bibliographyLink')
+        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['primeID'] = bPrimeID
+        child3 = etree.SubElement(root, 'speciesLink')
+        child3.attrib['preferredKey'] = formula of sPrimeID
+        child3.attrib['primeID'] = sPrimeID
+        child4 = etree.SubElement(root, 'expression')
+        child4.attrib['form']="Lennard-Jones"
+        child4_geo = etree.SubElement(child4, 'parameter')
+        child4_geo.attrib['name'] = "geometry"
+        child4_geo_val = etree.SubElement(child4_geo, 'value')
+        child4_geo_val.text = geometry
+        child4_dep = etree.SubElement(child4, 'parameter')
+        child4_dep.attrib['name'] = "potentialWellDepth"
+        child4_dep.attrib['units'] = "K"
+        child4_dep_val = etree.SubElement(child4_dep, 'value')
+        child4_dep_val.text = depth
+        child4_dia = etree.SubElement(child4, 'parameter')
+        child4_dia.attrib['name'] = "collisionDiameter"
+        child4_dia.attrib['units'] = "Angstroms"
+        child4_dia_val = etree.SubElement(child4_dia, 'value')
+        child4_dia_val.text = diameter
+        child4_dip = etree.SubElement(child4, 'parameter')
+        child4_dip.attrib['name'] = "dipoleMoment"
+        child4_dip.attrib['units'] = "Debye"
+        child4_dip_val = etree.SubElement(child4_dip, 'value')
+        child4_dip_val.text = dipole_moment
+        child4_pol = etree.SubElement(child4, 'parameter')
+        child4_pol.attrib['name'] = "polarizability"
+        child4_pol.attrib['units'] = "cubic Angstroms"
+        child4_pol_val = etree.SubElement(child4_pol, 'value')
+        child4_pol_val.text = polarizability
+        child4_rot = etree.SubElement(child4, 'parameter')
+        child4_rot.attrib['name'] = "rotationalRelaxation"
+        child4_rot_val = etree.SubElement(child4_rot, 'value')
+        child4_rot_val.text = rot_relax
+
 class xmlReaction():
     
     def print_reaction_xml(self):
