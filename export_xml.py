@@ -341,6 +341,53 @@ class xmlKinetics():
         child2 = etree.SubElement(root, 'bibliographyLink')
         child2.attrib['preferredKey'] = authorlist of bPrimeID
         child2.attrib['primeID'] = bPrimeID
+        if is_reverse==True:
+            direction='reverse'
+        else:
+            direction='forward'
+        child3 = etree.SubElement(root, 'rateCoefficient')
+        child3.attrib['direction'] = direction
+        child3-uncertainty = etree.SubElement(child3, 'uncertainty')
+        child3-uncertainty.attrib['bound']="plusminus"
+        child3-uncertainty.attrib['kind']="relative"
+        child3-uncertainty.attrib['transformation']="1"
+        child3-uncertainty.text = relative_uncertainty
+        child3-exp = etree.SubElement(child3, 'expression')
+        #assuming expression in arrhenius form (needs exceptions)
+        child3-exp.attrib['form']="arrhenius"
+        child3-exp_Avalue = etree.SubElement(child3-exp, 'parameter')
+        child3-exp_Avalue.attrib['name']="a"
+        child3-exp_Avalue.attrib['units']="cm3,mol,s,K"
+        child3-exp_Avalue_val = etree.SubElement(child3-exp_Avalue, 'value')
+        child3-exp_Avalue_val.text = A_value
+        if A_value_uncertainty is not None:
+            child3-exp_Avalue_unc = etree.SubElement(child3-exp_Avalue, 'uncertainty')
+            child3-exp_Avalue_unc.attrib['bound']="plusminus"
+            child3-exp_Avalue_unc.attrib['kind']="absolute"
+            child3-exp_Avalue_unc.attrib['transformation']="1"
+            child3-exp_Avalue_unc.text = A_value_uncertainty
+        if n_value!=0:
+            child3-exp_nvalue = etree.SubElement(child3-exp, 'parameter')
+            child3-exp_nvalue.attrib['name']="n"
+            child3-exp_nvalue.attrib['units']="unitless"
+            child3-exp_nvalue_val = etree.SubElement(child3-exp_nvalue, 'value')
+            child3-exp_nvalue_val.text = n_value
+        if E_value is not None:
+            child3-exp_Evalue = etree.SubElement(child3-exp, 'parameter')
+            child3-exp_Evalue.attrib['name']="e"
+            child3-exp_Evalue.attrib['units']="K"
+            child3-exp_Evalue_val = etree.SubElement(child3-exp_Evalue, 'value')
+            child3-exp_Evalue_val.text = E_value
+            if E_value_uncertainty is not None:
+                child3-exp_Evalue_unc = etree.SubElement(child3-exp_Evalue, 'uncertainty')
+                child3-exp_Evalue_unc.attrib['bound']="plusminus"
+                child3-exp_Evalue_unc.attrib['kind']="absolute"
+                child3-exp_Evalue_unc.attrib['transformation']="1"
+                child3-exp_Evalue_unc.text = E_value_uncertainty
+
+            
+        
+
 def main(top_root):
     """
     The main function. Give it the path to the top of the database
