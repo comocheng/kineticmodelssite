@@ -165,6 +165,36 @@ class xmlSpecies():
 #             symvariables["child5-{0}".format(n)].attrib["symbol"]=symbol
 #             symvariables["child5-{0}".format(n)].text=str(atomdict[sym])
         print etree.tostring(root, pretty_print=True)
+
+class xmlThermo():
+    
+    def print_thermo_xml(self):
+        xmlns="http://purl.org/NET/prime/"
+        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        thpPrimeID="thp00010102"
+        type="nasa7"
+        schemaLocation="http://warehouse.primekinetics.org/schema/thermodynamicPolynomials.xsd"
+        NSMAP = {None: xmlns, 'xsi': xsi}
+        root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
+        root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
+        # root.attrib["{" + xmlns + "}xsi"] = xsi
+        root.attrib["primeID"] = thpPrimeID
+        root.attrib["type"] = type
+        child1 = etree.SubElement(root, 'bibliographyLink')
+        child1.attrib['preferredKey']=authorlist of biblio
+        child1.attrib['primeID']=bPrimeID
+        child2 = etree.SubElement(root, 'preferredKey')
+        child2.attrib['group']="prime"
+        child2.text= preferredKey
+        child3 = etree.SubElement(root, 'preferredKey')
+        child3.attrib['preferredKey']=formula of species
+        child3.attrib['primeID']=sPrimeID
+        
+
+class xmlTransport():
+    
+    def print_transport_xml(self):
+    
             
 class xmlReaction():
     
