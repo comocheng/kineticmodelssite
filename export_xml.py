@@ -322,6 +322,25 @@ class xmlReaction():
 #         child22.text="1"
         print etree.tostring(root, pretty_print=True)
 
+class xmlKinetics():
+    
+    def print_kinetics_xml(self):
+        xmlns="http://purl.org/NET/prime/"
+        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        rkPrimeID="rk00010102"
+        schemaLocation="http://warehouse.primekinetics.org/schema/reactionRate.xsd"
+        NSMAP = {None: xmlns, 'xsi': xsi}
+        root = etree.Element('{' + xmlns + '}reactionRate', nsmap=NSMAP)
+        root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
+        # root.attrib["{" + xmlns + "}xsi"] = xsi
+        root.attrib["primeID"] = rkPrimeID
+        root.attrib['rateLawType'] = type  # (i.e. "mass action","unimolecular"...)
+        child1 = etree.SubElement(root, 'reactionLink')
+        child1.attrib['preferredKey'] = reactionequation of rPrimeID
+        child1.attrib['primeID'] = rPrimeID
+        child2 = etree.SubElement(root, 'bibliographyLink')
+        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['primeID'] = bPrimeID
 def main(top_root):
     """
     The main function. Give it the path to the top of the database
