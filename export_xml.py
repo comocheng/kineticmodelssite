@@ -388,6 +388,10 @@ class xmlKinetics():
             
         
 
+class xmlModel():
+    
+    def print_source_xml(self):
+
 def main(top_root):
     """
     The main function. Give it the path to the top of the database
