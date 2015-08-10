@@ -65,11 +65,11 @@ class xmlSpecies():
         root.attrib["primeID"] = sPrimeID
 #         child1=etree.SubElement(root,'copyright')
 #         child1.text="primekinetics.org 2005"
-        bibliography="b00014319"
+#         bibliography=bPrimeID
 #         copyrighted="true"
 #         source="NIST"
-        child2 = etree.SubElement(root, 'content')
-        child2.attrib["bibliography"] = bibliography
+#         child2 = etree.SubElement(root, 'content')
+#         child2.attrib["bibliography"] = bibliography
 #         child2.attrib["copyrighted"] = copyrighted
 #         child2.attrib["source"] = source
 #         child2.text="\nElements attributed to NIST are part of a collection copyrighted by NIST.\n"
@@ -175,7 +175,7 @@ class xmlThermo():
         type="nasa7"
         schemaLocation="http://warehouse.primekinetics.org/schema/thermodynamicPolynomials.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
-        root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
+        root = etree.Element('{' + xmlns + '}thermodynamicPolynomials', nsmap=NSMAP)
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
         root.attrib["primeID"] = thpPrimeID
