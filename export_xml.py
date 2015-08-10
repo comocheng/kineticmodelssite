@@ -186,10 +186,20 @@ class xmlThermo():
         child2 = etree.SubElement(root, 'preferredKey')
         child2.attrib['group']="prime"
         child2.text= preferredKey
-        child3 = etree.SubElement(root, 'preferredKey')
+        child3 = etree.SubElement(root, 'speciesLink')
         child3.attrib['preferredKey']=formula of species
         child3.attrib['primeID']=sPrimeID
-        
+        child4 = etree.SubElement(root, 'referenceState')
+        child4_tref = etree.SubElement(child4, 'Tref')
+        child4_tref.attrib['units']="K"
+        child4_tref.text = tref
+        child4_pref = etree.SubElement(child4, 'Pref')
+        child4_pref.attrib['units']="Pa"
+        child4_pref.text = pref
+        child5 = etree.SubElement(root, 'dfH')
+        child5.attrib['units']="J/mol"
+        child5.text = dfH
+
 
 class xmlTransport():
     
