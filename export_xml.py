@@ -454,6 +454,40 @@ class xmlModel():
         child2 = etree.SubElement(root, 'bibliographyLink')
         child2.attrib['preferredKey'] = authorlist of bPrimeID
         child2.attrib['primeID'] = bPrimeID
+        #species associated with model
+        child3 = etree.SubElement(root, 'speciesSet')
+        specieslist = #formulas of all species in model
+        speciesdict={}
+        for n in range(len(specieslist)):
+            speciesdict["child3-{0}".format(n)]=etree.SubElement(child3,'speciesLink')
+            speciesdict["child3-{0}".format(n)].attrib['preferredKey']=specieslist[n]
+            speciesdict["child3-{0}".format(n)].attrib['primeID']=specieslist[n]<-sPrimeID
+            speciesdict["child3-{0}_thermo".format(n)]=etree.SubElement("child3-{0}".format(n),'thermodynamicDataLink')
+            speciesdict["child3-{0}_thermo".format(n)].attrib['preferredKey']=#thermo preferred key (i.e. "L 7/88") for corresponding thermo
+            speciesdict["child3-{0}_thermo".format(n)].attrib['primeID']=thpPrimeID
+            if transport of specieslist[n] is not None:
+                speciesdict["child3-{0}_trans".format(n)]=etree.SubElement("child3-{0}".format(n),'transportDataLink')
+                speciesdict["child3-{0}_trans".format(n)].attrib['preferredKey'] = model_name
+                speciesdict["child3-{0}_trans".format(n)].attrib['primeID']=trPrimeID
+        #reactions associated with model
+        child4 = etree.SubElement(root, 'reactionSet')
+        reactionlist = #equations of all reactions in model
+        reactiondict={}
+        for n in range(len(specieslist)):
+            reactiondict["child4-{0}".format(n)]=etree.SubElement(child4,'reactionLink')
+            reactiondict["child4-{0}".format(n)].attrib['preferredKey']=reactionlist[n]
+            if is_reversible==False <-reactionlist[n]:
+                reversible='false'
+            else:
+                reversible='true'
+            reactiondict["child4-{0}".format(n)].attrib['reversible']=reversible
+            reactiondict["child4-{0}".format(n)].attrib['primeID']=reactionlist[n]<-sPrimeID
+            reactiondict["child4-{0}_kin".format(n)]=etree.SubElement("child4-{0}".format(n),'reactionRateLink')
+            reactiondict["child4-{0}_kin".format(n)].attrib['preferredKey']=reactionlist[n]
+            reactiondict["child4-{0}_kin".format(n)].attrib['primeID']=rkPrimeID
+        child5 = etree.SubElement(root, 'additionalDataItem')
+        child5.attrib['itemType'] = "URI"
+        child5.text=additional_info
         print etree.tostring(root, pretty_print=True)
 
 def main(top_root):
