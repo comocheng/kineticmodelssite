@@ -281,7 +281,7 @@ class xmlThermo():
         child7-7.attrib['id']="7"
         child7-7.attrib['label']="a7"
         child7-7.text = coefficient_7_2
-
+        print etree.tostring(root, pretty_print=True)
 
 class xmlTransport():
     
@@ -334,6 +334,7 @@ class xmlTransport():
         child4_rot.attrib['name'] = "rotationalRelaxation"
         child4_rot_val = etree.SubElement(child4_rot, 'value')
         child4_rot_val.text = rot_relax
+        print etree.tostring(root, pretty_print=True)
 
 class xmlReaction():
     
@@ -431,13 +432,14 @@ class xmlKinetics():
                 child3-exp_Evalue_unc.attrib['kind']="absolute"
                 child3-exp_Evalue_unc.attrib['transformation']="1"
                 child3-exp_Evalue_unc.text = E_value_uncertainty
-
+        print etree.tostring(root, pretty_print=True)
             
         
 
 class xmlModel():
     
     def print_source_xml(self):
+        print etree.tostring(root, pretty_print=True)
 
 def main(top_root):
     """
