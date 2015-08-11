@@ -438,7 +438,22 @@ class xmlKinetics():
 
 class xmlModel():
     
-    def print_source_xml(self):
+    def print_model_xml(self):
+        xmlns="http://purl.org/NET/prime/"
+        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        mPrimeID="m00010102"
+        schemaLocation="http://warehouse.primekinetics.org/schema/model.xsd"
+        NSMAP = {None: xmlns, 'xsi': xsi}
+        root = etree.Element('{' + xmlns + '}chemicalModel', nsmap=NSMAP)
+        root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
+        # root.attrib["{" + xmlns + "}xsi"] = xsi
+        root.attrib["primeID"] = mPrimeID
+        child1 = etree.SubElement(root, 'preferredKey')
+        child1.attrib['group'] = "prime"
+        child1.text = model_name #(i.e. 'GRI-Mech 3.0')
+        child2 = etree.SubElement(root, 'bibliographyLink')
+        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['primeID'] = bPrimeID
         print etree.tostring(root, pretty_print=True)
 
 def main(top_root):
