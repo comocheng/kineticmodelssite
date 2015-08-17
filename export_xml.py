@@ -250,7 +250,7 @@ class xmlTransport():
     
     def print_transport_xml(self):
         xmlns="http://purl.org/NET/prime/"
-        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi="http://www.w3.org/2001/XMLSchema_instance"
         trPrimeID="tr00010102"
         schemaLocation="http://warehouse.primekinetics.org/schema/transportCoefficients.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
@@ -260,44 +260,49 @@ class xmlTransport():
         root.attrib["primeID"] = trPrimeID
         child1 = etree.SubElement(root, 'preferredKey')
         child1.attrib['group'] = "prime"
-        child1.text = modelname #(i.e. 'GRI-Mech 3.0')
+        child1.text = modelname #(i.e. 'GRI_Mech 3.0')
+        sourcePreferredKey=pub_year+'.'
+        for n in range(len(authorlist)):
+            n=len(authorlist)-1-n
+            sourcePreferredKey=authorlist[n]+', '+sourcePreferredKey
         child2 = etree.SubElement(root, 'bibliographyLink')
-        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['preferredKey'] = sourcePreferredKey
         child2.attrib['primeID'] = bPrimeID
         child3 = etree.SubElement(root, 'speciesLink')
         child3.attrib['preferredKey'] = formula of sPrimeID
         child3.attrib['primeID'] = sPrimeID
         child4 = etree.SubElement(root, 'expression')
-        child4.attrib['form']="Lennard-Jones"
+        child4.attrib['form']="Lennard_Jones"
         child4_geo = etree.SubElement(child4, 'parameter')
         child4_geo.attrib['name'] = "geometry"
         child4_geo_val = etree.SubElement(child4_geo, 'value')
-        child4_geo_val.text = geometry
+        child4_geo_val.text = str(geometry)
         child4_dep = etree.SubElement(child4, 'parameter')
         child4_dep.attrib['name'] = "potentialWellDepth"
         child4_dep.attrib['units'] = "K"
         child4_dep_val = etree.SubElement(child4_dep, 'value')
-        child4_dep_val.text = depth
+        child4_dep_val.text = str(depth)
         child4_dia = etree.SubElement(child4, 'parameter')
         child4_dia.attrib['name'] = "collisionDiameter"
         child4_dia.attrib['units'] = "Angstroms"
         child4_dia_val = etree.SubElement(child4_dia, 'value')
-        child4_dia_val.text = diameter
+        child4_dia_val.text = str(diameter)
         child4_dip = etree.SubElement(child4, 'parameter')
         child4_dip.attrib['name'] = "dipoleMoment"
         child4_dip.attrib['units'] = "Debye"
         child4_dip_val = etree.SubElement(child4_dip, 'value')
-        child4_dip_val.text = dipole_moment
+        child4_dip_val.text = str(dipole_moment)
         child4_pol = etree.SubElement(child4, 'parameter')
         child4_pol.attrib['name'] = "polarizability"
         child4_pol.attrib['units'] = "cubic Angstroms"
         child4_pol_val = etree.SubElement(child4_pol, 'value')
-        child4_pol_val.text = polarizability
+        child4_pol_val.text = str(polarizability)
         child4_rot = etree.SubElement(child4, 'parameter')
         child4_rot.attrib['name'] = "rotationalRelaxation"
         child4_rot_val = etree.SubElement(child4_rot, 'value')
-        child4_rot_val.text = rot_relax
-        print etree.tostring(root, pretty_print=True)
+        child4_rot_val.text = str(rot_relax)
+        with open(trPrimeID+'.xml', "w+") as file:
+            file.write(etree.tostring(root, pretty_print=True))
 
 class xmlReaction():
     
@@ -349,8 +354,12 @@ class xmlKinetics():
         child1 = etree.SubElement(root, 'reactionLink')
         child1.attrib['preferredKey'] = reactionequation of rPrimeID
         child1.attrib['primeID'] = rPrimeID
+        sourcePreferredKey=pub_year+'.'
+        for n in range(len(authorlist)):
+            n=len(authorlist)-1-n
+            sourcePreferredKey=authorlist[n]+', '+sourcePreferredKey
         child2 = etree.SubElement(root, 'bibliographyLink')
-        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['preferredKey'] = sourcePreferredKey
         child2.attrib['primeID'] = bPrimeID
         if is_reverse==True:
             direction='reverse'
@@ -358,43 +367,43 @@ class xmlKinetics():
             direction='forward'
         child3 = etree.SubElement(root, 'rateCoefficient')
         child3.attrib['direction'] = direction
-        child3-uncertainty = etree.SubElement(child3, 'uncertainty')
-        child3-uncertainty.attrib['bound']="plusminus"
-        child3-uncertainty.attrib['kind']="relative"
-        child3-uncertainty.attrib['transformation']="1"
-        child3-uncertainty.text = relative_uncertainty
-        child3-exp = etree.SubElement(child3, 'expression')
+        child3_uncertainty = etree.SubElement(child3, 'uncertainty')
+        child3_uncertainty.attrib['bound']="plusminus"
+        child3_uncertainty.attrib['kind']="relative"
+        child3_uncertainty.attrib['transformation']="1"
+        child3_uncertainty.text = str(relative_uncertainty)
+        child3_exp = etree.SubElement(child3, 'expression')
         #assuming expression in arrhenius form (needs exceptions)
-        child3-exp.attrib['form']="arrhenius"
-        child3-exp_Avalue = etree.SubElement(child3-exp, 'parameter')
-        child3-exp_Avalue.attrib['name']="a"
-        child3-exp_Avalue.attrib['units']="cm3,mol,s,K"
-        child3-exp_Avalue_val = etree.SubElement(child3-exp_Avalue, 'value')
-        child3-exp_Avalue_val.text = A_value
+        child3_exp.attrib['form']="arrhenius"
+        child3_exp_Avalue = etree.SubElement(child3_exp, 'parameter')
+        child3_exp_Avalue.attrib['name']="a"
+        child3_exp_Avalue.attrib['units']="cm3,mol,s,K"
+        child3_exp_Avalue_val = etree.SubElement(child3_exp_Avalue, 'value')
+        child3_exp_Avalue_val.text = str(A_value)
         if A_value_uncertainty is not None:
-            child3-exp_Avalue_unc = etree.SubElement(child3-exp_Avalue, 'uncertainty')
-            child3-exp_Avalue_unc.attrib['bound']="plusminus"
-            child3-exp_Avalue_unc.attrib['kind']="absolute"
-            child3-exp_Avalue_unc.attrib['transformation']="1"
-            child3-exp_Avalue_unc.text = A_value_uncertainty
+            child3_exp_Avalue_unc = etree.SubElement(child3_exp_Avalue, 'uncertainty')
+            child3_exp_Avalue_unc.attrib['bound']="plusminus"
+            child3_exp_Avalue_unc.attrib['kind']="absolute"
+            child3_exp_Avalue_unc.attrib['transformation']="1"
+            child3_exp_Avalue_unc.text = str(A_value_uncertainty)
         if n_value!=0:
-            child3-exp_nvalue = etree.SubElement(child3-exp, 'parameter')
-            child3-exp_nvalue.attrib['name']="n"
-            child3-exp_nvalue.attrib['units']="unitless"
-            child3-exp_nvalue_val = etree.SubElement(child3-exp_nvalue, 'value')
-            child3-exp_nvalue_val.text = n_value
+            child3_exp_nvalue = etree.SubElement(child3_exp, 'parameter')
+            child3_exp_nvalue.attrib['name']="n"
+            child3_exp_nvalue.attrib['units']="unitless"
+            child3_exp_nvalue_val = etree.SubElement(child3_exp_nvalue, 'value')
+            child3_exp_nvalue_val.text = str(n_value)
         if E_value is not None:
-            child3-exp_Evalue = etree.SubElement(child3-exp, 'parameter')
-            child3-exp_Evalue.attrib['name']="e"
-            child3-exp_Evalue.attrib['units']="K"
-            child3-exp_Evalue_val = etree.SubElement(child3-exp_Evalue, 'value')
-            child3-exp_Evalue_val.text = E_value
+            child3_exp_Evalue = etree.SubElement(child3_exp, 'parameter')
+            child3_exp_Evalue.attrib['name']="e"
+            child3_exp_Evalue.attrib['units']="K"
+            child3_exp_Evalue_val = etree.SubElement(child3_exp_Evalue, 'value')
+            child3_exp_Evalue_val.text = str(E_value)
             if E_value_uncertainty is not None:
-                child3-exp_Evalue_unc = etree.SubElement(child3-exp_Evalue, 'uncertainty')
-                child3-exp_Evalue_unc.attrib['bound']="plusminus"
-                child3-exp_Evalue_unc.attrib['kind']="absolute"
-                child3-exp_Evalue_unc.attrib['transformation']="1"
-                child3-exp_Evalue_unc.text = E_value_uncertainty
+                child3_exp_Evalue_unc = etree.SubElement(child3_exp_Evalue, 'uncertainty')
+                child3_exp_Evalue_unc.attrib['bound']="plusminus"
+                child3_exp_Evalue_unc.attrib['kind']="absolute"
+                child3_exp_Evalue_unc.attrib['transformation']="1"
+                child3_exp_Evalue_unc.text = str(E_value_uncertainty)
         print etree.tostring(root, pretty_print=True)
             
         
@@ -403,7 +412,7 @@ class xmlModel():
     
     def print_model_xml(self):
         xmlns="http://purl.org/NET/prime/"
-        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi="http://www.w3.org/2001/XMLSchema_instance"
         mPrimeID="m00010102"
         schemaLocation="http://warehouse.primekinetics.org/schema/model.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
@@ -413,41 +422,45 @@ class xmlModel():
         root.attrib["primeID"] = mPrimeID
         child1 = etree.SubElement(root, 'preferredKey')
         child1.attrib['group'] = "prime"
-        child1.text = model_name #(i.e. 'GRI-Mech 3.0')
+        child1.text = model_name #(i.e. 'GRI_Mech 3.0')
+        sourcePreferredKey=pub_year+'.'
+        for n in range(len(authorlist)):
+            n=len(authorlist)-1-n
+            sourcePreferredKey=authorlist[n]+', '+sourcePreferredKey
         child2 = etree.SubElement(root, 'bibliographyLink')
-        child2.attrib['preferredKey'] = authorlist of bPrimeID
+        child2.attrib['preferredKey'] = sourcePreferredKey
         child2.attrib['primeID'] = bPrimeID
         #species associated with model
         child3 = etree.SubElement(root, 'speciesSet')
         specieslist = #formulas of all species in model
         speciesdict={}
         for n in range(len(specieslist)):
-            speciesdict["child3-{0}".format(n)]=etree.SubElement(child3,'speciesLink')
-            speciesdict["child3-{0}".format(n)].attrib['preferredKey']=specieslist[n]
-            speciesdict["child3-{0}".format(n)].attrib['primeID']=specieslist[n]<-sPrimeID
-            speciesdict["child3-{0}_thermo".format(n)]=etree.SubElement("child3-{0}".format(n),'thermodynamicDataLink')
-            speciesdict["child3-{0}_thermo".format(n)].attrib['preferredKey']=#thermo preferred key (i.e. "L 7/88") for corresponding thermo
-            speciesdict["child3-{0}_thermo".format(n)].attrib['primeID']=thpPrimeID
+            speciesdict["child3_{0}".format(n)]=etree.SubElement(child3,'speciesLink')
+            speciesdict["child3_{0}".format(n)].attrib['preferredKey']=specieslist[n]
+            speciesdict["child3_{0}".format(n)].attrib['primeID']=specieslist[n]<_sPrimeID
+            speciesdict["child3_{0}_thermo".format(n)]=etree.SubElement(speciesdict["child3_{0}".format(n)],'thermodynamicDataLink')
+            speciesdict["child3_{0}_thermo".format(n)].attrib['preferredKey']=#thermo preferred key (i.e. "L 7/88") for corresponding thermo
+            speciesdict["child3_{0}_thermo".format(n)].attrib['primeID']=thpPrimeID
             if transport of specieslist[n] is not None:
-                speciesdict["child3-{0}_trans".format(n)]=etree.SubElement("child3-{0}".format(n),'transportDataLink')
-                speciesdict["child3-{0}_trans".format(n)].attrib['preferredKey'] = model_name
-                speciesdict["child3-{0}_trans".format(n)].attrib['primeID']=trPrimeID
+                speciesdict["child3_{0}_trans".format(n)]=etree.SubElement(speciesdict["child3_{0}".format(n)],'transportDataLink')
+                speciesdict["child3_{0}_trans".format(n)].attrib['preferredKey'] = model_name
+                speciesdict["child3_{0}_trans".format(n)].attrib['primeID']=trPrimeID
         #reactions associated with model
         child4 = etree.SubElement(root, 'reactionSet')
         reactionlist = #equations of all reactions in model
         reactiondict={}
         for n in range(len(specieslist)):
-            reactiondict["child4-{0}".format(n)]=etree.SubElement(child4,'reactionLink')
-            reactiondict["child4-{0}".format(n)].attrib['preferredKey']=reactionlist[n]
-            if is_reversible==False <-reactionlist[n]:
+            reactiondict["child4_{0}".format(n)]=etree.SubElement(child4,'reactionLink')
+            reactiondict["child4_{0}".format(n)].attrib['preferredKey']=reactionlist[n]
+            if is_reversible==False <_reactionlist[n]:
                 reversible='false'
             else:
                 reversible='true'
-            reactiondict["child4-{0}".format(n)].attrib['reversible']=reversible
-            reactiondict["child4-{0}".format(n)].attrib['primeID']=reactionlist[n]<-sPrimeID
-            reactiondict["child4-{0}_kin".format(n)]=etree.SubElement("child4-{0}".format(n),'reactionRateLink')
-            reactiondict["child4-{0}_kin".format(n)].attrib['preferredKey']=reactionlist[n]
-            reactiondict["child4-{0}_kin".format(n)].attrib['primeID']=rkPrimeID
+            reactiondict["child4_{0}".format(n)].attrib['reversible']=reversible
+            reactiondict["child4_{0}".format(n)].attrib['primeID']=reactionlist[n]<_rPrimeID
+            reactiondict["child4_{0}_kin".format(n)]=etree.SubElement(speciesdict["child4_{0}".format(n)],'reactionRateLink')
+            reactiondict["child4_{0}_kin".format(n)].attrib['preferredKey']=reactionlist[n]
+            reactiondict["child4_{0}_kin".format(n)].attrib['primeID']=rkPrimeID
         child5 = etree.SubElement(root, 'additionalDataItem')
         child5.attrib['itemType'] = "URI"
         child5.text=additional_info
