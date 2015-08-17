@@ -1,9 +1,9 @@
 """
 Run this like so:
- Maybe similar? to ---> $  python export_xml.py /path/to/local/mirror/warehouse.primekinetics.org/
+ Maybe similar? to ___> $  python export_xml.py /path/to/local/mirror/warehouse.primekinetics.org/
  
 It should dig through the Django database 
-and create PrIMe-compatible xml files for each object
+and create PrIMe_compatible xml files for each object
 """
 
 from lxml import etree
@@ -22,7 +22,7 @@ class xmlSource():
     
     def print_source_xml(self):
         xmlns="http://purl.org/NET/prime/"
-        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi="http://www.w3.org/2001/XMLSchema_instance"
         bPrimeID="b00010102"
         schemaLocation="http://warehouse.primekinetics.org/schema/bibliography.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
@@ -46,16 +46,14 @@ class xmlSource():
         childpages.text = page_numbers
         childdoi = etree.SubElement(root, 'doi')
         childdoi.text = doi
-        print etree.tostring(root, pretty_print=True)
+        with open(bPrimeID+'.xml', "w+") as file:
+            file.write(etree.tostring(root, pretty_print=True))
 
 class xmlSpecies():
     
     def print_species_xml(self):
-        # mol = Molecule().fromSMILES('[OH]')
-        # spec = Species(molecule=[mol])
-        # import ipdb; ipdb.set_trace()
         xmlns="http://purl.org/NET/prime/"
-        xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi="http://www.w3.org/2001/XMLSchema_instance"
         sPrimeID="s00010102"
         schemaLocation="http://warehouse.primekinetics.org/schema/species.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
@@ -63,66 +61,34 @@ class xmlSpecies():
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
         root.attrib["primeID"] = sPrimeID
-#         child1=etree.SubElement(root,'copyright')
-#         child1.text="primekinetics.org 2005"
-#         bibliography=bPrimeID
-#         copyrighted="true"
-#         source="NIST"
-#         child2 = etree.SubElement(root, 'content')
-#         child2.attrib["bibliography"] = bibliography
-#         child2.attrib["copyrighted"] = copyrighted
-#         child2.attrib["source"] = source
-#         child2.text="\nElements attributed to NIST are part of a collection copyrighted by NIST.\n"
-        group="prime"
-        type="formula"
+        formula='Cr27O8C2H168F45Cl2'
         child3=etree.SubElement(root, 'preferredKey')
-        child3.attrib["group"]=group
-        child3.attrib["type"]=type
-        child3.text="OH"
+        child3.attrib["group"]="prime"
+        child3.attrib["type"]="formula"
+        child3.text=formula
         child4=etree.SubElement(root, 'chemicalIdentifier')
+        CAS="3352_57_6"
         if CAS is not None:
-            type="CASRegistryNumber"
             child4_CAS=etree.SubElement(child4, 'name')
     #         child41.attrib["source"] = source
-            child4_CAS.attrib["type"]=type
-            child4_CAS.text="3352-57-6"
+            child4_CAS.attrib["type"]="CASRegistryNumber"
+            child4_CAS.text=CAS
         if formula is not None:
-            type="formula"
             child4_formula=etree.SubElement(child4, 'name')
     #         child42.attrib["source"] = source
-            child4_formula.attrib["type"]=type
-            child4_formula.text="HO
+            child4_formula.attrib["type"]='formula'
+            child4_formula.text=formula
         #make list l of all names for species
-        l=['a','b','c','d','e']
+        l=['pizzazz','sparkle','elf','wonder','floo powder']
         namedict={}
-        for i, name in list(enumerate(l)):
-            namedict["child4-{0}".format(i)]=etree.SubElement(child4, 'name')
-            namedict["child4-{0}".format(i)].text=name
-            
-#         child43=etree.SubElement(child4, 'name')
-# #         child43.attrib["source"] = source
-#         child43.text="&middot;OH"
-#         child44=etree.SubElement(child4, 'name')
-# #         child44.attrib["source"] = source
-#         child44.text="hydroxy radical"
-#         child45=etree.SubElement(child4, 'name')
-# #         child45.attrib["source"] = source
-#         child45.text="hydroxyl"
-#         child46=etree.SubElement(child4, 'name')
-# #         child46.attrib["source"] = source
-#         child46.text="hydroxyl radical"
-#         child47=etree.SubElement(child4, 'name')
-# #         child47.attrib["source"] = source
-#         child47.text="oh"
-#         child48=etree.SubElement(child4, 'name')
-#         child48.text="hidroksil"
-#         child49=etree.SubElement(child4, 'name')
-#         child49.text="hidroksi radikal"
+        for n in range(len(l)):
+            namedict["child4_{0}".format(n)]=etree.SubElement(child4, 'name')
+            namedict["child4_{0}".format(n)].text=l[n]
+        inchi='Ch26/syflif/lshiek/4684759/Inchi'
         if inchi is not None:
-            type="InChI"
             child4_inchi=etree.SubElement(child4, 'name')
-            child4_inchi.attrib["type"]=type
-            child4_inchi.text="InChI=1/HO/h1H"
+            child4_inchi.attrib["type"]='InChI'
+            child4_inchi.text=inchi
         child5=etree.SubElement(root, 'chemicalComposition')
         form=[]
         count=[]
@@ -135,36 +101,29 @@ class xmlSpecies():
                 else:
                     form.append(formula[i])
             elif formula[i] in string.digits:
-                if formula[i+1] in string.digits:
-                    continue
-                elif formula[i-2] in string.digits and formula[i-1] in string.digits:
-                    count.append(formula[i-2:i+1])
-                elif formula[i-1] in string.digits:
-                    count.append(formula[i-1:i+1])
-                else:
-                    form.append(formula[i])
+                try:
+                    if formula[i+1] in string.digits:
+                        continue
+                    elif formula[i-2] in string.digits and formula[i-1] in string.digits:
+                        count.append(formula[i-2:i+1])
+                    elif formula[i-1] in string.digits:
+                        count.append(formula[i-1:i+1])
+                    else:
+                        count.append(formula[i])
+                except:
+                    if formula[i-2] in string.digits and formula[i-1] in string.digits:
+                        count.append(formula[i-2:i+1])
+                    elif formula[i-1] in string.digits:
+                        count.append(formula[i-1:i+1])
+                    else:
+                        count.append(formula[i])
         atomdict={}
         for n in range(len(form)):
-            atomdict["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
-            atomdict["child5-{0}".format(n)].attrib["symbol"]=form[n]
-            atomdict["child5-{0}".format(n)].text=count[n]
-#         atomdict={}
-#         for atom in mol.atoms:
-#             symbol = atom.symbol
-#             if symbol in atomdict:
-#                 atomdict[symbol]+=1
-#             else:
-#                 atomdict[symbol]=1
-#         symlist=[]
-#         for k in atomdict.keys():
-#             symlist.append[k]
-#         symvariables={}
-#         for n in range(len(symlist)):
-#             symbol=symlist[n]
-#             symvariables["child5-{0}".format(n)]=etree.SubElement(child5, 'atom')
-#             symvariables["child5-{0}".format(n)].attrib["symbol"]=symbol
-#             symvariables["child5-{0}".format(n)].text=str(atomdict[sym])
-        print etree.tostring(root, pretty_print=True)
+            atomdict["child5_{0}".format(n)]=etree.SubElement(child5, 'atom')
+            atomdict["child5_{0}".format(n)].attrib["symbol"]=form[n]
+            atomdict["child5_{0}".format(n)].text=count[n]
+        with open(sPrimeID+'.xml', "w+") as file:
+            file.write(etree.tostring(root, pretty_print=True))
 
 class xmlThermo():
     
