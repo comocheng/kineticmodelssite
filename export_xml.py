@@ -5,7 +5,7 @@ Run this like so:
 It should dig through the Django database 
 and create PrIMe_compatible xml files for each object
 """
-
+import os
 from lxml import etree
 import string
 
@@ -482,13 +482,24 @@ class xmlModel():
         with open(mPrimeID+'.xml', "w+") as file:
             file.write(etree.tostring(root, pretty_print=True))
 
-def main(top_root):
+def main(output_path):
     """
-    The main function. Give it the path to the top of the database
+    The main function. Give it the path to save things to
     """
-#     with open('exporterrors.txt', "w") as errors:
-#         errors.write("Restarting import at "+time.strftime("%D %T"))
-#     print "Starting at", top_root
+    import time
+    os.path.exists(output_path) or os.makedirs(output_path)
+
+    error_file = os.path.join(output_path, 'exporterrors.txt')
+    with open(error_file, "w") as errors:
+        errors.write("Restarting import at {0}\n".format(time.strftime("%D %T")))
+    def log_error(message):
+        with open(error_file, "a") as errors:
+            errors.write(message + '\n')
+        print(message)
+
+
+    log_error("All done!")
+
     
 #     for root, dirs, files in os.walk(top_root):
 #         if root.endswith('depository/bibliography'):
@@ -522,14 +533,14 @@ def main(top_root):
 #             #send this file into PrIMe database
 
 
-# if __name__ == "__main__":
-#     import argparse
-#     parser = argparse.ArgumentParser(
-#         description='Import PRIME database mirror into Django.')
-#     parser.add_argument('root',
-#                         metavar='root',
-#                         nargs=1,
-#                         help='location of the mirror on the local filesystem')
-#     args = parser.parse_args()
-#     top_root = os.path.normpath(os.path.abspath(args.root[0]))  # strip eg. a trailing '/'
-#     main(top_root)
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Expor Django database to prime format')
+    parser.add_argument('output',
+                        metavar='output',
+                        nargs=1,
+                        help='location of where to save things')
+    args = parser.parse_args()
+    output_path = os.path.normpath(os.path.abspath(args.output[0]))  # strip eg. a trailing '/'
+    main(output_path)
