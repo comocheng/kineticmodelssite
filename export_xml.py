@@ -50,49 +50,59 @@ class xmlSource():
         with open(bPrimeID+'.xml', "w+") as file:
             file.write(etree.tostring(root, pretty_print=True))
 
+
 class xmlSpecies():
     
+
+    def make_demo(self):
+        "Makes a demo species"
+        self.sPrimeID = "s00010102"
+        self.formula = 'Cr27O8C2H168F45Cl2'
+        self.CAS = "3352_57_6"
+        self.inchi = 'Ch26/syflif/lshiek/4684759/Inchi'
+
     def print_species_xml(self):
         xmlns="http://purl.org/NET/prime/"
         xsi="http://www.w3.org/2001/XMLSchema_instance"
-        sPrimeID="s00010102"
+
         schemaLocation="http://warehouse.primekinetics.org/schema/species.xsd"
         NSMAP = {None: xmlns, 'xsi': xsi}
         root = etree.Element('{' + xmlns + '}chemicalSpecies', nsmap=NSMAP)
         root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
         # root.attrib["{" + xmlns + "}xsi"] = xsi
-        root.attrib["primeID"] = sPrimeID
-        formula='Cr27O8C2H168F45Cl2'
+        root.attrib["primeID"] = self.sPrimeID
+
         child3=etree.SubElement(root, 'preferredKey')
         child3.attrib["group"]="prime"
         child3.attrib["type"]="formula"
-        child3.text=formula
+        child3.text = self.formula
         child4=etree.SubElement(root, 'chemicalIdentifier')
-        CAS="3352_57_6"
-        if CAS is not None:
+
+        if self.CAS is not None:
             child4_CAS=etree.SubElement(child4, 'name')
     #         child41.attrib["source"] = source
             child4_CAS.attrib["type"]="CASRegistryNumber"
-            child4_CAS.text=CAS
-        if formula is not None:
+            child4_CAS.text = self.CAS
+        if self.formula is not None:
             child4_formula=etree.SubElement(child4, 'name')
     #         child42.attrib["source"] = source
             child4_formula.attrib["type"]='formula'
-            child4_formula.text=formula
+            child4_formula.text = self.formula
         #make list l of all names for species
         l=['pizzazz','sparkle','elf','wonder','floo powder']
         namedict={}
         for n in range(len(l)):
             namedict["child4_{0}".format(n)]=etree.SubElement(child4, 'name')
             namedict["child4_{0}".format(n)].text=l[n]
-        inchi='Ch26/syflif/lshiek/4684759/Inchi'
-        if inchi is not None:
+
+        if self.inchi is not None:
             child4_inchi=etree.SubElement(child4, 'name')
             child4_inchi.attrib["type"]='InChI'
-            child4_inchi.text=inchi
+            child4_inchi.text = self.inchi
         child5=etree.SubElement(root, 'chemicalComposition')
         form=[]
         count=[]
+        formula = self.formula
         for i in range(len(formula)):
             if formula[i] in string.letters:
                 if formula[i+1] in string.letters:
@@ -123,8 +133,7 @@ class xmlSpecies():
             atomdict["child5_{0}".format(n)]=etree.SubElement(child5, 'atom')
             atomdict["child5_{0}".format(n)].attrib["symbol"]=form[n]
             atomdict["child5_{0}".format(n)].text=count[n]
-        with open(sPrimeID+'.xml', "w+") as file:
-            file.write(etree.tostring(root, pretty_print=True))
+        return(etree.tostring(root, pretty_print=True))
 
 class xmlThermo():
     
