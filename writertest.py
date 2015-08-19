@@ -22,7 +22,11 @@ def sourceWriter():
     root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
     # root.attrib["{" + xmlns + "}xsi"] = xsi
     root.attrib["primeID"] = bPrimeID
-    authorlist=['JFK','FDR','MLK','LBJ','JRR','JK Rowling']
+    a=e.authors.all()
+    b=a.values_list()
+    authorlist=[]
+    for i in range(len(b)):
+        authorlist.append(b[i][1])
     authordict={}
     for n in range(len(authorlist)): #authorlist should be in order of authorship
         authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
@@ -41,8 +45,11 @@ def sourceWriter():
     childdoi.text = e.doi
     with open(bPrimeID+'.xml', "w+") as file:
         file.write(etree.tostring(root, pretty_print=True))
+#     save_path = '/Users/dgreen18/PrIMe_database/django_to_xml/bibliography/'
+#     completeName = os.path.join(save_path, bPrimeID+'.xml')         
+#     file1 = open(completeName, "w+")
+#     file1.write(etree.tostring(root, pretty_print=True))
 #         print etree.tostring(root, pretty_print=True)
-
 
 def speciesWriter():
     xmlns="http://purl.org/NET/prime/"
@@ -63,12 +70,12 @@ def speciesWriter():
     CAS="3352_57_6"
     if CAS is not None:
         child4_CAS=etree.SubElement(child4, 'name')
-#         child41.attrib["source"] = source
+    #         child41.attrib["source"] = source
         child4_CAS.attrib["type"]="CASRegistryNumber"
         child4_CAS.text=CAS
     if formula is not None:
         child4_formula=etree.SubElement(child4, 'name')
-#         child42.attrib["source"] = source
+    #         child42.attrib["source"] = source
         child4_formula.attrib["type"]='formula'
         child4_formula.text=formula
     #make list l of all names for species
@@ -117,7 +124,7 @@ def speciesWriter():
         atomdict["child5_{0}".format(n)].text=count[n]
     with open(sPrimeID+'.xml', "w+") as file:
         file.write(etree.tostring(root, pretty_print=True))
-#         print etree.tostring(root, pretty_print=True)
+    #         print etree.tostring(root, pretty_print=True)
 
 def thermoWriter():
     xmlns="http://purl.org/NET/prime/"
