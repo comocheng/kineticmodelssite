@@ -504,6 +504,19 @@ class xmlModel():
             file.write(etree.tostring(root, pretty_print=True))
 
 
+def save_all_species(root_path):
+    """
+    Saves all the species from the django database into the database at root_path
+    """
+    catalog_path = os.path.join(root_path, 'species', 'catalog')
+    os.path.exists(catalog_path) or os.makedirs(catalog_path)
+    for django_species in Species.objects.all():
+        xml_species = xmlSpecies(django_species)
+        file_path = os.path.join(catalog_path, '{0}.xml'.format(xml_species.sPrimeID))
+        xml = xml_species.print_species_xml()
+        with open(file_path, 'w') as out_file:
+            out_file.write(xml)
+
 error_file = 'exporterrors.txt'
 def log_error(message):
     with open(error_file, "a") as errors:
@@ -521,6 +534,8 @@ def main(output_path):
     with open(error_file, "w") as errors:
         errors.write("Restarting import at {0}\n".format(time.strftime("%D %T")))
 
+
+    save_all_species(output_path)
 
     log_error("All done!")
 
