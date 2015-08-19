@@ -103,7 +103,8 @@ class xmlSpecies():
         form=[]
         count=[]
         formula = self.formula
-        for i in range(len(formula)):
+        try:
+         for i in range(len(formula)):
             if formula[i] in string.letters:
                 if formula[i+1] in string.letters:
                     continue
@@ -128,6 +129,8 @@ class xmlSpecies():
                         count.append(formula[i-1:i+1])
                     else:
                         count.append(formula[i])
+        except Exception as error:
+            log_error("Buggy formula parsing for {0!r}: {1!s}".format(formula, error))
         atomdict={}
         for n in range(len(form)):
             atomdict["child5_{0}".format(n)]=etree.SubElement(child5, 'atom')
