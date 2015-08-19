@@ -1,10 +1,21 @@
 from lxml import etree
 import string
+import os
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kineticssite.settings")
+import django
+django.setup()
+
+from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
+                                 Species, KinModel, Comment, SpecName, \
+                                 Thermo, ThermoComment, \
+                                 Source, Author, Authorship
 
 def sourceWriter():
+    e=Source.objects.get(pk=10000)
     xmlns="http://purl.org/NET/prime/"
     xsi="http://www.w3.org/2001/XMLSchema_instance"
-    bPrimeID="b00010102"
+    bPrimeID=e.bPrimeID
     schemaLocation="http://warehouse.primekinetics.org/schema/bibliography.xsd"
     NSMAP = {None: xmlns, 'xsi': xsi}
     root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
@@ -17,17 +28,17 @@ def sourceWriter():
         authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
         authordict["childauthor{0}".format(n)].text=authorlist[n]
     childyear = etree.SubElement(root, 'year')
-    childyear.text = '2005'
+    childyear.text = e.pub_year
     childtitle = etree.SubElement(root, 'title')
-    childtitle.text = 'How to plumb'
+    childtitle.text = e.source_title
     childjournal = etree.SubElement(root, 'journal')
-    childjournal.text = 'Sci Journal'
+    childjournal.text = e.journal_name
     childvolume = etree.SubElement(root, 'volume')
-    childvolume.text = '45'
+    childvolume.text = e.jour_vol_num
     childpages = etree.SubElement(root, 'pages')
-    childpages.text = '71_82'
+    childpages.text = e.page_numbers
     childdoi = etree.SubElement(root, 'doi')
-    childdoi.text = 'lksjfosinglj'
+    childdoi.text = e.doi
     with open(bPrimeID+'.xml', "w+") as file:
         file.write(etree.tostring(root, pretty_print=True))
 #         print etree.tostring(root, pretty_print=True)
@@ -465,9 +476,9 @@ def modelWriter():
 
 
 sourceWriter()
-speciesWriter()
-thermoWriter()
-transportWriter()
-reactionWriter()
-kineticsWriter()
-modelWriter()
+# speciesWriter()
+# thermoWriter()
+# transportWriter()
+# reactionWriter()
+# kineticsWriter()
+# modelWriter()
