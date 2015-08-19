@@ -53,6 +53,15 @@ class xmlSource():
 
 class xmlSpecies():
     
+    def __init__(self, species=None):
+        if species is None:
+            print("Making demo xmlSpecies")
+            self.make_demo()
+            return
+        self.sPrimeID = species.sPrimeID
+        self.formula = species.formula
+        self.CAS = species.CAS
+        self.inchi = species.inchi
 
     def make_demo(self):
         "Makes a demo species"
