@@ -18,7 +18,7 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
                                  Thermo, ThermoComment, \
                                  Source, Author, Authorship
 
-class xmlSource():
+class XmlSource():
     
     def print_source_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -51,11 +51,11 @@ class xmlSource():
             file.write(etree.tostring(root, pretty_print=True))
 
 
-class xmlSpecies():
+class XmlSpecies():
     
     def __init__(self, species=None):
         if species is None:
-            print("Making demo xmlSpecies")
+            print("Making demo XmlSpecies")
             self.make_demo()
             return
         self.sPrimeID = species.sPrimeID
@@ -148,7 +148,7 @@ class xmlSpecies():
             atomdict["child5_{0}".format(n)].text=count[n]
         return(etree.tostring(root, pretty_print=True))
 
-class xmlThermo():
+class XmlThermo():
     
     def print_thermo_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -272,7 +272,7 @@ class xmlThermo():
             file.write(etree.tostring(root, pretty_print=True))
 
 
-class xmlTransport():
+class XmlTransport():
     
     def print_transport_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -332,7 +332,7 @@ class xmlTransport():
         with open(trPrimeID+'.xml', "w+") as file:
             file.write(etree.tostring(root, pretty_print=True))
 
-class xmlReaction():
+class XmlReaction():
     
     def print_reaction_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -357,7 +357,7 @@ class xmlReaction():
         with open(rPrimeID+'.xml', "w+") as file:
             file.write(etree.tostring(root, pretty_print=True))
 
-class xmlKinetics():
+class XmlKinetics():
     
     def print_kinetics_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -435,7 +435,7 @@ class xmlKinetics():
             
         
 
-class xmlModel():
+class XmlModel():
     
     def print_model_xml(self):
         xmlns="http://purl.org/NET/prime/"
@@ -512,7 +512,7 @@ def save_all_species(root_path):
     catalog_path = os.path.join(root_path, 'species', 'catalog')
     os.path.exists(catalog_path) or os.makedirs(catalog_path)
     for django_species in Species.objects.all():
-        xml_species = xmlSpecies(django_species)
+        xml_species = XmlSpecies(django_species)
         file_path = os.path.join(catalog_path, '{0}.xml'.format(xml_species.sPrimeID))
         xml = xml_species.print_species_xml()
         with open(file_path, 'w') as out_file:
