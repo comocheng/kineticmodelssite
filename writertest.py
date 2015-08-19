@@ -20,34 +20,39 @@ def sourceWriter():
     NSMAP = {None: xmlns, 'xsi': xsi}
     root = etree.Element('{' + xmlns + '}bibliography', nsmap=NSMAP)
     root.attrib["{" + xsi + "}schemaLocation"] = schemaLocation
-    # root.attrib["{" + xmlns + "}xsi"] = xsi
     root.attrib["primeID"] = bPrimeID
     a=e.authors.all()
     b=a.values_list()
     authorlist=[]
     for i in range(len(b)):
         authorlist.append(b[i][1])
-    authordict={}
-    for n in range(len(authorlist)): #authorlist should be in order of authorship
-        authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
-        authordict["childauthor{0}".format(n)].text=authorlist[n]
-    childyear = etree.SubElement(root, 'year')
-    childyear.text = e.pub_year
-    childtitle = etree.SubElement(root, 'title')
-    childtitle.text = e.source_title
-    childjournal = etree.SubElement(root, 'journal')
-    childjournal.text = e.journal_name
-    childvolume = etree.SubElement(root, 'volume')
-    childvolume.text = e.jour_vol_num
-    childpages = etree.SubElement(root, 'pages')
-    childpages.text = e.page_numbers
-    childdoi = etree.SubElement(root, 'doi')
-    childdoi.text = e.doi
+    if len(authorlist)!=0:
+        authordict={}
+        for n in range(len(authorlist)): #authorlist should be in order of authorship
+            authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
+            authordict["childauthor{0}".format(n)].text=authorlist[n]
+    if e.pub_year!='':
+        childyear = etree.SubElement(root, 'year')
+        childyear.text = e.pub_year
+    if e.source_title!='':
+        childtitle = etree.SubElement(root, 'title')
+        childtitle.text = e.source_title
+    if e.journal_name!='':
+        childjournal = etree.SubElement(root, 'journal')
+        childjournal.text = e.journal_name
+    if e.jour_vol_num!='':
+        childvolume = etree.SubElement(root, 'volume')
+        childvolume.text = e.jour_vol_num
+    if e.page_numbers!='':
+        childpages = etree.SubElement(root, 'pages')
+        childpages.text = e.page_numbers
+    if e.doi!='':
+        childdoi = etree.SubElement(root, 'doi')
+        childdoi.text = e.doi
     with open(bPrimeID+'.xml', "w+") as file:
         file.write(etree.tostring(root, pretty_print=True))
     #to put xml into new folder
     os.rename('/Users/dgreen18/Code/PrIMe_database/'+bPrimeID+'.xml', '/Users/dgreen18/Code/PrIMe_database/django_to_xml/bibliography/'+bPrimeID+'.xml')
-#         print etree.tostring(root, pretty_print=True)
 
 def speciesWriter():
     xmlns="http://purl.org/NET/prime/"
@@ -476,12 +481,12 @@ def modelWriter():
         file.write(etree.tostring(root, pretty_print=True))
 #     print etree.tostring(root, pretty_print=True)
 
-
         
 
-if not os.path.exists('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123'):
-    os.makedirs('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123')
-# sourceWriter()
+# if not os.path.exists('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123'):
+#     os.makedirs('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123')
+
+sourceWriter()
 # speciesWriter()
 # thermoWriter()
 # transportWriter()
