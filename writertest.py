@@ -45,10 +45,8 @@ def sourceWriter():
     childdoi.text = e.doi
     with open(bPrimeID+'.xml', "w+") as file:
         file.write(etree.tostring(root, pretty_print=True))
-#     save_path = '/Users/dgreen18/PrIMe_database/django_to_xml/bibliography/'
-#     completeName = os.path.join(save_path, bPrimeID+'.xml')         
-#     file1 = open(completeName, "w+")
-#     file1.write(etree.tostring(root, pretty_print=True))
+    #to put xml into new folder
+    os.rename('/Users/dgreen18/Code/PrIMe_database/'+bPrimeID+'.xml', '/Users/dgreen18/Code/PrIMe_database/django_to_xml/bibliography/'+bPrimeID+'.xml')
 #         print etree.tostring(root, pretty_print=True)
 
 def speciesWriter():
@@ -481,8 +479,9 @@ def modelWriter():
 
         
 
-
-sourceWriter()
+if not os.path.exists('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123'):
+    os.makedirs('/Users/dgreen18/Code/PrIMe_database/django_to_xml/species/data/r00000123')
+# sourceWriter()
 # speciesWriter()
 # thermoWriter()
 # transportWriter()
