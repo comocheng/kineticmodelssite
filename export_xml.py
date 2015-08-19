@@ -62,6 +62,7 @@ class xmlSpecies():
         self.formula = species.formula
         self.CAS = species.CAS
         self.inchi = species.inchi
+        self.specname_set = species.specname_set
 
     def make_demo(self):
         "Makes a demo species"
@@ -98,7 +99,7 @@ class xmlSpecies():
             child4_formula.attrib["type"]='formula'
             child4_formula.text = self.formula
         #make list l of all names for species
-        l=['pizzazz','sparkle','elf','wonder','floo powder']
+        l = [ n.name for n in self.specname_set.all() ]
         namedict={}
         for n in range(len(l)):
             namedict["child4_{0}".format(n)]=etree.SubElement(child4, 'name')
