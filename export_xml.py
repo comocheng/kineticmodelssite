@@ -482,20 +482,23 @@ class xmlModel():
         with open(mPrimeID+'.xml', "w+") as file:
             file.write(etree.tostring(root, pretty_print=True))
 
+
+error_file = 'exporterrors.txt'
+def log_error(message):
+    with open(error_file, "a") as errors:
+        errors.write(message + '\n')
+    print(message)
+
 def main(output_path):
     """
     The main function. Give it the path to save things to
     """
     import time
     os.path.exists(output_path) or os.makedirs(output_path)
-
+    global error_file
     error_file = os.path.join(output_path, 'exporterrors.txt')
     with open(error_file, "w") as errors:
         errors.write("Restarting import at {0}\n".format(time.strftime("%D %T")))
-    def log_error(message):
-        with open(error_file, "a") as errors:
-            errors.write(message + '\n')
-        print(message)
 
 
     log_error("All done!")
