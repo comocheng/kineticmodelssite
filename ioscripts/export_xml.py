@@ -518,7 +518,7 @@ def save_all_species(root_path):
         with open(file_path, 'w') as out_file:
             out_file.write(xml)
 
-error_file = 'misc-scripts/exporterrors.txt'
+error_file = 'exporterrors.txt'
 def log_error(message):
     with open(error_file, "a") as errors:
         errors.write(message + '\n')
@@ -531,7 +531,7 @@ def main(output_path):
     import time
     os.path.exists(output_path) or os.makedirs(output_path)
     global error_file
-    error_file = os.path.join(output_path, 'misc-scripts/exporterrors.txt')
+    error_file = os.path.join(output_path, 'exporterrors.txt')
     with open(error_file, "w") as errors:
         errors.write("Restarting import at {0}\n".format(time.strftime("%D %T")))
 
