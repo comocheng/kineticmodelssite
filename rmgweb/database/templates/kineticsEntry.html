@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% load gravatar %}
+{% load render_kinetics %}
+
+
+
+{% block title %}
+{% if section != '' %}
+RMG Kinetics {{ section|title }}
+{% else %}
+RMG Kinetics Database
+{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+table.reaction {
+   margin: auto;
+}
+table.reaction td {
+   padding: 10px;
+}
+
+table.kineticsEntryData {
+    text-align: center;
+    margin-bottom: 1em;
+}
+
+table.kineticsEntryData td.key {
+    font-weight: bold;
+    text-align: right;
+}
+
+table.kineticsEntryData td.equals {
+    text-align: center;
+}
+
+table.kineticsEntryData td.value {
+    text-align: left;
+}
+
+table.kineticsEntryData td.reference p {
+    margin: 0px;
+}
+</style>
+
+<script src="/media/Highcharts/js/highcharts.js" type="text/javascript"></script>
+<script src="/media/highcharts.theme.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+jQuery(document).ready(function() {
+
+    var kseries = new Array();
+    
+    {{ kinetics|get_rate_coefficients:user }}
+    {% include "kineticsModel.js" %}
+    {% include "kineticsPlot.js" %}
+
+    jsMath.Synchronize(function() {
+        plotKinetics('plotk', kseries);
+    });
+
+});
+</script>
+{% endblock %}
+
+{% block navbar_items %}
+
+{% if section != '' %}
+<a href="{% url 'database.views.index' %}">Database</a>
+&raquo; <a href="{% url 'database.views.kinetics' %}">Kinetics</a>
+&raquo; <a href="{% url 'database.views.kinetics' section=section %}">{{ section|title }}</a>
+&raquo; <a href="{% url 'database.views.kinetics' section=section subsection=subsection %}">{{ databaseName }}</a>
+{% if entry.index and entry.index != -1 %}&raquo; <a href="{% url 'database.views.kineticsEntry' section=section subsection=subsection index=entry.index %}">{{ entry.index }}. {{ entry.label }}</a>{% endif %}
+{% if reaction %}&raquo; {{ reaction }}{% endif %}
+{% endif %}
+
+
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_title %}
+{% if entry.index and entry.index != -1%}
+{{ entry.index }}. {{ entry.label }}
+{% else %}
+{{ databaseName }}
+{% endif %}
+
+
+
+{% endblock %}
+
+{% block page_body %}
+
+{% if structure %}
+<h2>Group</h2>
+<table>
+    <tr>
+        <td>{{ structure|safe }}</td>
+    </tr>
+</table>
+{% else %}
+<h2>Reaction</h2>
+<table class="reaction">
+    <tr>
+        <td class="reactants">{{ reactants|safe }}</td>
+        <td class="reactionArrow">{{ arrow|safe }}</td>
+        <td class="reactants">{{ products|safe }}</td>
+    </tr>
+    {% if reaction.degeneracy %}
+    <tr><td>Degeneracy = {{reaction.degeneracy}}</td></tr>
+    {% endif %}
+</table>
+{% if reactionUrl != '' %}
+<p><a href="{{ reactionUrl }}">Search other kinetics sources for this reaction.</a></p>
+{% endif %}
+{% endif %}
+<br/>
+
+<h2>Kinetic Data 
+</h2>
+{{ kinetics|render_kinetics_math:user }}
+
+{% if kinetics %}
+<div id="plotk" style="width: 500px; height: 300px; margin: auto;"></div>
+{% endif %}
+
+<h2>Reference</h2>
+{% include "reference.html" %}
+
+
+<h2>Update database</h2>
+{% if new_entry_form %}
+<form method="post" id="entry_form" action="{% url 'database.views.kineticsEntryNew' family=subsection type="training" %}">
+<div style="display: none;">{{ new_entry_form.entry }}</div>
+{% csrf_token %}
+If this reaction is not in the training set for {{ subsection }} and you have a rate for it, then add it here:
+<input type="submit" value="Add new rate to training set" name="Add" />
+</form>
+{% endif %}
+{% if entry.index and entry.index != -1 %}
+If you noticed a mistake or have better data, then edit this entry here: <a href="{% url 'database.views.kineticsEntryEdit' section=section subsection=subsection index=entry.index %}"><button type="button">Edit entry</button></a>.
+{% endif %}
+{% if user.is_authenticated %}
+You are logged in as {{ user.get_full_name }}</a> 
+{% else %}
+You must <a href="{% url 'main.views.login' %}?next={{ request.path }}">log in first.</a>
+{% endif %}
+<br/>
+
+{% endblock %}

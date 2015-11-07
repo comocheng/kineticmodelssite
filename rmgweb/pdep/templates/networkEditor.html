@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+
+
+{% block title %}Edit Input File{% endblock %}
+
+{% block navbar_items %}
+<a href="{% url 'pdep.views.index' %}">Pressure Dependent Networks</a> &raquo;
+<a href="{% url 'pdep.views.networkIndex' networkKey=networkKey%}">Network {{ networkKey }}</a> &raquo;
+<a href="{% url 'pdep.views.networkEditor' networkKey=networkKey%}">Edit</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% include "networkSidebar.html" %}
+{% endblock %}
+
+{% block extrahead %}
+<link href="/media/pdep.css" rel="stylesheet" type="text/css"/>
+<style type="text/css">
+#id_inputText {
+    width: 100%;
+    height: 480px;
+}
+</style>
+{% endblock %}
+
+{% block page_title %}Edit {{ network.title }}{% endblock %}
+
+{% block page_body %}
+
+<p>
+For more information on the CanTherm input file format for pressure dependent networks,
+<a href="http://reactionmechanismgenerator.github.io/RMG-Py/users/cantherm/input_pdep.html">click here</a>.
+</p>
+
+<form action="" method="POST">{% csrf_token %}
+{{ form.as_p }}
+<p><input type="submit" value="Save" id="submit"/></p>
+</form>
+
+{% endblock %}

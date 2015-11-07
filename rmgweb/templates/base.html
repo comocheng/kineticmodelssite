@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+
+
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>{% block title %}RMG{% endblock %}</title>
+    <link href="/media/default.css" rel="stylesheet" type="text/css"/>
+    <link href="/media/jsMath-fonts.css" rel="stylesheet" type="text/css"/>
+    <script src="/media/jquery.js"></script>
+    <script src="/media/jsMath/easy/load.js"></script>
+    
+    {# this is for iPhones etc.#}<meta name = "viewport" content = "width = device-width, initial-scale = 0.6">
+    {% block extrahead %}{% endblock %}
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-24556433-1']);
+  _gaq.push(['_setDomainName', 'rmg.mit.edu']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</head>
+
+<body>
+<div id="document">
+
+    <div id="sidebar">
+        <div id="logo">
+        {% block sidebar_logo %}<a href="{% url 'main.views.index' %}"><img src="/media/rmg-logo-small.png" alt="RMG"/></a>{% endblock %}
+        </div>
+        
+        {% block sidebar_items %}{% endblock %}
+        
+        <p>
+        <a href="http://reactionmechanismgenerator.github.io/RMG-Py"><img src="/media/documentation-icon.png" class="icon" width="32px"/>
+        <div class="biglink">Documentation</div></a>
+        <div class="linkdesc">Learn more about the RMG software</div>
+        </p>
+        
+        
+        <p>
+        <a href="{% url 'database.views.index' %}"><img src="/media/database-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Database</div></a>
+        <div class="linkdesc">Browse the RMG database of chemical parameters</div>
+        </p>
+        
+                <p>
+        <a href="{% url 'rmg.views.input' %}"><img src="/media/input-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Create Input File</div></a>
+        <div class="linkdesc">Online form for making an RMG input file</div>
+        </p>
+        
+        <p>
+        <a href="{% url 'database.views.groupDraw' %}"><img src="/media/groupdraw-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Draw Group</div></a>
+        <div class="linkdesc">Draw a group structure from its adjlist</div>
+        </p>
+        
+        <p>
+        <a href="{% url 'database.views.moleculeSearch' %}"><img src="/media/moleculedraw-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Molecule Search</div></a>
+        <div class="linkdesc">Draw a molecule from its adjlist and search its properties</div>
+        </p>
+                    
+        <p>
+        <a href="{% url 'database.views.kineticsSearch' %}"><img src="/media/kinetics-search-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Kinetics Search</div></a>
+        <div class="linkdesc">Search for the kinetics of a chemical reaction</div>
+        </p>
+        
+        <p>
+        <a href="{% url 'database.views.solvationSearch' %}"><img src="/media/solvation-search-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Solvation Search</div></a>
+        <div class="linkdesc">Search for the solvation properties of a reaction between a solvent and a solute</div>
+        </p>
+        
+        <p>
+        <a href="{% url 'pdep.views.index' %}"><img src="/media/pdep-logo-small.png" class="icon" height="32px"/>
+        <div class="biglink">Pressure Dependent Networks</div></a>
+        <div class="linkdesc">CanTherm pdep calculations</div>
+        </p>
+        
+        <p>
+        <a href="{% url 'rmg.views.index' %}"><img src="/media/tools-icon.png" class="icon" height="32px"/>
+        <div class="biglink">Simulation & Tools</div></a>
+        <div class="linkdesc">Additional tools to supplement RMG </div>
+        </p>
+        
+        <!-- Dummy spans required for jsMath fonts to load properly -->
+        <span style="font-family: jsMath-cmex10;"></span>
+        <span style="font-family: jsMath-cmbx10;"></span>
+        <span style="font-family: jsMath-cmmi10;"></span>
+        <span style="font-family: jsMath-cmr10;"></span>
+        <span style="font-family: jsMath-cmsy10;"></span>
+        <span style="font-family: jsMath-cmti10;"></span>
+    </div>
+
+    <div id="mainbar">
+        <div id="header">
+{# Google +1 button #}
+           <g:plusone size="small" count="false"></g:plusone>
+           <script type="text/javascript">
+             (function() {
+               var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+               po.src = 'https://apis.google.com/js/plusone.js';
+               var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+             })();
+           </script>&nbsp;&nbsp;
+{# End of Google +1 button #}
+            {% if user.is_authenticated %}
+            <a href="{% url 'main.views.viewProfile' user.username %}">{{ user.username }}</a> | <a href="{% url 'main.views.editProfile' %}">Edit Profile</a> | <a href="{% url 'main.views.logout' %}?next={{ request.path }}">Log out</a>
+            {% else %}
+            <a href="{% url 'main.views.login' %}?next={{ request.path }}">Log in</a>
+            {% endif %}
+        </div>
+
+        <div id="main">
+            <div id="navbar">
+                <a href="{% url 'main.views.index' %}">RMG</a> &raquo;
+                {% block navbar_items %}{% endblock %}
+            </div>
+
+            <div id="contents">
+                <h1>{% block page_title %}RMG{% endblock %}</h1>
+
+                {% block page_body %}Reaction Mechanism Generator{% endblock %}
+            </div>
+            
+        </div>
+
+        <div id="footer">
+            {% block footer %}
+            Copyright &copy; 2012,
+            <a href="http://web.mit.edu/greengp/people/">W.H. Green</a>,
+            <a href="http://www.northeastern.edu/comocheng/people/">R.H. West</a>,
+            <i>et al.</i>
+            Created using <a href="http://www.djangoproject.com/">Django</a>.
+            Read the <a href="/privacy">Privacy Policy</a>.
+            {% endblock %}
+        </div>
+        
+    </div>
+
+    
+
+</div>
+
+</body>
+
+</html>

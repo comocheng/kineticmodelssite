@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+
+
+{% block title %}Merge Models{% endblock %}
+{% block extrahead %}
+
+<script type="text/javascript">
+$().ready(function() {
+        // Show a loading animation when after hitting the submit button before the video is created.
+        $('[id$=submit]').click(function() {
+            $('#loading_image').show();
+            $('#videos').hide();
+        });
+});
+</script>
+
+{%endblock%}
+{% block navbar_items %}
+<a href="{% url 'rmg.views.index' %}">Simulation and Tools</a> &raquo;
+<a href="{% url 'rmg.views.mergeModels' %}">Merge Models</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_title %}Merge Models{% endblock %}
+
+{% block page_body %}
+
+<p>
+<P>Merge two RMG models by uploading two chemkin files and their associated RMG Dictionary text files.
+Produces a merged chemkin file and its species dictionary.  The first model takes priority during the merging procress;
+all common species thermochemistry and reaction kinetics from the second model will be ignored.
+</p>
+<hr/>
+
+
+<form enctype="multipart/form-data" action="" method="POST">{% csrf_token %}
+{{ form.as_p }}
+<p><input type="submit" value="Submit" id="submit"/></p>
+</form>
+
+
+<hr/>
+<img src="../media/loading.gif" alt="Loading..." style="display:none" id="loading_image">
+{% if path %}
+<hr/>
+<P><b>Done merging. Your files are below:</b>
+<P><a href ="../{{path}}/chem.inp">Merged Chemkin File</a>
+<br><a href ="../{{path}}/species_dictionary.txt">Merged Species Dictionary File</a>
+<br><a href ="../{{path}}/merging_log.txt">Merging Log</a>
+{% endif %}
+
+
+{% endblock %}
