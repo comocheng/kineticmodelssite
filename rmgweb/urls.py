@@ -65,6 +65,9 @@ urlpatterns = patterns('rmgweb',
     
     (r'^user/(?P<username>\w+)$', 'main.views.viewProfile'),
 
+    # Kinetic Models
+    (r'^kineticmodels/', include('kineticmodels.urls')),
+
     # Database
     (r'^database/', include('rmgweb.database.urls')),
 
