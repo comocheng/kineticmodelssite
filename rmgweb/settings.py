@@ -130,6 +130,7 @@ INSTALLED_APPS = (
     'rmgweb.database',
     'rmgweb.pdep',
     'rmgweb.rmg',
+    'kineticmodels',
 )
 
 # Settings relating to user account management
