@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Kinetic Models Database{% endblock %}
+{% block title %}Kinetic Models Database: Source {{ source.id }}{% endblock %}
+{% block page_title %}Kinetic Models Database: Source {{ source.id }}{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a>
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
+<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a>
 {% endblock %}
 
 {% block sidebar_items %}
 {% endblock %}
-
-{% block page_title %}Kinetic Models Database{% endblock %}
 
 {% block page_body %}
 
