@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Kinetic Models Database{% endblock %}
+
+{% block navbar_items %}
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
+<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
+<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_title %}Edit Source {{ source.id }}{% endblock %}
+
+{% block page_body %}
+
+<form action="" method="POST">{% csrf_token %}
+{{ form.as_p }}
+<p><input type="submit" value="Save" id="submit"/></p>
+</form>
+
+{% endblock %}
