@@ -14,4 +14,12 @@ def bibliography(request):
     """
     sources = Source.objects.all()
     variables = {'sources': sources}
-    return render_to_response('bibliography.html', variables, context_instance=RequestContext(request))
+    return render_to_response('kineticmodels/bibliography.html', variables, context_instance=RequestContext(request))
+
+def source(request, source_id=0):
+    """
+    The listing of all the sources in the database
+    """
+    source = get_object_or_404(Source, id=source_id)
+    variables = {'source': source}
+    return render_to_response('kineticmodels/source.html', variables, context_instance=RequestContext(request))
