@@ -1,4 +1,5 @@
 from django.db import models
+from rmgpy.thermo import NASA, NASAPolynomial
 
 # Create your models here.
 """
@@ -271,6 +272,23 @@ class Thermo(models.Model):
     coefficient_5_2 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
     coefficient_6_2 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
     coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
+    
+    def toRMG(self):
+        "Returns an RMG object"
+        polynomials = []
+        for polynomial_number in [1,2]:
+            coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(j=coefficient_number,i=polynomial_number))) for coefficient_number in range(1,8) ]
+            polynomial = NASAPolynomial(coeffs=coeffs,
+                           Tmin=float(getattr(self, 'lower_temp_bound_{i}'.format(i=polynomial_number))),
+                           Tmax=float(getattr(self, 'upper_temp_bound_{i}'.format(i=polynomial_number))),
+                           E0=None,
+                           comment=''
+                           )
+            polynomials.append(polynomial)
+        rmg_object = NASA(polynomials=polynomials,
+                          Tmin=polynomials[0].Tmin,
+                          Tmax=polynomials[1].Tmin)
+        return rmg_object
 
     def __unicode__(self):
         return unicode(self.id)
