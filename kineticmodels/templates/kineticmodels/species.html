@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Kinetic Models Database: Bibliography{% endblock %}
+{% block page_title %}Kinetic Models Database: Bibliography{% endblock %}
+
+{% block navbar_items %}
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels.views.species' %}">Species</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_body %}
+
+<table>
+    <tr>
+        <th>Source ID<th>
+        <th>Title</th>
+        <th>Journal</th>
+        <th>Year</th>
+    </tr>
+{% for source in sources %}
+    <tr>
+        <td>{{ source.pk|slice:":8" }}<td>
+        <td>{{ source.source_title }}</td>
+        <td>{{ source.journal_name }}</td>
+        <td>{{ source.pub_year }}</td>
+        <td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>
+        <td><a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a></td>
+    </tr>
+{% endfor %}
+</table>
+<br/>
+
+{% endblock %}
