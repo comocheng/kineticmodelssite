@@ -3,6 +3,10 @@
 {% block title %}Kinetic Models Database: Source {{ source.id }} Editor{% endblock %}
 {% block page_title %}Kinetic Models Database: Source {{ source.id }} Editor{% endblock %}
 
+<!-- NRC
+  The below navbar items are only relevant to the source, source_editor, or bibliography links to avoid clutter.
+-->
+
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
 <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
