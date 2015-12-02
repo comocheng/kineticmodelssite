@@ -34,16 +34,26 @@ This module defines the Django forms used by the kineticsmodels app.
 
 from django import forms
 
-from models import KinModel, Source
+from models import KinModel, Source, Species
 
 ################################################################################
 
+# Form for Editing Sources
 class EditSourceForm(forms.ModelForm):
     """
     A Django form for editing a Source.
     """
     class Meta:
         model = Source
+        exclude = ()
+
+# For for editing a Species
+class EditSpeciesForm(forms.ModelForm):
+    """
+    Django Form template for editing a Species
+    """
+    class Meta:
+        model = Species
         exclude = ()
 
 ################################################################################

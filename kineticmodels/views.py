@@ -3,7 +3,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 
-from forms import EditSourceForm
+from forms import EditSourceForm, EditSpeciesForm
 from models import Source
 
 def index(request):
@@ -64,9 +64,9 @@ def species_editor(request, source_id = 0):
     Method for editing a specific species
     """
 
-    species_for_edit = get_object_or_404(Source, id=source_id)
+    species_for_edit = get_object_or_404(Species, id=source_id)
     if request.method == 'POST':
-        form = EditSourceForm(request.POST, instance=species_for_edit)
+        form = EditSpeciesForm(request.POST, instance=species_for_edit)
         if form.is_valid():
             # Save the form
             form.save()
@@ -74,7 +74,7 @@ def species_editor(request, source_id = 0):
             return HttpResponseRedirect(reverse(species_for_edit, args=(species_for_edit.id,)))
     else:
         # Create the form
-        form = EditSourceForm(instance=species_for_edit)
+        form = EditSpeciesForm(instance=species_for_edit)
     variables = {'species_for_edit': species_for_edit,
                  'form': form, }
 
