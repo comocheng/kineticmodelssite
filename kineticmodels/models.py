@@ -1,4 +1,5 @@
 from django.db import models
+# Added to support RMG integration
 from rmgpy.thermo import NASA, NASAPolynomial
 
 # Create your models here.
@@ -7,7 +8,7 @@ Reaction r1 'A -> B'
   kinetics according to model m1: (rate k1)
   kinetics according to model m2: (rate k2)
   kinetics according to model m3: (rate k2)
-  
+
 
 Reactions [ r1, ... ]
 Models    [ m1, m2, m3 ]
@@ -116,7 +117,7 @@ class Author(models.Model):
 class Source(models.Model):
     """
     A source, or bibliography item.
-    
+
     This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
     *****in catalog******
     year
@@ -155,7 +156,7 @@ class Source(models.Model):
 class Authorship(models.Model):
     """
     Who authored what paper.
-    
+
     This allows many-to-many join between Sources (publications)
     and Authors, keeping track of author ordering on each publication.
     """
@@ -171,7 +172,7 @@ class Authorship(models.Model):
 class Species(models.Model):
     """
     A chemical species.
-    
+
     This is the equivalent of 'Species' in PrIMe, which contain:
     *****in catalog*******
     bibliography
@@ -217,9 +218,9 @@ class SpecName(models.Model):
 class Thermo(models.Model):
     """
     A thermochemistry polynomial set
-    
+
     What Kinetics is to Reaction, Thermo is to Species.
-    
+
     This is the equivalent of the 'th' data within 'Species/data' in PrIMe,
     which contain:
     *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
@@ -272,7 +273,8 @@ class Thermo(models.Model):
     coefficient_5_2 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
     coefficient_6_2 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
     coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
-    
+
+    # This method should output an object in RMG format
     def toRMG(self):
         "Returns an RMG object"
         polynomials = []
@@ -326,15 +328,15 @@ class Transport(models.Model):
 class Reaction(models.Model):
     """
     A chemical reaction, with several species, has a rate in one or more models.
-    
+
     Should have:
      * species (linked via stoichiometry)
      * prime ID
-     
+
     It will be linked into various kinetic models and sources
     via the kinetics objects.
     There will not be a unique source for each reaction.
-     
+
     This is the equivalent of 'Reactions' in PrIMe, which contain:
     *****in catalog******
     species involved w/stoichiometries
@@ -357,12 +359,12 @@ class Reaction(models.Model):
 class Kinetics(models.Model):
     """
     A reaction rate expression.
-    
+
     For now let's keep things simple, and only use 3-parameter Arrhenius
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     May not have a unique source.
-    
+
     This is the equivalent of the 'rk' data within 'Reactions/data'
     in PrIMe, which contain:
     *****in data********
@@ -399,7 +401,7 @@ class Kinetics(models.Model):
 class Stoichiometry(models.Model):
     """
     How many times a species is created in a reaction.
-    
+
     Reactants have negative stoichiometries, products have positive.
     eg. in the reaction A <=> 2B  the stoichiometry of A is -1 and of B is +2
     In elementary reactions these are always integers, but chemkin allows floats,
@@ -431,7 +433,7 @@ class Stoichiometry(models.Model):
 class KinModel(models.Model):
     """
     A kinetic model.
-    
+
     Should have one of these:
      * source # eg. citation
      * chemkin_reactions_file
@@ -441,7 +443,7 @@ class KinModel(models.Model):
     And many of these:
      * species, liked via species name?
      * kinetics, each of which have a unique reaction, linked through comments
-     
+
     This is the equivalent of 'Models' in PrIMe, which contain:
     ******in catalog*******
     model name
@@ -475,7 +477,7 @@ class KinModel(models.Model):
 class Comment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
-    
+
     There may not have been a comment, eg. it may be an empty string,
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
@@ -491,7 +493,7 @@ class Comment(models.Model):
 class ThermoComment(models.Model):
     """
     The comment that a kinetic model made about a thermo entry it used.
-    
+
     There may not have been a comment, eg. it may be an empty string,
     but an entry in this table or the existence of this object
     links that thermo entry with that kinetic model.

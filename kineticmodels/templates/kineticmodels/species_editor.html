@@ -37,12 +37,12 @@
 <!--{% for source in sources %} ** Removed since there is only one species-->
     <tr>
         <!--<td>{{ source.pk|slice:":8" }}<td>-->
-        <td>{{ source.sPrimeID }}</td>
-        <td>{{ source.formula }}</td>
-        <td>{{ source.inchi }}</td>
-        <td>{{ source.CAS }}</td>
+        <td>{{ species_for_edit.sPrimeID }}</td>
+        <td>{{ species_for_edit.formula }}</td>
+        <td>{{ species_for_edit.inchi }}</td>
+        <td>{{ species_for_edit.CAS }}</td>
         <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=source.id%}">Edit</a></td>
+        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Edit</a></td>
     </tr>
 <!--{% endfor %}-->
 </table>

@@ -17,7 +17,7 @@
 <a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
 <a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Source Edit</a>
 <a href="{% url 'kineticmodels.views.species' %}">Species</a>
-<a href="{% url 'kineticmodels.views.species_editor' source_id=source.id%}">Species Edit</a>
+<a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Species Edit</a>
 {% endblock %}
 
 {% block sidebar_items %}

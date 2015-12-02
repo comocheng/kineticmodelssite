@@ -39,17 +39,17 @@
     </tr>
 {% for source in sources %}
 <!-- NRC
-    Table properties must be edited to include all relevant species fields
+    Table properties must be edited to include all relevant species fields(Done)
     Am not currently including a single species view
 -->
     <tr>
         <!--<td>{{ source.pk|slice:":8" }}<td>-->
-        <td>{{ source.sPrimeID }}</td>
-        <td>{{ source.formula }}</td>
-        <td>{{ source.inchi }}</td>
-        <td>{{ source.CAS }}</td>
+        <td>{{ species.sPrimeID }}</td>
+        <td>{{ species.formula }}</td>
+        <td>{{ species.inchi }}</td>
+        <td>{{ species.CAS }}</td>
         <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=species.id%}">Edit</a></td>
+        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>

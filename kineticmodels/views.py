@@ -53,8 +53,8 @@ def species(request):
     The listing of all species currently in the database
     """
 
-    sources = Source.objects.all()
-    variables = {'sources',sources}
+    species = Source.objects.all()
+    variables = {'species',species}
 
     return render_to_response('kineticmodels/species.html', variables, context_instance=RequestContext(request))
 
@@ -64,7 +64,18 @@ def species_editor(request, source_id = 0):
     Method for editing a specific species
     """
 
-    source = get_object_or_404(Source, id=source_id)
-    variables = {'source',source}
+    species_for_edit = get_object_or_404(Source, id=source_id)
+    if request.method == 'POST':
+        form = EditSourceForm(request.POST, instance=species_for_edit)
+        if form.is_valid():
+            # Save the form
+            form.save()
+            # Go back to the network's main page
+            return HttpResponseRedirect(reverse(species_for_edit, args=(species_for_edit.id,)))
+    else:
+        # Create the form
+        form = EditSourceForm(instance=species_for_edit)
+    variables = {'species_for_edit': species_for_edit,
+                 'form': form, }
 
     return render_to_response('kineticmodels/species_editor.html', variables, context_instance=RequestContext(request))
