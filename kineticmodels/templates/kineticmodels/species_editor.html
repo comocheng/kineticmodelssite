@@ -4,6 +4,9 @@
 {% block page_title %}Kinetic Models Database: Bibliography{% endblock %}
 
 <!-- NRC
+  This web page provides an interface to edit a specific species selected
+  Should have a functionality added to change species without going back to species.html
+
   The below navbar items are only relevant to the following pages:
       bibliography,
       species,
@@ -26,22 +29,22 @@
 -->
 <table>
     <tr>
-        <th>Source ID<th>
-        <th>Title</th>
-        <th>Journal</th>
-        <th>Year</th>
+        <th>sPrimeID<th>
+        <th>formula</th>
+        <th>inchi</th>
+        <th>CAS</th>
     </tr>
-{% for source in sources %}
+<!--{% for source in sources %} ** Removed since there is only one species-->
     <tr>
         <!--<td>{{ source.pk|slice:":8" }}<td>-->
         <td>{{ source.sPrimeID }}</td>
         <td>{{ source.formula }}</td>
         <td>{{ source.inchi }}</td>
         <td>{{ source.CAS }}</td>
-        <td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>
-        <td><a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a></td>
+        <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
+        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=source.id%}">Edit</a></td>
     </tr>
-{% endfor %}
+<!--{% endfor %}-->
 </table>
 <br/>
 

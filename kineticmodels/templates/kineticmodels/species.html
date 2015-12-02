@@ -49,7 +49,7 @@
         <td>{{ source.inchi }}</td>
         <td>{{ source.CAS }}</td>
         <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=source.id%}">Edit</a></td>
+        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=species.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>

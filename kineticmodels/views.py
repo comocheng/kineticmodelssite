@@ -18,6 +18,7 @@ def bibliography(request):
     variables = {'sources': sources}
     return render_to_response('kineticmodels/bibliography.html', variables, context_instance=RequestContext(request))
 
+""" See source.html"""
 def source(request, source_id=0):
     """
     The listing of all the sources in the database
@@ -26,6 +27,7 @@ def source(request, source_id=0):
     variables = {'source': source}
     return render_to_response('kineticmodels/source.html', variables, context_instance=RequestContext(request))
 
+""" See source_editor.html"""
 def source_editor(request, source_id=0):
     """
     Edit the details of a source
@@ -45,6 +47,7 @@ def source_editor(request, source_id=0):
                  'form': form, }
     return render_to_response('kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
 
+""" See species.html"""
 def species(request):
     """
     The listing of all species currently in the database
@@ -55,9 +58,10 @@ def species(request):
 
     return render_to_response('kineticmodels/species.html', variables, context_instance=RequestContext(request))
 
-def species_editor(request):
+""" See species_editor.html"""
+def species_editor(request, source_id = 0):
     """
-    The listing of all species currently in the database
+    Method for editing a specific species
     """
 
     source = get_object_or_404(Source, id=source_id)
