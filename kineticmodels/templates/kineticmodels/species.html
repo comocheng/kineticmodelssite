@@ -32,22 +32,24 @@
     Table properties must be edited to include all relevant species fields
     -->
     <tr>
-        <th>Source ID<th>
-        <th>Title</th>
-        <th>Journal</th>
-        <th>Year</th>
+        <th>sPrimeID<th>
+        <th>formula</th>
+        <th>inchi</th>
+        <th>CAS</th>
     </tr>
 {% for source in sources %}
 <!-- NRC
     Table properties must be edited to include all relevant species fields
+    Am not currently including a single species view
 -->
     <tr>
-        <td>{{ source.pk|slice:":8" }}<td>
-        <td>{{ source.source_title }}</td>
-        <td>{{ source.journal_name }}</td>
-        <td>{{ source.pub_year }}</td>
-        <td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>
-        <td><a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a></td>
+        <!--<td>{{ source.pk|slice:":8" }}<td>-->
+        <td>{{ source.sPrimeID }}</td>
+        <td>{{ source.formula }}</td>
+        <td>{{ source.inchi }}</td>
+        <td>{{ source.CAS }}</td>
+        <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
+        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=source.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>
