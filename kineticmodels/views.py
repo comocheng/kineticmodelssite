@@ -53,7 +53,7 @@ def species(request):
     The listing of all species currently in the database
     """
 
-    species = Source.objects.all()
+    species = Species.objects.all()
     variables = {'species',species}
 
     return render_to_response('kineticmodels/species.html', variables, context_instance=RequestContext(request))

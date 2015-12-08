@@ -1,6 +1,7 @@
 from django.conf.urls import include, url
 from . import views
 
+# ***If attemting to change to Class structure, must add as_view() to patterns***
 urlpatterns=[
     url(r'^$', views.index, name='index'),
     url(r'^bibliography/$', views.bibliography, name='bibliography'),

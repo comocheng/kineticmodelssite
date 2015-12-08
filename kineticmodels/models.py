@@ -196,6 +196,13 @@ class Species(models.Model):
     def __unicode__(self):
         return u"{s.id} {s.formula!s}".format(s=self)
 
+    # This method should output an object in RMG format
+    # Will be used in RMG section to access the PRIME DB
+    def toRMG(self):
+        # This code will output a species in a format acceptable by RMG
+        # *** Output will be rmg_object ***
+        return rmg_object
+
     class Meta:
         ordering = ('sPrimeID', )
         verbose_name_plural = "Species"
@@ -275,6 +282,7 @@ class Thermo(models.Model):
     coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
 
     # This method should output an object in RMG format
+    # Will be used in RMG section to access the PRIME DB
     def toRMG(self):
         "Returns an RMG object"
         polynomials = []
