@@ -25,7 +25,7 @@ from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
 class PrimeError(Exception):
     pass
 
-class Importer():
+class Importer(object):
     """
     A default importer, imports nothing in particular. 
     
@@ -482,7 +482,7 @@ def main(top_root):
     The main function. Give it the path to the top of the database mirror
     """
     with open('errors.txt', "w") as errors:
-        errors.write("Restarting import at "+time.strftime("%D %T"))
+        errors.write("Restarting import at "+time.strftime("%x"))
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
         if root.endswith('depository/bibliography'):
