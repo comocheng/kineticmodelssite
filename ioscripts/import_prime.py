@@ -118,7 +118,8 @@ class BibliographyImporter(Importer):
     def import_elementtree_root(self, bibitem):
         ns = self.ns
         primeID = bibitem.attrib.get("primeID")
-        dj_item, created = Source.objects.get_or_create(bPrimeID=primeID)  # dj_ stands for Django
+        dj_item, created = Source.objects.get_or_create(bib_PrimeID=primeID)  # dj_ stands for Django
+        print 'got here'
 
         # There may or may not be a journal, so have to cope with it being None
         dj_item.journal_name = bibitem.findtext('prime:journal',
@@ -128,7 +129,7 @@ class BibliographyImporter(Importer):
         # There seems to always be a year in every prime record, so assume it exists:
         #dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
         # In an older mirror, not everything has a year, so we need to cope with it being None:
-        dj_item.pub_year = bibitem.findtext('prime:year',
+        dj_item.publication_year = bibitem.findtext('prime:year',
                                             namespaces=ns,
                                             default='')
 
@@ -140,7 +141,7 @@ class BibliographyImporter(Importer):
         # Some might give a volume number:
         volume = bibitem.find('prime:volume', namespaces=ns)
         if volume is not None:
-            dj_item.jour_vol_num = volume.text
+            dj_item.journal_volume_number = volume.text
 
     # Some might give page numbers:
         dj_item.page_numbers = bibitem.findtext('prime:pages',
@@ -485,21 +486,21 @@ def main(top_root):
         errors.write("Restarting import at "+time.strftime("%x"))
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
-        if root.endswith('depository/bibliography'):
+        if root.endswith('depository\\bibliography'):
             print "We have found the Bibliography which we can import!"
             #print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_catalog()
-        elif root.endswith('depository/species'):
+        elif root.endswith('depository\\species'):
             print "We have found the Species which we can import!"
             TransportImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
 #             ThermoImporter(root).import_data()
-        elif root.endswith('depository/reactions'):
+        elif root.endswith('depository\\reactions'):
             print "We have found the Reactions which we can import!"
             #print "skipping for now, to test the next importer..."; continue
             KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
-        elif root.endswith('depository/models'):
+        elif root.endswith('depository\\models'):
             print "We have found the Kinetic Models which we can import!"
             ModelImporter(root).import_catalog()
         else:

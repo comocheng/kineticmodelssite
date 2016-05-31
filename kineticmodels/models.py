@@ -125,15 +125,15 @@ class Source(models.Model):
     journal volume
     page numbers
     """
-    bPrimeID = models.CharField('Prime ID',
+    bib_PrimeID = models.CharField('Prime ID',
                                 max_length=9,
                                 default='')
-    pub_year = models.CharField('Year of Publication',
+    publication_year = models.CharField('Year of Publication',
                                 default='',
                                 max_length=4)
     source_title = models.CharField(default='', max_length=300)
     journal_name = models.CharField(blank=True, max_length=300)
-    jour_vol_num = models.CharField('Journal Volume Number',
+    journal_volume_number = models.CharField('Journal Volume Number',
                                        blank=True,
                                        max_length=10)
     page_numbers = models.CharField(blank=True,
@@ -143,10 +143,10 @@ class Source(models.Model):
     doi = models.CharField(blank=True, max_length=80)  #not in PrIMe
 
     def __unicode__(self):
-        return u"{s.pub_year} {s.source_title}".format(s=self)
+        return u"{s.publication_year} {s.source_title}".format(s=self)
 
     class Meta:
-        ordering = ('bPrimeID', )
+        ordering = ('bib_PrimeID', )
         #unique_together = ["pub_year", "pub_name"]
 
 
