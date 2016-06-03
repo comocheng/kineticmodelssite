@@ -15,15 +15,18 @@ from xml.parsers.expat import ExpatError  # XML formatting errors
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kineticssite.settings")
 import django
+
 django.setup()
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-                                 Species, KinModel, Comment, SpecName, \
-                                 Thermo, ThermoComment, \
-                                 Source, Author, Authorship
+    Species, KinModel, Comment, SpecName, \
+    Thermo, ThermoComment, \
+    Source, Author, Authorship, Transport
+
 
 class PrimeError(Exception):
     pass
+
 
 class Importer(object):
     """
@@ -56,9 +59,9 @@ class Importer(object):
         for directory in sorted(directories):
             directory_path = os.path.join(data_path, directory)
             for file in sorted([f for f in os.listdir(directory_path) if (
-                                    f.endswith('.xml') and 
-                                    f.startswith(self.__class__.prime_ID_prefix)
-                                )]):
+                        f.endswith('.xml') and
+                        f.startswith(self.__class__.prime_ID_prefix)
+            )]):
                 full_path = os.path.join(directory_path, file)
                 self.import_file(full_path)
 
@@ -74,16 +77,15 @@ class Importer(object):
             full_path = os.path.join(catalog_path, file)
             self.import_file(full_path)
 
-
-    
     def import_file(self, file_path):
         """
         Import a single file
         """
+
         def save_error(message):
             with open('errors.txt', "a") as errors:
                 errors.write("{0}\t{1}\n".format(file_path, message))
-        
+
         print "Parsing file {}".format(file_path)
         try:
             tree = ElementTree.parse(file_path)
@@ -92,14 +94,12 @@ class Importer(object):
             save_error("[XML] Offset: %d" % (e.offset))
         except IOError as e:
             save_error("[XML] I/O Error %d: %s" % (e.errno, e.strerror))
-        
+
         try:
             root = tree.getroot()
             self.import_elementtree_root(root)
         except Exception as e:
             save_error(traceback.format_exc())
-            
-
 
     def import_elementtree_root(self, root):
         """
@@ -115,48 +115,48 @@ class BibliographyImporter(Importer):
     To import Bibliography items
     """
 
-    def import_elementtree_root(self, bibitem):
+    def import_elementtree_root(self, bib_item):
         ns = self.ns
-        primeID = bibitem.attrib.get("primeID")
-        dj_item, created = Source.objects.get_or_create(bib_PrimeID=primeID)  # dj_ stands for Django
-        print 'got here'
+        prime_id = bib_item.attrib.get("primeID")
+        dj_item, created = Source.objects.get_or_create(bPrimeID=prime_id)  # dj_ stands for Django
 
         # There may or may not be a journal, so have to cope with it being None
-        dj_item.journal_name = bibitem.findtext('prime:journal',
-                                                namespaces=ns,
-                                                default='')
+        dj_item.journal_name = bib_item.findtext('prime:journal',
+                                                 namespaces=ns,
+                                                 default='')
 
         # There seems to always be a year in every prime record, so assume it exists:
-        #dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
+        # dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
         # In an older mirror, not everything has a year, so we need to cope with it being None:
-        dj_item.publication_year = bibitem.findtext('prime:year',
-                                            namespaces=ns,
-                                            default='')
+        dj_item.publication_year = bib_item.findtext('prime:year',
+                                                     namespaces=ns,
+                                                     default='')
 
         # Every source should have a title:
-        dj_item.source_title = bibitem.findtext('prime:title',
-                                                namespaces=ns,
-                                                default='')
+        dj_item.source_title = bib_item.findtext('prime:title',
+                                                 namespaces=ns,
+                                                 default='')
 
         # Some might give a volume number:
-        volume = bibitem.find('prime:volume', namespaces=ns)
+        volume = bib_item.find('prime:volume', namespaces=ns)
         if volume is not None:
             dj_item.journal_volume_number = volume.text
 
-    # Some might give page numbers:
-        dj_item.page_numbers = bibitem.findtext('prime:pages',
-                                                namespaces=ns,
-                                                default='')
+        # Some might give page numbers:
+        dj_item.page_numbers = bib_item.findtext('prime:pages',
+                                                 namespaces=ns,
+                                                 default='')
 
-        # No sources in PrIMe will come with Digital Object Identifiers, but we should include this for future importing:
+        # No sources in PrIMe will come with Digital Object Identifiers,
+        # but we should include this for future importing:
         dj_item.doi = ''
 
         dj_item.save()
 
         authorship_already_in_database = Authorship.objects.all().filter(
             source=dj_item).exists()
-        for index, author in enumerate(bibitem.findall('prime:author',
-                                                       namespaces=ns)):
+        for index, author in enumerate(bib_item.findall('prime:author',
+                                                        namespaces=ns)):
             number = index + 1
             print u"author {} is {}".format(number, author.text)
             dj_author, created = Author.objects.get_or_create(name=author.text)
@@ -193,7 +193,7 @@ class SpeciesImporter(Importer):
                     continue
                 SpecName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
 
 class ThermoImporter(Importer):
@@ -207,7 +207,7 @@ class ThermoImporter(Importer):
         # Get the Prime ID for the thermo polynomial
         if thermo.attrib.get("primeID") != 'thp00000000':
             thpPrimeID = thermo.attrib.get("primeID")
-        else: 
+        else:
             return
         # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = thermo.find('prime:speciesLink', namespaces=ns)
@@ -247,7 +247,7 @@ class ThermoImporter(Importer):
                 coefficient_number = j + 1
                 assert coefficient_number == int(coefficient.attrib['id'])
                 value = float(coefficient.text)
-                #Equivalent of: dj_item.coefficient_1_1 = value
+                # Equivalent of: dj_item.coefficient_1_1 = value
                 setattr(dj_thermo,
                         'coefficient_{0}_{1}'.format(coefficient_number, polynomial_number),
                         value)
@@ -273,18 +273,19 @@ class ThermoImporter(Importer):
         assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
         dj_thermo.save()
 
+
 class TransportImporter(Importer):
     """
     To import the transport data of a species
     """
     prime_ID_prefix = 'tr'
-    
+
     def import_elementtree_root(self, trans):
         ns = self.ns
         # Get the Prime ID for the transport data
         if trans.attrib.get("primeID") != 'tr00000000':
             trPrimeID = trans.attrib.get("primeID")
-        else: 
+        else:
             return
         # Get the Prime ID for the species to which it belongs, and get (or create) the species
         specieslink = trans.find('prime:speciesLink', namespaces=ns)
@@ -297,7 +298,7 @@ class TransportImporter(Importer):
 
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = trans.find('prime:bibliographyLink',
-                                        namespaces=ns)
+                                       namespaces=ns)
         bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_trans.source = source
@@ -305,24 +306,25 @@ class TransportImporter(Importer):
         expression = trans.find('prime:expression', namespace=ns)
         for parameter in expression.findall('prime:parameter', namespaces=ns):
             if parameter.attrib['name'] == 'geometry':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.geometry=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.geometry = float(value.text)
             elif parameter.attrib['name'] == 'potentialWellDepth':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.depth=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.depth = float(value.text)
             elif parameter.attrib['name'] == 'collisionDiameter':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.diameter=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.diameter = float(value.text)
             elif parameter.attrib['name'] == 'dipoleMoment':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.dipole_moment=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.dipole_moment = float(value.text)
             elif parameter.attrib['name'] == 'polarizability':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.polarizability=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.polarizability = float(value.text)
             elif parameter.attrib['name'] == 'rotationalRelaxation':
-                value=parameter.find('prime:value', namespaces=ns)
-                dj_trans.rot_relax=float(value.text)
+                value = parameter.find('prime:value', namespaces=ns)
+                dj_trans.rot_relax = float(value.text)
         dj_trans.save
+
 
 class ReactionImporter(Importer):
     """
@@ -351,10 +353,11 @@ class ReactionImporter(Importer):
                 reaction=dj_reaction,
                 stoichiometry=stoichiometry)
             # This test currently broken or finds false failures:
-            #if stoichiometry_already_in_database:
+            # if stoichiometry_already_in_database:
             #    assert not created, "Stoichiometry change detected! probably a mistake?"
-        #import ipdb; ipdb.set_trace()
-        
+            # import ipdb; ipdb.set_trace()
+
+
 class KineticsImporter(Importer):
     """
     To import the kinetics data of a reaction (can be multiple for each species)
@@ -366,7 +369,7 @@ class KineticsImporter(Importer):
         # Get the Prime ID for the kinetics
         if kin.attrib.get("primeID") != 'rk00000000':
             rkPrimeID = kin.attrib.get("primeID")
-        else: 
+        else:
             return
         # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
         reactionlink = kin.find('prime:reactionLink', namespaces=ns)
@@ -376,24 +379,24 @@ class KineticsImporter(Importer):
         dj_kin, created = Kinetics.objects.get_or_create(
             rkPrimeID=rkPrimeID,
             reaction=reaction)
-        
+
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = kin.find('prime:bibliographyLink',
-                                        namespaces=ns)
+                                     namespaces=ns)
         bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_kin.source = source
 
         # Now give the Kinetics object its other properties
-        coefficient=kin.find('prime:rateCoefficient', namespaces=ns)
+        coefficient = kin.find('prime:rateCoefficient', namespaces=ns)
         if coefficient is None:
             raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
-        if coefficient.attrib['direction']=='reverse':
-            dj_kin.is_reverse=True
-        relunc=coefficient.find('prime:uncertainty', namespaces=ns)
+        if coefficient.attrib['direction'] == 'reverse':
+            dj_kin.is_reverse = True
+        relunc = coefficient.find('prime:uncertainty', namespaces=ns)
         if relunc is not None:
-            dj_kin.relative_uncertainty=float(relunc.text)
-        allexpression=coefficient.findall('prime:expression', namespaces=ns)
+            dj_kin.relative_uncertainty = float(relunc.text)
+        allexpression = coefficient.findall('prime:expression', namespaces=ns)
         if len(allexpression) != 1:
             raise PrimeError("Expected one Arrhenius expression but got {}".format(len(allexpression)))
         for expression in allexpression:
@@ -401,31 +404,31 @@ class KineticsImporter(Importer):
                 "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
             for parameter in expression.findall('prime:parameter', namespaces=ns):
                 if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.A_value=float(value.text)
+                    value = parameter.find('prime:value', namespaces=ns)
+                    dj_kin.A_value = float(value.text)
                     try:
-                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.A_value_uncertainty=float(uncertainty.text)
+                        uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.A_value_uncertainty = float(uncertainty.text)
                     except:
                         pass
                 elif parameter.attrib['name'] == 'n':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.n_value=float(value.text)
+                    value = parameter.find('prime:value', namespaces=ns)
+                    dj_kin.n_value = float(value.text)
                 elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
-                    value=parameter.find('prime:value', namespaces=ns)
-                    dj_kin.E_value=float(value.text)
+                    value = parameter.find('prime:value', namespaces=ns)
+                    dj_kin.E_value = float(value.text)
                     try:
-                        uncertainty=parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.E_value_uncertainty=float(uncertainty.text)
+                        uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
+                        dj_kin.E_value_uncertainty = float(uncertainty.text)
                     except:
                         pass
         temperature_range = kin.find('prime:validRange', namespaces=ns)
         if temperature_range is not None:
             for bound in temperature_range.findall('prime:bound', namespaces=ns):
                 if bound.attrib['kind'] == 'lower':
-                    dj_kin.lower_temp_bound=float(bound.text)
+                    dj_kin.lower_temp_bound = float(bound.text)
                 if bound.attrib['kind'] == 'upper':
-                    dj_kin.upper_temp_bound=float(bound.text)
+                    dj_kin.upper_temp_bound = float(bound.text)
         dj_kin.save()
 
 
@@ -433,31 +436,32 @@ class ModelImporter(Importer):
     """
     To import kinetic models
     """
+
     def import_elementtree_root(self, mod):
         ns = self.ns
         primeID = mod.attrib.get("primeID")
         dj_mod, created = KinModel.objects.get_or_create(mPrimeID=primeID)
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = mod.find('prime:bibliographyLink',
-                                        namespaces=ns)
+                                     namespaces=ns)
         bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
         dj_mod.source = source
         dj_mod.model_name = mod.findtext('prime:preferredKey',
-                                                namespaces=ns,
-                                                default='')
-        #parse additional info
+                                         namespaces=ns,
+                                         default='')
+        # parse additional info
         additionalinfo = mod.find('prime:additionalDataItem', namespaces=ns)
-        info=additionalinfo.text
-        description=additionalinfo.attrib.get('description')
-        if description!='Model description':
+        info = additionalinfo.text
+        description = additionalinfo.attrib.get('description')
+        if description != 'Model description':
             if info is not None:
-                dj_mod.additional_info = description+" = "+info
+                dj_mod.additional_info = description + " = " + info
             else:
                 dj_mod.additional_info = description
-        #parse species links
-        species_set=mod.find('prime:speciesSet', namespaces=ns)
-        specieslink=species_set.findall('prime:speciesLink', namespaces=ns)
+        # parse species links
+        species_set = mod.find('prime:speciesSet', namespaces=ns)
+        specieslink = species_set.findall('prime:speciesLink', namespaces=ns)
         for species in specieslink:
             sPrimeID = species.attrib.get("primeID")
             thermolink = species.find('prime:thermodynamicDataLink', namespaces=ns)
@@ -465,39 +469,40 @@ class ModelImporter(Importer):
             transportlink = species.find('prime:transportDataLink', namespaces=ns)
             if transportlink is not None:
                 trPrimeID = transportlink.attrib.get("primeID")
-            
-        #parse reaction links
-        reaction_set=mod.find('prime:reactionSet', namespaces=ns)
-        reactionlink=reaction_set.findall('prime:reactionLink', namespaces=ns)
+
+        # parse reaction links
+        reaction_set = mod.find('prime:reactionSet', namespaces=ns)
+        reactionlink = reaction_set.findall('prime:reactionLink', namespaces=ns)
         for reaction in reactionlink:
             rPrimeID = reaction.attrib.get("primeID")
             reversible = reaction.attrib.get("reversible")
             kineticslink = reaction.find('prime:reactionRateLink', namespaces=ns)
             rkPrimeID = kineticslink.attrib.get("primeID")
-            
-#             if reaction.attrib['reversible']=='false':
+
+
+# if reaction.attrib['reversible']=='false':
 #                 dj_kin.is_reversible=False
-        
+
 def main(top_root):
     """
     The main function. Give it the path to the top of the database mirror
     """
     with open('errors.txt', "w") as errors:
-        errors.write("Restarting import at "+time.strftime("%x"))
+        errors.write("Restarting import at " + time.strftime("%x"))
     print "Starting at", top_root
     for root, dirs, files in os.walk(top_root):
         if root.endswith('depository\\bibliography'):
             print "We have found the Bibliography which we can import!"
-            #print "skipping for now, to test the next importer..."; continue
+            # print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_catalog()
         elif root.endswith('depository\\species'):
             print "We have found the Species which we can import!"
             TransportImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
-#             ThermoImporter(root).import_data()
+        #             ThermoImporter(root).import_data()
         elif root.endswith('depository\\reactions'):
             print "We have found the Reactions which we can import!"
-            #print "skipping for now, to test the next importer..."; continue
+            # print "skipping for now, to test the next importer..."; continue
             KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
         elif root.endswith('depository\\models'):
@@ -515,6 +520,7 @@ def main(top_root):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(
         description='Import PRIME database mirror into Django.')
     parser.add_argument('root',

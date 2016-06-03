@@ -44,12 +44,12 @@ PrIMe Fields for objects we are not yet including:
 #     property values (i.e. residence time, energy control)
 #     variable components (many layers, quite confusing)
 #     description/additional info
-# Datasets
+# Data sets
 #     ******in catalog******** (only two xmls)
-#     dataset title
+#     data set title
 #     model
 #     surrogate models
-#     dataset website
+#     data set website
 #     *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
 #     model
 #     optimization variables with formulas and bounds
@@ -103,14 +103,17 @@ PrIMe Fields for objects we are not yet including:
 
 """
 
+
 class Author(models.Model):
     """
     An author of a Source, i.e. a person who published it.
     """
     name = models.CharField(help_text='format: surname, firstname',
                             max_length=80)
+
     def __unicode__(self):
         return unicode(self.name)
+
 
 class Source(models.Model):
     """
@@ -118,37 +121,36 @@ class Source(models.Model):
     
     This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
     *****in catalog******
-    year
+    publication year
     authors
     source title
     journal name
     journal volume
     page numbers
     """
-    bib_PrimeID = models.CharField('Prime ID',
-                                max_length=9,
-                                default='')
+    bPrimeID = models.CharField('Prime ID',
+                                   max_length=9,
+                                   default='')
     publication_year = models.CharField('Year of Publication',
-                                default='',
-                                max_length=4)
+                                        default='',
+                                        max_length=4)
     source_title = models.CharField(default='', max_length=300)
     journal_name = models.CharField(blank=True, max_length=300)
     journal_volume_number = models.CharField('Journal Volume Number',
-                                       blank=True,
-                                       max_length=10)
+                                             blank=True,
+                                             max_length=10)
     page_numbers = models.CharField(blank=True,
                                     help_text='[page #]-[page #]',
                                     max_length=100)
     authors = models.ManyToManyField(Author, through='Authorship')
-    doi = models.CharField(blank=True, max_length=80)  #not in PrIMe
+    doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
     def __unicode__(self):
         return u"{s.publication_year} {s.source_title}".format(s=self)
 
     class Meta:
-        ordering = ('bib_PrimeID', )
-        #unique_together = ["pub_year", "pub_name"]
-
+        ordering = ('bPrimeID',)
+        # unique_together = ["pub_year", "pub_name"]
 
 
 class Authorship(models.Model):
@@ -195,7 +197,7 @@ class Species(models.Model):
         return u"{s.id} {s.formula!s}".format(s=self)
 
     class Meta:
-        ordering = ('sPrimeID', )
+        ordering = ('sPrimeID',)
         verbose_name_plural = "Species"
 
 
@@ -251,7 +253,7 @@ class Thermo(models.Model):
                             blank=True,
                             help_text='units: J/mol',
                             default=0.0)
-    #polynomial 1
+    # polynomial 1
     lower_temp_bound_1 = models.FloatField('Polynomial 1 Lower Temp Bound', help_text='units: K', default=0.0)
     upper_temp_bound_1 = models.FloatField('Polynomial 1 Upper Temp Bound', help_text='units: K', default=0.0)
     coefficient_1_1 = models.FloatField('Polynomial 1 Coefficient 1', default=0.0)
@@ -261,7 +263,7 @@ class Thermo(models.Model):
     coefficient_5_1 = models.FloatField('Polynomial 1 Coefficient 5', default=0.0)
     coefficient_6_1 = models.FloatField('Polynomial 1 Coefficient 6', default=0.0)
     coefficient_7_1 = models.FloatField('Polynomial 1 Coefficient 7', default=0.0)
-    #polynomial 2_1
+    # polynomial 2_1
     lower_temp_bound_2 = models.FloatField('Polynomial 2 Lower Temp Bound', help_text='units: K', default=0.0)
     upper_temp_bound_2 = models.FloatField('Polynomial 2 Upper Temp Bound', help_text='units: K', default=0.0)
     coefficient_1_2 = models.FloatField('Polynomial 2 Coefficient 1', default=0.0)
@@ -274,6 +276,7 @@ class Thermo(models.Model):
 
     def __unicode__(self):
         return unicode(self.id)
+
 
 class Transport(models.Model):
     """
@@ -333,7 +336,7 @@ class Reaction(models.Model):
         return u"{s.id}".format(s=self)
 
     class Meta:
-        ordering = ('rPrimeID', )
+        ordering = ('rPrimeID',)
 
 
 class Kinetics(models.Model):
@@ -361,14 +364,13 @@ class Kinetics(models.Model):
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(blank=True,null=True)
+    E_value = models.FloatField(blank=True, null=True)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
     is_reverse = models.BooleanField(
         default=False,
         help_text='Is this the rate for the reverse reaction?')
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
-
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
@@ -398,6 +400,7 @@ class Stoichiometry(models.Model):
     class Meta:
         verbose_name_plural = 'Stoichiometries'
         unique_together = ["species", "reaction", "stoichiometry"]
+
 
 # Models
 #     ******in catalog*******
