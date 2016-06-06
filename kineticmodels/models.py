@@ -280,14 +280,14 @@ class Thermo(models.Model):
     preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    tref = models.FloatField('Reference State Temperature',
-                             blank=True,
-                             help_text='units: K',
-                             default=0.0)
-    pref = models.FloatField('Reference State Pressure',
-                             blank=True,
-                             help_text='units: Pa',
-                             default=0.0)
+    reference_temperature = models.FloatField('Reference State Temperature',
+                                              blank=True,
+                                              help_text='units: K',
+                                              default=0.0)
+    reference_pressure = models.FloatField('Reference State Pressure',
+                                           blank=True,
+                                           help_text='units: Pa',
+                                           default=0.0)
     dfH = models.FloatField('Enthalpy of Formation',
                             blank=True,
                             help_text='units: J/mol',
@@ -344,23 +344,23 @@ class Transport(models.Model):
     species = models.ForeignKey(Species)
     trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
-    depth = models.FloatField('Potential Well Depth',
-                              blank=True,
-                              help_text='units: K',
-                              default=0.0)
-    diameter = models.FloatField('Collision Diameter',
-                                 blank=True,
-                                 help_text='units: Angstroms',
-                                 default=0.0)
+    potential_well_depth = models.FloatField('Potential Well Depth',
+                                             blank=True,
+                                             help_text='units: K',
+                                             default=0.0)
+    collision_diameter = models.FloatField('Collision Diameter',
+                                           blank=True,
+                                           help_text='units: Angstroms',
+                                           default=0.0)
     dipole_moment = models.FloatField(blank=True,
                                       help_text='units: Debye',
                                       default=0.0)
     polarizability = models.FloatField(blank=True,
                                        help_text='units: cubic Angstroms',
                                        default=0.0)
-    rot_relax = models.FloatField('Rotational Relaxation',
-                                  blank=True,
-                                  default=0.0)
+    rotational_relaxation = models.FloatField('Rotational Relaxation',
+                                              blank=True,
+                                              default=0.0)
 
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)

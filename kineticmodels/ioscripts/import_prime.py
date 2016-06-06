@@ -309,10 +309,10 @@ class TransportImporter(Importer):
                 dj_trans.geometry = float(value.text)
             elif parameter.attrib['name'] == 'potentialWellDepth':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.depth = float(value.text)
+                dj_trans.potential_well_depth = float(value.text)
             elif parameter.attrib['name'] == 'collisionDiameter':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.diameter = float(value.text)
+                dj_trans.collision_diameter = float(value.text)
             elif parameter.attrib['name'] == 'dipoleMoment':
                 value = parameter.find('prime:value', namespaces=ns)
                 dj_trans.dipole_moment = float(value.text)
@@ -321,7 +321,7 @@ class TransportImporter(Importer):
                 dj_trans.polarizability = float(value.text)
             elif parameter.attrib['name'] == 'rotationalRelaxation':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.rot_relax = float(value.text)
+                dj_trans.rotational_relaxation = float(value.text)
         dj_trans.save
 
 
