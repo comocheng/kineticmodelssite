@@ -236,10 +236,10 @@ class ThermoImporter(Importer):
         reference = thermo.find('prime:referenceState', namespaces=ns)
         Tref = reference.find('prime:Tref', namespaces=ns)
         if Tref is not None:
-            dj_thermo.tref = float(Tref.text)
+            dj_thermo.reference_temperature = float(Tref.text)
         Pref = reference.find('prime:Pref', namespaces=ns)
         if Pref is not None:
-            dj_thermo.pref = float(Pref.text)
+            dj_thermo.reference_pressure = float(Pref.text)
         for i, polynomial in enumerate(thermo.findall('prime:polynomial',
                                                       namespaces=ns)):
             polynomial_number = i + 1
@@ -494,7 +494,7 @@ def main(top_root):
         # if root.endswith('depository\\bibliography'):
         if root.endswith(os.path.join(os.sep, 'depository', 'bibliography')):
             print "We have found the Bibliography which we can import!"
-            # print "skipping for now, to test the next importer..."; continue
+            print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
             print "We have found the Species which we can import!"
