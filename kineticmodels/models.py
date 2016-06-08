@@ -185,7 +185,7 @@ class Species(models.Model):
     sPrimeID = models.CharField('PrIMe ID', max_length=9)
     formula = models.CharField(blank=True, max_length=50)
     inchi = models.CharField('InChI', blank=True, max_length=500)
-    CAS = models.CharField('CAS Registry Number', blank=True, max_length=400)
+    cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
 
     def products(self):
         return self.filter(stoichiometry__stoichiometry__gt=0)
@@ -201,7 +201,7 @@ class Species(models.Model):
         verbose_name_plural = "Species"
 
 
-class SpecName(models.Model):
+class SpeciesName(models.Model):
     """
     A Species Name
     """
