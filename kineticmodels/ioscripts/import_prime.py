@@ -17,7 +17,7 @@ import django
 
 django.setup()
 
-from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
+from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
     Species, KineticModel, Comment, SpeciesName, \
     Thermo, ThermoComment, \
     Source, Author, Authorship, Transport
@@ -375,9 +375,18 @@ class KineticsImporter(Importer):
         rPrimeID = reactionlink.attrib['primeID']
         reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
         # Now get (or create) the django Kinetics object for that reaction
-        dj_kin, created = Kinetics.objects.get_or_create(
-            rkPrimeID=rkPrimeID,
-            reaction=reaction)
+        type_of_kinetics = coefficient.findall('prime:expression', namespaces=ns)
+        acceptable_forms = ('arrhenius', 'Arrhenius')
+        for expression in type_of_kinetics:
+            assert expression.attrib['form'] in acceptable_forms, \
+                "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
+            if expression.attrib['form'] in ('arrhenius', 'Arrhenius'):
+                dj_kin, created = ArrheniusKinetics.objects.get_or_create(
+                    rkPrimeID=rkPrimeID,
+                    reaction=reaction)
+            #### HERE IS WHERE WE EXTEND FOR OTHER TYPES
+            else:
+                pass
 
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = kin.find('prime:bibliographyLink',
@@ -387,7 +396,6 @@ class KineticsImporter(Importer):
         dj_kin.source = source
 
         # Now give the Kinetics object its other properties
-        coefficient = kin.find('prime:rateCoefficient', namespaces=ns)
         if coefficient is None:
             raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
         if coefficient.attrib['direction'] == 'reverse':
