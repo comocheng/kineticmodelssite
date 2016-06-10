@@ -48,7 +48,7 @@ def source_editor(request, source_id=0):
     return render_to_response('kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
 
 """ See species.html"""
-def species(request):
+def species_list(request):
     """
     The listing of all species currently in the database
     """

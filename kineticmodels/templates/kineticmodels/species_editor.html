@@ -16,8 +16,8 @@
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
 <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a>
-<a href="{% url 'kineticmodels.views.species' %}">Species</a>
 <a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
+<a href="{% url 'kineticmodels.views.species_list' %}">Species List</a>
 {% endblock %}
 
 {% block sidebar_items %}
