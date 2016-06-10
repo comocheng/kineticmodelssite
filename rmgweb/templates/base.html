@@ -52,48 +52,42 @@
         <p>
         <a href="{% url 'database.views.index' %}"><img src="/media/database-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">RMG Database</div></a>
-        <div class="linkdesc">Browse the RMG database of chemical parameters</div>
+        <div class="linkdesc">Browse the RMG database of chemical and kinetic parameters</div>
         </p>
         
-                <p>
+        <p>
         <a href="{% url 'rmg.views.input' %}"><img src="/media/input-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">Create Input File</div></a>
         <div class="linkdesc">Online form for making an RMG input file</div>
         </p>
-        
-        <p>
-        <a href="{% url 'database.views.groupDraw' %}"><img src="/media/groupdraw-logo-small.png" class="icon" height="32px"/>
-        <div class="biglink">Draw Group</div></a>
-        <div class="linkdesc">Draw a group structure from its adjlist</div>
-        </p>
-        
+                
         <p>
         <a href="{% url 'database.views.moleculeSearch' %}"><img src="/media/moleculedraw-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">Molecule Search</div></a>
-        <div class="linkdesc">Draw a molecule from its adjlist and search its properties</div>
+        <div class="linkdesc">Draw a molecule from its adjlist and search or estimate its properties</div>
         </p>
                     
         <p>
         <a href="{% url 'database.views.kineticsSearch' %}"><img src="/media/kinetics-search-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">Kinetics Search</div></a>
-        <div class="linkdesc">Search for the kinetics of a chemical reaction</div>
+        <div class="linkdesc">Search or estimate kinetics of a chemical reaction</div>
         </p>
         
         <p>
         <a href="{% url 'database.views.solvationSearch' %}"><img src="/media/solvation-search-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">Solvation Search</div></a>
-        <div class="linkdesc">Search for the solvation properties of a reaction between a solvent and a solute</div>
+        <div class="linkdesc">Search or estimate solvation properties of solvent and a solute</div>
         </p>
         
         <p>
         <a href="{% url 'pdep.views.index' %}"><img src="/media/pdep-logo-small.png" class="icon" height="32px"/>
         <div class="biglink">Pressure Dependent Networks</div></a>
-        <div class="linkdesc">CanTherm pdep calculations</div>
+        <div class="linkdesc">CanTherm pdep kinetic calculations</div>
         </p>
         
         <p>
         <a href="{% url 'rmg.views.index' %}"><img src="/media/tools-icon.png" class="icon" height="32px"/>
-        <div class="biglink">Simulation & Tools</div></a>
+        <div class="biglink">Other RMG Tools</div></a>
         <div class="linkdesc">Additional tools to supplement RMG </div>
         </p>
         
