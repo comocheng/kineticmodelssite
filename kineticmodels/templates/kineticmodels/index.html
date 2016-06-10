@@ -9,48 +9,51 @@
 
   Currently no page for a single species. There is a species list and a species_editor page
   This setup reflects Biliography and Source Editor
--->
 
-{% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
+  <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
 <a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
 <a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Source Edit</a>
 <a href="{% url 'kineticmodels.views.species' %}">Species</a>
 <a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Species Edit</a>
+-->
+
+{% block navbar_items %}
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
 {% endblock %}
 
 {% block sidebar_items %}
 {% endblock %}
 
-<!-- Testing this code to successfully add more to the index file-->
+<!-- Display links to the other parts of the kinetic models database site-->
+
+
+
 {% block page_body %}
-  <table> # Link table
-    <tr><th><b>Kinetic Model Links</b></th></tr>
-    # Main Categories
-    <tr><th>Source Links</th></tr>
-    <tr>
-      <ul>
-        <li><a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> </li>
-        <li><a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Source Edit</a></li>
-      </ul>
-    </tr>
-    <tr><th>Species Links</th></tr>
-    <tr>
-      <ul>
-        <li><a href="{% url 'kineticmodels.views.species' %}">Species</a> </li>
-        <li><a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Species Edit</a> </li>
-      </ul>
-    </tr>
+<h2><a href="{% url 'kineticModels.views.kineticModel_list' %}">Models</a></h2>
 
-  </table>
+<ul>
+<li> <a href="{% url 'kineticModels.views.kineticModel_list' %}">Browse Models</a></li>
+<li><a href="{% url 'database.views.kinetics' section='libraries' %}">Search Models</a></li>
+</ul>
+<!-- TODO Fix the search links-->
 
-<form action="" method="POST">{% csrf_token %}
-{{ form.as_p }}
-<p><input type="submit" value="Save" id="submit"/></p>
-</form>
+<h2><a href="{% url 'kineticmodels.views.species_list' %}">Species</a></h2>
 
+<ul>
+<li><a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a></li>
+<li><a href="{% url 'database.views.solvation' section='libraries' %}">Search Species</a></li>
+</ul>
+<!-- TODO Fix the search links-->
+<h2><a href="{% url 'kineticmodels.views.reaction_list' %}">Reactions</a></h2>
+
+<ul>
+<li><a href="{% url 'kineticmodels.views.reaction_list' %}">Browse Reactions</a></li>
+<li><a href="{% url 'database.views.statmech' section='libraries' %}">Search Reactions</a></li>
+</ul>
+<!-- TODO Fix the search links-->
+<h2><a href="{% url 'kineticmodels.views.thermo' %}">Bibliography</a></h2>
 {% endblock %}
+
 
 
 <!--
@@ -63,4 +66,8 @@
 {% else %}
     <p>No polls are available.</p>
 {% endif %}
+
+
+
+
  -->
