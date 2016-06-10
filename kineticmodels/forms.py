@@ -34,7 +34,7 @@ This module defines the Django forms used by the kineticsmodels app.
 
 from django import forms
 
-from models import KinModel, Source, Species
+from models import KineticModel, Source, Species, Reaction
 
 ################################################################################
 
@@ -56,6 +56,23 @@ class EditSpeciesForm(forms.ModelForm):
         model = Species
         exclude = ()
 
+# For for editing a Model
+class EditKineticModelForm(forms.ModelForm):
+    """
+    Django Form template for editing a Model
+    """
+    class Meta:
+        model = KineticModel
+        exclude = ()
+
+# For for editing a Reaction
+class EditReactionForm(forms.ModelForm):
+    """
+    Django Form template for editing a Reaction
+    """
+    class Meta:
+        model = Reaction
+        exclude = ()        
 ################################################################################
 
 class UploadModelForm(forms.ModelForm):
@@ -63,5 +80,5 @@ class UploadModelForm(forms.ModelForm):
     A Django form for uploading a kinetic model.
     """
     class Meta:
-        model = KinModel
+        model = KineticModel
         fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')

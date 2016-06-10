@@ -4,11 +4,11 @@ from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 
 from forms import EditSourceForm, EditSpeciesForm
-from models import Source, Species
+from models import Source, Species, KineticModel
 
 def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
-    return HttpResponse("This is the kinetic models index!")
+    return render(request, 'kineticmodels/index.html')
 
 def bibliography(request):
     """
@@ -80,3 +80,70 @@ def species_editor(request, species_id = 0):
                  'form': form, }
     return render(request, 'kineticmodels/species_editor.html', variables)
 
+
+def kineticModel_list(request):
+    """
+    The listing of all kinetic models currently in the database
+
+    See models.html
+    """
+    kineticModel_list = KineticModel.objects.all()
+    variables = {'kineticModels_list': kineticModel_list}
+    return render(request, 'kineticmodels/kineticModel.html', variables) 
+
+def kineticModel_editor(request, kineticModel_id = 0):
+    """
+    Method for editing a specific kinetic models. 
+    The editing framework still needs work.
+
+    See species_editor.html
+    """
+
+    kineticModel = get_object_or_404(Species, id=kineticModel_id)
+    if request.method == 'POST':
+        form = EditKineticModelForm(request.POST, instance=kineticModel)
+        if form.is_valid():
+            # Save the form
+            form.save()
+            # Go back to the network's main page
+            return HttpResponseRedirect(reverse(species_for_edit, args=(kineticModel.id,)))
+    else:
+        # Create the form
+        form = EditKineticModelForm(instance=kineticModel)
+    variables = {'species': kineticModel,
+                 'form': form, }
+    return render(request, 'kineticmodels/kineticModel_editor.html', variables)
+
+
+
+def reaction_list(request):
+    """
+    The listing of all reactions currently in the database
+
+    See reactions.html
+    """
+    reactions_list = Reaction.objects.all()
+    variables = {'reactions_list': reactions_list}
+    return render(request, 'kineticmodels/reactions.html', variables) 
+
+def reaction_editor(request, reaction_id = 0):
+    """
+    Method for editing a specific species
+
+    See species_editor.html
+    """
+
+    reaction = get_object_or_404(Species, id=reaction_id)
+    if request.method == 'POST':
+        form = EditReactionForm(request.POST, instance=reaction)
+        if form.is_valid():
+            # Save the form
+            form.save()
+            # Go back to the network's main page
+            return HttpResponseRedirect(reverse(species_for_edit, args=(reaction.id,)))
+    else:
+        # Create the form
+        form = EditReactionForm(instance=reaction)
+    variables = {'species': reaction,
+                 'form': form, }
+    return render(request, 'kineticmodels/reaction_editor.html', variables)
