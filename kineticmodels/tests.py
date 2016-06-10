@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-                                 Species, KinModel, Comment, \
+                                 Species, KineticModel, Comment, \
                                  Source, Author, Authorship
 
 
@@ -68,7 +68,7 @@ class ReactionTestCase(TestCase):
         s2 = Species(sPrimeID='s002', formula='CO2',)
         s2.save()
         b1 = Source.objects.create()
-        m1 = KinModel(source=b1, model_name="the first model")
+        m1 = KineticModel(source=b1, model_name="the first model")
         m1.save()
     def test_there_is_a_reaction(self):
         Reaction.objects.all()
@@ -101,9 +101,9 @@ class ReactionTestCase(TestCase):
     def test_add_kinetics_to_model(self):
         """How to add an existing kinetics to an existing model"""
         b2 = Source.objects.create()
-        m2 = KinModel.objects.create(source=b2, model_name="another model")
+        m2 = KineticModel.objects.create(source=b2, model_name="another model")
         k1 = Kinetics.objects.get(id=1)
-        c1 = Comment(kinetics=k1, kinmodel=m2, comment="Made up out of nowhere")
+        c1 = Comment(kinetics=k1, kineticModel=m2, comment="Made up out of nowhere")
         c1.save()
         
     def test_get_reactions_containing_species(self):
@@ -111,6 +111,6 @@ class ReactionTestCase(TestCase):
         s1.reaction_set.all()  # list of reactions that s1 is in
 
     def test_get_models_containing_species(self):
-        KinModel.objects.filter(kinetics__reaction__species=1)  # kinetic models that have species 1 in a reaction
+        KineticModel.objects.filter(kinetics__reaction__species=1)  # kinetic models that have species 1 in a reaction
 
 

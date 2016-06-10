@@ -441,7 +441,7 @@ class Stoichiometry(models.Model):
 #     additional info
 
 
-class KinModel(models.Model):
+class KineticModel(models.Model):
     """
     A kinetic model.
 
@@ -494,7 +494,7 @@ class Comment(models.Model):
     links that kinetics entry with that kinetic model.
     """
     kinetics = models.ForeignKey(Kinetics)
-    kinmodel = models.ForeignKey(KinModel)
+    kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
@@ -510,7 +510,7 @@ class ThermoComment(models.Model):
     links that thermo entry with that kinetic model.
     """
     thermo = models.ForeignKey(Thermo)
-    kinmodel = models.ForeignKey(KinModel)
+    kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
