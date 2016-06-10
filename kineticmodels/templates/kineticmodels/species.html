@@ -10,11 +10,12 @@
       species,
       species_editor,
 
+
+<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
 -->
 
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
 <a href="{% url 'kineticmodels.views.species_list' %}">Species List</a>
 {% endblock %}
 
@@ -37,7 +38,7 @@
         <th>inchi</th>
         <th>CAS</th>
     </tr>
-{% for source in sources %}
+{% for species in species_list %}
 <!-- NRC
     Table properties must be edited to include all relevant species fields(Done)
     Am not currently including a single species view

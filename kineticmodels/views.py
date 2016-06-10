@@ -4,7 +4,7 @@ from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 
 from forms import EditSourceForm, EditSpeciesForm
-from models import Source
+from models import Source, Species
 
 def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
@@ -45,37 +45,38 @@ def source_editor(request, source_id=0):
         form = EditSourceForm(instance=source)
     variables = {'source': source,
                  'form': form, }
-    return render_to_response('kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
+    #return render_to_response('kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
+    return render(request,'kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
 
-""" See species.html"""
 def species_list(request):
     """
     The listing of all species currently in the database
+
+    See species.html
     """
+    species_list = Species.objects.all()
+    variables = {'species_list': species_list}
+    return render(request, 'kineticmodels/species.html', variables) 
 
-    species = Species.objects.all()
-    variables = {'species',species}
-
-    return render_to_response('kineticmodels/species.html', variables, context_instance=RequestContext(request))
-
-""" See species_editor.html"""
-def species_editor(request, source_id = 0):
+def species_editor(request, species_id = 0):
     """
     Method for editing a specific species
+
+    See species_editor.html
     """
 
-    species_for_edit = get_object_or_404(Species, id=source_id)
+    species = get_object_or_404(Species, id=species_id)
     if request.method == 'POST':
-        form = EditSpeciesForm(request.POST, instance=species_for_edit)
+        form = EditSpeciesForm(request.POST, instance=species)
         if form.is_valid():
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species_for_edit, args=(species_for_edit.id,)))
+            return HttpResponseRedirect(reverse(species_for_edit, args=(species.id,)))
     else:
         # Create the form
-        form = EditSpeciesForm(instance=species_for_edit)
-    variables = {'species_for_edit': species_for_edit,
+        form = EditSpeciesForm(instance=species)
+    variables = {'species': species,
                  'form': form, }
+    return render(request, 'kineticmodels/species_editor.html', variables)
 
-    return render_to_response('kineticmodels/species_editor.html', variables, context_instance=RequestContext(request))

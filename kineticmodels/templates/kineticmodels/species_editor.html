@@ -16,8 +16,8 @@
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
 <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a>
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
 <a href="{% url 'kineticmodels.views.species_list' %}">Species List</a>
+<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -37,12 +37,12 @@
 <!--{% for source in sources %} ** Removed since there is only one species-->
     <tr>
         <!--<td>{{ source.pk|slice:":8" }}<td>-->
-        <td>{{ species_for_edit.sPrimeID }}</td>
-        <td>{{ species_for_edit.formula }}</td>
-        <td>{{ species_for_edit.inchi }}</td>
-        <td>{{ species_for_edit.CAS }}</td>
+        <td>{{ species.sPrimeID }}</td>
+        <td>{{ species.formula }}</td>
+        <td>{{ species.inchi }}</td>
+        <td>{{ species.CAS }}</td>
         <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Edit</a></td>
+        <td><a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a></td>
     </tr>
 <!--{% endfor %}-->
 </table>
