@@ -29,11 +29,11 @@
 
 
 {% block page_body %}
-<h2><a href="{% url 'kineticModels.views.kineticModel_list' %}">Models</a></h2>
+<h2><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Models</a></h2>
 
 <ul>
-<li> <a href="{% url 'kineticModels.views.kineticModel_list' %}">Browse Models</a></li>
-<li><a href="{% url 'database.views.kinetics' section='libraries' %}">Search Models</a></li>
+<li><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Browse Models</a></li>
+<li><a >Search Models</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
@@ -41,19 +41,19 @@
 
 <ul>
 <li><a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a></li>
-<li><a href="{% url 'database.views.solvation' section='libraries' %}">Search Species</a></li>
+<li><a >Search Species</a></li>
 </ul>
 <!-- TODO Fix the search links-->
-<h2><a href="{% url 'kineticmodels.views.reaction_list' %}">Reactions</a></h2>
 
+<h2><a href="{% url 'kineticmodels.views.reaction_list' %}">Reactions</a></h2>
 <ul>
 <li><a href="{% url 'kineticmodels.views.reaction_list' %}">Browse Reactions</a></li>
-<li><a href="{% url 'database.views.statmech' section='libraries' %}">Search Reactions</a></li>
+<li><a >Search Reactions</a></li>
 </ul>
 <!-- TODO Fix the search links-->
-<h2><a href="{% url 'kineticmodels.views.thermo' %}">Bibliography</a></h2>
-{% endblock %}
 
+<h2><a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a></h2>
+{% endblock %}
 
 
 <!--
@@ -66,8 +66,6 @@
 {% else %}
     <p>No polls are available.</p>
 {% endif %}
-
-
 
 
  -->
