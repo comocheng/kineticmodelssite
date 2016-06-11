@@ -6,7 +6,7 @@ TEMPLATE_DEBUG = DEBUG
 
 # The website administrators
 ADMINS = [
-    ('Josh Allen', 'jwallen@mit.edu')
+    ('Richard West', 'R.West@northeastern.edu')
     # ('Your Name', 'your_email@domain.com'),
 ]
 
@@ -20,7 +20,7 @@ DATABASE_PATH = settings['database.directory']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',                 # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': os.path.join(PROJECT_PATH, 'sqlitedb', 'rmgweb.db'),        # Or path to database file if using sqlite3.
+        'NAME': os.path.join(PROJECT_PATH, 'sqlitedb', 'combined.db'),        # Or path to database file if using sqlite3.
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
