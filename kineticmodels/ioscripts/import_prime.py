@@ -1,5 +1,4 @@
 """
-@author Hari Ilangovan ## As of 5/27
 Run this like so:
  $  python import_prime.py /path/to/local/mirror/warehouse.primekinetics.org/
  
@@ -13,13 +12,13 @@ import time
 from xml.etree import ElementTree  # cElementTree is C implementation of xml.etree.ElementTree, but works differently!
 from xml.parsers.expat import ExpatError  # XML formatting errors
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kineticssite.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
 import django
 
 django.setup()
 
 from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-    Species, KinModel, Comment, SpecName, \
+    Species, KineticModel, Comment, SpeciesName, \
     Thermo, ThermoComment, \
     Source, Author, Authorship, Transport
 
@@ -191,7 +190,7 @@ class SpeciesImporter(Importer):
                 if not name.text:
                     print "Warning! Blank species name in species {}".format(primeID)
                     continue
-                SpecName.objects.get_or_create(species=dj_item, name=name.text)
+                SpeciesName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
         # import ipdb; ipdb.set_trace()
 
@@ -440,7 +439,7 @@ class ModelImporter(Importer):
     def import_elementtree_root(self, mod):
         ns = self.ns
         primeID = mod.attrib.get("primeID")
-        dj_mod, created = KinModel.objects.get_or_create(mPrimeID=primeID)
+        dj_mod, created = KineticModel.objects.get_or_create(mPrimeID=primeID)
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = mod.find('prime:bibliographyLink',
                                      namespaces=ns)
