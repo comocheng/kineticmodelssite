@@ -52,11 +52,11 @@ def species_list(request):
     """
     The listing of all species currently in the database
 
-    See species.html
+    See species_list.html
     """
     species_list = Species.objects.all()
     variables = {'species_list': species_list}
-    return render(request, 'kineticmodels/species.html', variables) 
+    return render(request, 'kineticmodels/species_list.html', variables)
 
 def species_editor(request, species_id = 0):
     """
