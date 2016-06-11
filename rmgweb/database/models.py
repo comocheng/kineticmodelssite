@@ -41,7 +41,8 @@ def getSolventList():
     SolventList = [(entry.label, index) for index,entry in database.solvation.libraries['solvent'].entries.iteritems()]
     return SolventList
 
-SolventList = getSolventList()
+#SolventList = getSolventList()
+SolventList = [("Temporarily disabled to make website reboot faster", "Temporarily disabled to make website reboot faster")]
 
 
 class SolventSelection(models.Model):

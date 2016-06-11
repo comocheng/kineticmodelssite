@@ -887,12 +887,15 @@ class Input(models.Model):
 ################################################################################
 # DATABASE MODELS
 ################################################################################
-loadDatabase('thermo','libraries')
-loadDatabase('kinetics','libraries')
-ThermoLibraries = [(label, label) for label, library in database.thermo.libraries.iteritems()]
-ThermoLibraries.sort()
-KineticsLibraries = [(label, label) for label, library in database.kinetics.libraries.iteritems()]
-KineticsLibraries.sort()
+#loadDatabase('thermo','libraries')
+#loadDatabase('kinetics','libraries')
+#ThermoLibraries = [(label, label) for label, library in database.thermo.libraries.iteritems()]
+#ThermoLibraries.sort()
+#KineticsLibraries = [(label, label) for label, library in database.kinetics.libraries.iteritems()]
+#KineticsLibraries.sort()
+excuse = "Temporarily Disabled to make website reboot faster"
+ThermoLibraries = [(excuse, excuse)]
+KineticsLibraries = [(excuse, excuse)]
 
 class ThermoLibrary(models.Model):
     input = models.ForeignKey(Input, related_name = 'thermo_libraries')
