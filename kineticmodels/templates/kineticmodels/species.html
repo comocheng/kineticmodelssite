@@ -33,10 +33,12 @@
     Table properties must be edited to include all relevant species fields
     -->
     <tr>
-        <th>sPrimeID<th>
+        <th>ID</th>
+        <th>sPrimeID</th>
         <th>formula</th>
         <th>inchi</th>
         <th>CAS</th>
+        <th></th>
     </tr>
 {% for species in species_list %}
 <!-- NRC
@@ -44,13 +46,12 @@
     Am not currently including a single species view
 -->
     <tr>
-        <!--<td>{{ source.pk|slice:":8" }}<td>-->
+        <td>{{ species.pk}}</td>
         <td>{{ species.sPrimeID }}</td>
         <td>{{ species.formula }}</td>
         <td>{{ species.inchi }}</td>
         <td>{{ species.CAS }}</td>
-        <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a></td>
+        <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>
