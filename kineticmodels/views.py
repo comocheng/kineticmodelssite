@@ -3,8 +3,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 
-from forms import EditSourceForm, EditSpeciesForm
-from models import Source, Species, KineticModel
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm
+from models import Source, Species, KineticModel, Reaction
 
 def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
@@ -16,7 +16,7 @@ def bibliography(request):
     """
     sources = Source.objects.all()
     variables = {'sources': sources}
-    return render_to_response('kineticmodels/bibliography.html', variables, context_instance=RequestContext(request))
+    return render(request, 'kineticmodels/bibliography.html', variables)
 
 """ See source.html"""
 def source(request, source_id=0):
@@ -25,7 +25,7 @@ def source(request, source_id=0):
     """
     source = get_object_or_404(Source, id=source_id)
     variables = {'source': source}
-    return render_to_response('kineticmodels/source.html', variables, context_instance=RequestContext(request))
+    return render(request, 'kineticmodels/source.html', variables)
 
 """ See source_editor.html"""
 def source_editor(request, source_id=0):
@@ -45,8 +45,7 @@ def source_editor(request, source_id=0):
         form = EditSourceForm(instance=source)
     variables = {'source': source,
                  'form': form, }
-    #return render_to_response('kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
-    return render(request,'kineticmodels/source_editor.html', variables, context_instance=RequestContext(request))
+    return render(request,'kineticmodels/source_editor.html', variables)
 
 def species_list(request):
     """
@@ -72,7 +71,7 @@ def species_editor(request, species_id = 0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species_for_edit, args=(species.id,)))
+            return HttpResponseRedirect(reverse(species, args=(species.id,)))
     else:
         # Create the form
         form = EditSpeciesForm(instance=species)
@@ -89,7 +88,7 @@ def kineticModel_list(request):
     """
     kineticModel_list = KineticModel.objects.all()
     variables = {'kineticModels_list': kineticModel_list}
-    return render(request, 'kineticmodels/kineticModel.html', variables) 
+    return render(request, 'kineticmodels/kineticModel_list.html', variables) 
 
 def kineticModel_editor(request, kineticModel_id = 0):
     """
@@ -124,7 +123,7 @@ def reaction_list(request):
     """
     reactions_list = Reaction.objects.all()
     variables = {'reactions_list': reactions_list}
-    return render(request, 'kineticmodels/reactions.html', variables) 
+    return render(request, 'kineticmodels/reaction_list.html', variables) 
 
 def reaction_editor(request, reaction_id = 0):
     """
