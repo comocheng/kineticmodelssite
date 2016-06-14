@@ -87,7 +87,7 @@ def kineticModel_list(request):
     See models.html
     """
     kineticModel_list = KineticModel.objects.all()
-    variables = {'kineticModels_list': kineticModel_list}
+    variables = {'kineticModel_list': kineticModel_list}
     return render(request, 'kineticmodels/kineticModel_list.html', variables) 
 
 def kineticModel_editor(request, kineticModel_id = 0):
@@ -98,18 +98,18 @@ def kineticModel_editor(request, kineticModel_id = 0):
     See species_editor.html
     """
 
-    kineticModel = get_object_or_404(Species, id=kineticModel_id)
+    kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
     if request.method == 'POST':
         form = EditKineticModelForm(request.POST, instance=kineticModel)
         if form.is_valid():
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species_for_edit, args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse(kineticModel, args=(kineticModel.id,)))
     else:
         # Create the form
         form = EditKineticModelForm(instance=kineticModel)
-    variables = {'species': kineticModel,
+    variables = {'kineticModel': kineticModel,
                  'form': form, }
     return render(request, 'kineticmodels/kineticModel_editor.html', variables)
 
@@ -121,8 +121,8 @@ def reaction_list(request):
 
     See reactions.html
     """
-    reactions_list = Reaction.objects.all()
-    variables = {'reactions_list': reactions_list}
+    reaction_list = Reaction.objects.all()
+    variables = {'reaction_list': reaction_list}
     return render(request, 'kineticmodels/reaction_list.html', variables) 
 
 def reaction_editor(request, reaction_id = 0):
@@ -132,17 +132,17 @@ def reaction_editor(request, reaction_id = 0):
     See species_editor.html
     """
 
-    reaction = get_object_or_404(Species, id=reaction_id)
+    reaction = get_object_or_404(Reaction, id=reaction_id)
     if request.method == 'POST':
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species_for_edit, args=(reaction.id,)))
+            return HttpResponseRedirect(reverse(reaction, args=(reaction.id,)))
     else:
         # Create the form
         form = EditReactionForm(instance=reaction)
-    variables = {'species': reaction,
+    variables = {'reaction': reaction,
                  'form': form, }
     return render(request, 'kineticmodels/reaction_editor.html', variables)
