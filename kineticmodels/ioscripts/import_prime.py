@@ -493,7 +493,7 @@ def main(top_root):
         # if root.endswith('depository\\bibliography'):
         if root.endswith(os.path.join(os.sep, 'depository', 'bibliography')):
             print "We have found the Bibliography which we can import!"
-            print "skipping for now, to test the next importer..."; continue
+            # print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
             print "We have found the Species which we can import!"
