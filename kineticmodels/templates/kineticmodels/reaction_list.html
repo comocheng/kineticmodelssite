@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Kinetic Models Database: Reaction List{% endblock %}
+{% block page_title %}Kinetic Models Database: Reaction List{% endblock %}
+
+<!-- NRC
+  The below navbar items are only relevant to the following pages:
+      source,
+      source_editor,
+      reaction,
+      reaction_editor,
+
+
+<a href="{% url 'kineticmodels.views.reaction_editor' reaction_id=reaction.id%}">Edit</a>
+-->
+
+{% block navbar_items %}
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels.views.reaction_list' %}">Reaction List</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_body %}
+
+<!-- NRC
+  The following HTML code will list all of the reaction currently in the database
+-->
+
+<table>
+    <!-- NRC
+    Table properties must be edited to include all relevant reaction fields
+    -->
+    <tr>
+        <th>ID</th>
+        <th>rPrimeID</th>
+        <th>species</th>
+        <th>is_reversible</th>
+        <th></th>
+    </tr>
+{% for reaction in reaction_list %}
+<!-- NRC
+    Table properties must be edited to include all relevant reaction fields(Done)
+    Am not currently including a single reaction view
+-->
+    <tr>
+        <td>{{ reaction.pk}}</td>
+        <td>{{ reaction.rPrimeID }}</td>
+        <td>{{ reaction.species }}</td>
+        <td>{{ reaction.is_reversible }}</td>
+        <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
+    </tr>
+{% endfor %}
+</table>
+<br/>
+
+{% endblock %}
