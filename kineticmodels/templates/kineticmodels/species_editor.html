@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Kinetic Models Database: Bibliography{% endblock %}
-{% block page_title %}Kinetic Models Database: Bibliography{% endblock %}
+
+{% block title %}Kinetic Models Database: Species {{ species.id }} Editor{% endblock %}
+{% block page_title %}Kinetic Models Database: Species {{ species.id }} Editor{% endblock %}
 
 <!-- NRC
   This web page provides an interface to edit a specific species selected
@@ -27,25 +28,14 @@
 <!-- NRC
   The following HTML code will list the data related to the specific species being edited
 -->
-<table>
-    <tr>
-        <th>sPrimeID<th>
-        <th>formula</th>
-        <th>inchi</th>
-        <th>CAS</th>
-    </tr>
-<!--{% for source in sources %} ** Removed since there is only one species-->
-    <tr>
-        <!--<td>{{ source.pk|slice:":8" }}<td>-->
-        <td>{{ species.sPrimeID }}</td>
-        <td>{{ species.formula }}</td>
-        <td>{{ species.inchi }}</td>
-        <td>{{ species.CAS }}</td>
-        <!--<td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>-->
-        <td><a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a></td>
-    </tr>
-<!--{% endfor %}-->
-</table>
-<br/>
+<!--
+    The following form allows the selected source to be edited
+    Each source field needs a section to edit
+  -->
+<form action="{% url kineticmodels:species_editor species.id}" method="POST">
+  {% csrf_token %}
+  {{ form.as_p }}
+<p><input type="submit" value="Save" id="submit"/></p>
+</form>
 
 {% endblock %}

@@ -23,7 +23,7 @@
     The following form allows the selected source to be edited
     Each source field needs a section to edit
   -->
-<form action="{% url kineticmodels:source_editor source.id}" method="POST">
+<form action="{% url 'kineticmodels.views.source_editor' source_id=source.id%}" method="POST">
   {% csrf_token %}
   {{ form.as_p }}
 <p><input type="submit" value="Save" id="submit"/></p>
