@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Kinetic Models Database: Species List{% endblock %}
+{% block page_title %}Kinetic Models Database: Species List{% endblock %}
+
+<!-- NRC
+  The below navbar items are only relevant to the following pages:
+      source,
+      source_editor,
+      kineticModel,
+      kineticModel_editor,
+
+
+<a href="{% url 'kineticmodels.views.kineticModel_editor' kineticModel_id=kineticModel.id%}">Edit</a>
+-->
+
+{% block navbar_items %}
+<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels.views.kineticModel_list' %}">Kinetic Models List</a>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_body %}
+
+<!-- NRC
+  The following HTML code will list all of the kineticModel currently in the database
+  
+  TODO: Add more parts of the kinetic model to be displayed and then figure out
+  a way to display it nicely.
+
+-->
+
+<table>
+    <!-- NRC
+    Table properties must be edited to include all relevant kineticModel fields
+    -->
+    <tr>
+        <th>ID</th>
+        <th>mPrimeID</th>
+        <th>model_name</th>
+        <th>thermo</th>
+        <th>kinetics</th>
+        <th></th>
+    </tr>
+{% for kineticModel in kineticModel_list %}
+<!-- NRC
+    Table properties must be edited to include all relevant kineticModel fields(Done)
+    Am not currently including a single kineticModel view
+-->
+    <tr>
+        <td>{{ kineticModel.pk}}</td>
+        <td>{{ kineticModel.mPrimeID }}</td>
+        <td>{{ kineticModel.model_name }}</td>
+        <td>{{ kineticModel.thermo }}</td>
+        <td>{{ kineticModel.kinetics }}</td>
+        <td><a href="{% url 'kineticModel editor' kineticModel_id=kineticModel.id%}">Edit</a></td>
+    </tr>
+{% endfor %}
+</table>
+<br/>
+
+{% endblock %}
