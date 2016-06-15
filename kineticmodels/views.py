@@ -71,15 +71,19 @@ def pageGenerator(items, pageNumber):
     and other information like page number of the page and total number 
     of pages
     """
-    
+    itemsPerPage = ITEMSPERPAGE
+    totalPages = int(math.floor(len(items)/itemsPerPage))+1
 
     pageNumber = int(pageNumber)
-    itemsPerPage = ITEMSPERPAGE
-    startIndex = (pageNumber-1)*itemsPerPage
-    endIndex = pageNumber*itemsPerPage
-    
-    totalPages = int(math.ceil(len(items)/itemsPerPage))
 
+    if pageNumber == 0:
+        pageNumber = totalPages
+    if pageNumber == totalPages+1:
+        pageNumber = 1
+
+    startIndex = (pageNumber-1)*itemsPerPage
+    endIndex = pageNumber*itemsPerPage    
+    
     items = items[startIndex:endIndex]
 
     
