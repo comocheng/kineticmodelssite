@@ -16,7 +16,7 @@
 
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.species_list' %}">Species List</a>
+<a href="{% url 'species list' nextPage %}">Next Page</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -56,5 +56,19 @@
 {% endfor %}
 </table>
 <br/>
+    <!-- The content of your page would go here. -->
+
+    <footer class="footer-basic-centered">
+
+      <p class="footer-links">
+        <a href="{% url 'species list' previousPage %}">Previous Page</a>
+        ·
+        <a href="{% url 'species list' nextPage %}">Next Page</a>
+
+      </p>
+
+      <p class="footer-company-name">Page {{currentPage}} out of {{totalPages}}</p>
+
+    </footer>
 
 {% endblock %}

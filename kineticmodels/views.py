@@ -5,6 +5,9 @@ from django.core.urlresolvers import reverse
 
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm
 from models import Source, Species, KineticModel, Reaction
+import math
+
+ITEMSPERPAGE = 10
 
 def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
@@ -47,15 +50,40 @@ def source_editor(request, source_id=0):
                  'form': form, }
     return render(request,'kineticmodels/source_editor.html', variables)
 
-def species_list(request):
+def species_list(request, pageNumber = 1):
     """
     The listing of all species currently in the database
 
     See species_list.html
     """
     species_list = Species.objects.all()
-    variables = {'species_list': species_list}
+
+    page = pageGenerator(species_list, pageNumber)
+
+    variables = {'species_list': page[0], 'currentPage' : page[1], 
+                    'nextPage': page[1]+1, 'previousPage' : page[1]-1,
+                        'totalPages' : page[2],}
     return render(request, 'kineticmodels/species_list.html', variables)
+
+def pageGenerator(items, pageNumber):
+    """
+    Helper function to generate the variables to be displayed on the page 
+    and other information like page number of the page and total number 
+    of pages
+    """
+    
+
+    pageNumber = int(pageNumber)
+    itemsPerPage = ITEMSPERPAGE
+    startIndex = (pageNumber-1)*itemsPerPage
+    endIndex = pageNumber*itemsPerPage
+    
+    totalPages = int(math.ceil(len(items)/itemsPerPage))
+
+    items = items[startIndex:endIndex]
+
+    
+    return [items, pageNumber, totalPages]
 
 def species_editor(request, species_id = 0):
     """
