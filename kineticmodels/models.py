@@ -246,11 +246,11 @@ class Structure(models.Model):
     
     isomer = models.ForeignKey(Isomer)
     smiles = models.CharField('SMILES', blank=True, max_length=500)
-    adjacencyList = models.CharField('Adjacency List', blank=True, max_length=500)
+    adjacencyList = models.TextField('Adjacency List')
     electronicState = models.IntegerField('Electronic State')
-    
+
     def __unicode__(self):
-        return u"{s.adjacencyList".format(s=self)
+        return u"{s.adjacencyList}".format(s=self)
 
 
 
