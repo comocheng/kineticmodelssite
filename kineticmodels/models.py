@@ -218,6 +218,42 @@ class SpeciesName(models.Model):
         verbose_name_plural = "Alternative Species Names"
 
 
+class Isomer(models.Model):
+    """
+    An isomer of a species which stores the InChI of the species.
+
+    This doesn't have an equivalent term in rmg the most simmilar term would
+    be an InChI
+
+    An Isomer is linked to Structures by a one to many relationship because
+    an isomer may point to multiple structures 
+    """
+
+    inchi = models.CharField('InChI', blank=True, max_length=500)
+    species = models.ManyToManyField(Species)
+
+
+    def __unicode__(self):
+        return u"{s.inchi}".format(s=self)
+
+
+class Structure(models.Model):
+    """
+    A structure is the resonance structure of Isomers.
+
+    The equivalent term in RMG would be a molecule    
+    """
+    
+    isomer = models.ForeignKey(Isomer)
+    smiles = models.CharField('SMILES', blank=True, max_length=500)
+    adjacencyList = models.CharField('Adjacency List', blank=True, max_length=500)
+    electronicState = models.IntegerField('Electronic State')
+    
+    def __unicode__(self):
+        return u"{s.adjacencyList".format(s=self)
+
+
+
 class Thermo(models.Model):
     """
     A thermochemistry polynomial set
@@ -438,6 +474,11 @@ class Stoichiometry(models.Model):
 #     reactions involved
 #         kinetics
 #     additional info
+
+#TODO - class Isomer
+#TODO - class Structure
+
+
 
 
 class KineticModel(models.Model):
