@@ -189,12 +189,6 @@ class Species(models.Model):
     inchi = models.CharField('InChI', blank=True, max_length=500)
     cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
 
-    def products(self):
-        return self.filter(stoichiometry__stoichiometry__gt=0)
-
-    def reactants(self):
-        return self.filter(stoichiometry__stoichiometry__lt=0)
-
     def __unicode__(self):
         return u"{s.id} {s.formula!s}".format(s=self)
 
@@ -366,6 +360,11 @@ class Reaction(models.Model):
     class Meta:
         ordering = ('rPrimeID',)
 
+    def products(self):
+        return self.filter(stoichiometry__stoichiometry__gt=0)
+
+    def reactants(self):
+        return self.filter(stoichiometry__stoichiometry__lt=0)
 
 class Kinetics(models.Model):
     """
