@@ -18,11 +18,11 @@
 
 {% block page_body %}
 
-<h1>Reaction: {{reaction.id}}</h1>
+<h1>Reaction: {{reaction.id }}</h1>
 <table>
-    <tr><td>rPrimeID</td><td>{{ reaction.rPrimeID }}</a></td></tr>
-    <tr><td>Reactants</td><td>{{ reaction.reactants}}</td></tr>
-    <tr><td>Products</td><td>{{ reaction.products}}</td></tr>
+    <tr><td>rPrimeID</td><td><a href="http://warehouse.primekinetics.org/depository/reactions/catalog/{{ species.rPrimeID }}.xml">{{ species.rPrimeID }}</a></td></tr>
+    <tr><td>Reactants</td><td>{{ reaction.reactants }}</td></tr>
+    <tr><td>Products</td><td>{{ reaction.products }}</td></tr>
     <tr><td>is_reversible</td><td>{{ reaction.is_reversible }}</td></tr>
     </tr>
 </table>
