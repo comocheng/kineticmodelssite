@@ -442,6 +442,16 @@ class Reaction(models.Model):
 
 
 class Kinetics(models.Model):
+    """
+    A reaction rate expression.
+    
+    Must belong to a single reaction.
+    May occur in several models, linked via a comment.
+    May not have a unique source.
+
+    This is the equivalent of the 'rk' data within 'Reactions/data'
+    in PrIMe, which contain:
+    """
     rkPrimeID = models.CharField(blank=True, max_length=10)
     reaction = models.OneToOneField(Reaction)
     source = models.ForeignKey(Source, null=True)
@@ -450,20 +460,15 @@ class Kinetics(models.Model):
         help_text='Is this the rate for the reverse reaction?')
 
     class Meta:
-        abstract = True
+        verbose_name_plural = "Kinetics"
 
 
-class ArrheniusKinetics(Kinetics):
+class ArrheniusKinetics(models.Model):
     """
-    A reaction rate expression.
+    A reaction rate expression in modified Arrhenius form
 
     For now let's keep things simple, and only use 3-parameter Arrhenius
-    Must belong to a single reaction.
-    May occur in several models, linked via a comment.
-    May not have a unique source.
 
-    This is the equivalent of the 'rk' data within 'Reactions/data'
-    in PrIMe, which contain:
     *****in data********
     a value
     a value uncertainty
@@ -471,6 +476,8 @@ class ArrheniusKinetics(Kinetics):
     e value
     bibliography
     """
+    kinetics = models.OneToOneField(Kinetics)
+
     relative_uncertainty = models.FloatField(blank=True, null=True)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
