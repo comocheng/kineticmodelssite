@@ -455,6 +455,7 @@ class Kinetics(models.Model):
     rkPrimeID = models.CharField(blank=True, max_length=10)
     reaction = models.OneToOneField(Reaction)
     source = models.ForeignKey(Source, null=True)
+    relative_uncertainty = models.FloatField(blank=True, null=True)
     is_reverse = models.BooleanField(
         default=False,
         help_text='Is this the rate for the reverse reaction?')
@@ -478,7 +479,6 @@ class ArrheniusKinetics(models.Model):
     """
     kinetics = models.OneToOneField(Kinetics)
 
-    relative_uncertainty = models.FloatField(blank=True, null=True)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)

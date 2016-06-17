@@ -375,68 +375,74 @@ class KineticsImporter(Importer):
         rPrimeID = reactionlink.attrib['primeID']
         reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
         # Now get (or create) the django Kinetics object for that reaction
-        type_of_kinetics = coefficient.findall('prime:expression', namespaces=ns)
-        acceptable_forms = ('arrhenius', 'Arrhenius')
-        for expression in type_of_kinetics:
-            assert expression.attrib['form'] in acceptable_forms, \
-                "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
-            if expression.attrib['form'] in ('arrhenius', 'Arrhenius'):
-                dj_kin, created = ArrheniusKinetics.objects.get_or_create(
-                    rkPrimeID=rkPrimeID,
-                    reaction=reaction)
-            #### HERE IS WHERE WE EXTEND FOR OTHER TYPES
-            else:
-                pass
+        kinetics, created = Kinetics.objects.get_or_create(
+                                rkPrimeID=rkPrimeID,
+                                reaction=reaction)
 
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = kin.find('prime:bibliographyLink',
                                      namespaces=ns)
         bPrimeID = bibliography_link.attrib['primeID']
         source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        dj_kin.source = source
+        kinetics.source = source
+
+        # Now identify the type and try to make that objecttoo
+        coefficient = kin.find('prime:rateCoefficient', namespaces=ns)
 
         # Now give the Kinetics object its other properties
         if coefficient is None:
             raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
         if coefficient.attrib['direction'] == 'reverse':
-            dj_kin.is_reverse = True
+            kinetics.is_reverse = True
         relunc = coefficient.find('prime:uncertainty', namespaces=ns)
         if relunc is not None:
-            dj_kin.relative_uncertainty = float(relunc.text)
-        allexpression = coefficient.findall('prime:expression', namespaces=ns)
-        if len(allexpression) != 1:
-            raise PrimeError("Expected one Arrhenius expression but got {}".format(len(allexpression)))
-        for expression in allexpression:
-            assert expression.attrib['form'] in ('arrhenius', 'Arrhenius'), \
-                "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
-            for parameter in expression.findall('prime:parameter', namespaces=ns):
-                if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
-                    value = parameter.find('prime:value', namespaces=ns)
-                    dj_kin.A_value = float(value.text)
-                    try:
-                        uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.A_value_uncertainty = float(uncertainty.text)
-                    except:
-                        pass
-                elif parameter.attrib['name'] == 'n':
-                    value = parameter.find('prime:value', namespaces=ns)
-                    dj_kin.n_value = float(value.text)
-                elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
-                    value = parameter.find('prime:value', namespaces=ns)
-                    dj_kin.E_value = float(value.text)
-                    try:
-                        uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
-                        dj_kin.E_value_uncertainty = float(uncertainty.text)
-                    except:
-                        pass
-        temperature_range = kin.find('prime:validRange', namespaces=ns)
-        if temperature_range is not None:
-            for bound in temperature_range.findall('prime:bound', namespaces=ns):
-                if bound.attrib['kind'] == 'lower':
-                    dj_kin.lower_temp_bound = float(bound.text)
-                if bound.attrib['kind'] == 'upper':
-                    dj_kin.upper_temp_bound = float(bound.text)
-        dj_kin.save()
+            kinetics.relative_uncertainty = float(relunc.text)
+
+        kinetics.save()
+
+        # now find the expression(s) and create those
+        expressions = coefficient.findall('prime:expression', namespaces=ns)
+        if len(expressions) != 1:
+            raise NotImplementedError("Can only do single expression (for now)")
+        for expression in expressions:
+            if expression.attrib['form'].lower() == 'arrhenius':
+                ### ARRHENIUS
+                arrhenius, created = ArrheniusKinetics.objects.get_or_create(
+                    kinetics=kinetics)
+
+                for parameter in expression.findall('prime:parameter', namespaces=ns):
+                    if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
+                        value = parameter.find('prime:value', namespaces=ns)
+                        arrhenius.A_value = float(value.text)
+                        try:
+                            uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
+                            arrhenius.A_value_uncertainty = float(uncertainty.text)
+                        except:
+                            pass
+                    elif parameter.attrib['name'] == 'n':
+                        value = parameter.find('prime:value', namespaces=ns)
+                        arrhenius.n_value = float(value.text)
+                    elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
+                        value = parameter.find('prime:value', namespaces=ns)
+                        arrhenius.E_value = float(value.text)
+                        try:
+                            uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
+                            arrhenius.E_value_uncertainty = float(uncertainty.text)
+                        except:
+                            pass
+                temperature_range = kin.find('prime:validRange', namespaces=ns)
+                if temperature_range is not None:
+                    for bound in temperature_range.findall('prime:bound', namespaces=ns):
+                        if bound.attrib['kind'] == 'lower':
+                            arrhenius.lower_temp_bound = float(bound.text)
+                        if bound.attrib['kind'] == 'upper':
+                            arrhenius.upper_temp_bound = float(bound.text)
+                arrhenius.save()
+
+            #### HERE IS WHERE WE EXTEND FOR OTHER TYPES with elif statements
+            else:
+                raise NotImplementedError("Can't import kinetics type {}".format(expression.attrib['form']))
+
 
 
 class ModelImporter(Importer):
@@ -512,8 +518,8 @@ def main(top_root):
         elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
             print "We have found the Reactions which we can import!"
             # print "skipping for now, to test the next importer..."; continue
-            # KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
+            KineticsImporter(root).import_data()
         elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
             print "We have found the Kinetic Models which we can import!"
             print "skipping for now, to test the next importer..."; continue
