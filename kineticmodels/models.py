@@ -415,7 +415,7 @@ class Reaction(models.Model):
         Raises error for fractional stoichiometry.
         """
         specs = []
-        for n, s in self.stoich_species(self):
+        for n, s in self.stoich_species():
             if n < 0:
                 continue
             if n != int(n):
