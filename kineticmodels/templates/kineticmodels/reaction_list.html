@@ -46,8 +46,8 @@
     Am not currently including a single reaction view
 -->
     <tr>
-        <td>{{ reaction.pk}}</td>
-        <td>{{ reaction.rPrimeID }}</td>
+        <td>{{ reaction.pk }}</td>
+        <td><a href="http://warehouse.primekinetics.org/depository/reactions/catalog/{{ species.rPrimeID }}.xml">{{ species.rPrimeID }}</a></td>
         <td>{{ reaction.reactants }}</td>
         <td>{{ reaction.products }}</td>
         <td>{{ reaction.is_reversible }}</td>
