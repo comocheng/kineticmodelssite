@@ -16,7 +16,6 @@
 
 {% block navbar_items %}
 <a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'species list' nextPage %}">Next Page</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -51,6 +50,7 @@
         <td>{{ species.formula }}</td>
         <td>{{ species.inchi }}</td>
         <td>{{ species.CAS }}</td>
+        <td><a href="{% url 'species' species_id=species.id%}">View</a></td>
         <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
 {% endfor %}
@@ -60,15 +60,21 @@
 
     <footer class="footer-basic-centered">
 
-      <p class="footer-links">
-        <a href="{% url 'species list' previousPage %}">Previous Page</a>
-        ·
-        <a href="{% url 'species list' nextPage %}">Next Page</a>
+      <div class="pagination">
+          <span class="step-links">
+              {% if species_list.has_previous %}
+                  <a href="?page={{ species_list.previous_page_number }}">previous</a>
+              {% endif %}
 
-      </p>
+              <span class="current">
+                  Page {{ species_list.number }} of {{ species_list.paginator.num_pages }}.
+              </span>
 
-      <p class="footer-company-name">Page {{currentPage}} out of {{totalPages}}</p>
-
+              {% if species_list.has_next %}
+                  <a href="?page={{ species_list.next_page_number }}">next</a>
+              {% endif %}
+          </span>
+      </div>
     </footer>
 
 {% endblock %}

@@ -55,10 +55,31 @@
         <td>{{ kineticModel.model_name }}</td>
         <td>{{ kineticModel.thermo }}</td>
         <td>{{ kineticModel.kinetics }}</td>
+        <td><a href="{% url 'kineticModel' kineticModel_id=kineticModel.id%}">View</a></td> 
         <td><a href="{% url 'kineticModel editor' kineticModel_id=kineticModel.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>
 <br/>
+
+    <footer class="footer-basic-centered">
+
+      <div class="pagination">
+          <span class="step-links">
+              {% if kineticModel_list.has_previous %}
+                  <a href="?page={{ kineticModel_list.previous_page_number }}">previous</a>
+              {% endif %}
+
+              <span class="current">
+                  Page {{ kineticModel_list.number }} of {{ kineticModel_list.paginator.num_pages }}.
+              </span>
+
+              {% if kineticModel_list.has_next %}
+                  <a href="?page={{ kineticModel_list.next_page_number }}">next</a>
+              {% endif %}
+          </span>
+      </div>
+    </footer>
+
 
 {% endblock %}

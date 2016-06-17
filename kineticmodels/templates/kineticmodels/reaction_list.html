@@ -35,7 +35,8 @@
     <tr>
         <th>ID</th>
         <th>rPrimeID</th>
-        <th>species</th>
+        <th>Reactants</th>
+        <th>Products</th>
         <th>is_reversible</th>
         <th></th>
     </tr>
@@ -47,12 +48,34 @@
     <tr>
         <td>{{ reaction.pk}}</td>
         <td>{{ reaction.rPrimeID }}</td>
-        <td>{{ reaction.species }}</td>
+        <td>{{ reaction.reactants }}</td>
+        <td>{{ reaction.products }}</td>
         <td>{{ reaction.is_reversible }}</td>
+        <td><a href="{% url 'reaction' reaction_id=reaction.id%}">View</a></td>
         <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>
 <br/>
+
+    <footer class="footer-basic-centered">
+
+      <div class="pagination">
+          <span class="step-links">
+              {% if reaction_list.has_previous %}
+                  <a href="?page={{ reaction_list.previous_page_number }}">previous</a>
+              {% endif %}
+
+              <span class="current">
+                  Page {{ reaction_list.number }} of {{ reaction_list.paginator.num_pages }}.
+              </span>
+
+              {% if reaction_list.has_next %}
+                  <a href="?page={{ reaction_list.next_page_number }}">next</a>
+              {% endif %}
+          </span>
+      </div>
+    </footer>
+
 
 {% endblock %}

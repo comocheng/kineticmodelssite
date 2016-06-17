@@ -397,10 +397,10 @@ class Reaction(models.Model):
         ordering = ('rPrimeID',)
 
     def products(self):
-        return self.filter(stoichiometry__stoichiometry__gt=0)
+        return self.species.filter(stoichiometry__stoichiometry__gt=0)
 
     def reactants(self):
-        return self.filter(stoichiometry__stoichiometry__lt=0)
+        return self.species.filter(stoichiometry__stoichiometry__lt=0)
 
 class Kinetics(models.Model):
     """
@@ -475,8 +475,6 @@ class Stoichiometry(models.Model):
 #         kinetics
 #     additional info
 
-#TODO - class Isomer
-#TODO - class Structure
 
 
 
