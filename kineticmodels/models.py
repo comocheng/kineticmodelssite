@@ -396,11 +396,50 @@ class Reaction(models.Model):
     class Meta:
         ordering = ('rPrimeID',)
 
+    def stoich_species(self):
+        """
+        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        """
+        reaction = []
+        for stoich in self.stoichiometry_set.all():
+            reaction.append((stoich.stoichiometry, stoich.species))
+        reaction.sort()
+        return reaction
+
     def products(self):
-        return self.species.filter(stoichiometry__stoichiometry__gt=0)
+        """
+        returns a list of products, for elementary reaction,
+        with each product repeated the number of times it appears,
+        eg. [B, B] if the reaction is A <=> 2B.
+        
+        Raises error for fractional stoichiometry.
+        """
+        specs = []
+        for n, s in self.stoich_species(self):
+            if n < 0:
+                continue
+            if n != int(n):
+                raise NotImplementedError
+            specs.extend([s] * int(n))
+        return specs
 
     def reactants(self):
-        return self.species.filter(stoichiometry__stoichiometry__lt=0)
+        """
+        returns a list of reactants, for elementary reaction,
+        with each product repeated the number of times it appears,
+        eg. [A, A] if the reaction is 2A <=> B.
+        
+        Raises error for fractional stoichiometry.
+        """
+        specs = []
+        for n, s in self.stoich_species(self):
+            if n > 0:
+                continue
+            if n != int(n):
+                raise NotImplementedError
+            specs.extend([s] * int(-n))
+        return specs
+
 
 class Kinetics(models.Model):
     """
