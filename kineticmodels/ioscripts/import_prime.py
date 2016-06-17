@@ -505,16 +505,18 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
             print "We have found the Species which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             TransportImporter(root).import_data()
+            ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
-        #             ThermoImporter(root).import_data()
         elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
             print "We have found the Reactions which we can import!"
             # print "skipping for now, to test the next importer..."; continue
-            KineticsImporter(root).import_data()
+            # KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
             print "We have found the Kinetic Models which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
