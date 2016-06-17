@@ -280,14 +280,14 @@ class Thermo(models.Model):
     preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    tref = models.FloatField('Reference State Temperature',
-                             blank=True,
-                             help_text='units: K',
-                             default=0.0)
-    pref = models.FloatField('Reference State Pressure',
-                             blank=True,
-                             help_text='units: Pa',
-                             default=0.0)
+    reference_temperature = models.FloatField('Reference State Temperature',
+                                              blank=True,
+                                              help_text='units: K',
+                                              default=0.0)
+    reference_pressure = models.FloatField('Reference State Pressure',
+                                           blank=True,
+                                           help_text='units: Pa',
+                                           default=0.0)
     dfH = models.FloatField('Enthalpy of Formation',
                             blank=True,
                             help_text='units: J/mol',
@@ -344,23 +344,23 @@ class Transport(models.Model):
     species = models.ForeignKey(Species)
     trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
-    depth = models.FloatField('Potential Well Depth',
-                              blank=True,
-                              help_text='units: K',
-                              default=0.0)
-    diameter = models.FloatField('Collision Diameter',
-                                 blank=True,
-                                 help_text='units: Angstroms',
-                                 default=0.0)
+    potential_well_depth = models.FloatField('Potential Well Depth',
+                                             blank=True,
+                                             help_text='units: K',
+                                             default=0.0)
+    collision_diameter = models.FloatField('Collision Diameter',
+                                           blank=True,
+                                           help_text='units: Angstroms',
+                                           default=0.0)
     dipole_moment = models.FloatField(blank=True,
                                       help_text='units: Debye',
                                       default=0.0)
     polarizability = models.FloatField(blank=True,
                                        help_text='units: cubic Angstroms',
                                        default=0.0)
-    rot_relax = models.FloatField('Rotational Relaxation',
-                                  blank=True,
-                                  default=0.0)
+    rotational_relaxation = models.FloatField('Rotational Relaxation',
+                                              blank=True,
+                                              default=0.0)
 
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)
@@ -444,14 +444,31 @@ class Reaction(models.Model):
 class Kinetics(models.Model):
     """
     A reaction rate expression.
-
-    For now let's keep things simple, and only use 3-parameter Arrhenius
+    
     Must belong to a single reaction.
     May occur in several models, linked via a comment.
     May not have a unique source.
 
     This is the equivalent of the 'rk' data within 'Reactions/data'
     in PrIMe, which contain:
+    """
+    rkPrimeID = models.CharField(blank=True, max_length=10)
+    reaction = models.OneToOneField(Reaction)
+    source = models.ForeignKey(Source, null=True)
+    is_reverse = models.BooleanField(
+        default=False,
+        help_text='Is this the rate for the reverse reaction?')
+
+    class Meta:
+        verbose_name_plural = "Kinetics"
+
+
+class ArrheniusKinetics(models.Model):
+    """
+    A reaction rate expression in modified Arrhenius form
+
+    For now let's keep things simple, and only use 3-parameter Arrhenius
+
     *****in data********
     a value
     a value uncertainty
@@ -459,18 +476,14 @@ class Kinetics(models.Model):
     e value
     bibliography
     """
-    reaction = models.ForeignKey(Reaction)
-    source = models.ForeignKey(Source, null=True)
-    rkPrimeID = models.CharField(blank=True, max_length=10)
+    kinetics = models.OneToOneField(Kinetics)
+
     relative_uncertainty = models.FloatField(blank=True, null=True)
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
     E_value = models.FloatField(blank=True, null=True)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
-    is_reverse = models.BooleanField(
-        default=False,
-        help_text='Is this the rate for the reverse reaction?')
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
 
@@ -479,7 +492,7 @@ class Kinetics(models.Model):
             s=self)
 
     class Meta:
-        verbose_name_plural = "Kinetics"
+        verbose_name_plural = "Arrhenius Kinetics"
 
 
 class Stoichiometry(models.Model):
@@ -545,7 +558,7 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='Comment')
+    kinetics = models.ManyToManyField(ArrheniusKinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
     transport = models.ManyToManyField(Transport)
     additional_info = models.CharField(max_length=1000)
@@ -570,7 +583,7 @@ class Comment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(Kinetics)
+    kinetics = models.ForeignKey(ArrheniusKinetics)
     kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 

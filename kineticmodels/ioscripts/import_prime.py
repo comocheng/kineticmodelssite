@@ -17,7 +17,7 @@ import django
 
 django.setup()
 
-from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
+from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
     Species, KineticModel, Comment, SpeciesName, \
     Thermo, ThermoComment, \
     Source, Author, Authorship, Transport
@@ -309,10 +309,10 @@ class TransportImporter(Importer):
                 dj_trans.geometry = float(value.text)
             elif parameter.attrib['name'] == 'potentialWellDepth':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.depth = float(value.text)
+                dj_trans.potential_well_depth = float(value.text)
             elif parameter.attrib['name'] == 'collisionDiameter':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.diameter = float(value.text)
+                dj_trans.collision_diameter = float(value.text)
             elif parameter.attrib['name'] == 'dipoleMoment':
                 value = parameter.find('prime:value', namespaces=ns)
                 dj_trans.dipole_moment = float(value.text)
@@ -321,7 +321,7 @@ class TransportImporter(Importer):
                 dj_trans.polarizability = float(value.text)
             elif parameter.attrib['name'] == 'rotationalRelaxation':
                 value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.rot_relax = float(value.text)
+                dj_trans.rotational_relaxation = float(value.text)
         dj_trans.save
 
 
@@ -375,9 +375,18 @@ class KineticsImporter(Importer):
         rPrimeID = reactionlink.attrib['primeID']
         reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
         # Now get (or create) the django Kinetics object for that reaction
-        dj_kin, created = Kinetics.objects.get_or_create(
-            rkPrimeID=rkPrimeID,
-            reaction=reaction)
+        type_of_kinetics = coefficient.findall('prime:expression', namespaces=ns)
+        acceptable_forms = ('arrhenius', 'Arrhenius')
+        for expression in type_of_kinetics:
+            assert expression.attrib['form'] in acceptable_forms, \
+                "Equation form {} is not Arrhenius!".format(expression.attrib['form'])
+            if expression.attrib['form'] in ('arrhenius', 'Arrhenius'):
+                dj_kin, created = ArrheniusKinetics.objects.get_or_create(
+                    rkPrimeID=rkPrimeID,
+                    reaction=reaction)
+            #### HERE IS WHERE WE EXTEND FOR OTHER TYPES
+            else:
+                pass
 
         # Start by finding the source link, and looking it up in the bibliography
         bibliography_link = kin.find('prime:bibliographyLink',
@@ -387,7 +396,6 @@ class KineticsImporter(Importer):
         dj_kin.source = source
 
         # Now give the Kinetics object its other properties
-        coefficient = kin.find('prime:rateCoefficient', namespaces=ns)
         if coefficient is None:
             raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
         if coefficient.attrib['direction'] == 'reverse':
@@ -497,16 +505,18 @@ def main(top_root):
             BibliographyImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
             print "We have found the Species which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             TransportImporter(root).import_data()
+            ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
-        #             ThermoImporter(root).import_data()
         elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
             print "We have found the Reactions which we can import!"
             # print "skipping for now, to test the next importer..."; continue
-            KineticsImporter(root).import_data()
+            # KineticsImporter(root).import_data()
             ReactionImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
             print "We have found the Kinetic Models which we can import!"
+            print "skipping for now, to test the next importer..."; continue
             ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
