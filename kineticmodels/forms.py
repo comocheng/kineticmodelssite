@@ -75,6 +75,26 @@ class EditReactionForm(forms.ModelForm):
         exclude = ()        
 ################################################################################
 
+################################################################################
+
+#Form for searching Species
+class SpeciesSearchForm(forms.Form):
+    """
+    A django form for searching through a Species
+    """
+
+    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
+    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
+    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
+
+
+
+
+
+
+
+################################################################################
 class UploadModelForm(forms.ModelForm):
     """
     A Django form for uploading a kinetic model.

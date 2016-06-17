@@ -120,7 +120,22 @@ def species_editor(request, species_id = 0):
     return render(request, 'kineticmodels/species_editor.html', variables)
     
 
+def species_search(request):
+    """
+    Method for searching through the species database
+    """
 
+    form = SpeciesSearchForm()
+
+    if request.method == 'POST':
+        posted = SpeciesSearchForm(request.POST, error_class=DivErrorList)
+        initial = request.POST.copy()      
+
+        if posted.is_valid(): #don't know if needed
+            Species.objects.filter(formula=posted.formula, inchi=posted.inchi, sPrimeID=posted.sPrimeID)
+
+    variables = {'form' : form,}
+    return reder(request, 'kineticmodels/species_editor.html', variables)
 
 def kineticModel_list(request):
     """
