@@ -3,8 +3,9 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm
 from models import Source, Species, KineticModel, Reaction
 import math
 
@@ -124,18 +125,45 @@ def species_search(request):
     """
     Method for searching through the species database
     """
+    # filteredSpecies = Species.objects.none()
 
-    form = SpeciesSearchForm()
+    # if request.method == 'POST':
+    #     form = SpeciesSearchForm(request.POST)
+    #     if form.is_valid(): #don't know if needed
+    #         formula = form.cleaned_data['formula']
+    #         sPrimeID = form.cleaned_data['sPrimeID']
+    #         inchi = form.cleaned_data['inchi']
+    #         cas = form.cleaned_data['cas']
+    #         filteredSpecies = Species.objects.filter(formula=posted.formula, inchi=posted.inchi, sPrimeID=posted.sPrimeID)
+        
+    #         # filteredSpecies = Species.objects.filter(Q(formula__iexact = formula)|
+    #         #                                 Q(sPrimeID__iexact = sPrimeID)|
+    #         #                                 Q(inchi__iexact = inchi) |
+    #         #                                 Q(cas__iexact = cas))
+    #         filteredSpecies = searchHelper(Species.objects.all(), [formula,sPrimeID,inchi,cas])
 
-    if request.method == 'POST':
-        posted = SpeciesSearchForm(request.POST, error_class=DivErrorList)
-        initial = request.POST.copy()      
+    # else:
+    #     form = SpeciesSearchForm()
 
-        if posted.is_valid(): #don't know if needed
-            Species.objects.filter(formula=posted.formula, inchi=posted.inchi, sPrimeID=posted.sPrimeID)
+    filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
+    variables = {'filteredSpecies' : filteredSpecies,}
+    return render(request, 'kineticmodels/species_search.html', variables)
 
-    variables = {'form' : form,}
-    return reder(request, 'kineticmodels/species_editor.html', variables)
+
+def searchHelper(items, searchParameters):
+
+    """ Search helper function to help with not loading the entire database
+    """
+
+    for parameter in searchParameters:
+        if parameter != '':
+            items = items.filter(pk__exact=parameter)
+
+    return items
+
+
+
+
 
 def kineticModel_list(request):
     """

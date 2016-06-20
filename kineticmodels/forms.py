@@ -33,7 +33,7 @@ This module defines the Django forms used by the kineticsmodels app.
 """
 
 from django import forms
-
+import django_filters
 from models import KineticModel, Source, Species, Reaction
 
 ################################################################################
@@ -78,16 +78,19 @@ class EditReactionForm(forms.ModelForm):
 ################################################################################
 
 #Form for searching Species
-class SpeciesSearchForm(forms.Form):
+class SpeciesSearchForm(django_filters.FilterSet):
     """
     A django form for searching through a Species
-    """
+     """
+    class Meta:
+        model = Species
+        fields = ('formula', 'sPrimeID', 'inchi', 'cas')
 
-    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
-    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
-    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
-    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
 
+    # sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    # formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
+    # inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
+    # cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
 
 
 

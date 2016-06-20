@@ -10,6 +10,7 @@ urlpatterns=[
     url(r'^species/$', views.species_list, name='species list'),
     url(r'^species/(?P<species_id>[0-9]+)/$', views.species, name='species'),    
     url(r'^species/(?P<species_id>[0-9]+)/edit/$', views.species_editor, name='species editor'),
+    url(r'^species/search/$', views.species_search, name='species search'),  
     url(r'^models/$', views.kineticModel_list, name='kinetic model list'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/$', views.kineticModel, name='kinetic model'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.kineticModel_editor, name='kinetic model editor'), 
