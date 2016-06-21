@@ -33,7 +33,6 @@ This module defines the Django forms used by the kineticsmodels app.
 """
 
 from django import forms
-import django_filters
 from models import KineticModel, Source, Species, Reaction
 
 ################################################################################
