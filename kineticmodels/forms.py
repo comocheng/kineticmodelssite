@@ -78,19 +78,19 @@ class EditReactionForm(forms.ModelForm):
 ################################################################################
 
 #Form for searching Species
-class SpeciesSearchForm(django_filters.FilterSet):
+class SpeciesSearchForm(forms.Form):
     """
     A django form for searching through a Species
      """
-    class Meta:
-        model = Species
-        fields = ('formula', 'sPrimeID', 'inchi', 'cas')
+    # class Meta:
+    #     model = Species
+    #     fields = ('formula', 'sPrimeID', 'inchi', 'cas')
 
 
-    # sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
-    # formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
-    # inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
-    # cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
+    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
+    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
+    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
 
 
 

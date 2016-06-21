@@ -125,40 +125,39 @@ def species_search(request):
     """
     Method for searching through the species database
     """
-    # filteredSpecies = Species.objects.none()
+    filteredSpecies = Species.objects.none()
 
-    # if request.method == 'POST':
-    #     form = SpeciesSearchForm(request.POST)
-    #     if form.is_valid(): #don't know if needed
-    #         formula = form.cleaned_data['formula']
-    #         sPrimeID = form.cleaned_data['sPrimeID']
-    #         inchi = form.cleaned_data['inchi']
-    #         cas = form.cleaned_data['cas']
-    #         filteredSpecies = Species.objects.filter(formula=posted.formula, inchi=posted.inchi, sPrimeID=posted.sPrimeID)
-        
-    #         # filteredSpecies = Species.objects.filter(Q(formula__iexact = formula)|
-    #         #                                 Q(sPrimeID__iexact = sPrimeID)|
-    #         #                                 Q(inchi__iexact = inchi) |
-    #         #                                 Q(cas__iexact = cas))
-    #         filteredSpecies = searchHelper(Species.objects.all(), [formula,sPrimeID,inchi,cas])
+    if request.method == 'POST':
+        form = SpeciesSearchForm(request.POST)
+        if form.is_valid(): #don't know if needed
+            formula = form.cleaned_data['formula']
+            sPrimeID = form.cleaned_data['sPrimeID']
+            inchi = form.cleaned_data['inchi']
+            cas = form.cleaned_data['cas']
+            filteredSpecies = searchHelper(Species.objects.all(), 
+                                [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
 
-    # else:
-    #     form = SpeciesSearchForm()
+    else:
+        form = SpeciesSearchForm()
 
-    filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
-    variables = {'filteredSpecies' : filteredSpecies,}
+    #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
+    variables = {'filteredSpecies' : filteredSpecies, 'form' : form}
     return render(request, 'kineticmodels/species_search.html', variables)
 
 
-def searchHelper(items, searchParameters):
+def searchHelper(items, searchParameterData, searchParameterNames):
 
-    """ Search helper function to help with not loading the entire database
+    """ Search helper function which takes in the items to be filtered along with the 
+        search parameters and returns an exact match for the given search
+        parameters
     """
 
-    for parameter in searchParameters:
-        if parameter != '':
-            items = items.filter(pk__exact=parameter)
-
+    for counter in range(len(searchParameterData)):
+        if searchParameterData[counter] != '':
+            kwargs = {
+                '{0}__{1}'.format(searchParameterNames[counter], 'exact'): searchParameterData[counter]
+            }
+            items = items.filter(**kwargs)
     return items
 
 
