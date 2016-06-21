@@ -8,6 +8,7 @@ from django.db.models import Q
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm
 from models import Source, Species, KineticModel, Reaction
 import math
+import rmgpy, rmgpy.molecule
 
 ITEMSPERPAGE = 20
 
@@ -93,8 +94,14 @@ def species(request, species_id=0):
     """
     The listing of a specific species in the database
     """
+    from rmgweb.main.tools import getStructureInfo
     species = get_object_or_404(Species, id=species_id)
     variables = {'species': species}
+
+    if species.inchi:
+        molecule = rmgpy.molecule.Molecule().fromInChI(str(species.inchi))
+        variables['molecule'] = molecule
+        variables['structure_markup'] = getStructureInfo(molecule)
     return render(request, 'kineticmodels/species.html', variables)
 
 
@@ -119,7 +126,7 @@ def species_editor(request, species_id = 0):
     variables = {'species': species,
                  'form': form, }
     return render(request, 'kineticmodels/species_editor.html', variables)
-    
+
 
 def species_search(request):
     """
@@ -159,8 +166,6 @@ def searchHelper(items, searchParameterData, searchParameterNames):
             }
             items = items.filter(**kwargs)
     return items
-
-
 
 
 
