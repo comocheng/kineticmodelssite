@@ -203,6 +203,14 @@ def kineticModel(request, kineticModel_id=0):
     return render(request, 'kineticmodels/kineticModel.html', variables)
 
 
+def kineticModel_new(request):
+    """
+    The listing of a specific kinetic Model in the database
+    """
+    kineticModel = KineticModel.objects.create()
+    return HttpResponseRedirect(reverse(kineticModel_editor, args=(kineticModel.id,)))
+
+
 def kineticModel_editor(request, kineticModel_id = 0):
     """
     Method for editing a specific kinetic models. 
