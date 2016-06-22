@@ -64,6 +64,15 @@ class EditKineticModelForm(forms.ModelForm):
         model = KineticModel
         exclude = ()
 
+class UploadKineticModelForm(forms.ModelForm):
+    """
+    A Django form for uploading a kinetic model.
+    """
+    class Meta:
+        model = KineticModel
+        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+
+
 # For for editing a Reaction
 class EditReactionForm(forms.ModelForm):
     """
@@ -96,11 +105,4 @@ class SpeciesSearchForm(forms.Form):
 
 
 
-################################################################################
-class UploadModelForm(forms.ModelForm):
-    """
-    A Django form for uploading a kinetic model.
-    """
-    class Meta:
-        model = KineticModel
-        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+
