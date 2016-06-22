@@ -1,82 +1,11 @@
-{% extends "base.html" %}
-{% load databasefilters %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database: Species {{ species.id }}{% endblock %}
-{% block page_title %}Kinetic Models Database: Species {{ species.id }}{% endblock %}
+{% block title %}{{ block.super }}: Species{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the species, species_editor, or bibliography links to avoid clutter.
--->
+{% block page_title %}{{ block.super }}: Species{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'species list' %}">Browse Species</a> &raquo;
-<a href="{% url 'species view' species_id=species.id%}">Species {{ species.id }}</a>
+{{ block.super }} &raquo;
+<a href="{% url 'species list' %}">Species List</a>
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
-
-{% block extrahead %}
-<style>
-.result th {text-align: left;}
-</style>
-<script type="text/javascript">
-
-$(document).ready(function() {
-	{% if molecule.toSMILES %}
-	// Update list of names
-	var url = '/cactus/{{ molecule.toSMILES|urlencode:"" }}/names'
-	var jqxhr = $.get(url,function(names) { $('#species_names').html(names);})
-	               .error(function(j,t,e) { $('#species_names').html(t+'\n'+e) })
-	{% endif %}
-}) // end of document.ready
-</script>
-{% endblock %}
-
-{% block page_body %}
-
-<h1>Species: {{species.id}}</h1>
-<table>
-    <tr><td>ID</td><td>{{ species.pk }}</a></td></tr>
-    <tr><td>sPrimeID</td><td><a href="http://warehouse.primekinetics.org/depository/species/catalog/{{ species.sPrimeID}}.xml">{{ species.sPrimeID}}</a></td></tr>
-    <tr><td>formula</td><td>{{ species.formula }}</td></tr>
-    <tr><td>inchi</td><td>{{ species.inchi }}</td></tr>
-    <tr><td>CAS</td><td>{{ species.CAS }}</td></tr>    
-    </tr>
-</table>
-<br/>
-
-{% if structure_markup %}
-<h2>Structure info based on InChI:</h2>
-<table>
-<tr class="result">
-<th>Molecule Structure:</th>
-<td style="padding: 40px;">{{ structure_markup|safe }}</td>
-</tr>
-<tr class ="result">
-    <th>Molecular Weight:</th>
-    <td>{{ molecule.getMolecularWeight|renderMW }}</td>
-</tr>
-<tr class="result">
-<th>InChI:</th>
-<td>{{ molecule.toInChI }}</td>
-</tr>
-<tr class="result">
-<th>SMILES:</th>
-<td>{{ molecule.toSMILES }}</td>
-</tr>
-<tr class="result">
-<th valign="top">RMG Adjacency List:</th>
-<td>{{ molecule.toAdjacencyList|renderAdjlist }}</td>
-</tr>
-<tr class="result" style="white-space: pre-wrap;">
-<th style="vertical-align: top;">Names (from NCI):</th>
-<td id="species_names"></td>
-</tr>
-</table>
-{% endif %}
-
-<a href="{% url 'species editor' species_id=species.id %}">Edit</a>
-
-{% endblock %}

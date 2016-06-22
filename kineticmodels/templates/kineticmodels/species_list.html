@@ -1,25 +1,8 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/species.html" %}
 
-{% block title %}Kinetic Models Database: Species List{% endblock %}
-{% block page_title %}Kinetic Models Database: Species List{% endblock %}
+{% block title %}{{ block.super }} List{% endblock %}
+{% block page_title %}{{ block.super }} List{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the following pages:
-      source,
-      source_editor,
-      species,
-      species_editor,
-
-
-<a href="{% url 'species editor' species_id=species.id%}">Edit</a>
--->
-
-{% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-{% endblock %}
-
-{% block sidebar_items %}
-{% endblock %}
 
 {% block page_body %}
 

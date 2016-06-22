@@ -1,24 +1,17 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/source.html" %}
 
-{% block title %}Kinetic Models Database: Source {{ source.id }} Editor{% endblock %}
-{% block page_title %}Kinetic Models Database: Source {{ source.id }} Editor{% endblock %}
+{% block title %}{{ block.super }} {{ source.id }} Editor{% endblock %}
+{% block page_title %}{{ block.super }} {{ source.id }} Editor{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the source, source_editor, or bibliography links to avoid clutter.
--->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'bibliography' %}">Bibliography</a> &raquo;
-<a href="{% url 'source view' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
-<a href="{% url 'source editor' source_id=source.id%}">Edit</a>
+{{ block.super }} &raquo;
+<a href="{% url 'source view' source_id=source.id %}">Source {{ reaction.id }}</a> &raquo;
+<a href="{% url 'source editor' source_id=source.id %}">Edit</a>
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
 
 {% block page_body %}
-
 <!--
     The following form allows the selected source to be edited
     Each source field needs a section to edit

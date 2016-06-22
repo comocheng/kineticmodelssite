@@ -1,33 +1,11 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database: Kinetic Model {{ kineticModel.id }}{% endblock %}
-{% block page_title %}Kinetic Models Database: KineticModel {{ kineticModel.id }}{% endblock %}
+{% block title %}{{ block.super }}: Kinetic Model{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the kineticModel, kineticModel_editor, or bibliography links to avoid clutter.
--->
+{% block page_title %}{{ block.super }}: Kinetic Model{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodel list' %}">Browse Kinetic Models</a> &raquo;
-<a href="{% url 'kineticmodel view' kineticModel_id=kineticModel.id%}">Kinetic Model {{ kineticModel.id }}</a>
+{{ block.super }} &raquo;
+<a href="{% url 'reaction list' %}">Kinetic Models</a>
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
-
-{% block page_body %}
-
-<h1>Kinetic Model: {{kineticModel.id}}</h1>
-<table>
-    <tr><td>mPrimeID</td><td>{{ kineticModel.mPrimeID }}</a></td></tr>
-    <tr><td>model_name</td><td>{{ kineticModel.model_name }}</td></tr>
-    <tr><td>thermo</td><td>{{ kineticModel.thermo }}</td></tr>
-    <tr><td>kinetics</td><td>{{ kineticModel.kinetics }}</td></tr>
-    </tr>
-</table>
-<br/>
-<a href="{% url 'kineticmodel editor' kineticModel_id=kineticModel.id%}">Edit</a>
-
-
-{% endblock %}

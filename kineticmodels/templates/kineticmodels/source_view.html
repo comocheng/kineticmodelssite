@@ -1,0 +1,29 @@
+{% extends "kineticmodels/source.html" %}
+
+{% block title %}{{ block.super }} {{ source.id }}{% endblock %}
+{% block page_title %}{{ block.super }} {{ source.id }}{% endblock %}
+
+<!-- NRC
+  The below navbar items are only relevant to the source, source_editor, or bibliography links to avoid clutter.
+-->
+
+{% block navbar_items %}
+{{ block.super }} &raquo;
+<a href="{% url 'source view' source_id=source.id%}">Source {{ source.id }}</a>
+{% endblock %}
+
+
+{% block page_body %}
+
+<h1>Source: {{source.id}}</h1>
+<table>
+    <tr><td>Title</td><td>{{ source.source_title }}</a></td></tr>
+    <tr><td>Journal</td><td>{{ source.journal_name }}</td></tr>
+    <tr><td>Year</td><td>{{ source.pub_year }}</td></tr>
+    </tr>
+</table>
+<br/>
+<a href="{% url 'source editor' source_id=source.id%}">Edit</a>
+
+
+{% endblock %}

@@ -1,27 +1,12 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/reaction.html" %}
 
-
-{% block title %}Kinetic Models Database: Reaction {{ reaction.id }} Editor{% endblock %}
-{% block page_title %}Kinetic Models Database: Reaction {{ reaction.id }} Editor{% endblock %}
-
-<!-- NRC
-  This web page provides an interface to edit a specific reaction selected
-  Should have a functionality added to change reaction without going back to reaction.html
-
-  The below navbar items are only relevant to the following pages:
-      bibliography,
-      reaction,
-      reaction_editor,
--->
+{% block title %}{{ block.super }} {{ reaction.id }} Editor{% endblock %}
+{% block page_title %}{{ block.super }} {{ reaction.id }} Editor{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'bibliography' %}">Bibliography</a>
-<a href="{% url 'reaction list' %}">Reaction List</a>
-<a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a>
-{% endblock %}
-
-{% block sidebar_items %}
+{{ block.super }} &raquo;
+<a href="{% url 'reaction view' reaction_id=reaction.id %}">Reaction {{ reaction.id }}</a> &raquo;
+<a href="{% url 'reaction editor' reaction_id=reaction.id %}">Edit</a>
 {% endblock %}
 
 {% block page_body %}

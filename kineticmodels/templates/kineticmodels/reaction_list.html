@@ -1,26 +1,8 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/reaction.html" %}
 
-{% block title %}Kinetic Models Database: Reaction List{% endblock %}
-{% block page_title %}Kinetic Models Database: Reaction List{% endblock %}
+{% block title %}{{ block.super }} List{% endblock %}
+{% block page_title %}{{ block.super }} List{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the following pages:
-      source,
-      source_editor,
-      reaction,
-      reaction_editor,
-
-
-<a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a>
--->
-
-{% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'reaction list' %}">Reaction List</a>
-{% endblock %}
-
-{% block sidebar_items %}
-{% endblock %}
 
 {% block page_body %}
 

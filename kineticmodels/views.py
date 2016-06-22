@@ -35,7 +35,7 @@ def bibliography(request):
         sourcesOnAPage = paginator.page(paginator.num_pages)
 
     variables = {'sources': sourcesOnAPage}
-    return render(request, 'kineticmodels/bibliography.html', variables)
+    return render(request, 'kineticmodels/source_list.html', variables)
 
 """ See source.html"""
 def source(request, source_id=0):
@@ -44,7 +44,7 @@ def source(request, source_id=0):
     """
     source = get_object_or_404(Source, id=source_id)
     variables = {'source': source}
-    return render(request, 'kineticmodels/source.html', variables)
+    return render(request, 'kineticmodels/source_view.html', variables)
 
 """ See source_editor.html"""
 def source_editor(request, source_id=0):
@@ -102,7 +102,7 @@ def species(request, species_id=0):
         molecule = rmgpy.molecule.Molecule().fromInChI(str(species.inchi))
         variables['molecule'] = molecule
         variables['structure_markup'] = getStructureInfo(molecule)
-    return render(request, 'kineticmodels/species.html', variables)
+    return render(request, 'kineticmodels/species_view.html', variables)
 
 
 def species_editor(request, species_id = 0):
@@ -200,7 +200,7 @@ def kineticModel(request, kineticModel_id=0):
     """
     kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
     variables = {'kineticModel': kineticModel}
-    return render(request, 'kineticmodels/kineticModel.html', variables)
+    return render(request, 'kineticmodels/kineticModel_view.html', variables)
 
 
 def kineticModel_new(request):
@@ -277,7 +277,7 @@ def reaction(request, reaction_id=0):
     """
     reaction = get_object_or_404(Reaction, id=reaction_id)
     variables = {'reaction': reaction}
-    return render(request, 'kineticmodels/reaction.html', variables)
+    return render(request, 'kineticmodels/reaction_view.html', variables)
 
 def reaction_editor(request, reaction_id = 0):
     """

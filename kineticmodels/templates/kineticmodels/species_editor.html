@@ -1,27 +1,13 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/species.html" %}
 
+{% block title %}{{ block.super }} {{ species.id }} Editor{% endblock %}
+{% block page_title %}{{ block.super }} {{ species.id }} Editor{% endblock %}
 
-{% block title %}Kinetic Models Database: Species {{ species.id }} Editor{% endblock %}
-{% block page_title %}Kinetic Models Database: Species {{ species.id }} Editor{% endblock %}
-
-<!-- NRC
-  This web page provides an interface to edit a specific species selected
-  Should have a functionality added to change species without going back to species.html
-
-  The below navbar items are only relevant to the following pages:
-      bibliography,
-      species,
-      species_editor,
--->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'bibliography' %}">Bibliography</a>
-<a href="{% url 'species list' %}">Species List</a>
-<a href="{% url 'species editor' species_id=species.id%}">Edit</a>
-{% endblock %}
-
-{% block sidebar_items %}
+{{ block.super }} &raquo;
+<a href="{% url 'species view' species_id=species.id %}">Species {{ species.id }}</a> &raquo;
+<a href="{% url 'species editor' species_id=species.id %}">Edit</a>
 {% endblock %}
 
 {% block page_body %}
