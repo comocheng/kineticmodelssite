@@ -113,5 +113,20 @@ class SourceSearchForm(forms.Form):
     cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)
 
 
+#Form for searching Reactions
+class ReactionSearchForm(forms.Form):
+    """
+    A django form for searching through a Reaction
+    """
+
+    rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9, strip = True, required=False)
+
+    reactant1Formula = forms.CharField(label="Reactant #1 Formula", max_length=50, strip = True, required=False)
+    reactant2Formula = forms.CharField(label="Reactant #2 Formula", max_length=50, strip = True, required=False)
+
+    is_reversible = models.BooleanField(label="Is Reversible?", default=True, help_text='Is this reaction reversible?')
+
+    product1Formula = forms.CharField(label="Product #1 Formula", max_length=50, strip = True, required=False)
+    product2Formula = forms.CharField(label="Product #2 Formula", max_length=50, strip = True, required=False)
 
 
