@@ -16,11 +16,11 @@ def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
     return render(request, 'kineticmodels/index.html')
 
-def bibliography(request):
+def bibliography(request, sourceList):
     """
     The listing of all the sources in the database
     """
-    sources = Source.objects.all()
+    sources = sourceList
 
     paginator = Paginator(sources, ITEMSPERPAGE)
 
@@ -66,13 +66,37 @@ def source_editor(request, source_id=0):
                  'form': form, }
     return render(request,'kineticmodels/source_editor.html', variables)
 
-def species_list(request, speciesList, pageNumber = 1):
+def source_search(request):
+    """
+    Method for searching through the source database (bibliographies)
+    """
+    filteredSources = Species.objects.none()
+
+    if request.method == 'POST':
+        form = SourceSearchForm(request.POST)
+        if form.is_valid(): #don't know if needed
+            formula = form.cleaned_data['formula']
+            sPrimeID = form.cleaned_data['sPrimeID']
+            inchi = form.cleaned_data['inchi']
+            cas = form.cleaned_data['cas']
+            filteredSources = searchHelper(Sources.objects.all(), 
+                                [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
+            return bibliography(request, filteredSources)
+
+    else:
+        form = SourceSearchForm()
+
+    #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
+    variables = {'filteredSources' : filteredSources, 'form' : form}
+    return render(request, 'kineticmodels/species_search.html', variables)
+
+
+def species_list(request, speciesList):
     """
     The listing of all species currently in the database
 
     See species_list.html
     """
-#    species_list = Species.objects.all()
 
     paginator = Paginator(speciesList, ITEMSPERPAGE)
 
@@ -149,7 +173,7 @@ def species_search(request):
         form = SpeciesSearchForm()
 
     #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
-    variables = {'filteredSpecies' : filteredSpecies, 'form' : form}
+    variables = {'form' : form}
     return render(request, 'kineticmodels/species_search.html', variables)
 
 

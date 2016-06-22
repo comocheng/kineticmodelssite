@@ -22,6 +22,8 @@
         <td><a href="{% url 'source view' source_id=source.pk %}">View</a></td>
         <td><a href="{% url 'source editor' source_id=source.id%}">Edit</a></td>
     </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 </table>
 <br/>
