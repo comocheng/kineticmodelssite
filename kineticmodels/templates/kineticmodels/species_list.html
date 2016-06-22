@@ -11,11 +11,11 @@
       species_editor,
 
 
-<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
+<a href="{% url 'species editor' species_id=species.id%}">Edit</a>
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
 {% endblock %}
 
 {% block sidebar_items %}
@@ -50,7 +50,7 @@
         <td>{{ species.formula }}</td>
         <td>{{ species.inchi }}</td>
         <td>{{ species.CAS }}</td>
-        <td><a href="{% url 'species' species_id=species.id%}">View</a></td>
+        <td><a href="{% url 'species view' species_id=species.id%}">View</a></td>
         <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
 {% endfor %}

@@ -8,9 +8,9 @@
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.kineticmodels_list' %}">Browse Kinetic Models</a> &raquo;
-<a href="{% url 'kineticmodels.views.kineticModel' kineticModel_id=kineticModel.id%}">Kinetic Model {{ kineticModel.id }}</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodel list' %}">Browse Kinetic Models</a> &raquo;
+<a href="{% url 'kineticmodel view' kineticModel_id=kineticModel.id%}">Kinetic Model {{ kineticModel.id }}</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -27,7 +27,7 @@
     </tr>
 </table>
 <br/>
-<a href="{% url 'kineticmodels.views.kineticModel_editor' kineticModel_id=kineticModel.id%}">Edit</a>
+<a href="{% url 'kineticmodel editor' kineticModel_id=kineticModel.id%}">Edit</a>
 
 
 {% endblock %}

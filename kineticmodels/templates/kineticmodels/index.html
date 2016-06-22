@@ -10,15 +10,15 @@
   Currently no page for a single species. There is a species list and a species_editor page
   This setup reflects Biliography and Source Editor
 
-  <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
-<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Source Edit</a>
-<a href="{% url 'kineticmodels.views.species' %}">Species</a>
-<a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Species Edit</a>
+  <a href="{% url 'bibliography' %}">Bibliography</a> &raquo;
+<a href="{% url 'source view' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
+<a href="{% url 'source editor' source_id=source.id%}">Source Edit</a>
+<a href="{% url 'species view' %}">Species</a>
+<a href="{% url 'species editor' source_id=species_for_edit.id%}">Species Edit</a>
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
 {% endblock %}
 
 {% block sidebar_items %}
@@ -29,30 +29,30 @@
 
 
 {% block page_body %}
-<h2><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Models</a></h2>
+<h2><a href="{% url 'kineticmodel list' %}">Models</a></h2>
 
 <ul>
-<li><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Browse Models</a></li>
+<li><a href="{% url 'kineticmodel list' %}">Browse Models</a></li>
 <li><a >Search Models</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.species_list' %}">Species</a></h2>
+<h2><a href="{% url 'species list' %}">Species</a></h2>
 
 <ul>
-<li><a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a></li>
-<li><a href="{% url 'kineticmodels.views.species_search' %}">Search Species</a></li>
+<li><a href="{% url 'species list' %}">Browse Species</a></li>
+<li><a href="{% url 'species search' %}">Search Species</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.reaction_list' %}">Reactions</a></h2>
+<h2><a href="{% url 'reaction list' %}">Reactions</a></h2>
 <ul>
-<li><a href="{% url 'kineticmodels.views.reaction_list' %}">Browse Reactions</a></li>
+<li><a href="{% url 'reaction list' %}">Browse Reactions</a></li>
 <li><a >Search Reactions</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a></h2>
+<h2><a href="{% url 'bibliography' %}">Bibliography</a></h2>
 {% endblock %}
 
 

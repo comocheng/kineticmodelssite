@@ -9,8 +9,8 @@
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'bibliography' %}">Bibliography</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -31,8 +31,8 @@
         <td>{{ source.source_title }}</td>
         <td>{{ source.journal_name }}</td>
         <td>{{ source.pub_year }}</td>
-        <td><a href="{% url 'kineticmodels.views.source' source_id=source.pk %}">View</a></td>
-        <td><a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a></td>
+        <td><a href="{% url 'source view' source_id=source.pk %}">View</a></td>
+        <td><a href="{% url 'source editor' source_id=source.id%}">Edit</a></td>
     </tr>
 {% endfor %}
 </table>

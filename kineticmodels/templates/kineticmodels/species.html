@@ -9,9 +9,9 @@
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a> &raquo;
-<a href="{% url 'kineticmodels.views.species' species_id=species.id%}">Species {{ species.id }}</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'species list' %}">Browse Species</a> &raquo;
+<a href="{% url 'species view' species_id=species.id%}">Species {{ species.id }}</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -78,7 +78,7 @@ $(document).ready(function() {
 {% endif %}
 
 
-<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
+<a href="{% url 'species editor' species_id=species.id%}">Edit</a>
 
 
 {% endblock %}

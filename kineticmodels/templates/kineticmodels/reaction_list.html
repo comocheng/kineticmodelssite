@@ -11,12 +11,12 @@
       reaction_editor,
 
 
-<a href="{% url 'kineticmodels.views.reaction_editor' reaction_id=reaction.id%}">Edit</a>
+<a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a>
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.reaction_list' %}">Reaction List</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'reaction list' %}">Reaction List</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -51,7 +51,7 @@
         <td>{{ reaction.reactants }}</td>
         <td>{{ reaction.products }}</td>
         <td>{{ reaction.is_reversible }}</td>
-        <td><a href="{% url 'reaction' reaction_id=reaction.id%}">View</a></td>
+        <td><a href="{% url 'reaction view' reaction_id=reaction.id%}">View</a></td>
         <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
     </tr>
 {% endfor %}

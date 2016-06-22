@@ -14,10 +14,10 @@
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a>
-<a href="{% url 'kineticmodels.views.kineticModel_list' %}">Kinetic Model List</a>
-<a href="{% url 'kineticmodels.views.kineticModel_editor' kineticModel_id=kineticModel.id%}">Edit</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'bibliography' %}">Bibliography</a>
+<a href="{% url 'kineticmodel list' %}">Kinetic Model List</a>
+<a href="{% url 'kineticmodel editor' kineticModel_id=kineticModel.id%}">Edit</a>
 {% endblock %}
 
 {% block sidebar_items %}

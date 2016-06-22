@@ -8,10 +8,10 @@
 -->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
-<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
+<a href="{% url 'kineticmodels site home' %}">Kinetic Models Database</a> &raquo;
+<a href="{% url 'bibliography' %}">Bibliography</a> &raquo;
+<a href="{% url 'source view' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
+<a href="{% url 'source editor' source_id=source.id%}">Edit</a>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -23,7 +23,7 @@
     The following form allows the selected source to be edited
     Each source field needs a section to edit
   -->
-<form action="{% url 'kineticmodels.views.source_editor' source_id=source.id%}" method="POST">
+<form action="{% url 'source editor' source_id=source.id%}" method="POST">
   {% csrf_token %}
   {{ form.as_p }}
 <p><input type="submit" value="Save" id="submit"/></p>
