@@ -66,15 +66,15 @@ def source_editor(request, source_id=0):
                  'form': form, }
     return render(request,'kineticmodels/source_editor.html', variables)
 
-def species_list(request, pageNumber = 1):
+def species_list(request, speciesList, pageNumber = 1):
     """
     The listing of all species currently in the database
 
     See species_list.html
     """
-    species_list = Species.objects.all()
+#    species_list = Species.objects.all()
 
-    paginator = Paginator(species_list, ITEMSPERPAGE)
+    paginator = Paginator(speciesList, ITEMSPERPAGE)
 
     page = request.GET.get('page')
     try:
@@ -143,6 +143,7 @@ def species_search(request):
             cas = form.cleaned_data['cas']
             filteredSpecies = searchHelper(Species.objects.all(), 
                                 [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
+            return species_list(request, filteredSpecies)
 
     else:
         form = SpeciesSearchForm()

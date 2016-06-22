@@ -54,35 +54,6 @@ Use this form to search for a species in the kinetic models database.
   {{ form.as_p }}
 <p><input type="submit" value="Submit" id="submit"/></p>
 </form>
-{% if filteredSpecies|length %}
-  
-<table>
-    <!-- NRC
-    Table properties must be edited to include all relevant species fields
-    -->
-    <tr>
-        <th>ID</th>
-        <th>sPrimeID</th>
-        <th>formula</th>
-        <th>inchi</th>
-        <th>CAS</th>
-        <th></th>
-    </tr>
-  {% for species in filteredSpecies %}
-    <tr>
-        <td>{{ species.pk}}</td>
-        <td><a href="http://warehouse.primekinetics.org/depository/species/catalog/{{ species.sPrimeID }}.xml">{{ species.sPrimeID }}</a></td>
-        <td>{{ species.formula }}</td>
-        <td>{{ species.inchi }}</td>
-        <td>{{ species.CAS }}</td>
-        <td><a href="{% url 'species view' species_id=species.id%}">View</a></td>
-        <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
-    </tr>  
-  {% endfor %}
-</table>
-{% else %}
-  Sorry, no results for your search criteria
-{% endif %}
 
 
 {% endblock %}

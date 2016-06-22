@@ -10,6 +10,7 @@
   The following HTML code will list all of the species currently in the database
 -->
 
+
 <table>
     <!-- NRC
     Table properties must be edited to include all relevant species fields
@@ -22,6 +23,8 @@
         <th>CAS</th>
         <th></th>
     </tr>
+
+
 {% for species in species_list %}
 <!-- NRC
     Table properties must be edited to include all relevant species fields(Done)
@@ -36,6 +39,8 @@
         <td><a href="{% url 'species view' species_id=species.id%}">View</a></td>
         <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 </table>
 <br/>
