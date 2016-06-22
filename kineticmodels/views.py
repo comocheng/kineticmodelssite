@@ -79,7 +79,7 @@ def source_search(request):
             sPrimeID = form.cleaned_data['sPrimeID']
             inchi = form.cleaned_data['inchi']
             cas = form.cleaned_data['cas']
-            filteredSources = searchHelper(Sources.objects.all(), 
+            filteredSources = searchHelper(Source.objects.all(), 
                                 [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
             return bibliography(request, filteredSources)
 
