@@ -558,9 +558,9 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment')
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment')
-    transport = models.ManyToManyField(Transport)
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
+    transport = models.ManyToManyField(Transport, blank=True)
     additional_info = models.CharField(max_length=1000)
     #     reaction=kinetics something
     #     species=reaction something
