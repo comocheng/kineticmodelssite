@@ -482,7 +482,7 @@ class ArrheniusKinetics(models.Model):
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(blank=True, null=True)
+    E_value = models.FloatField(default=0.0)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
@@ -558,9 +558,9 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(ArrheniusKinetics, through='Comment')
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment')
-    transport = models.ManyToManyField(Transport)
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
+    transport = models.ManyToManyField(Transport, blank=True)
     additional_info = models.CharField(max_length=1000)
     #     reaction=kinetics something
     #     species=reaction something
@@ -575,7 +575,7 @@ class KineticModel(models.Model):
         verbose_name_plural = "Kinetic Models"
 
 
-class Comment(models.Model):
+class KineticsComment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
 
@@ -583,7 +583,7 @@ class Comment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(ArrheniusKinetics)
+    kinetics = models.ForeignKey(Kinetics)
     kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 

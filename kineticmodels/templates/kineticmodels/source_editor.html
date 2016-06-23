@@ -16,7 +16,7 @@
     The following form allows the selected source to be edited
     Each source field needs a section to edit
   -->
-<form action="{% url 'source editor' source_id=source.id%}" method="POST">
+<form method="POST">
   {% csrf_token %}
   {{ form.as_p }}
 <p><input type="submit" value="Save" id="submit"/></p>

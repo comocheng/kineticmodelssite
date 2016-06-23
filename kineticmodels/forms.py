@@ -62,7 +62,7 @@ class EditKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        exclude = ()
+        exclude = ('kinetics', 'thermo', 'transport')
 
 class UploadKineticModelForm(forms.ModelForm):
     """
