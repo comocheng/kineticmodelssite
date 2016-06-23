@@ -558,7 +558,7 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(ArrheniusKinetics, through='Comment')
+    kinetics = models.ManyToManyField(Kinetics, through='Comment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
     transport = models.ManyToManyField(Transport)
     additional_info = models.CharField(max_length=1000)
@@ -583,7 +583,7 @@ class Comment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(ArrheniusKinetics)
+    kinetics = models.ForeignKey(Kinetics)
     kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
 
