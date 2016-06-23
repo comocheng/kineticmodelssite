@@ -62,7 +62,7 @@ class EditKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        exclude = ()
+        exclude = ('kinetics', 'thermo', 'transport')
 
 class UploadKineticModelForm(forms.ModelForm):
     """
@@ -124,7 +124,7 @@ class ReactionSearchForm(forms.Form):
     reactant1Formula = forms.CharField(label="Reactant #1 Formula", max_length=50, strip = True, required=False)
     reactant2Formula = forms.CharField(label="Reactant #2 Formula", max_length=50, strip = True, required=False)
 
-    is_reversible = models.BooleanField(label="Is Reversible?", default=True, help_text='Is this reaction reversible?')
+    #is_reversible = models.BooleanField(label="Is Reversible?", default=True, help_text='Is this reaction reversible?')
 
     product1Formula = forms.CharField(label="Product #1 Formula", max_length=50, strip = True, required=False)
     product2Formula = forms.CharField(label="Product #2 Formula", max_length=50, strip = True, required=False)
