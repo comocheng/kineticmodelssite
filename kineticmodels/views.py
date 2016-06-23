@@ -37,8 +37,8 @@ def bibliography(request, sourceList):
     variables = {'sources': sourcesOnAPage}
     return render(request, 'kineticmodels/source_list.html', variables)
 
-""" See source.html"""
-def source(request, source_id=0):
+
+def source_view(request, source_id=0):
     """
     The listing of a specific source in the database
     """
@@ -58,7 +58,7 @@ def source_editor(request, source_id=0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(source, args=(source.id,)))
+            return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
     else:
         # Create the form
         form = EditSourceForm(instance=source)
@@ -113,8 +113,8 @@ def species_list(request, speciesList):
     variables = {'species_list': speciesOnAPage,}
     return render(request, 'kineticmodels/species_list.html', variables)
 
-""" See species.html"""
-def species(request, species_id=0):
+
+def species_view(request, species_id=0):
     """
     The listing of a specific species in the database
     """
@@ -143,7 +143,7 @@ def species_editor(request, species_id = 0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species, args=(species.id,)))
+            return HttpResponseRedirect(reverse(species_view, args=(species.id,)))
     else:
         # Create the form
         form = EditSpeciesForm(instance=species)
@@ -219,7 +219,7 @@ def kineticModel_list(request):
 
 
 """ See kineticModel.html"""
-def kineticModel(request, kineticModel_id=0):
+def kineticModel_view(request, kineticModel_id=0):
     """
     The listing of a specific kinetic Model in the database
     """
@@ -251,7 +251,7 @@ def kineticModel_editor(request, kineticModel_id = 0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(kineticModel, args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse(kineticModel_view, args=(kineticModel.id,)))
     else:
         # Create the form
         form = EditKineticModelForm(instance=kineticModel)
@@ -296,7 +296,7 @@ def reaction_list(request):
 
 
 """ See reaction.html"""
-def reaction(request, reaction_id=0):
+def reaction_view(request, reaction_id=0):
     """
     The listing of a specific reaction in the database
     """
@@ -318,7 +318,7 @@ def reaction_editor(request, reaction_id = 0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(reaction, args=(reaction.id,)))
+            return HttpResponseRedirect(reverse(reaction_view, args=(reaction.id,)))
     else:
         # Create the form
         form = EditReactionForm(instance=reaction)
