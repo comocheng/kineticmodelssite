@@ -482,7 +482,7 @@ class ArrheniusKinetics(models.Model):
     A_value = models.FloatField(default=0.0)
     A_value_uncertainty = models.FloatField(blank=True, null=True)
     n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(blank=True, null=True)
+    E_value = models.FloatField(default=0.0)
     E_value_uncertainty = models.FloatField(blank=True, null=True)
     lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
     upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
