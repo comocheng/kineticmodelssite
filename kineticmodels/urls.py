@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 from . import views
-from models import Species, Source
+from models import Species, Source, Reaction
 
 # ***If attemting to change to Class structure, must add as_view() to patterns***
 urlpatterns=[
@@ -17,9 +17,10 @@ urlpatterns=[
     url(r'^models/new$', views.kineticModel_new, name='kineticmodel new'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/$', views.kineticModel, name='kineticmodel view'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.kineticModel_editor, name='kineticmodel editor'),
-    url(r'^reactions/$', views.reaction_list, name='reaction list'),
+    url(r'^reactions/$', views.reaction_list, {'reactionList': Reaction.objects.all()}, name='reaction list'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/$', views.reaction, name='reaction view'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/edit/$', views.reaction_editor, name='reaction editor'),       
+    url(r'^reactions/search/$', views.reaction_search, name='reaction search'),  
 # #     url(r'^(?P<question_id>[0-9]+)/results/$', views.results, name='results'),
 # #     url(r'^(?P<question_id>[0-9]+)/vote/$', views.vote, name='vote'),
 ## page/(?P<pageNumber>[0-9]+)/$
