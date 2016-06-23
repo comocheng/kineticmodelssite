@@ -6,7 +6,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm
-from models import Source, Species, KineticModel, Reaction
+from models import Source, Species, KineticModel, Reaction, Stoichiometry
 import math
 import rmgpy, rmgpy.molecule
 
@@ -335,17 +335,64 @@ def reaction_search(request):
 
     if request.method == 'POST':
         form = ReactionSearchForm(request.POST)
-        if form.is_valid(): #don't know if needed
+        if form.is_valid(): 
+            
+            reactant1Formula = form.cleaned_data['reactant1Formula']
+            filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
+            reactant2Formula = form.cleaned_data['reactant2Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
+            product1Formula = form.cleaned_data['product1Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product1Formula, False)
+            product2Formula = form.cleaned_data['product2Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product2Formula, False)
+
+
             rPrimeID = form.cleaned_data['rPrimeID']
             is_reversible = form.cleaned_data['is_reversible']
-            reactant1Formula = form.cleaned_data['reactant1Formula']
-            filteredReactions = searchHelper(Reaction.objects.all(), 
-                                [rPrimeID,is_reversible, reactant1Formula], ['rPrimeID', 'is_reversible','stoichiometry_set__species'])
+            filteredReactions = searchHelper(filteredReactions, 
+                                [rPrimeID,is_reversible], ['rPrimeID', 'is_reversible'])
             
             return reaction_list(request, filteredReactions)
 
     else:
         form = ReactionSearchForm()
+
+    variables = {'form' : form}
+    return render(request, 'kineticmodels/reaction_search.html', variables)
+
+
+
+def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
+    """
+    helper for reaction search. The function takes in a formula to filter through a list of
+    species and whether the species is a reactant or not. It uses this data to output a list 
+    of reactions which contain the given formula in place of reactants or products where
+    applicable. 
+    """ 
+    
+    reactionIDs = []
+
+    if formula != '':
+        filteredSpecies = searchHelper(species_list, [formula], ['formula'])
+        for species in filteredSpecies:
+            tempStoich = searchHelper(Stoichiometry.objects.all(), [species.pk], ['species_id']) 
+            for stoich in tempStoich:
+                if isReactant==True and stoich.stoichiometry<0:
+                    reactionIDs.append(stoich.reaction_id)
+                if isReactant==False and stoich.stoichiometry>0:
+                    reactionIDs.append(stoich.reaction_id)
+    
+        filteredReactions = reaction_list.filter(pk__in=reactionIDs)    
+        return filteredReactions
+ 
+
+    return reaction_list
+
+
+
+
+
+
 
     #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
     variables = {'form' : form}
