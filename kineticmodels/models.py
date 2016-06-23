@@ -558,7 +558,7 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='Comment')
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment')
     thermo = models.ManyToManyField(Thermo, through='ThermoComment')
     transport = models.ManyToManyField(Transport)
     additional_info = models.CharField(max_length=1000)
@@ -575,7 +575,7 @@ class KineticModel(models.Model):
         verbose_name_plural = "Kinetic Models"
 
 
-class Comment(models.Model):
+class KineticsComment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
 
