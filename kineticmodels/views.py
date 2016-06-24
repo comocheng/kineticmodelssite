@@ -375,14 +375,19 @@ def reaction_search(request):
 
 
             rPrimeID = form.cleaned_data['rPrimeID']
-            is_reversible = form.cleaned_data['is_reversible']
-            filteredReactions = searchHelper(filteredReactions, 
-                                [rPrimeID,is_reversible], ['rPrimeID', 'is_reversible'])
+            filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
+            reversibleChoice = form.cleaned_data['is_reversible']
+            print reversibleChoice
+            if reversibleChoice != 'unknown':
+                is_reversible= True if reversibleChoice == 'yes' else False
+                print is_reversible
+                filteredReactions = searchHelper(filteredReactions, 
+                                [is_reversible], ['is_reversible'])
             
             return reaction_list(request, filteredReactions)
 
-    else:
-        form = ReactionSearchForm()
+    
+    form = ReactionSearchForm()
 
     variables = {'form' : form}
     return render(request, 'kineticmodels/reaction_search.html', variables)
@@ -396,7 +401,7 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     of reactions which contain the given formula in place of reactants or products where
     applicable. 
     """ 
-    
+
     reactionIDs = []
 
     if formula != '':

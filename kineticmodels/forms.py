@@ -129,7 +129,8 @@ class ReactionSearchForm(forms.Form):
     reactant1Formula = forms.CharField(label="Reactant #1 Formula", max_length=50, strip = True, required=False)
     reactant2Formula = forms.CharField(label="Reactant #2 Formula", max_length=50, strip = True, required=False)
 
-    is_reversible = forms.BooleanField(label="Is Reversible?", required=False)
+    CHOICES = (('unknown','Don\'t Care'), ('yes', 'Yes'),('no', 'No'))
+    is_reversible = forms.ChoiceField(label="Is Reversible?", required=False,widget=forms.Select,choices=CHOICES)
 
     product1Formula = forms.CharField(label="Product #1 Formula", max_length=50, strip = True, required=False)
     product2Formula = forms.CharField(label="Product #2 Formula", max_length=50, strip = True, required=False)
