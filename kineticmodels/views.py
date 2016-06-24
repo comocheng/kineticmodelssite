@@ -5,8 +5,8 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm
-from models import Source, Species, KineticModel, Reaction, Stoichiometry
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
+from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
 
@@ -43,7 +43,7 @@ def source_view(request, source_id=0):
     The listing of a specific source in the database
     """
     source = get_object_or_404(Source, id=source_id)
-    variables = {'source': source}
+    variables = {'source': source,}
     return render(request, 'kineticmodels/source_view.html', variables)
 
 """ See source_editor.html"""
@@ -75,12 +75,21 @@ def source_search(request):
     if request.method == 'POST':
         form = SourceSearchForm(request.POST)
         if form.is_valid(): #don't know if needed
-            formula = form.cleaned_data['formula']
-            sPrimeID = form.cleaned_data['sPrimeID']
-            inchi = form.cleaned_data['inchi']
-            cas = form.cleaned_data['cas']
-            filteredSources = searchHelper(Source.objects.all(), 
-                                [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
+            author = form.cleaned_data['author']
+            publication_year = form.cleaned_data['publication_year']
+            source_title = form.cleaned_data['source_title']
+            journal_name = form.cleaned_data['journal_name']
+            journal_volume_number = form.cleaned_data['journal_volume_number']
+            page_numbers = form.cleaned_data['page_numbers']
+            doi = form.cleaned_data['doi']
+
+            filteredSources = sourceSearchHelper(Source.objects.all(), Author.objects.all(), author)
+            filteredSources = searchHelper(filteredSources, 
+                                [publication_year,source_title,source_title,journal_name,
+                                journal_volume_number,page_numbers,doi], 
+                                ['publication_year','source_title','source_title','journal_name',
+                                'journal_volume_number','page_numbers','doi'])
+            
             return bibliography(request, filteredSources)
 
     else:
@@ -88,8 +97,33 @@ def source_search(request):
 
     #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
     variables = {'filteredSources' : filteredSources, 'form' : form}
-    return render(request, 'kineticmodels/species_search.html', variables)
+    return render(request, 'kineticmodels/source_search.html', variables)
 
+
+def sourceSearchHelper(source_list, author_list, authorName):
+    """
+    helper for source search. The function takes in a formula to filter through a list of
+    species and whether the species is a reactant or not. It uses this data to output a list 
+    of reactions which contain the given formula in place of reactants or products where
+    applicable. 
+    """ 
+
+    sourceIDs = []
+
+    if authorName != '':
+        filteredAuthors = author_list.filter(name__exact=authorName)
+        filteredAuthorship = Authorship.objects.filter(author_id__in=filteredAuthors.values_list('pk'))
+        filteredSources = source_list.filter(pk__in=filteredAuthorship.values_list('source_id'))
+        # for author in filteredAuthors:
+        #     tempAuthorship = Authorship.objects.filter(author_id__exact=author.pk)
+        #     for authorship in tempAuthorship:
+        #         sourceIDs.append(stoich.source_id)
+    
+        # filteredSources = reaction_list.filter(pk__in=sourceIDs)    
+        return filteredSources
+ 
+
+    return source_list
 
 def species_list(request, speciesList):
     """
@@ -177,11 +211,13 @@ def species_search(request):
     return render(request, 'kineticmodels/species_search.html', variables)
 
 
+
 def searchHelper(items, searchParameterData, searchParameterNames):
 
     """ Search helper function which takes in the items to be filtered along with the 
         search parameters and returns an exact match for the given search
         parameters
+        items = items.filter(searchParameterNames__exact=searchParameterData)
     """
 
     for counter in range(len(searchParameterData)):
@@ -373,15 +409,14 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     reactionIDs = []
 
     if formula != '':
-        filteredSpecies = searchHelper(species_list, [formula], ['formula'])
-        for species in filteredSpecies:
-            tempStoich = searchHelper(Stoichiometry.objects.all(), [species.pk], ['species_id']) 
-            for stoich in tempStoich:
-                if isReactant==True and stoich.stoichiometry<0:
-                    reactionIDs.append(stoich.reaction_id)
-                if isReactant==False and stoich.stoichiometry>0:
-                    reactionIDs.append(stoich.reaction_id)
-    
+        filteredSpecies = species_list.filter(formula__exact=formula)
+        filteredStoich = Stoichiometry.objects.filter(species_id__in=filteredSpecies.values_list('pk'))
+        for stoich in filteredStoich:
+            if isReactant==True and stoich.stoichiometry<0:
+                reactionIDs.append(stoich.reaction_id)
+            if isReactant==False and stoich.stoichiometry>0:
+                reactionIDs.append(stoich.reaction_id)
+
         filteredReactions = reaction_list.filter(pk__in=reactionIDs)    
         return filteredReactions
  
