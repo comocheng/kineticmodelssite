@@ -19,10 +19,16 @@
 <table>
 	<tr><td>bPrime ID</td><td>{{ source.bPrimeID }}</a></td></tr>
     <tr><td>Title</td><td>{{ source.source_title }}</a></td></tr>
-    <tr><td>Author(s)</td><td>{{ source.authors }}</td></tr>
     <tr><td>Journal</td><td>{{ source.journal_name }}</td></tr>
     <tr><td>Page Number</td><td>{{ source.page_numbers }}</td></tr>
     <tr><td>Year</td><td>{{ source.publication_year }}</td></tr>
+    <tr><td>Author(s)</td>
+    <td>
+{% for author in source.authors.all %}
+    {{ author.name}}  |   
+{% endfor %}
+	|</td>
+	</tr>
     </tr>
 </table>
 <br/>
