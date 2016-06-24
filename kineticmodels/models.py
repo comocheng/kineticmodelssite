@@ -130,7 +130,7 @@ class Source(models.Model):
     journal volume
     page numbers
     """
-    bPrimeID = models.CharField('Prime ID',
+    bPrimeID = models.CharField('Prime ID', blank=True,
                                    max_length=9,
                                    default='')
     publication_year = models.CharField('Year of Publication',
