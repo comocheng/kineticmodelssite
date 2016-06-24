@@ -107,10 +107,15 @@ class SourceSearchForm(forms.Form):
     A django form for searching through a Sources
     """
 
-    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
-    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
-    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
-    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)
+    bPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+    publication_year = forms.CharField(label = 'Year of Publication', max_length=4, strip = True, required=False)
+    source_title = forms.CharField(label = 'Source Title', max_length=300, strip = True, required=False)
+    journal_name = forms.CharField(label = 'Journal Name', max_length=300, strip = True, required=False)
+    journal_volume_number = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
+    page_numbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
+    doi = forms.CharField(label = 'DOI', max_length=80, strip = True, required=False)
+    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
+
 
 
 #Form for searching Reactions
