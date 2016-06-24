@@ -318,15 +318,6 @@ def reaction_list(request, reactionList):
         reactionsOnAPage = paginator.page(paginator.num_pages)
 
     variables = {'reaction_list': reactionsOnAPage}
-    i = 0
-    for react in reactionsOnAPage:
-        if i==3:
-            break
-        i += 1
-        print "First Reactant - ", react.reactants()[0].formula
-        print "First Reactant - ", react.stoichiometry_set.all()[0].species
-        print "First stoich species - ", react.stoich_species()[0][1].formula
-
 
     return render(request, 'kineticmodels/reaction_list.html', variables) 
 
