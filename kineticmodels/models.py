@@ -1,6 +1,9 @@
 from django.db import models
 # Added to support RMG integration
 from rmgpy.thermo import NASA, NASAPolynomial
+import os
+
+import rmgweb.settings as settings
 
 # Create your models here.
 """
@@ -555,6 +558,57 @@ class KineticModel(models.Model):
         kinetics
     additional info
     """
+
+    def getPath(self):
+        """
+        Return the absolute path of the directory that the object uses
+        to store files.
+        """
+        return os.path.join(settings.MEDIA_ROOT, 'kinetic_models', str(self.id))
+ 
+
+    def upload_chemkin_to(instance, filename):
+        print "SAVING CHEMKIN FILE"
+        filename = 'chemkin.txt'
+        return os.path.join(self.getPath(), filename)
+    def upload_thermo_to(instance, filename):
+        return os.path.join(self.getPath(), 'thermo.txt')
+    def upload_transport_to(instance, filename):
+        return os.path.join(self.getPath(), 'transport.txt')
+
+    def createOutput(self):
+        """
+        Generate output html file from the path containing chemkin and dictionary files.
+        """
+        from rmgpy.chemkin import saveHTMLFile
+        # if self.Foreign:
+        #     # Chemkin file was not from RMG, do not parse the comments when visualizing the file.
+        #     saveHTMLFile(self.path, readComments = False)
+        # else:
+        saveHTMLFile(self.getpath())
+
+    def createDir(self):
+        """
+        Create the directory (and any other needed parent directories) that
+        the Network uses for storing files.
+        """
+        try:
+            os.makedirs(os.path.join(self.getPath(),'chemkin'))
+            os.makedirs(os.path.join(self.getPath(),'species'))
+        except OSError:
+            # Fail silently on any OS errors
+            pass
+
+    def deleteDir(self):
+        """
+        Clean up everything by deleting the directory
+        """
+        import shutil
+        try:
+            shutil.rmtree(self.getPath())
+        except OSError:
+            pass
+
     source = models.ForeignKey(Source)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
@@ -564,9 +618,12 @@ class KineticModel(models.Model):
     additional_info = models.CharField(max_length=1000)
     #     reaction=kinetics something
     #     species=reaction something
-    chemkin_reactions_file = models.FileField(blank=True)
-    chemkin_thermo_file = models.FileField(blank=True)
-    chemkin_transport_file = models.FileField(blank=True)
+    chemkin_reactions_file = models.FileField(blank=True,
+                                              upload_to='uploads/',)
+    chemkin_thermo_file = models.FileField(blank=True,
+                                              upload_to=upload_thermo_to,)
+    chemkin_transport_file = models.FileField(blank=True,
+                                              upload_to=upload_transport_to,)
 
     def __unicode__(self):
         return u"{s.id} {s.model_name}".format(s=self)
