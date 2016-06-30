@@ -569,8 +569,7 @@ class KineticModel(models.Model):
 
     def upload_chemkin_to(instance, filename):
         print "SAVING CHEMKIN FILE"
-        filename = 'chemkin.txt'
-        return os.path.join(self.getPath(), filename)
+        return os.path.join(self.getPath(), 'chemkin.txt')
     def upload_thermo_to(instance, filename):
         return os.path.join(self.getPath(), 'thermo.txt')
     def upload_transport_to(instance, filename):
@@ -619,7 +618,7 @@ class KineticModel(models.Model):
     #     reaction=kinetics something
     #     species=reaction something
     chemkin_reactions_file = models.FileField(blank=True,
-                                              upload_to='uploads/',)
+                                              upload_to=upload_chemkin_to,)
     chemkin_thermo_file = models.FileField(blank=True,
                                               upload_to=upload_thermo_to,)
     chemkin_transport_file = models.FileField(blank=True,
