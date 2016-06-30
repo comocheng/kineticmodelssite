@@ -282,10 +282,14 @@ def kineticModel_editor(request, kineticModel_id = 0):
 
     kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
     if request.method == 'POST':
-        form = EditKineticModelForm(request.POST, instance=kineticModel)
+        form = EditKineticModelForm(request.POST, request.FILES, instance=kineticModel)
         if form.is_valid():
             # Save the form
+         #   print "File before save - ", kineticModel.chemkin_reactions_file.url
             form.save()
+            print "File after save - ", kineticModel.chemkin_reactions_file.url
+            # Generate the output HTML file
+           # kineticModel.createOutput()            
             # Go back to the network's main page
             return HttpResponseRedirect(reverse(kineticModel_view, args=(kineticModel.id,)))
     else:
