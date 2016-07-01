@@ -530,8 +530,13 @@ class Stoichiometry(models.Model):
 #         kinetics
 #     additional info
 
-
-
+def upload_chemkin_to(instance, filename):
+    print "SAVING CHEMKIN FILE"
+    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
+def upload_thermo_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
+def upload_transport_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
 
 
 class KineticModel(models.Model):
@@ -565,15 +570,6 @@ class KineticModel(models.Model):
         to store files.
         """
         return os.path.join(settings.MEDIA_ROOT, 'kinetic_models', str(self.id))
- 
-
-    def upload_chemkin_to(instance, filename):
-        print "SAVING CHEMKIN FILE"
-        return os.path.join(self.getPath(), 'chemkin.txt')
-    def upload_thermo_to(instance, filename):
-        return os.path.join(self.getPath(), 'thermo.txt')
-    def upload_transport_to(instance, filename):
-        return os.path.join(self.getPath(), 'transport.txt')
 
     def createOutput(self):
         """
