@@ -284,6 +284,7 @@ def kineticModel_editor(request, kineticModel_id = 0):
     if request.method == 'POST':
         form = EditKineticModelForm(request.POST, request.FILES, instance=kineticModel)
         if form.is_valid():
+            kineticModel.createDir()
             # Save the form
          #   print "File before save - ", kineticModel.chemkin_reactions_file.url
             form.save()
