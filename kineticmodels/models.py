@@ -593,17 +593,6 @@ class KineticModel(models.Model):
         """
         return os.path.join(settings.MEDIA_ROOT, 'kinetic_models', str(self.id))
 
-    def createOutput(self):
-        """
-        Generate output html file from the path containing chemkin and dictionary files.
-        """
-        from rmgpy.chemkin import saveHTMLFile
-        # if self.Foreign:
-        #     # Chemkin file was not from RMG, do not parse the comments when visualizing the file.
-        #     saveHTMLFile(self.path, readComments = False)
-        # else:
-        saveHTMLFile(self.getpath())
-
     def createDir(self):
         """
         Create the directory (and any other needed parent directories) that
@@ -611,7 +600,6 @@ class KineticModel(models.Model):
         """
         try:
             os.makedirs(os.path.join(self.getPath(),'chemkin'))
-            os.makedirs(os.path.join(self.getPath(),'species'))
         except OSError:
             # Fail silently on any OS errors
             pass
