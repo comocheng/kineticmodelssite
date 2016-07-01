@@ -564,6 +564,28 @@ class KineticModel(models.Model):
     additional info
     """
 
+    source = models.ForeignKey(Source)
+    mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
+    model_name = models.CharField(default='', max_length=200, unique=True)
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
+    transport = models.ManyToManyField(Transport, blank=True)
+    additional_info = models.CharField(max_length=1000)
+    #     reaction=kinetics something
+    #     species=reaction something
+    chemkin_reactions_file = models.FileField(blank=True,
+                                              upload_to=upload_chemkin_to,)
+    chemkin_thermo_file = models.FileField(blank=True,
+                                              upload_to=upload_thermo_to,)
+    chemkin_transport_file = models.FileField(blank=True,
+                                              upload_to=upload_transport_to,)
+
+    def __unicode__(self):
+        return u"{s.id} {s.model_name}".format(s=self)
+
+    class Meta:
+        verbose_name_plural = "Kinetic Models"
+
     def getPath(self):
         """
         Return the absolute path of the directory that the object uses
@@ -603,29 +625,6 @@ class KineticModel(models.Model):
             shutil.rmtree(self.getPath())
         except OSError:
             pass
-
-    source = models.ForeignKey(Source)
-    mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    model_name = models.CharField(default='', max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
-    transport = models.ManyToManyField(Transport, blank=True)
-    additional_info = models.CharField(max_length=1000)
-    #     reaction=kinetics something
-    #     species=reaction something
-    chemkin_reactions_file = models.FileField(blank=True,
-                                              upload_to=upload_chemkin_to,)
-    chemkin_thermo_file = models.FileField(blank=True,
-                                              upload_to=upload_thermo_to,)
-    chemkin_transport_file = models.FileField(blank=True,
-                                              upload_to=upload_transport_to,)
-
-    def __unicode__(self):
-        return u"{s.id} {s.model_name}".format(s=self)
-
-    class Meta:
-        verbose_name_plural = "Kinetic Models"
-
 
 class KineticsComment(models.Model):
     """
