@@ -20,7 +20,7 @@ urlpatterns=[
     url(r'^reactions/$', views.reaction_list, {'reactionList': Reaction.objects.all()}, name='reaction list'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/$', views.reaction_view, name='reaction view'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/edit/$', views.reaction_editor, name='reaction editor'),       
-    url(r'^reactions/search/$', views.reaction_search, name='reaction search'),  
+    url(r'^reactions/search/$', views.ReactionSearchView.as_view(), name='reaction search'),  
 # #     url(r'^(?P<question_id>[0-9]+)/results/$', views.results, name='results'),
 # #     url(r'^(?P<question_id>[0-9]+)/vote/$', views.vote, name='vote'),
 ## page/(?P<pageNumber>[0-9]+)/$
