@@ -3,15 +3,6 @@
 {% block title %}{{ block.super }} {{ kineticModel.id }} Editor{% endblock %}
 {% block page_title %}{{ block.super }} {{ kineticModel.id }} Editor{% endblock %}
 
-<!-- NRC
-  This web page provides an interface to edit a specific kineticModel selected
-  Should have a functionality added to change kineticModel without going back to kineticModel.html
-
-  The below navbar items are only relevant to the following pages:
-      bibliography,
-      kineticModel,
-      kineticModel_editor,
--->
 
 {% block navbar_items %}
 {{ block.super }} &raquo;
@@ -21,13 +12,6 @@
 
 
 {% block page_body %}
-<!-- NRC
-  The following HTML code will list the data related to the specific kineticModel being edited
--->
-<!--
-    The following form allows the selected source to be edited
-    Each source field needs a section to edit
-  -->
 
 <form method="POST" enctype="multipart/form-data">
   {% csrf_token %}
