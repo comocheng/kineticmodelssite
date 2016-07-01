@@ -286,12 +286,7 @@ def kineticModel_editor(request, kineticModel_id = 0):
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
-         #   print "File before save - ", kineticModel.chemkin_reactions_file.url
             form.save()
-            print "File after save - ", kineticModel.chemkin_reactions_file.url
-            # Generate the output HTML file
-           # kineticModel.createOutput()            
-            # Go back to the network's main page
             return HttpResponseRedirect(reverse(kineticModel_view, args=(kineticModel.id,)))
     else:
         # Create the form
