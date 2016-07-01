@@ -4,6 +4,7 @@ from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
+from django.views.generic.list import ListView
 
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
@@ -352,6 +353,86 @@ def reaction_editor(request, reaction_id = 0):
     variables = {'reaction': reaction,
                  'form': form, }
     return render(request, 'kineticmodels/reaction_editor.html', variables)
+
+
+
+class ReactionSearchView(ListView):
+    model = Reaction
+    form_class = ReactionSearchForm
+    initial = {'key':'value'}
+    template_name = 'kineticmodels/reaction_search.html'
+    paginate_by = ITEMSPERPAGE
+
+    
+    # def get(self, request, *args, **kwargs):
+    #     form = self.form_class(initial=self.initial)
+    #     return render(request, self.template_name, {'form': form, 'object_list' : Reaction.objects.none()})
+
+    # def post(self, request, *args, **kwargs):
+    #     form = self.form_class(request.POST)
+    #     if form.is_valid():
+    #         reactant1Formula = form.cleaned_data['reactant1Formula']
+    #         filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
+    #         reactant2Formula = form.cleaned_data['reactant2Formula']
+    #         filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
+    #         product1Formula = form.cleaned_data['product1Formula']
+    #         filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product1Formula, False)
+    #         product2Formula = form.cleaned_data['product2Formula']
+    #         filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product2Formula, False)
+
+
+    #         rPrimeID = form.cleaned_data['rPrimeID']
+    #         filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
+    #         reversibleChoice = form.cleaned_data['is_reversible']
+    #         print reversibleChoice
+    #         if reversibleChoice != 'unknown':
+    #             is_reversible= True if reversibleChoice == 'yes' else False
+    #             print is_reversible
+    #             filteredReactions = searchHelper(filteredReactions, 
+    #                             [is_reversible], ['is_reversible'])
+            
+    #         queryset = filteredReactions
+    #      #   return object_list(request, template_name='kineticmodels/reaction_search.html', queryset=filteredReactions, paginate_by=ITEMSPERPAGE)
+    #         page_obj = ListView.paginate_queryset(self, filteredReactions, ITEMSPERPAGE)
+    #         print page_obj
+    #         return render(request, self.template_name, {'form': form,'object_list' : filteredReactions, 'page_obj': page_obj})
+    #         #return queryset
+
+    def get_queryset(self):
+        #context = super(ReactionSearchView, self).get_context_data(**kwargs)
+
+        form = ReactionSearchForm(self.request.GET)
+        if form.is_valid(): 
+            reactant1Formula = form.cleaned_data['reactant1Formula']
+            filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
+            reactant2Formula = form.cleaned_data['reactant2Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
+            product1Formula = form.cleaned_data['product1Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product1Formula, False)
+            product2Formula = form.cleaned_data['product2Formula']
+            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product2Formula, False)
+
+
+            rPrimeID = form.cleaned_data['rPrimeID']
+            filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
+            reversibleChoice = form.cleaned_data['is_reversible']
+            if reversibleChoice != 'unknown':
+                is_reversible= True if reversibleChoice == 'yes' else False
+                filteredReactions = searchHelper(filteredReactions, 
+                                [is_reversible], ['is_reversible'])
+            return filteredReactions
+        else:
+            return Reaction.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super(ReactionSearchView, self).get_context_data(**kwargs)
+        context['form'] = ReactionSearchForm(self.request.GET)
+        queries_without_page = self.request.GET.copy()
+        if queries_without_page.has_key('page'):
+            del queries_without_page['page']
+        context['queries'] = queries_without_page
+        print queries_without_page
+        return context
 
 
 def reaction_search(request):
