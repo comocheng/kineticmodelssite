@@ -28,7 +28,8 @@
     The following form allows the selected source to be edited
     Each source field needs a section to edit
   -->
-<form method="POST">
+
+<form method="POST" enctype="multipart/form-data">
   {% csrf_token %}
   {{ form.as_p }}
 <p><input type="submit" value="Save" id="submit"/></p>
