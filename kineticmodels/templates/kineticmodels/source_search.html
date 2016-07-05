@@ -47,13 +47,35 @@ var jqxhr = $.get(url,function(names) { $('#source_names').html(names);})
 {% block page_body %}
 
 <p>
-Use this form to search for a source in the kinetic models database.
+Use this form to search for sources in the kinetic models database.
 </p>
-<form action="{% url 'source search' %}" method="POST">
-  {% csrf_token %}
+<form action="{% url 'source search' %}" method="GET">
   {{ form.as_p }}
 <p><input type="submit" value="Submit" id="submit"/></p>
 </form>
 
+<table>
+    <tr>
+        <th>Source ID<th>
+        <th>Title</th>
+        <th>Journal</th>
+        <th>Year</th>
+    </tr>
+{% for source in object_list %}
+    <tr>
+        <td>{{ source.pk|slice:":8" }}<td>
+        <td>{{ source.source_title }}</td>
+        <td>{{ source.journal_name }}</td>
+        <td>{{ source.pub_year }}</td>
+        <td><a href="{% url 'source view' source_id=source.pk %}">View</a></td>
+        <td><a href="{% url 'source editor' source_id=source.id%}">Edit</a></td>
+    </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
+{% endfor %}
+</table>
+
+
+{% include 'kineticmodels/navigation_footer.html' %}
 
 {% endblock %}
