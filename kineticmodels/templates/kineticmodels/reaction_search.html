@@ -50,7 +50,6 @@ var jqxhr = $.get(url,function(names) { $('#reaction_names').html(names);})
 Use this form to search for a reaction in the kinetic models database.
 </p>
 <form action="{% url 'reaction search' %}" method="GET">
-  
   {{ form.as_p }}
 <p><input type="submit" value="Submit" id="submit"/></p>
 </form>
@@ -81,39 +80,13 @@ Use this form to search for a reaction in the kinetic models database.
         <td><a href="{% url 'reaction view' reaction_id=reaction.id%}">View</a></td>
         <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
     </tr>
+{% empty %}
+    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 
 </table>
-{% for p in page_obg.paginator.page_range %}
-    <a href="?{{queries.urlencode}}&amp;page={{p}}"{% ifequal p page %} class="selected"{% endifequal %}>{{p}}</a>
-{% empty %}
-    <a href="?{{queries.urlencode}}&amp;page=1" class="selected">1</a>
-{% endfor %}
 
-<br/>
 
-    <footer class="footer-basic-centered">
-        <div class="pagination">
-            <ul>
-                {% if page_obj.has_previous %}
-                    <li><a href="?{{queries.urlencode}}&amp;page={{ page_obj.previous_page_number }}">previous</a></li>
-                {% else %}
-                    <li class="disabled">previous</li>
-                {% endif %}
-                {% for page in page_obj.paginator.page_range  %}
-                    {% if page == summaries.number %}
-                        <li><a class="active" href="?{{queries.urlencode}}&amp;page={{ page }}" >{{ page }}</a></li>
-                    {% else %}
-                        <li><a href="?{{queries.urlencode}}&amp;page={{ page }}" >{{ page }}</a></li>
-                    {% endif %}
-                {% endfor %}
-                {% if page_obj.has_next %}
-                    <li><a href="?{{queries.urlencode}}&amp;page={{ page_obj.next_page_number }}">next</a></li>
-                {% else %}
-                    <li class="disabled">next</li>
-                {% endif %}
-            </ul>
-        </div>
-    </footer>
+{% include 'kineticmodels/navigation_footer.html' %}
 
 {% endblock %}
