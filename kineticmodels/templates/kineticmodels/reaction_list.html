@@ -22,7 +22,7 @@
         <th>is_reversible</th>
         <th></th>
     </tr>
-{% for reaction in reaction_list %}
+{% for reaction in object_list %}
 <!-- NRC
     Table properties must be edited to include all relevant reaction fields(Done)
     Am not currently including a single reaction view
@@ -37,27 +37,10 @@
         <td><a href="{% url 'reaction editor' reaction_id=reaction.id%}">Edit</a></td>
     </tr>
 {% endfor %}
+
 </table>
-<br/>
 
-    <footer class="footer-basic-centered">
 
-      <div class="pagination">
-          <span class="step-links">
-              {% if reaction_list.has_previous %}
-                  <a href="?page={{ reaction_list.previous_page_number }}">previous</a>
-              {% endif %}
-
-              <span class="current">
-                  Page {{ reaction_list.number }} of {{ reaction_list.paginator.num_pages }}.
-              </span>
-
-              {% if reaction_list.has_next %}
-                  <a href="?page={{ reaction_list.next_page_number }}">next</a>
-              {% endif %}
-          </span>
-      </div>
-    </footer>
-
+{% include 'kineticmodels/navigation_footer.html' %}
 
 {% endblock %}
