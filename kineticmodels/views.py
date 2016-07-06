@@ -4,7 +4,7 @@ from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
-from django.views.generic.list import ListView
+from django.views.generic import ListView, DetailView, UpdateView, View 
 
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
@@ -17,35 +17,29 @@ def index(request):
 #     template=loader.get_template('kineticmodels/index.html')
     return render(request, 'kineticmodels/index.html')
 
-def bibliography(request, sourceList):
-    """
-    The listing of all the sources in the database
-    """
-    sources = sourceList
 
-    paginator = Paginator(sources, ITEMSPERPAGE)
+class SourceListView(ListView):
+    model = Source
+    template_name = 'kineticmodels/source_list.html'
+    paginate_by = ITEMSPERPAGE
 
-    page = request.GET.get('page')
-    try:
-        sourcesOnAPage = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
-        sourcesOnAPage = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range (e.g. 9999), deliver last page of results.
-        sourcesOnAPage = paginator.page(paginator.num_pages)
+    def get_queryset(self):
+        return Source.objects.all()
 
-    variables = {'sources': sourcesOnAPage}
-    return render(request, 'kineticmodels/source_list.html', variables)
+    def get_context_data(self, **kwargs):
+        context = super(SourceListView, self).get_context_data(**kwargs)
+        return context
 
 
-def source_view(request, source_id=0):
-    """
-    The listing of a specific source in the database
-    """
-    source = get_object_or_404(Source, id=source_id)
-    variables = {'source': source,}
-    return render(request, 'kineticmodels/source_view.html', variables)
+class SourceView(View):
+    model = Source
+    template_name = 'kineticmodels/source_view.html'
+    def get(self, request, source_id=0):
+        source = get_object_or_404(Source, id=source_id)
+        variables = {'source': source,}
+        return render(request, self.template_name, variables)
+
+
 
 """ See source_editor.html"""
 def source_editor(request, source_id=0):
@@ -67,7 +61,7 @@ def source_editor(request, source_id=0):
                  'form': form, }
     return render(request,'kineticmodels/source_editor.html', variables)
 
-class SourceSearchView(ListView):
+class SourceSearchView(DetailView):
     model = Source
     form_class = SourceSearchForm
     template_name = 'kineticmodels/source_search.html'
@@ -106,39 +100,6 @@ class SourceSearchView(ListView):
         return context
 
 
-def source_search(request):
-    """
-    Method for searching through the source database (bibliographies)
-    """
-    filteredSources = Species.objects.none()
-
-    if request.method == 'POST':
-        form = SourceSearchForm(request.POST)
-        if form.is_valid(): #don't know if needed
-            author = form.cleaned_data['author']
-            publication_year = form.cleaned_data['publication_year']
-            source_title = form.cleaned_data['source_title']
-            journal_name = form.cleaned_data['journal_name']
-            journal_volume_number = form.cleaned_data['journal_volume_number']
-            page_numbers = form.cleaned_data['page_numbers']
-            doi = form.cleaned_data['doi']
-
-            filteredSources = sourceSearchHelper(Source.objects.all(), Author.objects.all(), author)
-            filteredSources = searchHelper(filteredSources, 
-                                [publication_year,source_title,source_title,journal_name,
-                                journal_volume_number,page_numbers,doi], 
-                                ['publication_year','source_title','source_title','journal_name',
-                                'journal_volume_number','page_numbers','doi'])
-            
-            return bibliography(request, filteredSources)
-
-    else:
-        form = SourceSearchForm()
-
-    #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
-    variables = {'filteredSources' : filteredSources, 'form' : form}
-    return render(request, 'kineticmodels/source_search.html', variables)
-
 
 def sourceSearchHelper(source_list, author_list, authorName):
     """
@@ -165,43 +126,38 @@ def sourceSearchHelper(source_list, author_list, authorName):
 
     return source_list
 
-def species_list(request, speciesList):
-    """
-    The listing of all species currently in the database
+class SpeciesListView(ListView):
+    model = Species
+    template_name = 'kineticmodels/species_list.html'
+    paginate_by = ITEMSPERPAGE
 
-    See species_list.html
-    """
+    def get_queryset(self):
+        return Species.objects.all()
 
-    paginator = Paginator(speciesList, ITEMSPERPAGE)
+    def get_context_data(self, **kwargs):
+        context = super(SpeciesListView, self).get_context_data(**kwargs)
+        return context
 
-    page = request.GET.get('page')
-    try:
-        speciesOnAPage = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
-        speciesOnAPage = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range (e.g. 9999), deliver last page of results.
-        speciesOnAPage = paginator.page(paginator.num_pages)
- 
-    variables = {'species_list': speciesOnAPage,}
-    return render(request, 'kineticmodels/species_list.html', variables)
+class SpeciesView(View):
+    model = Species
+    template_name = 'kineticmodels/species_view.html'
+    def get(self, request, species_id=0):
+        from rmgweb.main.tools import getStructureInfo
+        species = get_object_or_404(Species, id=species_id)
+        variables = {'species': species}
+
+        if species.inchi:
+            molecule = rmgpy.molecule.Molecule().fromInChI(str(species.inchi))
+            variables['molecule'] = molecule
+            variables['structure_markup'] = getStructureInfo(molecule)
+
+        return render(request, self.template_name, variables)
 
 
-def species_view(request, species_id=0):
-    """
-    The listing of a specific species in the database
-    """
-    from rmgweb.main.tools import getStructureInfo
-    species = get_object_or_404(Species, id=species_id)
-    variables = {'species': species}
-
-    if species.inchi:
-        molecule = rmgpy.molecule.Molecule().fromInChI(str(species.inchi))
-        variables['molecule'] = molecule
-        variables['structure_markup'] = getStructureInfo(molecule)
-    return render(request, 'kineticmodels/species_view.html', variables)
-
+class SpeciesEditor(UpdateView):
+    model = Species
+    fields = '__all__'
+    template_name_suffix = '_editor'
 
 def species_editor(request, species_id = 0):
     """
@@ -217,7 +173,7 @@ def species_editor(request, species_id = 0):
             # Save the form
             form.save()
             # Go back to the network's main page
-            return HttpResponseRedirect(reverse(species_view, args=(species.id,)))
+            return HttpResponseRedirect(reverse('species view', args=(species.id,)))
     else:
         # Create the form
         form = EditSpeciesForm(instance=species)
@@ -253,32 +209,6 @@ class SpeciesSearchView(ListView):
         context['queries'] = queries_without_page
         print queries_without_page
         return context
-
-
-
-def species_search(request):
-    """
-    Method for searching through the species database
-    """
-    filteredSpecies = Species.objects.none()
-
-    if request.method == 'POST':
-        form = SpeciesSearchForm(request.POST)
-        if form.is_valid(): #don't know if needed
-            formula = form.cleaned_data['formula']
-            sPrimeID = form.cleaned_data['sPrimeID']
-            inchi = form.cleaned_data['inchi']
-            cas = form.cleaned_data['cas']
-            filteredSpecies = searchHelper(Species.objects.all(), 
-                                [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
-            return species_list(request, filteredSpecies)
-
-    else:
-        form = SpeciesSearchForm()
-
-    #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
-    variables = {'form' : form}
-    return render(request, 'kineticmodels/species_search.html', variables)
 
 
 
@@ -365,41 +295,27 @@ def kineticModel_editor(request, kineticModel_id = 0):
                  'form': form, }
     return render(request, 'kineticmodels/kineticModel_editor.html', variables)
 
+class ReactionListView(ListView):
+    model = Reaction
+    template_name = 'kineticmodels/reaction_list.html'
+    paginate_by = ITEMSPERPAGE
+
+    def get_queryset(self):
+        return Reaction.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super(ReactionListView, self).get_context_data(**kwargs)
+        return context
+
+class ReactionView(View):
+    model = Reaction
+    template_name = 'kineticmodels/reaction_view.html'
+    def get(self, request, reaction_id=0):
+        reaction = get_object_or_404(Reaction, id=reaction_id)
+        variables = {'reaction': reaction}
+        return render(request, self.template_name, variables)
 
 
-def reaction_list(request, reactionList):
-    """
-    The listing of all reactions currently in the database
-
-    See reactions.html
-    """
-    reaction_list = reactionList
-    
-    paginator = Paginator(reaction_list, ITEMSPERPAGE)
-
-    page = request.GET.get('page')
-    try:
-        reactionsOnAPage = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
-        reactionsOnAPage = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range (e.g. 9999), deliver last page of results.
-        reactionsOnAPage = paginator.page(paginator.num_pages)
-
-    variables = {'reaction_list': reactionsOnAPage}
-
-    return render(request, 'kineticmodels/reaction_list.html', variables) 
-
-
-""" See reaction.html"""
-def reaction_view(request, reaction_id=0):
-    """
-    The listing of a specific reaction in the database
-    """
-    reaction = get_object_or_404(Reaction, id=reaction_id)
-    variables = {'reaction': reaction}
-    return render(request, 'kineticmodels/reaction_view.html', variables)
 
 def reaction_editor(request, reaction_id = 0):
     """
@@ -492,11 +408,3 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     return reaction_list
 
 
-
-
-
-
-
-    #filteredSpecies = SpeciesSearchForm(request.GET, queryset=Species.objects.all())
-    variables = {'form' : form}
-    return render(request, 'kineticmodels/reaction_search.html', variables)
