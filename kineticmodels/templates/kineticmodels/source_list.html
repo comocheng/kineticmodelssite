@@ -15,7 +15,7 @@
         <th>Journal</th>
         <th>Year</th>
     </tr>
-{% for source in sources %}
+{% for source in object_list %}
     <tr>
         <td>{{ source.pk|slice:":8" }}<td>
         <td>{{ source.source_title }}</td>
@@ -24,30 +24,10 @@
         <td><a href="{% url 'source view' source_id=source.pk %}">View</a></td>
         <td><a href="{% url 'source editor' source_id=source.id%}">Edit</a></td>
     </tr>
-{% empty %}
-    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 </table>
-<br/>
 
-    <footer class="footer-basic-centered">
 
-      <div class="pagination">
-          <span class="step-links">
-              {% if sources.has_previous %}
-                  <a href="?page={{ sources.previous_page_number }}">previous</a>
-              {% endif %}
-
-              <span class="current">
-                  Page {{ sources.number }} of {{ sources.paginator.num_pages }}.
-              </span>
-
-              {% if sources.has_next %}
-                  <a href="?page={{ sources.next_page_number }}">next</a>
-              {% endif %}
-          </span>
-      </div>
-    </footer>
-
+{% include 'kineticmodels/navigation_footer.html' %}
 
 {% endblock %}
