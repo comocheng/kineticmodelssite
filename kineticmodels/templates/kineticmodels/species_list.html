@@ -25,7 +25,7 @@
     </tr>
 
 
-{% for species in species_list %}
+{% for species in object_list %}
 <!-- NRC
     Table properties must be edited to include all relevant species fields(Done)
     Am not currently including a single species view
@@ -39,30 +39,10 @@
         <td><a href="{% url 'species view' species_id=species.id%}">View</a></td>
         <td><a href="{% url 'species editor' species_id=species.id%}">Edit</a></td>
     </tr>
-{% empty %}
-    <li>Sorry, no results for your search criteria.</li>
 {% endfor %}
 </table>
-<br/>
-    <!-- The content of your page would go here. -->
 
-    <footer class="footer-basic-centered">
+{% include 'kineticmodels/navigation_footer.html' %}
 
-      <div class="pagination">
-          <span class="step-links">
-              {% if species_list.has_previous %}
-                  <a href="?page={{ species_list.previous_page_number }}">previous</a>
-              {% endif %}
-
-              <span class="current">
-                  Page {{ species_list.number }} of {{ species_list.paginator.num_pages }}.
-              </span>
-
-              {% if species_list.has_next %}
-                  <a href="?page={{ species_list.next_page_number }}">next</a>
-              {% endif %}
-          </span>
-      </div>
-    </footer>
 
 {% endblock %}
