@@ -14,7 +14,6 @@ import rmgpy, rmgpy.molecule
 ITEMSPERPAGE = 20
 
 def index(request):
-#     template=loader.get_template('kineticmodels/index.html')
     return render(request, 'kineticmodels/index.html')
 
 
@@ -40,26 +39,45 @@ class SourceView(View):
         return render(request, self.template_name, variables)
 
 
+class SourceEditor(View):
+    model = Source
+    template_name = 'kineticmodels/source_editor.html'
+    def get(self, request, source_id=0):
+        source = get_object_or_404(Source, id=source_id)
+        form = EditSourceForm(instance=source)
+        variables = {'source': source,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
-""" See source_editor.html"""
-def source_editor(request, source_id=0):
-    """
-    Edit the details of a source
-    """
-    source = get_object_or_404(Source, id=source_id)
-    if request.method == 'POST':
+    def post(self, request, source_id=0):
+        source = get_object_or_404(Source, id=source_id)
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
-            # Save the form
             form.save()
-            # Go back to the network's main page
             return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
-    else:
-        # Create the form
-        form = EditSourceForm(instance=source)
-    variables = {'source': source,
-                 'form': form, }
-    return render(request,'kineticmodels/source_editor.html', variables)
+        variables = {'source': source,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+# """ See source_editor.html"""
+# def source_editor(request, source_id=0):
+#     """
+#     Edit the details of a source
+#     """
+#     source = get_object_or_404(Source, id=source_id)
+#     if request.method == 'POST':
+#         form = EditSourceForm(request.POST, instance=source)
+#         if form.is_valid():
+#             # Save the form
+#             form.save()
+#             # Go back to the network's main page
+#             return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
+#     else:
+#         # Create the form
+#         form = EditSourceForm(instance=source)
+#     variables = {'source': source,
+#                  'form': form, }
+#     return render(request,'kineticmodels/source_editor.html', variables)
 
 class SourceSearchView(DetailView):
     model = Source
@@ -154,32 +172,26 @@ class SpeciesView(View):
         return render(request, self.template_name, variables)
 
 
-class SpeciesEditor(UpdateView):
+class SpeciesEditor(View):
     model = Species
-    fields = '__all__'
-    template_name_suffix = '_editor'
+    template_name = 'kineticmodels/species_editor.html'
+    def get(self, request, species_id=0):
+        species = get_object_or_404(Species, id=species_id)
+        form = EditSpeciesForm(instance=species)
+        variables = {'species': species,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
-def species_editor(request, species_id = 0):
-    """
-    Method for editing a specific species
-
-    See species_editor.html
-    """
-
-    species = get_object_or_404(Species, id=species_id)
-    if request.method == 'POST':
+    def post(self, request, species_id=0):
+        species = get_object_or_404(Species, id=species_id)
         form = EditSpeciesForm(request.POST, instance=species)
         if form.is_valid():
-            # Save the form
             form.save()
-            # Go back to the network's main page
             return HttpResponseRedirect(reverse('species view', args=(species.id,)))
-    else:
-        # Create the form
-        form = EditSpeciesForm(instance=species)
-    variables = {'species': species,
-                 'form': form, }
-    return render(request, 'kineticmodels/species_editor.html', variables)
+        variables = {'species': species,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
 
 class SpeciesSearchView(ListView):
     model = Species
@@ -317,27 +329,25 @@ class ReactionView(View):
 
 
 
-def reaction_editor(request, reaction_id = 0):
-    """
-    Method for editing a specific species
+class ReactionEditor(View):
+    model = Reaction
+    template_name = 'kineticmodels/reaction_editor.html'
+    def get(self, request, reaction_id=0):
+        reaction = get_object_or_404(Reaction, id=reaction_id)
+        form = EditReactionForm(instance=reaction)
+        variables = {'reaction': reaction,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
-    See species_editor.html
-    """
-
-    reaction = get_object_or_404(Reaction, id=reaction_id)
-    if request.method == 'POST':
+    def post(self, request, reaction_id=0):
+        reaction = get_object_or_404(Reaction, id=reaction_id)
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
-            # Save the form
             form.save()
-            # Go back to the network's main page
             return HttpResponseRedirect(reverse(reaction_view, args=(reaction.id,)))
-    else:
-        # Create the form
-        form = EditReactionForm(instance=reaction)
-    variables = {'reaction': reaction,
-                 'form': form, }
-    return render(request, 'kineticmodels/reaction_editor.html', variables)
+        variables = {'reaction': reaction,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
 
 
