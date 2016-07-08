@@ -281,31 +281,34 @@ def kineticModel_new(request):
     The listing of a specific kinetic Model in the database
     """
     kineticModel = KineticModel.objects.create()
-    return HttpResponseRedirect(reverse(kineticModel_editor, args=(kineticModel.id,)))
+    return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
 
-def kineticModel_editor(request, kineticModel_id = 0):
+class KineticModelEditor(View):
     """
-    Method for editing a specific kinetic models. 
-    The editing framework still needs work.
-
-    See species_editor.html
+    For editing KineticModel objects.
     """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticmodel_editor.html'
 
-    kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-    if request.method == 'POST':
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = EditKineticModelForm(instance=kineticModel)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = EditKineticModelForm(request.POST, request.FILES, instance=kineticModel)
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
             form.save()
             return HttpResponseRedirect(reverse(kineticModel_view, args=(kineticModel.id,)))
-    else:
-        # Create the form
-        form = EditKineticModelForm(instance=kineticModel)
-    variables = {'kineticModel': kineticModel,
-                 'form': form, }
-    return render(request, 'kineticmodels/kineticModel_editor.html', variables)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, 'kineticmodels/kineticModel_editor.html', variables)
 
 class ReactionListView(ListView):
     model = Reaction
