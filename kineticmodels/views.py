@@ -361,6 +361,20 @@ class KineticModelEditor(View):
                      'form': form, }
         return render(request, 'kineticmodels/kineticModel_editor.html', variables)
 
+
+class SourceAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = Author.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+
+        return qs
+
+
 class ReactionListView(ListView):
     model = Reaction
     template_name = 'kineticmodels/reaction_list.html'
