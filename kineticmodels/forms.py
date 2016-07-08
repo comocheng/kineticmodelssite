@@ -33,8 +33,8 @@ This module defines the Django forms used by the kineticsmodels app.
 """
 
 from django import forms
-from models import KineticModel, Source, Species, Reaction
-
+from models import KineticModel, Source, Species, Reaction, Author
+from dal import autocomplete
 ################################################################################
 
 # Form for Editing Sources
@@ -114,7 +114,19 @@ class SourceSearchForm(forms.Form):
     journal_volume_number = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
     page_numbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
     doi = forms.CharField(label = 'DOI', max_length=80, strip = True, required=False)
-    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
+#    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
+
+    author = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
+            widget=autocomplete.ModelSelect2(url='author-autocomplete') )
+
+class AuthorSearchForm(forms.ModelForm):
+
+    name = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
+            widget=autocomplete.ModelSelect2(url='test-autocomplete') )
+    class Meta:
+        model = Author
+        fields = ('__all__')
+
 
 
 
