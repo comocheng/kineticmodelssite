@@ -100,7 +100,9 @@ class SourceSearchView(ListView):
             journal_volume_number = form.cleaned_data['journal_volume_number']
             page_numbers = form.cleaned_data['page_numbers']
             doi = form.cleaned_data['doi']
-
+            print "-------------------------"
+            print "Authors are ", author
+            
             filteredSources = sourceSearchHelper(Source.objects.all(), Author.objects.all(), author)
             filteredSources = searchHelper(filteredSources, 
                                 [publication_year,source_title,source_title,journal_name,
@@ -292,39 +294,34 @@ def searchHelper(items, searchParameterData, searchParameterNames):
     return items
 
 
+class KineticModelListView(ListView):
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModel_list.html'
+    paginate_by = ITEMSPERPAGE
 
-def kineticModel_list(request):
-    """
-    The listing of all kinetic models currently in the database
+    def get_queryset(self):
+        return KineticModel.objects.all()
 
-    See models.html
-    """
-    kineticModel_list = KineticModel.objects.all()
-
-    paginator = Paginator(kineticModel_list, ITEMSPERPAGE)
-
-    page = request.GET.get('page')
-    try:
-        kineticModelsOnAPage = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
-        kineticModelsOnAPage = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range (e.g. 9999), deliver last page of results.
-        kineticModelsOnAPage = paginator.page(paginator.num_pages)
- 
-    variables = {'kineticModel_list': kineticModelsOnAPage}
-    return render(request, 'kineticmodels/kineticModel_list.html', variables) 
+    def get_context_data(self, **kwargs):
+        context = super(KineticModelListView, self).get_context_data(**kwargs)
+        return context
 
 
-""" See kineticModel.html"""
-def kineticModel_view(request, kineticModel_id=0):
-    """
-    The listing of a specific kinetic Model in the database
-    """
-    kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-    variables = {'kineticModel': kineticModel}
-    return render(request, 'kineticmodels/kineticModel_view.html', variables)
+class KineticModelView(View):
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModel_view.html'
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        variables = {'kineticModel': kineticModel}
+        return render(request, self.template_name, variables)
+
+
+class KineticModelNew(View):
+    model = KineticModel
+    def get(self, request):
+        kineticModel = KineticModel.objects.create()
+        return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
+
 
 
 def kineticModel_new(request):
