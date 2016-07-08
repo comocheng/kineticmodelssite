@@ -26,7 +26,7 @@
         <th>kinetics</th>
         <th></th>
     </tr>
-{% for kineticModel in kineticModel_list %}
+{% for kineticModel in object_list %}
 <!-- NRC
     Table properties must be edited to include all relevant kineticModel fields(Done)
     Am not currently including a single kineticModel view
@@ -42,26 +42,8 @@
     </tr>
 {% endfor %}
 </table>
-<br/>
 
-    <footer class="footer-basic-centered">
-
-      <div class="pagination">
-          <span class="step-links">
-              {% if kineticModel_list.has_previous %}
-                  <a href="?page={{ kineticModel_list.previous_page_number }}">previous</a>
-              {% endif %}
-
-              <span class="current">
-                  Page {{ kineticModel_list.number }} of {{ kineticModel_list.paginator.num_pages }}.
-              </span>
-
-              {% if kineticModel_list.has_next %}
-                  <a href="?page={{ kineticModel_list.next_page_number }}">next</a>
-              {% endif %}
-          </span>
-      </div>
-    </footer>
+{% include 'kineticmodels/navigation_footer.html' %}
 
 
 {% endblock %}
