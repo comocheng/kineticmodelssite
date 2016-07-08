@@ -2,13 +2,17 @@ from django.conf.urls import include, url
 from . import views
 from models import Species, Source, Reaction
 
+
 # ***If attemting to change to Class structure, must add as_view() to patterns***
 urlpatterns=[
     url(r'^$', views.index, name='kineticmodels site home'),
     url(r'^bibliography/$', views.SourceListView.as_view(), name='bibliography'),
     url(r'^source/(?P<source_id>[0-9]+)/$', views.SourceView.as_view(), name='source view'),
     url(r'^source/(?P<source_id>[0-9]+)/edit/$', views.SourceEditor.as_view(), name='source editor'),
-    url(r'^source/search/$', views.SourceSearchView.as_view(), name='source search'),  
+    url(r'^source/search/$', views.SourceSearchView.as_view(), name='source search'),
+    url(r'^source/author-autocomplete/$', views.AuthorAutocomplete.as_view(), name='author-autocomplete'),
+    url(r'^source/test-autocomplete/$', views.TestAutocomplete.as_view(), name='test-autocomplete'),            
+    url(r'^source/test-search/$', views.TestSearchView.as_view(), name='test-search'),            
     url(r'^species/$', views.SpeciesListView.as_view(), name='species list'),
     url(r'^species/(?P<species_id>[0-9]+)/$', views.SpeciesView.as_view(), name='species view'),
     url(r'^species/(?P<species_id>[0-9]+)/edit/$', views.SpeciesEditor.as_view(), name='species editor'),
