@@ -114,7 +114,6 @@ class SourceSearchView(ListView):
         if queries_without_page.has_key('page'):
             del queries_without_page['page']
         context['queries'] = queries_without_page
-        print queries_without_page
         return context
 
 
