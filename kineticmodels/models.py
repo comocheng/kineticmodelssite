@@ -586,12 +586,17 @@ class KineticModel(models.Model):
     class Meta:
         verbose_name_plural = "Kinetic Models"
 
-    def getPath(self):
+    def getPath(self, absolute=False):
         """
-        Return the absolute path of the directory that the object uses
+        Return the path of the directory that the object uses
         to store files.
+        If `absolute=True` then it's absolute, otherwise it's relative
+        to settings.MEDIA_ROOT
         """
-        return os.path.join(settings.MEDIA_ROOT, 'kinetic_models', str(self.id))
+        return os.path.join(settings.MEDIA_ROOT if absolute else '',
+                            'kinetic_models',
+                            str(self.id)
+                            )
 
     def createDir(self):
         """
@@ -599,7 +604,7 @@ class KineticModel(models.Model):
         the Network uses for storing files.
         """
         try:
-            os.makedirs(os.path.join(self.getPath(),'chemkin'))
+            os.makedirs(os.path.join(self.getPath(absolute=True), 'chemkin'))
         except OSError:
             # Fail silently on any OS errors
             pass
@@ -610,7 +615,7 @@ class KineticModel(models.Model):
         """
         import shutil
         try:
-            shutil.rmtree(self.getPath())
+            shutil.rmtree(self.getPath(absolute=True))
         except OSError:
             pass
 
