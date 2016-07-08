@@ -3,7 +3,7 @@ from django.db import models
 from rmgpy.thermo import NASA, NASAPolynomial
 import os
 
-import rmgweb.settings as settings
+from django.conf import settings
 
 # Create your models here.
 """
