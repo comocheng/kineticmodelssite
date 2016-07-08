@@ -2,6 +2,7 @@ from django.db import models
 # Added to support RMG integration
 from rmgpy.thermo import NASA, NASAPolynomial
 import os
+import uuid
 
 from django.conf import settings
 
@@ -566,7 +567,7 @@ class KineticModel(models.Model):
 
     source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    model_name = models.CharField(default='', max_length=200, unique=True)
+    model_name = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
     thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
