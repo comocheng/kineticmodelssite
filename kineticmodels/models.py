@@ -564,7 +564,7 @@ class KineticModel(models.Model):
     additional info
     """
 
-    source = models.ForeignKey(Source)
+    source = models.ForeignKey(Source, null=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
