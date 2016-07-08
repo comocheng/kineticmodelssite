@@ -6,10 +6,14 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.views.generic import ListView, DetailView, UpdateView, View 
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, AuthorSearchForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
+
+from dal import autocomplete
+
+
 
 ITEMSPERPAGE = 20
 
@@ -142,6 +146,54 @@ def sourceSearchHelper(source_list, author_list, authorName):
  
 
     return source_list
+
+
+class AuthorAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = Author.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+
+        return qs
+
+class TestAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Don't forget to filter out results depending on the visitor !
+        # if not self.request.user.is_authenticated():
+        #     return Author.objects.none()
+        qs = Author.objects.all()
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+
+        return qs
+
+class TestSearchView(ListView):
+    model = Author
+    form_class = AuthorSearchForm
+    template_name = 'kineticmodels/test_autocomplete.html'
+    paginate_by = ITEMSPERPAGE
+
+    
+    def get_queryset(self):
+        form = AuthorSearchForm(self.request.GET)
+        if form.is_valid(): 
+            return Author.objects.all()
+        else:
+            return Author.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super(TestSearchView, self).get_context_data(**kwargs)
+        context['form'] = AuthorSearchForm(self.request.GET)
+        queries_without_page = self.request.GET.copy()
+        if queries_without_page.has_key('page'):
+            del queries_without_page['page']
+        context['queries'] = queries_without_page
+        return context
+
 
 class SpeciesListView(ListView):
     model = Species
