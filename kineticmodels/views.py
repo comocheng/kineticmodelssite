@@ -54,7 +54,7 @@ class SourceEditor(View):
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
+            return HttpResponseRedirect(reverse('source view', args=(source.id,)))
         variables = {'source': source,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -344,7 +344,7 @@ class ReactionEditor(View):
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse(reaction_view, args=(reaction.id,)))
+            return HttpResponseRedirect(reverse('reaction view', args=(reaction.id,)))
         variables = {'reaction': reaction,
                      'form': form, }
         return render(request, self.template_name, variables)
