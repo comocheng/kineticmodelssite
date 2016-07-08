@@ -564,13 +564,13 @@ class KineticModel(models.Model):
     additional info
     """
 
-    source = models.ForeignKey(Source, null=True)
+    source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
     model_name = models.CharField(default='', max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
     thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
-    additional_info = models.CharField(max_length=1000)
+    additional_info = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
     #     species=reaction something
     chemkin_reactions_file = models.FileField(blank=True,
