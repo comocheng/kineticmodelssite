@@ -79,7 +79,7 @@ class SourceEditor(View):
 #                  'form': form, }
 #     return render(request,'kineticmodels/source_editor.html', variables)
 
-class SourceSearchView(DetailView):
+class SourceSearchView(ListView):
     model = Source
     form_class = SourceSearchForm
     template_name = 'kineticmodels/source_search.html'
