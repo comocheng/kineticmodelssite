@@ -78,4 +78,10 @@ Use this form to search for sources in the kinetic models database.
 
 {% include 'kineticmodels/navigation_footer.html' %}
 
+{% block footer %}
+<script type="text/javascript" src="/static/collected/admin/js/vendor/jquery/jquery.js"></script>
+
+{{ form.media }}
+{% endblock %}
+
 {% endblock %}
