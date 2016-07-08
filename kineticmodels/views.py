@@ -54,7 +54,7 @@ class SourceEditor(View):
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
+            return HttpResponseRedirect(reverse('source view', args=(source.id,)))
         variables = {'source': source,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -71,7 +71,7 @@ class SourceEditor(View):
 #             # Save the form
 #             form.save()
 #             # Go back to the network's main page
-#             return HttpResponseRedirect(reverse(source_view, args=(source.id,)))
+#             return HttpResponseRedirect(reverse('source view', args=(source.id,)))
 #     else:
 #         # Create the form
 #         form = EditSourceForm(instance=source)
@@ -305,7 +305,7 @@ class KineticModelEditor(View):
             kineticModel.createDir()
             # Save the form
             form.save()
-            return HttpResponseRedirect(reverse(kineticModel_view, args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, 'kineticmodels/kineticModel_editor.html', variables)
@@ -347,7 +347,7 @@ class ReactionEditor(View):
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse(reaction_view, args=(reaction.id,)))
+            return HttpResponseRedirect(reverse('reaction view', args=(reaction.id,)))
         variables = {'reaction': reaction,
                      'form': form, }
         return render(request, self.template_name, variables)
