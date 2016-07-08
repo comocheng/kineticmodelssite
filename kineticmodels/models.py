@@ -2,8 +2,9 @@ from django.db import models
 # Added to support RMG integration
 from rmgpy.thermo import NASA, NASAPolynomial
 import os
+import uuid
 
-import rmgweb.settings as settings
+from django.conf import settings
 
 # Create your models here.
 """
@@ -564,13 +565,13 @@ class KineticModel(models.Model):
     additional info
     """
 
-    source = models.ForeignKey(Source)
+    source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    model_name = models.CharField(default='', max_length=200, unique=True)
+    model_name = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
     thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
-    additional_info = models.CharField(max_length=1000)
+    additional_info = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
     #     species=reaction something
     chemkin_reactions_file = models.FileField(blank=True,
@@ -586,12 +587,17 @@ class KineticModel(models.Model):
     class Meta:
         verbose_name_plural = "Kinetic Models"
 
-    def getPath(self):
+    def getPath(self, absolute=False):
         """
-        Return the absolute path of the directory that the object uses
+        Return the path of the directory that the object uses
         to store files.
+        If `absolute=True` then it's absolute, otherwise it's relative
+        to settings.MEDIA_ROOT
         """
-        return os.path.join(settings.MEDIA_ROOT, 'kinetic_models', str(self.id))
+        return os.path.join(settings.MEDIA_ROOT if absolute else '',
+                            'kinetic_models',
+                            str(self.id)
+                            )
 
     def createDir(self):
         """
@@ -599,7 +605,7 @@ class KineticModel(models.Model):
         the Network uses for storing files.
         """
         try:
-            os.makedirs(os.path.join(self.getPath(),'chemkin'))
+            os.makedirs(os.path.join(self.getPath(absolute=True), 'chemkin'))
         except OSError:
             # Fail silently on any OS errors
             pass
@@ -610,7 +616,7 @@ class KineticModel(models.Model):
         """
         import shutil
         try:
-            shutil.rmtree(self.getPath())
+            shutil.rmtree(self.getPath(absolute=True))
         except OSError:
             pass
 
