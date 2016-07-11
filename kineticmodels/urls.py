@@ -10,9 +10,11 @@ urlpatterns=[
     url(r'^source/(?P<source_id>[0-9]+)/$', views.SourceView.as_view(), name='source view'),
     url(r'^source/(?P<source_id>[0-9]+)/edit/$', views.SourceEditor.as_view(), name='source editor'),
     url(r'^source/search/$', views.SourceSearchView.as_view(), name='source search'),
+
     url(r'^source/author-autocomplete/$', views.AuthorAutocomplete.as_view(), name='author-autocomplete'),
-    url(r'^source/test-autocomplete/$', views.TestAutocomplete.as_view(), name='test-autocomplete'),            
-    url(r'^source/test-search/$', views.TestSearchView.as_view(), name='test-search'),            
+    url(r'^models/source-autocomplete/$', views.SourceAutocomplete.as_view(), name='source-autocomplete'),
+    url(r'^reactions/species-autocomplete/$', views.SpeciesAutocomplete.as_view(), name='species-autocomplete'),
+
     url(r'^species/$', views.SpeciesListView.as_view(), name='species list'),
     url(r'^species/(?P<species_id>[0-9]+)/$', views.SpeciesView.as_view(), name='species view'),
     url(r'^species/(?P<species_id>[0-9]+)/edit/$', views.SpeciesEditor.as_view(), name='species editor'),
