@@ -106,30 +106,31 @@ class SpeciesSearchForm(forms.Form):
 
 
 #Form for searching Sources
-class SourceSearchForm(forms.Form):
-    """
-    A django form for searching through a Sources
-    """
+# class SourceSearchForm(forms.Form):
+#     """
+#     A django form for searching through a Sources
+#     """
 
-    bPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
-    publication_year = forms.CharField(label = 'Year of Publication', max_length=4, strip = True, required=False)
-    source_title = forms.CharField(label = 'Source Title', max_length=300, strip = True, required=False)
-    journal_name = forms.CharField(label = 'Journal Name', max_length=300, strip = True, required=False)
-    journal_volume_number = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
-    page_numbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
-    doi = forms.CharField(label = 'DOI', max_length=80, strip = True, required=False)
-#    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
+#     bPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
+#     publication_year = forms.CharField(label = 'Year of Publication', max_length=4, strip = True, required=False)
+#     source_title = forms.CharField(label = 'Source Title', max_length=300, strip = True, required=False)
+#     journal_name = forms.CharField(label = 'Journal Name', max_length=300, strip = True, required=False)
+#     journal_volume_number = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
+#     page_numbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
+#     doi = forms.CharField(label = 'DOI', max_length=80, strip = True, required=False)
+# #    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
 
-    author = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
-            widget=autocomplete.ModelSelect2(url='author-autocomplete') )
+#     author = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
+#             widget=autocomplete.ModelSelect2Multiple(url='author-autocomplete') )
 
-class AuthorSearchForm(forms.ModelForm):
+class SourceSearchForm(forms.ModelForm):
 
-    name = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
-            widget=autocomplete.ModelSelect2(url='test-autocomplete') )
     class Meta:
-        model = Author
-        fields = ('__all__')
+        model = Source
+        fields = ('bPrimeID', 'publication_year', 'source_title', 'journal_name', 'journal_volume_number', 'page_numbers', 'doi', 'authors')
+        widgets =  {
+            'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
+        }
 
 
 
