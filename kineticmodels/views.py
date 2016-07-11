@@ -448,3 +448,16 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     return reaction_list
 
 
+class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = Species.objects.all()
+
+        if self.q:
+            qs = qs.filter(formula__istartswith=self.q)
+
+        return qs
+
+
