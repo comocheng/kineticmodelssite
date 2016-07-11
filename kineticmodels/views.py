@@ -93,15 +93,13 @@ class SourceSearchView(ListView):
     def get_queryset(self):
         form = SourceSearchForm(self.request.GET)
         if form.is_valid(): 
-            author = form.cleaned_data['author']
+            author = form.cleaned_data['authors']
             publication_year = form.cleaned_data['publication_year']
             source_title = form.cleaned_data['source_title']
             journal_name = form.cleaned_data['journal_name']
             journal_volume_number = form.cleaned_data['journal_volume_number']
             page_numbers = form.cleaned_data['page_numbers']
             doi = form.cleaned_data['doi']
-            print "-------------------------"
-            print "Authors are ", author
             
             filteredSources = sourceSearchHelper(Source.objects.all(), Author.objects.all(), author)
             filteredSources = searchHelper(filteredSources, 
@@ -162,39 +160,6 @@ class AuthorAutocomplete(autocomplete.Select2QuerySetView):
 
         return qs
 
-class TestAutocomplete(autocomplete.Select2QuerySetView):
-    def get_queryset(self):
-        # Don't forget to filter out results depending on the visitor !
-        # if not self.request.user.is_authenticated():
-        #     return Author.objects.none()
-        qs = Author.objects.all()
-        if self.q:
-            qs = qs.filter(name__istartswith=self.q)
-
-        return qs
-
-class TestSearchView(ListView):
-    model = Author
-    form_class = AuthorSearchForm
-    template_name = 'kineticmodels/test_autocomplete.html'
-    paginate_by = ITEMSPERPAGE
-
-    
-    def get_queryset(self):
-        form = AuthorSearchForm(self.request.GET)
-        if form.is_valid(): 
-            return Author.objects.all()
-        else:
-            return Author.objects.none()
-
-    def get_context_data(self, **kwargs):
-        context = super(TestSearchView, self).get_context_data(**kwargs)
-        context['form'] = AuthorSearchForm(self.request.GET)
-        queries_without_page = self.request.GET.copy()
-        if queries_without_page.has_key('page'):
-            del queries_without_page['page']
-        context['queries'] = queries_without_page
-        return context
 
 
 class SpeciesListView(ListView):
