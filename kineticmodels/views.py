@@ -122,7 +122,7 @@ class SourceSearchView(ListView):
 
 
 
-def sourceSearchHelper(source_list, author_list, authorName):
+def sourceSearchHelper(source_list, author_list, authorNameList):
     """
     helper for source search. The function takes in a formula to filter through a list of
     species and whether the species is a reactant or not. It uses this data to output a list 
@@ -132,20 +132,16 @@ def sourceSearchHelper(source_list, author_list, authorName):
 
     sourceIDs = []
 
-    if authorName != '':
+    filteredAuthorship = Authorship.objects.all()
+    filteredSources = source_list
+
+    for authorName in authorNameList:
+        print authorName
         filteredAuthors = author_list.filter(name__exact=authorName)
         filteredAuthorship = Authorship.objects.filter(author_id__in=filteredAuthors.values_list('pk'))
-        filteredSources = source_list.filter(pk__in=filteredAuthorship.values_list('source_id'))
-        # for author in filteredAuthors:
-        #     tempAuthorship = Authorship.objects.filter(author_id__exact=author.pk)
-        #     for authorship in tempAuthorship:
-        #         sourceIDs.append(stoich.source_id)
-    
-        # filteredSources = reaction_list.filter(pk__in=sourceIDs)    
-        return filteredSources
- 
-
-    return source_list
+        filteredSources = filteredSources.filter(pk__in=filteredAuthorship.values_list('source_id'))
+  
+    return filteredSources
 
 
 class AuthorAutocomplete(autocomplete.Select2QuerySetView):
@@ -282,8 +278,8 @@ class KineticModelView(View):
 
 
 class KineticModelNew(View):
-    model = KineticModel
-    def get(self, request):
+ 
+    def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
         return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
@@ -329,10 +325,10 @@ class SourceAutocomplete(autocomplete.Select2QuerySetView):
     #     # Don't forget to filter out results depending on the visitor !
     #     if not self.request.user.is_authenticated():
     #         return Country.objects.none()
-        qs = Author.objects.all()
+        qs = Source.objects.all()
 
         if self.q:
-            qs = qs.filter(name__istartswith=self.q)
+            qs = qs.filter(text__istartswith=self.q)
 
         return qs
 
@@ -391,14 +387,19 @@ class ReactionSearchView(ListView):
         form = ReactionSearchForm(self.request.GET)
         if form.is_valid(): 
             reactant1Formula = form.cleaned_data['reactant1Formula']
+            print "reactant 1", reactant1Formula
             filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
             reactant2Formula = form.cleaned_data['reactant2Formula']
             filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
+            # reactants = form.cleaned_data['reactants']
+            # if self.request.GET.copy():
+            #     reactants = self.request.GET.copy().reactants
+
+
             product1Formula = form.cleaned_data['product1Formula']
             filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product1Formula, False)
             product2Formula = form.cleaned_data['product2Formula']
             filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product2Formula, False)
-
 
             rPrimeID = form.cleaned_data['rPrimeID']
             filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
