@@ -62,7 +62,11 @@ class EditKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        exclude = ('kinetics', 'thermo', 'transport')
+    #    exclude = ('kinetics', 'thermo', 'transport')
+        fields = ('source', 'mPrimeID', 'model_name', 'additional_info', 'chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+        widgets =  {
+            'source': autocomplete.ModelSelect2(url='source-autocomplete')
+        }
 
 class UploadKineticModelForm(forms.ModelForm):
     """
