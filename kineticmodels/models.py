@@ -137,10 +137,10 @@ class Source(models.Model):
     bPrimeID = models.CharField('Prime ID', blank=True,
                                    max_length=9,
                                    default='')
-    publication_year = models.CharField('Year of Publication',
+    publication_year = models.CharField('Year of Publication', blank=True,
                                         default='',
                                         max_length=4)
-    source_title = models.CharField(default='', max_length=300)
+    source_title = models.CharField(default='', blank=True, max_length=300)
     journal_name = models.CharField(blank=True, max_length=300)
     journal_volume_number = models.CharField('Journal Volume Number',
                                              blank=True,
@@ -148,7 +148,7 @@ class Source(models.Model):
     page_numbers = models.CharField(blank=True,
                                     help_text='[page #]-[page #]',
                                     max_length=100)
-    authors = models.ManyToManyField(Author, through='Authorship')
+    authors = models.ManyToManyField(Author, blank=True, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
     def __unicode__(self):
