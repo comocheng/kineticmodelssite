@@ -14,6 +14,7 @@ urlpatterns=[
     url(r'^source/author-autocomplete/$', views.AuthorAutocomplete.as_view(), name='author-autocomplete'),
     url(r'^models/source-autocomplete/$', views.SourceAutocomplete.as_view(), name='source-autocomplete'),
     url(r'^reactions/species-autocomplete/$', views.SpeciesAutocomplete.as_view(), name='species-autocomplete'),
+    url(r'^reactions/speciesName-autocomplete/$', views.SpeciesNameAutocomplete.as_view(), name='speciesName-autocomplete'),
 
     url(r'^species/$', views.SpeciesListView.as_view(), name='species list'),
     url(r'^species/(?P<species_id>[0-9]+)/$', views.SpeciesView.as_view(), name='species view'),
