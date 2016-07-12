@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.views.generic import ListView, DetailView, UpdateView, View 
 
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
-from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
+from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author, SpeciesName
 import math
 import rmgpy, rmgpy.molecule
 
@@ -455,6 +455,18 @@ class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
     #     if not self.request.user.is_authenticated():
     #         return Country.objects.none()
         qs = Species.objects.all()
+
+        if self.q:
+            qs = qs.filter(formula__istartswith=self.q)
+
+        return qs
+
+class SpeciesNameAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = SpeciesName.objects.all()
 
         if self.q:
             qs = qs.filter(formula__istartswith=self.q)
