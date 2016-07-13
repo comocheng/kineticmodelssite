@@ -143,24 +143,24 @@ class ReactionSearchForm(forms.Form):
 
     rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9, strip = True, required=False)
 
-    reactant1Formula = forms.ModelChoiceField(
-        queryset=Species.objects.all(), required=False,
-        widget=autocomplete.ModelSelect2(url='species-autocomplete')
-    )
-    reactant2Formula = forms.ModelChoiceField(
-        queryset=Species.objects.all(), required=False,
-        widget=autocomplete.ModelSelect2(url='species-autocomplete')
-    )
-    # reactants = forms.ModelChoiceField(
+    # reactant1Formula = forms.ModelChoiceField(
     #     queryset=Species.objects.all(), required=False,
     #     widget=autocomplete.ModelSelect2(url='species-autocomplete')
     # )
+    # reactant2Formula = forms.ModelChoiceField(
+    #     queryset=Species.objects.all(), required=False,
+    #     widget=autocomplete.ModelSelect2(url='species-autocomplete')
+    # )
+    reactants = forms.ModelMultipleChoiceField(label="Reactant(s)",
+        queryset=Species.objects.all(), required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='species-autocomplete')
+    )
    
 
     CHOICES = (('unknown','Don\'t Care'), ('yes', 'Yes'),('no', 'No'))
     is_reversible = forms.ChoiceField(label="Is Reversible?", required=False,widget=forms.Select,choices=CHOICES)
 
-    product1Formula = forms.CharField(label="Product #1 Formula", max_length=50, strip = True, required=False)
-    product2Formula = forms.CharField(label="Product #2 Formula", max_length=50, strip = True, required=False)
-
-
+    products = forms.ModelMultipleChoiceField(label="Product(s)",
+        queryset=Species.objects.all(), required=False,
+        widget=autocomplete.ModelSelect2Multiple(url='species-autocomplete')
+    )
