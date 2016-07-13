@@ -385,21 +385,26 @@ class ReactionSearchView(ListView):
 
     def get_queryset(self):
         form = ReactionSearchForm(self.request.GET)
-        if form.is_valid(): 
-            reactant1Formula = form.cleaned_data['reactant1Formula']
-            print "reactant 1", reactant1Formula
-            filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
-            reactant2Formula = form.cleaned_data['reactant2Formula']
-            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
-            # reactants = form.cleaned_data['reactants']
-            # if self.request.GET.copy():
-            #     reactants = self.request.GET.copy().reactants
+        if form.is_valid():
+            filteredReactions = Reaction.objects.all() 
+            # reactant1Formula = form.cleaned_data['reactant1Formula']
+            # print "reactant 1", reactant1Formula
+            # filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
+            # reactant2Formula = form.cleaned_data['reactant2Formula']
+            # filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
+   #         reactants = form.cleaned_data['reactants']
+
+            if self.request.GET.has_key('reactants') :
+                reactants = form.cleaned_data['reactants']
+                for reactant in reactants:
+                    filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant.formula, True)
 
 
-            product1Formula = form.cleaned_data['product1Formula']
-            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product1Formula, False)
-            product2Formula = form.cleaned_data['product2Formula']
-            filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product2Formula, False)
+            if self.request.GET.has_key('products') :
+                products = form.cleaned_data['products']
+                for product in products:
+                    filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product.formula, False)
+
 
             rPrimeID = form.cleaned_data['rPrimeID']
             filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
