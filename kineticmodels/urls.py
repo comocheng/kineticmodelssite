@@ -19,10 +19,13 @@ urlpatterns=[
     url(r'^species/(?P<species_id>[0-9]+)/$', views.SpeciesView.as_view(), name='species view'),
     url(r'^species/(?P<species_id>[0-9]+)/edit/$', views.SpeciesEditor.as_view(), name='species editor'),
     url(r'^species/search/$', views.SpeciesSearchView.as_view(), name='species search'),  
+    
     url(r'^models/$', views.KineticModelListView.as_view(), name='kineticmodel list'),
     url(r'^models/new$', views.KineticModelNew.as_view(), name='kineticmodel new'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/$', views.KineticModelView.as_view(), name='kineticmodel view'),
-    url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.KineticModelEditor.as_view(), name='kineticmodel editor'),
+    url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.KineticModelMetaDataEditor.as_view(), name='kineticmodel editor'),
+    url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/file/$', views.KineticModelFileEditor.as_view(), name='kineticmodel file editor'),
+    
     url(r'^reactions/$', views.ReactionListView.as_view(), name='reaction list'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/$', views.ReactionView.as_view(), name='reaction view'),
     url(r'^reactions/(?P<reaction_id>[0-9]+)/edit/$', views.ReactionEditor.as_view(), name='reaction editor'),       
