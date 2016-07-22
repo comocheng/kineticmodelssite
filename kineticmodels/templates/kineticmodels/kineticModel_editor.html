@@ -16,7 +16,8 @@
 <form method="POST" enctype="multipart/form-data">
   {% csrf_token %}
   {{ form.as_p }}
-<p><input type="submit" value="Save" id="submit"/></p>
+<p><input type="submit" value="Save" name="submit"/></p>
+<p><input type="submit" value="Next" name="next"/></p>
 </form>
 
 {% endblock %}
