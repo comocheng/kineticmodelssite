@@ -6,7 +6,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.views.generic import ListView, DetailView, UpdateView, View 
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelMetaDataForm, EditKineticModelFileForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
@@ -293,31 +293,65 @@ def kineticModel_new(request):
     return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
 
-class KineticModelEditor(View):
+class KineticModelMetaDataEditor(View):
     """
-    For editing KineticModel objects.
+    For editing the meta data for KineticModel objects.
     """
     model = KineticModel
     template_name = 'kineticmodels/kineticmodel_editor.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = EditKineticModelForm(instance=kineticModel)
+        form = EditKineticModelMetaDataForm(instance=kineticModel)
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)
 
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = EditKineticModelForm(request.POST, request.FILES, instance=kineticModel)
+        form = EditKineticModelMetaDataForm(request.POST, instance=kineticModel)
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
             form.save()
+            if 'next' in request.POST:
+                return HttpResponseRedirect(reverse('kineticmodel file editor', args=(kineticModel.id,)))
+                
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
-        return render(request, 'kineticmodels/kineticModel_editor.html', variables)
+        return render(request, self.template_name, variables)
+
+
+class KineticModelFileEditor(View):
+    """
+    For editing the files for KineticModel objects.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticmodel_editor.html'
+
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = EditKineticModelFileForm(instance=kineticModel)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = EditKineticModelFileForm(request.POST, request.FILES, instance=kineticModel)
+        if form.is_valid():
+            kineticModel.createDir()
+            # Save the form
+            form.save()                
+            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+
+
+
 
 
 class SourceAutocomplete(autocomplete.Select2QuerySetView):
@@ -328,7 +362,7 @@ class SourceAutocomplete(autocomplete.Select2QuerySetView):
         qs = Source.objects.all()
 
         if self.q:
-            qs = qs.filter(text__istartswith=self.q)
+            qs = qs.filter(id__istartswith=self.q)
 
         return qs
 
