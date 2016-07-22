@@ -56,17 +56,37 @@ class EditSpeciesForm(forms.ModelForm):
         exclude = ()
 
 # For for editing a Model
-class EditKineticModelForm(forms.ModelForm):
+class EditKineticModelMetaDataForm(forms.ModelForm):
     """
     Django Form template for editing a Model
     """
     class Meta:
         model = KineticModel
     #    exclude = ('kinetics', 'thermo', 'transport')
-        fields = ('source', 'mPrimeID', 'model_name', 'additional_info', 'chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+        fields = ('source', 'mPrimeID', 'model_name', 'additional_info')
         widgets =  {
             'source': autocomplete.ModelSelect2(url='source-autocomplete')
         }
+ 
+    # mPrimeID = forms.CharField(label = 'mPrIMe ID', max_length=9, strip = True, required=False)
+    # source = forms.ModelChoiceField(label="Source",
+    #     queryset=Source.objects.all(), required=False,
+    #     widget=autocomplete.ModelSelect2Multiple(url='source-autocomplete'))
+    # model_name = forms.CharField(label = 'Model Name', max_length=200, strip = True, required=False)
+    # additional_info = forms.CharField(label = 'Additional Info', max_length=1000, strip = True, required=False)    
+
+
+
+
+class EditKineticModelFileForm(forms.ModelForm):
+    """
+    Django Form template for editing a Model
+    """
+    class Meta:
+        model = KineticModel
+    #    exclude = ('kinetics', 'thermo', 'transport')
+        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+
 
 class UploadKineticModelForm(forms.ModelForm):
     """
