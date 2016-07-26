@@ -574,10 +574,8 @@ class KineticModel(models.Model):
     additional_info = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
     #     species=reaction something
-    chemkin_reactions_file = models.FileField(blank=True,
-                                              upload_to=upload_chemkin_to,)
-    chemkin_thermo_file = models.FileField(blank=True,
-                                              upload_to=upload_thermo_to,)
+    chemkin_reactions_file = models.FileField( upload_to=upload_chemkin_to,)
+    chemkin_thermo_file = models.FileField( upload_to=upload_thermo_to,)
     chemkin_transport_file = models.FileField(blank=True,
                                               upload_to=upload_transport_to,)
 
