@@ -10,6 +10,7 @@ from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKinetic
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
+import logging
 
 from dal import autocomplete
 
@@ -361,6 +362,88 @@ class KineticModelFileEditor(View):
         return render(request, self.template_name, variables)
 
 
+            # if self.request.GET.has_key('products') :
+
+
+class MagicSpeciesDict(dict):
+    """
+    A dictionary that always has the species you're looking for!
+    
+    (If they key isn't there when you ask, it adds a blank Species() object and returns that)
+    """
+
+    def __init__(self, dictionary=None):
+        self.dictionary = dictionary or {}
+
+    def __getitem__(self, key):
+        if key not in self.dictionary:
+            self.dictionary[key] = Species()
+        return dict.__getitem__(self.dictionary, key)
+
+def loadSpecies(self, species_file):
+    """
+    Load the chemkin list of species
+    """
+    speciesAliases = {}
+    speciesDict = {}
+    if species_file:
+        logging.info("Reading species list...")
+        speciesList = []
+        with open(species_file) as f:
+            line0 = f.readline()
+            while line0 != '':
+                line = removeCommentFromLine(line0)[0]
+                tokens_upper = line.upper().split()
+                if tokens_upper and tokens_upper[0] in ('SPECIES', 'SPEC'):
+                    # Unread the line (we'll re-read it in readReactionBlock())
+                    f.seek(-len(line0), 1)
+                    readSpeciesBlock(f, speciesDict, speciesAliases, speciesList)
+                line0 = f.readline()
+    else:
+        logging.info("No species file to limit species. Will read everything in thermo file")
+        speciesList = None
+        speciesDict = MagicSpeciesDict(speciesDict)
+    self.speciesList = speciesList
+    self.speciesDict = speciesDict
+
+
+def loadThermo(self, thermo_file):
+    """
+    Load the chemkin thermochemistry file
+    """
+    logging.info("Reading thermo file...")
+    speciesDict = self.speciesDict
+    foundThermoBlock = False
+    #import codecs
+    #with codecs.open(thermo_file, "r", "utf-8") as f:
+    with open(thermo_file) as f:
+        line0 = f.readline()
+        while line0 != '':
+            line = removeCommentFromLine(line0)[0]
+            tokens_upper = line.upper().split()
+            if tokens_upper and tokens_upper[0].startswith('THER'):
+                foundThermoBlock = True
+                # Unread the line (we'll re-read it in readThermoBlock())
+                f.seek(-len(line0), 1)
+                try:
+                    formulaDict = readThermoBlock(f, speciesDict)  # updates speciesDict in place
+                except:
+                    logging.error("Error reading thermo block around line:\n" + f.readline())
+                    raise
+                assert formulaDict, "Didn't read any thermo data"
+            line0 = f.readline()
+    assert foundThermoBlock, "Couldn't find a line beginning with THERMO or THERM or THER in {0}".format(thermo_file)
+    assert formulaDict, "Didn't read any thermo data from {0}".format(thermo_file)
+
+    # Save the formulaDict, converting from {'c':1,'h':4} into "CH4" in the process.
+    #self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
+    self.formulaDict = dict(
+        (label, convertFormula(formula))
+        for (label, formula) in formulaDict.iteritems())
+    # thermoDict contains original thermo as read from chemkin thermo file
+    #self.thermoDict = {s.label: s.thermo for s in speciesDict.values() }
+    self.thermoDict = dict((s.label, s.thermo)
+                           for s in speciesDict.values())
 
 
 
