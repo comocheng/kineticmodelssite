@@ -343,7 +343,18 @@ class KineticModelFileEditor(View):
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
-            form.save()                
+            form.save()    
+            
+            if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
+                print "Thermo File - ", request.FILES['chemkin_thermo_file']
+                thermoFile = request.FILES['chemkin_thermo_file'].file
+                reactionsFile = request.FILES['chemkin_reactions_file'].file
+                # thermoData = thermoFile.read()
+                # reactionsData = reactionsFile.read()
+                loadSpecies(self, reactionsFile)
+                loadThermo(self, thermoFile)
+
+
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
