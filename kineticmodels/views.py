@@ -10,8 +10,9 @@ from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKinetic
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
-import logging
 
+import logging
+import subprocess, os, sys
 from dal import autocomplete
 
 
@@ -348,7 +349,7 @@ class KineticModelFileEditor(View):
             kineticModel.createDir()
             # Save the form
             form.save()    
-            
+            print "KineticModel Path - ", kineticModel.getPath(absolute=True)
             if 'back' in request.POST:
                 return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
@@ -358,9 +359,11 @@ class KineticModelFileEditor(View):
                 reactionsFile = request.FILES['chemkin_reactions_file'].file
                 # thermoData = thermoFile.read()
                 # reactionsData = reactionsFile.read()
-                loadSpecies(self, reactionsFile)
-                loadThermo(self, thermoFile)
-
+                # loadSpecies(self, reactionsFile)
+                # loadThermo(self, thermoFile)
+                importPath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
+                print "Import Path - ", importPath
+                p = subprocess.call(importPath)
 
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
