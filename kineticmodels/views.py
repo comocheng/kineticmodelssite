@@ -319,7 +319,7 @@ class KineticModelMetaDataEditor(View):
                 return HttpResponseRedirect(reverse('kineticmodel file editor', args=(kineticModel.id,)))
 
             if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticmodel.id,)))
+                return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
 
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
@@ -350,7 +350,7 @@ class KineticModelFileEditor(View):
             form.save()    
             
             if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticmodel.id,)))
+                return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
             if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
                 print "Thermo File - ", request.FILES['chemkin_thermo_file']
