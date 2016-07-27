@@ -1,0 +1,4 @@
+ch2	triplet[CH2]
+ch2(s)	singlet[CH2]
+c2h2	C#C
+c	[C]
