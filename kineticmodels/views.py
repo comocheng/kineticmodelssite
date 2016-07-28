@@ -280,19 +280,11 @@ class KineticModelView(View):
 
 
 class KineticModelNew(View):
- 
+    "To create a new kinetic model. Redirects to editor"
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
         return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
-
-
-def kineticModel_new(request):
-    """
-    The listing of a specific kinetic Model in the database
-    """
-    kineticModel = KineticModel.objects.create()
-    return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
 
 class KineticModelMetaDataEditor(View):
