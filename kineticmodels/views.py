@@ -355,8 +355,8 @@ class KineticModelFileEditor(View):
 
             if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
                 print "Thermo File - ", request.FILES['chemkin_thermo_file']
-                thermoFile = request.FILES['chemkin_thermo_file'].file
-                reactionsFile = request.FILES['chemkin_reactions_file'].file
+                thermoFile = request.FILES['chemkin_thermo_file']
+                reactionsFile = request.FILES['chemkin_reactions_file']
                 # thermoData = thermoFile.read()
                 # reactionsData = reactionsFile.read()
                 # loadSpecies(self, reactionsFile)
@@ -364,7 +364,6 @@ class KineticModelFileEditor(View):
                 importPath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
                 print "Import Path - ", importPath
                 p = subprocess.call(importPath)
-
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
