@@ -432,6 +432,12 @@ class KineticModelFileContentEditor(View):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         if filetype == 'thermo':
             file = kineticModel.chemkin_thermo_file.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkin_reactions_file.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkin_transport_file.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
         form = FileEditorForm()
         content = file.read()
         form.initial = {'content':content }
@@ -443,6 +449,13 @@ class KineticModelFileContentEditor(View):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         if filetype == 'thermo':
             file = kineticModel.chemkin_thermo_file.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkin_reactions_file.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkin_transport_file.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
+
         form = FileEditorForm(request.POST)
         if form.is_valid():
             content = form.cleaned_data['content']
