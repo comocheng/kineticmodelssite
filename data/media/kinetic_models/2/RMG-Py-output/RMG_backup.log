@@ -1,6 +1,6 @@
 Reading species list...
-[29/Jul/2016:11:22:51] ENGINE Bus STARTING
-[29/Jul/2016:11:22:51] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Jul/2016:11:44:02] ENGINE Bus STARTING
+[29/Jul/2016:11:44:02] ENGINE Started monitor thread '_TimeoutMonitor'.
 Reading thermo file...
 Thermo file has default temperature range 300.0 to 1000.0 and 1000.0 to 5000.0
 Ignoring thermo data for hoco because it's not in the requested list of species.
@@ -394,7 +394,7 @@ Must be because you turned off the training depository.
 Could not find training depository in family Fake_3products3.
 Must be because you turned off the training depository.
 Filling in rate rules in kinetics families by averaging...
-Error: [29/Jul/2016:11:23:07] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x102640990>>
+Error: [29/Jul/2016:11:44:20] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x101e3c990>>
 Traceback (most recent call last):
   File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
     output.append(listener(*args, **kwargs))
@@ -406,7 +406,7 @@ Traceback (most recent call last):
     raise IOError("Port %r not free on %r" % (port, host))
 IOError: Port 8156 not free on '0.0.0.0'
 
-Error: [29/Jul/2016:11:23:07] ENGINE Shutting down due to error in start listener:
+Error: [29/Jul/2016:11:44:20] ENGINE Shutting down due to error in start listener:
 Traceback (most recent call last):
   File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
     self.publish('start')
@@ -414,9 +414,9 @@ Traceback (most recent call last):
     raise exc
 ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
 
-[29/Jul/2016:11:23:07] ENGINE Bus STOPPING
-[29/Jul/2016:11:23:07] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
-[29/Jul/2016:11:23:08] ENGINE Stopped thread '_TimeoutMonitor'.
-[29/Jul/2016:11:23:08] ENGINE Bus STOPPED
-[29/Jul/2016:11:23:08] ENGINE Bus EXITING
-[29/Jul/2016:11:23:08] ENGINE Bus EXITED
+[29/Jul/2016:11:44:20] ENGINE Bus STOPPING
+[29/Jul/2016:11:44:20] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[29/Jul/2016:11:44:20] ENGINE Stopped thread '_TimeoutMonitor'.
+[29/Jul/2016:11:44:21] ENGINE Bus STOPPED
+[29/Jul/2016:11:44:21] ENGINE Bus EXITING
+[29/Jul/2016:11:44:21] ENGINE Bus EXITED
