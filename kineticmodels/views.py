@@ -297,13 +297,19 @@ class KineticModelImporter(View):
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
 
-        running = kineticModel in importer_processes
+
         process = importer_processes.get(kineticModel, None)
-        if process:
-            print process.poll()
+        if process is None:
+            status = 'clear'
+        elif process.poll() is None:
+            status = 'active'
+        else:
+            status = 'died'
+
         variables = {'kineticModel': kineticModel,
-                     'running': running ,
-                     'process': process}
+                     'status': status,
+                     'port': 8000 + kineticModel.id,
+                     }
         return render(request, self.template_name, variables)
 
     def post(self, request, kineticModel_id=0):
@@ -321,6 +327,7 @@ class KineticModelImporter(View):
                                  '--thermo', thermoFile,
                                  '--known', 'SMILES.txt',
                                  '--output-directory', 'importer-output',
+                                 '--port', str(8000 + kineticModel.id),
                                  ]
 
                 p = subprocess.Popen(args=importCommand,
