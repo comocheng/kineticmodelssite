@@ -1,5 +1,5 @@
 from django.shortcuts import render, render_to_response, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -286,6 +286,63 @@ class KineticModelNew(View):
         return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
 
+importer_processes = {}
+class KineticModelImporter(View):
+    """
+    For importing a KineticModel.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModel_importer_status.html'
+
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+
+        running = kineticModel in importer_processes
+        process = importer_processes.get(kineticModel, None)
+        if process:
+            print process.poll()
+        variables = {'kineticModel': kineticModel,
+                     'running': running ,
+                     'process': process}
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if 'start' in request.POST:
+            if kineticModel not in importer_processes:
+                workingDirectory = kineticModel.getPath(absolute=True)
+
+                reactionsFile = kineticModel.chemkin_reactions_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                thermoFile = kineticModel.chemkin_thermo_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                importCommand = ['python',
+                                 os.path.expandvars("$RMGpy/importChemkin.py"),
+                                 '--species', reactionsFile,
+                                 '--reactions', reactionsFile,
+                                 '--thermo', thermoFile,
+                                 '--known', 'SMILES.txt',
+                                 '--output-directory', 'importer-output',
+                                 ]
+
+                p = subprocess.Popen(args=importCommand,
+                                     cwd=workingDirectory,
+                                     env=None,
+                                     stdout=open(os.path.join(workingDirectory, "importer.log"), 'w'),
+                                     stderr=subprocess.STDOUT,
+                                     )
+                print("Starting import command {!r} in {} with PID {}".format(' '.join(importCommand), workingDirectory, p.pid))
+                importer_processes[kineticModel] = p
+
+        elif 'stop' in request.POST:
+            process = importer_processes.get(kineticModel, None)
+            if process:
+                if process.poll() is None:
+                    print("Killing process with PID {}".process.pid)
+                    process.terminate()
+                del(importer_processes[kineticModel])
+
+        return HttpResponseRedirect(reverse('kineticmodel importer', args=(kineticModel.id,)))
+
+
 
 class KineticModelMetaDataEditor(View):
     """
@@ -353,9 +410,7 @@ class KineticModelFileEditor(View):
                 # reactionsData = reactionsFile.read()
                 # loadSpecies(self, reactionsFile)
                 # loadThermo(self, thermoFile)
-                importPath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
-                print "Import Path - ", importPath
-                p = subprocess.call(importPath)
+
 
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
