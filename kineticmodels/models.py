@@ -603,7 +603,7 @@ class KineticModel(models.Model):
         the Network uses for storing files.
         """
         try:
-            os.makedirs(os.path.join(self.getPath(absolute=True), 'chemkin'))
+            os.makedirs(self.getPath(absolute=True))
         except OSError:
             # Fail silently on any OS errors
             pass
