@@ -375,11 +375,6 @@ class KineticModelMetaDataEditor(View):
             kineticModel.createDir()
             # Save the form
             form.save()
-            if 'next' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel upload', args=(kineticModel.id,)))
-
-            if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
 
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
@@ -410,8 +405,6 @@ class KineticModelUpload(View):
             # Save the form
             form.save()    
             print "KineticModel Path - ", kineticModel.getPath(absolute=True)
-            if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
             if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
                 print "Thermo File - ", request.FILES['chemkin_thermo_file']
