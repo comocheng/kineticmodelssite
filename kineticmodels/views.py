@@ -373,6 +373,12 @@ class KineticModelFileEditor(View):
 
             # if self.request.GET.has_key('products') :
 
+def createImportSH(self, kineticModel):
+    """
+    Helper function to create the import.sh executable for a kinetic model
+    """
+    filePath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
+
 
 class MagicSpeciesDict(dict):
     """
