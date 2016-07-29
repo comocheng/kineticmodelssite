@@ -1,9 +1,0 @@
-Reading species list...
-[27/Jul/2016:16:07:17] ENGINE Bus STARTING
-[27/Jul/2016:16:07:17] ENGINE Bus STOPPING
-[27/Jul/2016:16:07:17] ENGINE HTTP Server None already shut down
-[27/Jul/2016:16:07:17] ENGINE Started monitor thread '_TimeoutMonitor'.
-[27/Jul/2016:16:07:17] ENGINE Stopped thread '_TimeoutMonitor'.
-[27/Jul/2016:16:07:17] ENGINE Bus STOPPED
-[27/Jul/2016:16:07:17] ENGINE Bus EXITING
-[27/Jul/2016:16:07:17] ENGINE Bus EXITED
