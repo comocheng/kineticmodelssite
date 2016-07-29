@@ -14,18 +14,30 @@
 <h1>Kinetic Model: {{kineticModel.id }}</h1>
 
 <table>
+	<tr><th>Metadata</th><td><a href="{% url 'kineticmodel editor' kineticModel_id=kineticModel.id %}">Edit metadata</a></td></tr>
 	<tr><td>mPrime ID</td><td>{{ kineticModel.mPrimeID }}</a></td></tr>
     <tr><td>Name</td><td>{{ kineticModel.model_name }}</a></td></tr>
     <tr><td>Additional Info</td><td>{{ kineticModel.additional_info }}</td></tr>
     <tr><td>Source</td><td>{{ kineticModel.source.pk }}</td></tr>
+    
+	<tr><th>Files</th><td><a href="{% url 'kineticmodel upload' kineticModel_id=kineticModel.id %}">Upload files</a></td></tr>
     <tr><td>Reactions file</td><td>{% if kineticModel.chemkin_reactions_file %}
-        <a href="{{ kineticModel.chemkin_reactions_file.url }}">{{ kineticModel.chemkin_reactions_file.name }}</a>{% endif %}</td></tr>
-        
+    {{ kineticModel.chemkin_reactions_file.name }}
+        <a href="{% url 'kineticmodel file content editor' kineticModel_id=kineticModel.id filetype='reactions' %}">Edit</a>{% endif %}
+    </td></tr>
+    <tr><td>Thermo file</td><td>{% if kineticModel.chemkin_thermo_file %}
+    {{ kineticModel.chemkin_thermo_file.name }}
+        <a href="{% url 'kineticmodel file content editor' kineticModel_id=kineticModel.id filetype='thermo' %}">Edit</a>{% endif %}
+    </td></tr>
+    <tr><td>Transport file</td><td>{% if kineticModel.chemkin_transport_file %}
+    {{ kineticModel.chemkin_transport_file.name }}
+        <a href="{% url 'kineticmodel file content editor' kineticModel_id=kineticModel.id filetype='transport' %}">Edit</a>{% endif %}
+    </td></tr>
+    
+    <tr><th>Importer</th>
+    <td><a href="{% url 'kineticmodel importer' kineticModel_id=kineticModel.id %}">Import</a></td></tr>
+
 </table>
-
-{{ kineticModel.getPath }}
-
-<a href="{% url 'kineticmodel editor' kineticModel_id=kineticModel.id %}">Edit</a>
 
 
 {% endblock %}

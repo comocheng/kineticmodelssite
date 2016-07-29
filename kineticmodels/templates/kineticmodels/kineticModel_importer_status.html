@@ -1,0 +1,30 @@
+{% extends "kineticmodels/kineticModel_importer.html" %}
+
+{% block title %}{{ block.super }} Status{% endblock %}
+{% block page_title %}{{ block.super }} Status{% endblock %}
+
+{% block navbar_items %}
+{{ block.super }} Status
+{% endblock %}
+
+{% block page_body %}
+
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+{% if status == 'clear' %}
+  Not yet running
+  <input type="submit" value="Start" name="start"/>
+{% else %}
+  PID: {{ process.pid }}<br \>
+ {% if status == 'died' %}
+  Died<br \>
+  Return code: {{ process.returncode }}<br \>
+  <input type="submit" value="Clear" name="stop"/>
+ {% else %}
+  Running<br \>
+  Access port: <a href="http://127.0.0.1:{{ port }}/">{{ port }}</a><br \>
+  <input type="submit" value="Stop" name="stop"/>
+ {% endif %}
+{% endif %}
+</form>
+{% endblock %}

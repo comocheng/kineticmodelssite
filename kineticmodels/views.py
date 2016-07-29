@@ -1,12 +1,15 @@
 from django.shortcuts import render, render_to_response, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.views.generic import ListView, DetailView, UpdateView, View 
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelMetaDataForm, EditKineticModelFileForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
+                  EditKineticModelMetaDataForm, EditKineticModelFileForm, \
+                  SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, \
+                  FileEditorForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
@@ -280,19 +283,75 @@ class KineticModelView(View):
 
 
 class KineticModelNew(View):
- 
+    "To create a new kinetic model. Redirects to editor"
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
         return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
 
+importer_processes = {}
+class KineticModelImporter(View):
+    """
+    For importing a KineticModel.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModel_importer_status.html'
 
-def kineticModel_new(request):
-    """
-    The listing of a specific kinetic Model in the database
-    """
-    kineticModel = KineticModel.objects.create()
-    return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+
+
+        process = importer_processes.get(kineticModel, None)
+        if process is None:
+            status = 'clear'
+        elif process.poll() is None:
+            status = 'active'
+        else:
+            status = 'died'
+
+        variables = {'kineticModel': kineticModel,
+                     'status': status,
+                     'port': 8000 + kineticModel.id,
+                     }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if 'start' in request.POST:
+            if kineticModel not in importer_processes:
+                workingDirectory = kineticModel.getPath(absolute=True)
+
+                reactionsFile = kineticModel.chemkin_reactions_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                thermoFile = kineticModel.chemkin_thermo_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                importCommand = ['python',
+                                 os.path.expandvars("$RMGpy/importChemkin.py"),
+                                 '--species', reactionsFile,
+                                 '--reactions', reactionsFile,
+                                 '--thermo', thermoFile,
+                                 '--known', 'SMILES.txt',
+                                 '--output-directory', 'importer-output',
+                                 '--port', str(8000 + kineticModel.id),
+                                 ]
+
+                p = subprocess.Popen(args=importCommand,
+                                     cwd=workingDirectory,
+                                     env=None,
+                                     stdout=open(os.path.join(workingDirectory, "importer.log"), 'w'),
+                                     stderr=subprocess.STDOUT,
+                                     )
+                print("Starting import command {!r} in {} with PID {}".format(' '.join(importCommand), workingDirectory, p.pid))
+                importer_processes[kineticModel] = p
+
+        elif 'stop' in request.POST:
+            process = importer_processes.get(kineticModel, None)
+            if process:
+                if process.poll() is None:
+                    print("Killing process with PID {}".process.pid)
+                    process.terminate()
+                del(importer_processes[kineticModel])
+
+        return HttpResponseRedirect(reverse('kineticmodel importer', args=(kineticModel.id,)))
+
 
 
 class KineticModelMetaDataEditor(View):
@@ -316,11 +375,6 @@ class KineticModelMetaDataEditor(View):
             kineticModel.createDir()
             # Save the form
             form.save()
-            if 'next' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel file editor', args=(kineticModel.id,)))
-
-            if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
 
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
@@ -328,9 +382,10 @@ class KineticModelMetaDataEditor(View):
         return render(request, self.template_name, variables)
 
 
-class KineticModelFileEditor(View):
+
+class KineticModelUpload(View):
     """
-    For editing the files for KineticModel objects.
+    For uploading the files for KineticModel objects.
     """
     model = KineticModel
     template_name = 'kineticmodels/kineticmodel_editor.html'
@@ -350,8 +405,6 @@ class KineticModelFileEditor(View):
             # Save the form
             form.save()    
             print "KineticModel Path - ", kineticModel.getPath(absolute=True)
-            if 'back' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
 
             if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
                 print "Thermo File - ", request.FILES['chemkin_thermo_file']
@@ -364,13 +417,55 @@ class KineticModelFileEditor(View):
                 importPath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
                 print "Import Path - ", importPath
                 p = subprocess.call(importPath)
+
+
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)
 
+class KineticModelFileContentEditor(View):
+    """
+    For editing the files for KineticModel objects.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticmodel_editor.html'
 
-            # if self.request.GET.has_key('products') :
+    def get(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkin_thermo_file.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkin_reactions_file.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkin_transport_file.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
+        form = FileEditorForm()
+        content = file.read()
+        form.initial = {'content':content }
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkin_thermo_file.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkin_reactions_file.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkin_transport_file.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
+        form = FileEditorForm(request.POST)
+        if form.is_valid():
+            content = form.cleaned_data['content']
+            with open(file.name, 'w') as f:
+                f.write(content)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
 def createImportSH(self, kineticModel):
     """

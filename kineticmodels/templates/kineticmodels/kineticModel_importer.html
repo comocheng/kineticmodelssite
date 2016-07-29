@@ -1,0 +1,17 @@
+{% extends "kineticmodels/kineticModel.html" %}
+
+{% block title %}{{ block.super }} {{ kineticModel.id }} Importer{% endblock %}
+{% block page_title %}{{ block.super }} {{ kineticModel.id }} Importer{% endblock %}
+
+{% block navbar_items %}
+{{ block.super }} &raquo;
+<a href="{% url 'kineticmodel view' kineticModel_id=kineticModel.id %}">Model {{ kineticModel.id }}</a>
+&raquo;
+Importer
+{% endblock %}
+
+{% block page_body %}
+
+<h1>Kinetic Model: {{kineticModel.id }}</h1>
+
+{% endblock %}
