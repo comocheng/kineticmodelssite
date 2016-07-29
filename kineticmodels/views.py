@@ -6,7 +6,10 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.views.generic import ListView, DetailView, UpdateView, View 
 
-from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, EditKineticModelMetaDataForm, EditKineticModelFileForm, SpeciesSearchForm, ReactionSearchForm, SourceSearchForm
+from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
+                  EditKineticModelMetaDataForm, EditKineticModelFileForm, \
+                  SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, \
+                  FileEditorForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
@@ -425,9 +428,36 @@ class KineticModelUpload(View):
                      'form': form, }
         return render(request, self.template_name, variables)
 
+class KineticModelFileContentEditor(View):
+    """
+    For editing the files for KineticModel objects.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticmodel_editor.html'
 
-            # if self.request.GET.has_key('products') :
+    def get(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkin_thermo_file.file
+        form = FileEditorForm()
+        content = file.read()
+        form.initial = {'content':content }
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
+    def post(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkin_thermo_file.file
+        form = FileEditorForm(request.POST)
+        if form.is_valid():
+            content = form.cleaned_data['content']
+            with open(file.name, 'w') as f:
+                f.write(content)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
 
 class MagicSpeciesDict(dict):
     """

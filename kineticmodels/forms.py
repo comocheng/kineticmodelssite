@@ -109,6 +109,11 @@ class EditReactionForm(forms.ModelForm):
 
 ################################################################################
 
+class FileEditorForm(forms.Form):
+    "For editing generic text files"
+    content = forms.CharField(label="File content", widget=forms.Textarea(attrs={'rows': 30, 'cols': 80}))
+
+
 #Form for searching Species
 class SpeciesSearchForm(forms.Form):
     """
