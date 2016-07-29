@@ -373,7 +373,7 @@ class KineticModelMetaDataEditor(View):
             # Save the form
             form.save()
             if 'next' in request.POST:
-                return HttpResponseRedirect(reverse('kineticmodel file editor', args=(kineticModel.id,)))
+                return HttpResponseRedirect(reverse('kineticmodel upload', args=(kineticModel.id,)))
 
             if 'back' in request.POST:
                 return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
@@ -384,9 +384,10 @@ class KineticModelMetaDataEditor(View):
         return render(request, self.template_name, variables)
 
 
-class KineticModelFileEditor(View):
+
+class KineticModelUpload(View):
     """
-    For editing the files for KineticModel objects.
+    For uploading the files for KineticModel objects.
     """
     model = KineticModel
     template_name = 'kineticmodels/kineticmodel_editor.html'
