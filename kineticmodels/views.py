@@ -406,19 +406,6 @@ class KineticModelUpload(View):
             form.save()    
             print "KineticModel Path - ", kineticModel.getPath(absolute=True)
 
-            if request.FILES.has_key('chemkin_thermo_file') and request.FILES.has_key('chemkin_reactions_file'):
-                print "Thermo File - ", request.FILES['chemkin_thermo_file']
-                thermoFile = request.FILES['chemkin_thermo_file']
-                reactionsFile = request.FILES['chemkin_reactions_file']
-                # thermoData = thermoFile.read()
-                # reactionsData = reactionsFile.read()
-                # loadSpecies(self, reactionsFile)
-                # loadThermo(self, thermoFile)
-                importPath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
-                print "Import Path - ", importPath
-                p = subprocess.call(importPath)
-
-
             return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
@@ -467,27 +454,12 @@ class KineticModelFileContentEditor(View):
                      'form': form, }
         return render(request, self.template_name, variables)
 
-def createImportSH(self, kineticModel):
     """
-    Helper function to create the import.sh executable for a kinetic model
-    """
-    filePath = os.path.join(kineticModel.getPath(absolute=True), 'import.sh')
-
-
-class MagicSpeciesDict(dict):
-    """
-    A dictionary that always has the species you're looking for!
-    
-    (If they key isn't there when you ask, it adds a blank Species() object and returns that)
     """
 
-    def __init__(self, dictionary=None):
-        self.dictionary = dictionary or {}
 
-    def __getitem__(self, key):
-        if key not in self.dictionary:
-            self.dictionary[key] = Species()
-        return dict.__getitem__(self.dictionary, key)
+
+
 
 def loadSpecies(self, species_file):
     """
@@ -495,37 +467,7 @@ def loadSpecies(self, species_file):
     """
     speciesAliases = {}
     speciesDict = {}
-    if species_file:
-        logging.info("Reading species list...")
-        speciesList = []
-        with open(species_file) as f:
-            line0 = f.readline()
-            while line0 != '':
-                line = removeCommentFromLine(line0)[0]
-                tokens_upper = line.upper().split()
-                if tokens_upper and tokens_upper[0] in ('SPECIES', 'SPEC'):
-                    # Unread the line (we'll re-read it in readReactionBlock())
-                    f.seek(-len(line0), 1)
-                    readSpeciesBlock(f, speciesDict, speciesAliases, speciesList)
-                line0 = f.readline()
-    else:
-        logging.info("No species file to limit species. Will read everything in thermo file")
-        speciesList = None
-        speciesDict = MagicSpeciesDict(speciesDict)
-    self.speciesList = speciesList
-    self.speciesDict = speciesDict
 
-
-def loadThermo(self, thermo_file):
-    """
-    Load the chemkin thermochemistry file
-    """
-    logging.info("Reading thermo file...")
-    speciesDict = self.speciesDict
-    foundThermoBlock = False
-    #import codecs
-    #with codecs.open(thermo_file, "r", "utf-8") as f:
-    with open(thermo_file) as f:
         line0 = f.readline()
         while line0 != '':
             line = removeCommentFromLine(line0)[0]
