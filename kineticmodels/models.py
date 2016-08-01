@@ -533,11 +533,11 @@ class Stoichiometry(models.Model):
 
 def upload_chemkin_to(instance, filename):
     print "SAVING CHEMKIN FILE"
-    return os.path.join(instance.getPath(),'chemkin.txt')
+    return os.path.join(instance.getPath(), 'chemkin','chemkin.txt')
 def upload_thermo_to(instance, filename):
-    return os.path.join(instance.getPath(), 'thermo.txt')
+    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
 def upload_transport_to(instance, filename):
-    return os.path.join(instance.getPath(), 'transport.txt')
+    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
 
 
 class KineticModel(models.Model):
@@ -603,7 +603,7 @@ class KineticModel(models.Model):
         the Network uses for storing files.
         """
         try:
-            os.makedirs(self.getPath(absolute=True))
+            os.makedirs(os.path.join(self.getPath(absolute=True), 'chemkin'))
         except OSError:
             # Fail silently on any OS errors
             pass
