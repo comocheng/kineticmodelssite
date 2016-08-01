@@ -13,6 +13,8 @@ from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
+import rmgpy.chemkin
+from rmgpy.chemkin import readSpeciesBlock
 
 import logging
 import subprocess, os, sys
