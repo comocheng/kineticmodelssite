@@ -1,6 +1,6 @@
 Reading species list...
-[29/Jul/2016:14:03:42] ENGINE Bus STARTING
-[29/Jul/2016:14:03:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Aug/2016:11:32:37] ENGINE Bus STARTING
+[01/Aug/2016:11:32:37] ENGINE Started monitor thread '_TimeoutMonitor'.
 Reading thermo file...
 Thermo file has default temperature range 300.0 to 1000.0 and 1000.0 to 5000.0
 Ignoring thermo data for hoco because it's not in the requested list of species.
@@ -343,11 +343,59 @@ I think ch2 is triplet[CH2] based on its label
 I think ch2(s) is singlet[CH2] based on its label
 I think c2h2 is C#C based on its label
 I think c is [C] based on its label
-Identified 4 species:
+I think h is [H] based on its label
+I think h2 is [H][H] based on its label
+I think o is [O] based on its label
+I think o2 is [O][O] based on its label
+I think oh is [OH] based on its label
+I think oh* is [OH] based on its label
+I think h2o is O based on its label
+I think n2 is N#N based on its label
+I think ho2 is [O]O based on its label
+I think h2o2 is OO based on its label
+I think ar is [Ar] based on its label
+I think co is [C]=O based on its label
+I think co2 is O=C=O based on its label
+I think ch3oh is CO based on its label
+I think ch4 is C based on its label
+I think ch3 is [CH3] based on its label
+I think ch is [CH] based on its label
+I think ch* is [CH] based on its label
+I think c2h6 is CC based on its label
+I think c2h5 is C[CH2] based on its label
+I think c2h4 is C=C based on its label
+I think c2h is [C]#C based on its label
+I think he is [He] based on its label
+I think c3h8 is CCC based on its label
+Identified 28 species:
    ch2
    ch2(s)
    c2h2
    c
+   h
+   h2
+   o
+   o2
+   oh
+   oh*
+   h2o
+   n2
+   ho2
+   h2o2
+   ar
+   co
+   co2
+   ch3oh
+   ch4
+   ch3
+   ch
+   ch*
+   c2h6
+   c2h5
+   c2h4
+   c2h
+   he
+   c3h8
 Initializing RMG
 Loading RMG database...
 Loading thermodynamics library from CBS_QB3_1dHR.py in /Users/hamzakhan/Code/RMG-database/input/thermo/libraries...
@@ -394,7 +442,7 @@ Must be because you turned off the training depository.
 Could not find training depository in family Fake_3products3.
 Must be because you turned off the training depository.
 Filling in rate rules in kinetics families by averaging...
-Error: [29/Jul/2016:14:04:02] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x10263c990>>
+Error: [01/Aug/2016:11:32:55] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x101c3c990>>
 Traceback (most recent call last):
   File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
     output.append(listener(*args, **kwargs))
@@ -406,7 +454,7 @@ Traceback (most recent call last):
     raise IOError("Port %r not free on %r" % (port, host))
 IOError: Port 8156 not free on '0.0.0.0'
 
-Error: [29/Jul/2016:14:04:03] ENGINE Shutting down due to error in start listener:
+Error: [01/Aug/2016:11:32:55] ENGINE Shutting down due to error in start listener:
 Traceback (most recent call last):
   File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
     self.publish('start')
@@ -414,9 +462,9 @@ Traceback (most recent call last):
     raise exc
 ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
 
-[29/Jul/2016:14:04:03] ENGINE Bus STOPPING
-[29/Jul/2016:14:04:03] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
-[29/Jul/2016:14:04:03] ENGINE Stopped thread '_TimeoutMonitor'.
-[29/Jul/2016:14:04:03] ENGINE Bus STOPPED
-[29/Jul/2016:14:04:03] ENGINE Bus EXITING
-[29/Jul/2016:14:04:03] ENGINE Bus EXITED
+[01/Aug/2016:11:32:55] ENGINE Bus STOPPING
+[01/Aug/2016:11:32:56] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[01/Aug/2016:11:32:56] ENGINE Stopped thread '_TimeoutMonitor'.
+[01/Aug/2016:11:32:56] ENGINE Bus STOPPED
+[01/Aug/2016:11:32:56] ENGINE Bus EXITING
+[01/Aug/2016:11:32:56] ENGINE Bus EXITED
