@@ -506,6 +506,16 @@ class KineticModelAddSMILES(View):
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)     
+
+def SMILESHelper(userInput, SMILESCompound):
+    stringToReturn = ''
+    for i in range(len(SMILESCompound)):
+        if userInput[i] != '' and SMILESCompound[i] != '':
+            stringToReturn+=userInput[i]+'\t'+SMILESCompound[i]+'\n'
+    return stringToReturn
+
+
+
 def loadSpecies(self, species_file):
     """
     Load the chemkin list of species
