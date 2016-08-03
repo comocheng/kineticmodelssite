@@ -280,7 +280,11 @@ class KineticModelView(View):
     template_name = 'kineticmodels/kineticModel_view.html'
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        variables = {'kineticModel': kineticModel}
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        SMILESgenerated = os.path.isfile(filePath)
+
+        variables = {'kineticModel': kineticModel, 
+                        'SMILESgenerated': SMILESgenerated}
         return render(request, self.template_name, variables)
 
 
