@@ -456,7 +456,7 @@ class KineticModelFileContentEditor(View):
                      'form': form, }
         return render(request, self.template_name, variables)
 
-class KineticModelSMILES(View):
+class KineticModelGenerateSMILES(View):
     """
     Class for the view to generate the SMILES.txt file for a kinetic model
     """
