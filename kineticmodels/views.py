@@ -469,11 +469,34 @@ class KineticModelGenerateSMILES(View):
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        speciesFile = kineticModel.chemkin_reactions_file.name
+        form = GenerateSMILESForm()
+        speciesFile = kineticModel.chemkin_reactions_file
         speciesList = loadSpecies(self, speciesFile)
-        print "Species List - ", speciesList
+        variables = {'kineticModel': kineticModel,
+                        'form': form}
+        return render(request, self.template_name, variables)
 
-#    def post(self, request, kineticModel_id=0):
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = GenerateSMILESForm(request.POST)
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        if form.is_valid():
+            c = form.cleaned_data['c']
+            ch2s = form.cleaned_data['ch2s']
+            ch2t = form.cleaned_data['ch2t']
+            c2h2 = form.cleaned_data['c2h2']
+
+            if(os.path.isfile(filePath)):
+                os.remove(filePath)
+            
+            SMILESFile = open(filePath, 'w')
+            SMILESFile.write(SMILESHelper([c,ch2s,ch2t,c2h2], ['[C]', 'singlet[CH2]', 'triplet[CH2]', 'C#C']))
+
+
+            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)       
         
 
 
