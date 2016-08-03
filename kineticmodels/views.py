@@ -485,16 +485,16 @@ def loadSpecies(self, species_file):
     speciesDict = {}
 
     speciesList = []
-    with open(species_file) as f:
+    f = species_file
+    line0 = f.readline()
+    while line0 != '':
+        line = removeCommentFromLine(line0)[0]
+        tokens_upper = line.upper().split()
+        if tokens_upper and tokens_upper[0] in ('SPECIES', 'SPEC'):
+            # Unread the line (we'll re-read it in readReactionBlock())
+            f.seek(-len(line0), 1)
+            readSpeciesBlock(f, speciesDict, speciesAliases, speciesList)
         line0 = f.readline()
-        while line0 != '':
-            line = removeCommentFromLine(line0)[0]
-            tokens_upper = line.upper().split()
-            if tokens_upper and tokens_upper[0] in ('SPECIES', 'SPEC'):
-                # Unread the line (we'll re-read it in readReactionBlock())
-                f.seek(-len(line0), 1)
-                readSpeciesBlock(f, speciesDict, speciesAliases, speciesList)
-            line0 = f.readline()
 
     return speciesList
 
