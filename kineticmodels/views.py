@@ -9,7 +9,7 @@ from django.views.generic import ListView, DetailView, UpdateView, View
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
                   EditKineticModelMetaDataForm, EditKineticModelFileForm, \
                   SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, \
-                  FileEditorForm
+                  FileEditorForm, GenerateSMILESForm, AddSMILESForm
 from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
