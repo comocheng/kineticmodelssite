@@ -14,7 +14,7 @@ from models import Source, Species, KineticModel, Reaction, Stoichiometry, Autho
 import math
 import rmgpy, rmgpy.molecule
 import rmgpy.chemkin
-from rmgpy.chemkin import readSpeciesBlock
+from rmgpy.chemkin import readSpeciesBlock, removeCommentFromLine
 
 import logging
 import subprocess, os, sys
