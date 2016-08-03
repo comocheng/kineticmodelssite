@@ -200,3 +200,13 @@ class GenerateSMILESForm(forms.Form):
     ch2t = forms.CharField(label = 'triplet[CH2]', max_length=50, strip = True, required=False)
     c2h2 = forms.CharField(label = 'C#C', max_length=50, strip = True, required=False)  
 
+
+#Form for adding compounds to the SMILES.txt
+class AddSMILESForm(forms.Form):
+    """
+    A django form for adding compounds to the SMILES file for a Kinetic Model
+    """
+
+    smiles = forms.CharField(label = 'SMILES form of the compound', max_length=50, strip = True, required=False)
+    chemkin = forms.CharField(label = 'The formula of the compound as represented in the CHEMKIN file', max_length=50, strip = True, required=False)
+ 
