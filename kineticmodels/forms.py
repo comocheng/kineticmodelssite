@@ -189,3 +189,14 @@ class ReactionSearchForm(forms.Form):
         queryset=Species.objects.all(), required=False,
         widget=autocomplete.ModelSelect2Multiple(url='species-autocomplete')
     )
+
+#Form for generating the SMILES.txt
+class GenerateSMILESForm(forms.Form):
+    """
+    A django form for generating the SMILES file for a Kinetic Model
+    """
+    c = forms.CharField(label = '[C]', max_length=50, strip = True, required=False)
+    ch2s= forms.CharField(label = 'singlet[CH2]', max_length=50, strip = True, required=False)
+    ch2t = forms.CharField(label = 'triplet[CH2]', max_length=50, strip = True, required=False)
+    c2h2 = forms.CharField(label = 'C#C', max_length=50, strip = True, required=False)  
+
