@@ -35,7 +35,9 @@
     </td></tr>
 
     <tr><th>SMILES File</th><td><a href="{% url 'kineticmodel smiles' kineticModel_id=kineticModel.id %}">Generate SMILES.txt File</a></td></tr>
-    <tr><td>SMILES.txt</td><td>
+    <tr><td>SMILES.txt</td><td>{% if SMILESgenerated %}
+    SMILES.txt
+        <a href="{% url 'kineticmodel add smiles' kineticModel_id=kineticModel.id %}">Add Species to the SMILES file</a>{% endif %}        
     </td></tr>
     
     <tr><th>Importer</th>
