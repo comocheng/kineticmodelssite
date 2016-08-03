@@ -26,6 +26,7 @@ urlpatterns=[
     url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.KineticModelMetaDataEditor.as_view(), name='kineticmodel editor'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/upload/$', views.KineticModelUpload.as_view(), name='kineticmodel upload'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/SMILES/generate/$', views.KineticModelGenerateSMILES.as_view(), name='kineticmodel smiles'),
+    url(r'^models/(?P<kineticModel_id>[0-9]+)/SMILES/add/$', views.KineticModelAddSMILES.as_view(), name='kineticmodel add smiles'),      
     url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/(?P<filetype>reactions|thermo|transport)$', views.KineticModelFileContentEditor.as_view(), name='kineticmodel file content editor'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/import/$', views.KineticModelImporter.as_view(), name='kineticmodel importer'),
     
