@@ -477,6 +477,35 @@ class KineticModelGenerateSMILES(View):
         
 
 
+class KineticModelAddSMILES(View):
+    """
+    Class for the view to add compounds to the SMILES.txt file for a kinetic model
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticmodel_SMILES.html'
+
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = AddSMILESForm()
+        variables = {'kineticModel': kineticModel,
+                        'form': form}
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        form = AddSMILESForm(request.POST)
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        if form.is_valid():
+            smiles = form.cleaned_data['smiles']
+            chemkin = form.cleaned_data['chemkin']
+
+            SMILESFile = open(filePath, 'a')
+            SMILESFile.write(SMILESHelper([chemkin], [smiles]))
+
+            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)     
 def loadSpecies(self, species_file):
     """
     Load the chemkin list of species
