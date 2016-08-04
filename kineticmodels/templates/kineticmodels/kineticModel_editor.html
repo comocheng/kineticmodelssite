@@ -19,5 +19,11 @@
 <p><input type="submit" value="Save" name="submit"/></p>
 </form>
 
+{% block footer %}
+<script type="text/javascript" src="/static/collected/admin/js/vendor/jquery/jquery.js"></script>
+
+{{ form.media }}
+{% endblock %}
+
 {% endblock %}
 
