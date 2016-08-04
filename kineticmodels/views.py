@@ -17,7 +17,7 @@ import rmgpy.chemkin
 from rmgpy.chemkin import readSpeciesBlock, removeCommentFromLine
 
 import logging
-import subprocess, os, sys
+import subprocess, os, sys, re
 from dal import autocomplete
 
 
