@@ -44,7 +44,11 @@ class EditSourceForm(forms.ModelForm):
     """
     class Meta:
         model = Source
-        exclude = ()
+        fields = ('bPrimeID', 'publication_year', 'source_title', 'journal_name', 'journal_volume_number', 'page_numbers', 'doi', 'authors')
+        widgets =  {
+            'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
+        }
+
 
 # For for editing a Species
 class EditSpeciesForm(forms.ModelForm):
