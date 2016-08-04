@@ -306,7 +306,6 @@ class KineticModelImporter(View):
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
 
-
         process = importer_processes.get(kineticModel, None)
         if process is None:
             status = 'clear'
@@ -570,8 +569,10 @@ class SourceAutocomplete(autocomplete.Select2QuerySetView):
         qs = Source.objects.all()
 
         if self.q:
-            qs = qs.filter(id__istartswith=self.q)
-
+            if re.match("^[0-9]*$", self.q):
+                qs = qs.filter(publication_year__istartswith=self.q)
+            else:
+                qs = qs.filter(source_title__istartswith=self.q)
         return qs
 
 
