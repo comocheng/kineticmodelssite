@@ -10,6 +10,7 @@ urlpatterns=[
     url(r'^source/(?P<source_id>[0-9]+)/$', views.SourceView.as_view(), name='source view'),
     url(r'^source/(?P<source_id>[0-9]+)/edit/$', views.SourceEditor.as_view(), name='source editor'),
     url(r'^source/search/$', views.SourceSearchView.as_view(), name='source search'),
+    url(r'^source/new/$', views.SourceNew.as_view(), name='source new'),    
 
     url(r'^source/author-autocomplete/$', views.AuthorAutocomplete.as_view(), name='author-autocomplete'),
     url(r'^models/source-autocomplete/$', views.SourceAutocomplete.as_view(), name='source-autocomplete'),
