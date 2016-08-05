@@ -70,25 +70,6 @@ class SourceEditor(View):
                      'form': form, }
         return render(request, self.template_name, variables)
 
-# """ See source_editor.html"""
-# def source_editor(request, source_id=0):
-#     """
-#     Edit the details of a source
-#     """
-#     source = get_object_or_404(Source, id=source_id)
-#     if request.method == 'POST':
-#         form = EditSourceForm(request.POST, instance=source)
-#         if form.is_valid():
-#             # Save the form
-#             form.save()
-#             # Go back to the network's main page
-#             return HttpResponseRedirect(reverse('source view', args=(source.id,)))
-#     else:
-#         # Create the form
-#         form = EditSourceForm(instance=source)
-#     variables = {'source': source,
-#                  'form': form, }
-#     return render(request,'kineticmodels/source_editor.html', variables)
 
 class SourceNew(View):
     "To create a new source. Redirects to editor"
