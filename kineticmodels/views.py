@@ -351,7 +351,7 @@ class KineticModelMetaDataEditor(View):
     For editing the meta data for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_editor.html'
+    template_name = 'kineticmodels/kineticmodel_metadataeditor.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
@@ -380,7 +380,7 @@ class KineticModelUpload(View):
     For uploading the files for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_editor.html'
+    template_name = 'kineticmodels/kineticmodel_fileeditor.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
