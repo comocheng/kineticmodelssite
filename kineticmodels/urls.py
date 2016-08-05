@@ -22,7 +22,7 @@ urlpatterns=[
     url(r'^species/search/$', views.SpeciesSearchView.as_view(), name='species search'),  
     
     url(r'^models/$', views.KineticModelListView.as_view(), name='kineticmodel list'),
-    url(r'^models/new$', views.KineticModelNew.as_view(), name='kineticmodel new'),
+    url(r'^models/new/$', views.KineticModelNew.as_view(), name='kineticmodel new'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/$', views.KineticModelView.as_view(), name='kineticmodel view'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/edit/$', views.KineticModelMetaDataEditor.as_view(), name='kineticmodel editor'),
     url(r'^models/(?P<kineticModel_id>[0-9]+)/upload/$', views.KineticModelUpload.as_view(), name='kineticmodel upload'),
