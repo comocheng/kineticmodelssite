@@ -25,10 +25,17 @@ from dal import autocomplete
 ITEMSPERPAGE = 20
 
 def index(request):
+    """
+    Home page of the kinetic models site
+    """
     return render(request, 'kineticmodels/index.html')
 
 
 class SourceListView(ListView):
+    """
+    Class based view for browsing through all the sources 
+    a.k.a. the bibliography 
+    """
     model = Source
     template_name = 'kineticmodels/source_list.html'
     paginate_by = ITEMSPERPAGE
@@ -42,6 +49,9 @@ class SourceListView(ListView):
 
 
 class SourceView(View):
+    """
+    Class based view for viewing a source
+    """
     model = Source
     template_name = 'kineticmodels/source_view.html'
     def get(self, request, source_id=0):
@@ -51,6 +61,9 @@ class SourceView(View):
 
 
 class SourceEditor(View):
+    """
+    Class based view for editing a source
+    """
     model = Source
     template_name = 'kineticmodels/source_editor.html'
     def get(self, request, source_id=0):
@@ -65,19 +78,27 @@ class SourceEditor(View):
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('source view', args=(source.id,)))
+            return HttpResponseRedirect(reverse('source view',
+                                                     args=(source.id,)))
         variables = {'source': source,
                      'form': form, }
         return render(request, self.template_name, variables)
 
 
 class SourceNew(View):
-    "To create a new source. Redirects to editor"
+    """
+    To create a new source. Redirects to editor for a source.
+    """
     def get(self, request, source_id=0):
         source = Source.objects.create()
-        return HttpResponseRedirect(reverse('source editor', args=(source.id,)))
+        return HttpResponseRedirect(reverse('source editor', 
+                                                    args=(source.id,)))
 
 class SourceSearchView(ListView):
+    """
+    View to search through the sources. Uses source search helper to filter 
+    using the various search parameters.
+    """
     model = Source
     form_class = SourceSearchForm
     template_name = 'kineticmodels/source_search.html'
@@ -95,12 +116,16 @@ class SourceSearchView(ListView):
             page_numbers = form.cleaned_data['page_numbers']
             doi = form.cleaned_data['doi']
             
-            filteredSources = sourceSearchHelper(Source.objects.all(), Author.objects.all(), author)
+            filteredSources = sourceSearchHelper(Source.objects.all(), 
+                                                Author.objects.all(), author)
             filteredSources = searchHelper(filteredSources, 
-                                [publication_year,source_title,source_title,journal_name,
-                                journal_volume_number,page_numbers,doi], 
-                                ['publication_year','source_title','source_title','journal_name',
-                                'journal_volume_number','page_numbers','doi'])
+                                [publication_year,source_title,source_title,
+                                     journal_name, journal_volume_number,
+                                                            page_numbers,doi], 
+                                ['publication_year','source_title',
+                                    'source_title','journal_name',
+                                    'journal_volume_number','page_numbers',
+                                                                    'doi'])
             return filteredSources
         else:
             return Source.objects.none()
@@ -118,10 +143,10 @@ class SourceSearchView(ListView):
 
 def sourceSearchHelper(source_list, author_list, authorNameList):
     """
-    helper for source search. The function takes in a formula to filter through a list of
-    species and whether the species is a reactant or not. It uses this data to output a list 
-    of reactions which contain the given formula in place of reactants or products where
-    applicable. 
+    helper for source search. The function takes in a formula to filter 
+    through a list of species and whether the species is a reactant or not.
+    It uses this data to output a list of reactions which contain the given
+    formula in place of reactants or products where applicable. 
     """ 
 
     sourceIDs = []
@@ -132,13 +157,19 @@ def sourceSearchHelper(source_list, author_list, authorNameList):
     for authorName in authorNameList:
         print authorName
         filteredAuthors = author_list.filter(name__exact=authorName)
-        filteredAuthorship = Authorship.objects.filter(author_id__in=filteredAuthors.values_list('pk'))
-        filteredSources = filteredSources.filter(pk__in=filteredAuthorship.values_list('source_id'))
+        filteredAuthorship = Authorship.objects.filter(
+                            author_id__in=filteredAuthors.values_list('pk'))
+        filteredSources = filteredSources.filter(
+                            pk__in=filteredAuthorship.values_list('source_id'))
   
     return filteredSources
 
 
 class AuthorAutocomplete(autocomplete.Select2QuerySetView):
+    """
+    Autocomplete function for authors which is used in source search and 
+    source editor.
+    """
     def get_queryset(self):
     #     # Don't forget to filter out results depending on the visitor !
     #     if not self.request.user.is_authenticated():
@@ -153,6 +184,9 @@ class AuthorAutocomplete(autocomplete.Select2QuerySetView):
 
 
 class SpeciesListView(ListView):
+    """
+    Class based view for browsing through all the species.
+    """
     model = Species
     template_name = 'kineticmodels/species_list.html'
     paginate_by = ITEMSPERPAGE
@@ -165,6 +199,9 @@ class SpeciesListView(ListView):
         return context
 
 class SpeciesView(View):
+    """
+    Class based view for viewing a species 
+    """
     model = Species
     template_name = 'kineticmodels/species_view.html'
     def get(self, request, species_id=0):
@@ -181,6 +218,9 @@ class SpeciesView(View):
 
 
 class SpeciesEditor(View):
+    """
+    Class based view for editing a species
+    """
     model = Species
     template_name = 'kineticmodels/species_editor.html'
     def get(self, request, species_id=0):
@@ -202,6 +242,9 @@ class SpeciesEditor(View):
 
 
 class SpeciesSearchView(ListView):
+    """
+    Class based view for searching through species
+    """
     model = Species
     form_class = SpeciesSearchForm
     template_name = 'kineticmodels/species_search.html'
