@@ -90,6 +90,12 @@ class SourceEditor(View):
 #                  'form': form, }
 #     return render(request,'kineticmodels/source_editor.html', variables)
 
+class SourceNew(View):
+    "To create a new source. Redirects to editor"
+    def get(self, request, source_id=0):
+        source = Source.objects.create()
+        return HttpResponseRedirect(reverse('source editor', args=(source.id,)))
+
 class SourceSearchView(ListView):
     model = Source
     form_class = SourceSearchForm
