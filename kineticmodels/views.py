@@ -556,8 +556,9 @@ class KineticModelGenerateSMILES(View):
         form = GenerateSMILESForm()
         speciesFile = kineticModel.chemkin_reactions_file
         speciesList = loadSpecies(self, speciesFile)
+        print "Species List", speciesList
         variables = {'kineticModel': kineticModel,
-                        'form': form}
+                        'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
 
     def post(self, request, kineticModel_id=0):
@@ -583,7 +584,6 @@ class KineticModelGenerateSMILES(View):
         return render(request, self.template_name, variables)       
         
 
-
 class KineticModelAddSMILES(View):
     """
     Class for the view to add compounds to the SMILES.txt file for a kinetic model
@@ -594,8 +594,10 @@ class KineticModelAddSMILES(View):
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = AddSMILESForm()
+        speciesFile = kineticModel.chemkin_reactions_file
+        speciesList = loadSpecies(self, speciesFile)
         variables = {'kineticModel': kineticModel,
-                        'form': form}
+                        'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
 
     def post(self, request, kineticModel_id=0):
