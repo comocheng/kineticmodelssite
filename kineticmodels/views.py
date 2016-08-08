@@ -77,7 +77,16 @@ class SourceEditor(View):
         source = get_object_or_404(Source, id=source_id)
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
-            form.save()
+            source.save(update_fields=['bPrimeID', 'publication_year',
+                        'source_title', 'journal_name', 'journal_volume_number',
+                                                    'page_numbers', 'doi'])
+            formAuthors = form.cleaned_data['authors']
+            Authorship.objects.filter(source_id=source.id).delete()
+            for i in range(len(formAuthors)):
+                b = Authorship(order = i, author_id=formAuthors[i].id, source_id = source.id)
+                b.save()
+
+            #form.save()
             return HttpResponseRedirect(reverse('source view',
                                                      args=(source.id,)))
         variables = {'source': source,
