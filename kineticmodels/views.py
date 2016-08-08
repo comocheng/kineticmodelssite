@@ -498,6 +498,52 @@ class KineticModelFileContentEditor(View):
                      'form': form, }
         return render(request, self.template_name, variables)
 
+# class KineticModelGenerateSMILES(ListView):
+#     """ 
+#     Class based view for generating SMILES with pagination
+#     """
+#     model = KineticModel
+#     form_class = SpeciesSearchForm
+#     template_name = 'kineticmodels/kineticmodel_SMILES'
+#     paginate_by = ITEMSPERPAGE
+#     filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+
+#     def get_queryset(self):
+#         form = GenerateSMILESForm(self.request.GET)
+#         if form.is_valid(): 
+#             c = form.cleaned_data['c']
+#             ch2s = form.cleaned_data['ch2s']
+#             ch2t = form.cleaned_data['ch2t']
+#             c2h2 = form.cleaned_data['c2h2']
+
+#             if(os.path.isfile(filePath)):
+#                 os.remove(filePath)
+            
+#             SMILESFile = open(filePath, 'w')
+#             SMILESFile.write(SMILESHelper([c,ch2s,ch2t,c2h2], ['[C]', 'singlet[CH2]', 'triplet[CH2]', 'C#C']))
+#             speciesFile = kineticModel.chemkin_reactions_file
+#             speciesList = loadSpecies(self, speciesFile)
+#             return speciesList
+#         else:
+#             speciesFile = kineticModel.chemkin_reactions_file
+#             speciesList = loadSpecies(self, speciesFile)
+#             return speciesList
+    
+#     def get_context_data(self, **kwargs):
+#         context = super(KineticModelGenerateSMILES, self).get_context_data(**kwargs)
+#         context['form'] = GenerateSMILESForm(self.request.GET)
+#         queries_without_page = self.request.GET.copy()
+#         if queries_without_page.has_key('page'):
+#             del queries_without_page['page']
+#         context['queries'] = queries_without_page
+#         print queries_without_page
+#         return context
+
+
+
+
+
+
 class KineticModelGenerateSMILES(View):
     """
     Class for the view to generate the SMILES.txt file for a kinetic model
