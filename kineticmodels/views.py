@@ -33,8 +33,9 @@ def index(request):
 
 class SourceListView(ListView):
     """
-    Class based view for browsing through all the sources 
-    a.k.a. the bibliography 
+    Class based view for browsing through all the sources a.k.a. the 
+    bibliography. Uses pagination in ListView to list ITEMSPERPAGE
+    number of items on a page.
     """
     model = Source
     template_name = 'kineticmodels/source_list.html'
@@ -106,7 +107,8 @@ class SourceNew(View):
 class SourceSearchView(ListView):
     """
     View to search through the sources. Uses source search helper to filter 
-    using the various search parameters.
+    using the various search parameters. Uses pagination in ListView to list
+    ITEMSPERPAGE number of items on a page.
     """
     model = Source
     form_class = SourceSearchForm
@@ -194,7 +196,8 @@ class AuthorAutocomplete(autocomplete.Select2QuerySetView):
 
 class SpeciesListView(ListView):
     """
-    Class based view for browsing through all the species.
+    Class based view for browsing through all the species. Uses pagination in
+    ListView to list ITEMSPERPAGE number of items on a page.
     """
     model = Species
     template_name = 'kineticmodels/species_list.html'
@@ -460,7 +463,7 @@ class KineticModelFileContentEditor(View):
     For editing the files for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_editor.html'
+    template_name = 'kineticmodels/kineticmodel_fileeditor.html'
 
     def get(self, request, kineticModel_id=0, filetype=''):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
