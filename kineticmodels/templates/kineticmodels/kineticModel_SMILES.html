@@ -22,5 +22,22 @@ In the form below please enter the formula names(as in the mechanism chamkin fil
 <p><input type="submit" value="Save" name="submit"/></p>
 </form>
 
+<table>
+    <tr>
+        <th>Species in Chemkin File</th>
+    </tr>
+{% for species in speciesList %}
+    <tr>
+        <td>{{ species}}</td>
+    </tr>
+{% endfor %}
+</table>
+
+
+
+
+
+
+
 {% endblock %}
 
