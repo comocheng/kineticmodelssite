@@ -618,7 +618,76 @@ def loadSpecies(self, species_file):
 
     return speciesList
 
+def loadThermo(self, thermo_file, speciesDict):
+    """
+    Load the chemkin thermochemistry file
+    """
+    logging.info("Reading thermo file...")
+    foundThermoBlock = False
+    #import codecs
+    #with codecs.open(thermo_file, "r", "utf-8") as f:
+    with open(thermo_file) as f:
+        line0 = f.readline()
+        while line0 != '':
+            line = removeCommentFromLine(line0)[0]
+            tokens_upper = line.upper().split()
+            if tokens_upper and tokens_upper[0].startswith('THER'):
+                foundThermoBlock = True
+                # Unread the line (we'll re-read it in readThermoBlock())
+                f.seek(-len(line0), 1)
+                try:
+                    formulaDict = readThermoBlock(f, speciesDict)  # updates speciesDict in place
+                except:
+                    logging.error("Error reading thermo block around line:\n" + f.readline())
+                    raise
+                assert formulaDict, "Didn't read any thermo data"
+            line0 = f.readline()
+    assert foundThermoBlock, "Couldn't find a line beginning with THERMO or THERM or THER in {0}".format(thermo_file)
+    assert formulaDict, "Didn't read any thermo data from {0}".format(thermo_file)
 
+    # Save the formulaDict, converting from {'c':1,'h':4} into "CH4" in the process.
+    #self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
+    formulaDict = dict(
+        (label, convertFormula(formula))
+        for (label, formula) in formulaDict.iteritems())
+    # thermoDict contains original thermo as read from chemkin thermo file
+    #self.thermoDict = {s.label: s.thermo for s in speciesDict.values() }
+    thermoDict = dict((s.label, s.thermo)
+                           for s in speciesDict.values())
+    return formulaDict, thermoDict
+
+def convertFormula(formulaDict):
+    """
+    Given a formula in dict form {'c':2, 'h':6, 'o':0}
+    return a canonical formula string "C2H6"
+    
+    For comparison reasons, this must be the same algorithm as used in
+    rmgpy.molecule.Molecule class.
+    """
+
+#    elements = {e.capitalize(): n for e, n in formulaDict.iteritems() if n > 0}
+    elements = dict((e.capitalize(), n) for (e, n) in formulaDict.iteritems() if n > 0)
+    hasCarbon = 'C' in elements
+    hasHydrogen = 'H' in elements
+    # Use the Hill system to generate the formula
+    formula = ''
+    # Carbon and hydrogen always come first if carbon is present
+    if hasCarbon:
+        count = elements['C']
+        formula += 'C{0:d}'.format(count) if count > 1 else 'C'
+        del elements['C']
+        if hasHydrogen:
+            count = elements['H']
+            formula += 'H{0:d}'.format(count) if count > 1 else 'H'
+            del elements['H']
+    # Other atoms are in alphabetical order
+    # (This includes hydrogen if carbon is not present)
+    keys = elements.keys()
+    keys.sort()
+    for key in keys:
+        count = elements[key]
+        formula += '{0}{1:d}'.format(key, count) if count > 1 else key
+    return formula
 
 class SourceAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
