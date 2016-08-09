@@ -10,7 +10,8 @@ from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
                   EditKineticModelMetaDataForm, EditKineticModelFileForm, \
                   SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, \
                   FileEditorForm, GenerateSMILESForm, AddSMILESForm
-from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
+from models import Source, Species, KineticModel, Reaction, \
+                    Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
 import rmgpy.chemkin
@@ -80,12 +81,13 @@ class SourceEditor(View):
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
             source.save(update_fields=['bPrimeID', 'publication_year',
-                        'source_title', 'journal_name', 'journal_volume_number',
-                                                    'page_numbers', 'doi'])
+                             'source_title', 'journal_name', 
+                              'journal_volume_number', 'page_numbers', 'doi'])
             formAuthors = form.cleaned_data['authors']
             Authorship.objects.filter(source_id=source.id).delete()
             for i in range(len(formAuthors)):
-                b = Authorship(order = i, author_id=formAuthors[i].id, source_id = source.id)
+                b = Authorship(order = i, author_id=formAuthors[i].id,
+                                                     source_id = source.id)
                 b.save()
 
             #form.save()
@@ -248,7 +250,8 @@ class SpeciesEditor(View):
         form = EditSpeciesForm(request.POST, instance=species)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('species view', args=(species.id,)))
+            return HttpResponseRedirect(reverse('species view', 
+                                                    args=(species.id,)))
         variables = {'species': species,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -272,7 +275,8 @@ class SpeciesSearchView(ListView):
             inchi = form.cleaned_data['inchi']
             cas = form.cleaned_data['cas']
             filteredSpecies = searchHelper(Species.objects.all(), 
-                                [formula,sPrimeID,inchi,cas], ['formula', 'sPrimeID', 'inchi', 'cas'])
+                                [formula,sPrimeID,inchi,cas], 
+                                    ['formula', 'sPrimeID', 'inchi', 'cas'])
             return filteredSpecies
         else:
             return Species.objects.none()
@@ -291,16 +295,17 @@ class SpeciesSearchView(ListView):
 
 def searchHelper(items, searchParameterData, searchParameterNames):
 
-    """ Search helper function which takes in the items to be filtered along with the 
-        search parameters and returns an exact match for the given search
-        parameters
+    """ Search helper function which takes in the items to be filtered along 
+        with the search parameters and returns an exact match for the given 
+        search parameters
         items = items.filter(searchParameterNames__exact=searchParameterData)
     """
 
     for counter in range(len(searchParameterData)):
         if searchParameterData[counter] != '':
             kwargs = {
-                '{0}__{1}'.format(searchParameterNames[counter], 'exact'): searchParameterData[counter]
+                '{0}__{1}'.format(searchParameterNames[counter], 
+                                        'exact'): searchParameterData[counter]
             }
             items = items.filter(**kwargs)
     return items
@@ -331,7 +336,8 @@ class KineticModelView(View):
     template_name = 'kineticmodels/kineticModel_view.html'
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 
+                                                                'SMILES.txt')
         SMILESgenerated = os.path.isfile(filePath)
 
         variables = {'kineticModel': kineticModel, 
@@ -345,7 +351,8 @@ class KineticModelNew(View):
     """
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
-        return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
+        return HttpResponseRedirect(reverse('kineticmodel editor', 
+                                                    args=(kineticModel.id,)))
 
 
 importer_processes = {}
@@ -408,7 +415,8 @@ class KineticModelImporter(View):
                     process.terminate()
                 del(importer_processes[kineticModel])
 
-        return HttpResponseRedirect(reverse('kineticmodel importer', args=(kineticModel.id,)))
+        return HttpResponseRedirect(reverse('kineticmodel importer', 
+                                                    args=(kineticModel.id,)))
 
 
 
@@ -428,13 +436,15 @@ class KineticModelMetaDataEditor(View):
 
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = EditKineticModelMetaDataForm(request.POST, instance=kineticModel)
+        form = EditKineticModelMetaDataForm(request.POST, 
+                                                    instance=kineticModel)
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
             form.save()
 
-            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse('kineticmodel view', 
+                                                   args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -457,14 +467,16 @@ class KineticModelUpload(View):
 
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = EditKineticModelFileForm(request.POST, request.FILES, instance=kineticModel)
+        form = EditKineticModelFileForm(request.POST, request.FILES, 
+                                                        instance=kineticModel)
         if form.is_valid():
             kineticModel.createDir()
             # Save the form
             form.save()    
             print "KineticModel Path - ", kineticModel.getPath(absolute=True)
 
-            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse('kineticmodel view', 
+                                                    args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -524,8 +536,9 @@ class KineticModelGenerateSMILES(View):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = GenerateSMILESForm()
         speciesFile = kineticModel.chemkin_reactions_file
-        speciesList = loadSpecies(self, speciesFile)
-        print "Species List", speciesList
+        speciesList, speciesDict = loadSpecies(self, speciesFile)
+     #   print "Species List", speciesList
+        print "Species Dict", speciesDict
         variables = {'kineticModel': kineticModel,
                         'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
@@ -533,7 +546,8 @@ class KineticModelGenerateSMILES(View):
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = GenerateSMILESForm(request.POST)
-        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 
+                                                                'SMILES.txt')
         if form.is_valid():
             c = form.cleaned_data['c']
             ch2s = form.cleaned_data['ch2s']
@@ -544,10 +558,12 @@ class KineticModelGenerateSMILES(View):
                 os.remove(filePath)
             
             SMILESFile = open(filePath, 'w')
-            SMILESFile.write(SMILESHelper([c,ch2s,ch2t,c2h2], ['[C]', 'singlet[CH2]', 'triplet[CH2]', 'C#C']))
+            SMILESFile.write(SMILESHelper([c,ch2s,ch2t,c2h2], 
+                            ['[C]', 'singlet[CH2]', 'triplet[CH2]', 'C#C']))
 
 
-            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse('kineticmodel view',
+                                                    args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)       
@@ -555,7 +571,8 @@ class KineticModelGenerateSMILES(View):
 
 class KineticModelAddSMILES(View):
     """
-    Class for the view to add compounds to the SMILES.txt file for a kinetic model
+    Class for the view to add compounds to the SMILES.txt file for a kinetic 
+    model
     """
     model = KineticModel
     template_name = 'kineticmodels/kineticmodel_SMILES.html'
@@ -572,7 +589,8 @@ class KineticModelAddSMILES(View):
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = AddSMILESForm(request.POST)
-        filePath = os.path.join(kineticModel.getPath(absolute=True), 'SMILES.txt')
+        filePath = os.path.join(kineticModel.getPath(absolute=True), 
+                                                                'SMILES.txt')
         if form.is_valid():
             smiles = form.cleaned_data['smiles']
             chemkin = form.cleaned_data['chemkin']
@@ -580,7 +598,8 @@ class KineticModelAddSMILES(View):
             SMILESFile = open(filePath, 'a')
             SMILESFile.write(SMILESHelper([chemkin], [smiles]))
 
-            return HttpResponseRedirect(reverse('kineticmodel view', args=(kineticModel.id,)))
+            return HttpResponseRedirect(reverse('kineticmodel view', 
+                                                    args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)     
@@ -690,6 +709,10 @@ def convertFormula(formulaDict):
     return formula
 
 class SourceAutocomplete(autocomplete.Select2QuerySetView):
+    """
+    Autocomplete method for source used in when adding a source to a kinetic
+    model
+    """
     def get_queryset(self):
     #     # Don't forget to filter out results depending on the visitor !
     #     if not self.request.user.is_authenticated():
@@ -705,6 +728,9 @@ class SourceAutocomplete(autocomplete.Select2QuerySetView):
 
 
 class ReactionListView(ListView):
+    """
+    Class based view for listing reactions using pagination
+    """
     model = Reaction
     template_name = 'kineticmodels/reaction_list.html'
     paginate_by = ITEMSPERPAGE
@@ -727,6 +753,9 @@ class ReactionView(View):
 
 
 class ReactionEditor(View):
+    """
+    Class based view for editing a reaction
+    """
     model = Reaction
     template_name = 'kineticmodels/reaction_editor.html'
     def get(self, request, reaction_id=0):
@@ -741,7 +770,8 @@ class ReactionEditor(View):
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('reaction view', args=(reaction.id,)))
+            return HttpResponseRedirect(reverse('reaction view', 
+                                                    rgs=(reaction.id,)))
         variables = {'reaction': reaction,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -749,6 +779,9 @@ class ReactionEditor(View):
 
 
 class ReactionSearchView(ListView):
+    """
+    Clasas based view for searching through the reactions in the database
+    """
     model = Reaction
     form_class = ReactionSearchForm
     template_name = 'kineticmodels/reaction_search.html'
@@ -758,27 +791,28 @@ class ReactionSearchView(ListView):
         form = ReactionSearchForm(self.request.GET)
         if form.is_valid():
             filteredReactions = Reaction.objects.all() 
-            # reactant1Formula = form.cleaned_data['reactant1Formula']
-            # print "reactant 1", reactant1Formula
-            # filteredReactions = reactionSearchHelper(Reaction.objects.all(), Species.objects.all(), reactant1Formula, True)
-            # reactant2Formula = form.cleaned_data['reactant2Formula']
-            # filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant2Formula, True)
-   #         reactants = form.cleaned_data['reactants']
 
             if self.request.GET.has_key('reactants') :
                 reactants = form.cleaned_data['reactants']
                 for reactant in reactants:
-                    filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), reactant.formula, True)
+                    filteredReactions = reactionSearchHelper(
+                                                filteredReactions, 
+                                                    Species.objects.all(), 
+                                                        reactant.formula, True)
 
 
             if self.request.GET.has_key('products') :
                 products = form.cleaned_data['products']
                 for product in products:
-                    filteredReactions = reactionSearchHelper(filteredReactions, Species.objects.all(), product.formula, False)
+                    filteredReactions = reactionSearchHelper(
+                                                filteredReactions, 
+                                                    Species.objects.all(),
+                                                        product.formula, False)
 
 
             rPrimeID = form.cleaned_data['rPrimeID']
-            filteredReactions = searchHelper(filteredReactions,[rPrimeID],['rPrimeID'])
+            filteredReactions = searchHelper(filteredReactions,
+                                                    [rPrimeID],['rPrimeID'])
             reversibleChoice = form.cleaned_data['is_reversible']
             if reversibleChoice != 'unknown':
                 is_reversible= True if reversibleChoice == 'yes' else False
@@ -801,17 +835,18 @@ class ReactionSearchView(ListView):
 
 def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     """
-    helper for reaction search. The function takes in a formula to filter through a list of
-    species and whether the species is a reactant or not. It uses this data to output a list 
-    of reactions which contain the given formula in place of reactants or products where
-    applicable. 
+    helper for reaction search. The function takes in a formula to filter 
+    through a list of species and whether the species is a reactant or not. 
+    It uses this data to output a list of reactions which contain the given 
+    formula in place of reactants or products where applicable. 
     """ 
 
     reactionIDs = []
 
     if formula != '':
         filteredSpecies = species_list.filter(formula__exact=formula)
-        filteredStoich = Stoichiometry.objects.filter(species_id__in=filteredSpecies.values_list('pk'))
+        filteredStoich = Stoichiometry.objects.filter(
+                            species_id__in=filteredSpecies.values_list('pk'))
         for stoich in filteredStoich:
             if isReactant==True and stoich.stoichiometry<0:
                 reactionIDs.append(stoich.reaction_id)
@@ -826,6 +861,9 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
 
 
 class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
+    """
+    Autocomplete for species used in searching though the reactions database
+    """
     def get_queryset(self):
     #     # Don't forget to filter out results depending on the visitor !
     #     if not self.request.user.is_authenticated():
