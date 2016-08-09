@@ -616,7 +616,7 @@ def loadSpecies(self, species_file):
             readSpeciesBlock(f, speciesDict, speciesAliases, speciesList)
         line0 = f.readline()
 
-    return speciesList
+    return speciesList, speciesDict
 
 def loadThermo(self, thermo_file, speciesDict):
     """
