@@ -255,7 +255,8 @@ class SpeciesEditor(View):
 
 class SpeciesSearchView(ListView):
     """
-    Class based view for searching through species
+    Class based view for searching through species. Uses pagination in 
+    ListView to list ITEMSPERPAGE number of items on a page.
     """
     model = Species
     form_class = SpeciesSearchForm
@@ -305,6 +306,10 @@ def searchHelper(items, searchParameterData, searchParameterNames):
 
 
 class KineticModelListView(ListView):
+    """
+    Class based view for browsing through all the kinetic models. Uses 
+    pagination in ListView to list ITEMSPERPAGE number of items on a page.
+    """
     model = KineticModel
     template_name = 'kineticmodels/kineticModel_list.html'
     paginate_by = ITEMSPERPAGE
@@ -318,6 +323,9 @@ class KineticModelListView(ListView):
 
 
 class KineticModelView(View):
+    """
+    Class based view for viewing a Kinetic Model 
+    """
     model = KineticModel
     template_name = 'kineticmodels/kineticModel_view.html'
     def get(self, request, kineticModel_id=0):
@@ -331,7 +339,9 @@ class KineticModelView(View):
 
 
 class KineticModelNew(View):
-    "To create a new kinetic model. Redirects to editor"
+    """
+    To create a new kinetic model. Redirects to editor
+    """
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
         return HttpResponseRedirect(reverse('kineticmodel editor', args=(kineticModel.id,)))
@@ -620,6 +630,9 @@ class KineticModelAddSMILES(View):
         return render(request, self.template_name, variables)     
 
 def SMILESHelper(userInput, SMILESCompound):
+    """
+    SMILES Helper for adding the species and
+    """
     stringToReturn = ''
     for i in range(len(SMILESCompound)):
         if userInput[i] != '' and SMILESCompound[i] != '':
