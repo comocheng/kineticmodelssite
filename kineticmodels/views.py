@@ -534,18 +534,42 @@ class KineticModelGenerateSMILES(View):
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = GenerateSMILESForm()
         speciesFile = kineticModel.chemkin_reactions_file
+        thermoFile = kineticModel.chemkin_thermo_file
         speciesList, speciesDict = loadSpecies(self, speciesFile)
-     #   print "Species List", speciesList
-        print "Species Dict", speciesDict
+        formulaDict, thermoDict = loadThermo(self, thermoFile, speciesDict)
+        
+        C2H2 = [['',''],]
+        CH2 = [['',''],]
+        C = [['',''],['C','C'],]
+
+        for formula in formulaDict.iteritems():
+            if 'C2H2' == formula[1]:
+                choice = [formula[0], formula[0]]
+                C2H2.append(choice)
+     
+            if 'CH2' == formula[1]:
+                choice = [formula[0], formula[0]]
+                CH2.append(choice)
+                        
+            if 'C' == formula[1]:
+                choice = [formula[0], formula[0]]
+                C.append(choice)
+        print "C - ", C
+        print "CH2 - ", CH2
+        print "C2H2 - ", C2H2
+        
+        form = GenerateSMILESForm(C2H2=C2H2, CH2=CH2, C=C)
+
+        # print "Species List", speciesList
+        # print "Species Dict", speciesDict
         variables = {'kineticModel': kineticModel,
                         'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
 
     def post(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        form = GenerateSMILESForm(request.POST)
+        form = GenerateSMILESForm(request.POST, C2H2=[], CH2=[], C=[])
         filePath = os.path.join(kineticModel.getPath(absolute=True), 
                                                                 'SMILES.txt')
         if form.is_valid():
