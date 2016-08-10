@@ -645,35 +645,35 @@ def loadThermo(self, thermo_file, speciesDict):
     foundThermoBlock = False
     #import codecs
     #with codecs.open(thermo_file, "r", "utf-8") as f:
-    with open(thermo_file) as f:
+    f = thermo_file
+    line0 = f.readline()
+    while line0 != '':
+        line = removeCommentFromLine(line0)[0]
+        tokens_upper = line.upper().split()
+        if tokens_upper and tokens_upper[0].startswith('THER'):
+            foundThermoBlock = True
+            # Unread the line (we'll re-read it in readThermoBlock())
+            f.seek(-len(line0), 1)
+            try:
+                formulaDict = readThermoBlock(f, speciesDict)  # updates speciesDict in place
+            except:
+                logging.error("Error reading thermo block around line:\n" + f.readline())
+                raise
+            assert formulaDict, "Didn't read any thermo data"
         line0 = f.readline()
-        while line0 != '':
-            line = removeCommentFromLine(line0)[0]
-            tokens_upper = line.upper().split()
-            if tokens_upper and tokens_upper[0].startswith('THER'):
-                foundThermoBlock = True
-                # Unread the line (we'll re-read it in readThermoBlock())
-                f.seek(-len(line0), 1)
-                try:
-                    formulaDict = readThermoBlock(f, speciesDict)  # updates speciesDict in place
-                except:
-                    logging.error("Error reading thermo block around line:\n" + f.readline())
-                    raise
-                assert formulaDict, "Didn't read any thermo data"
-            line0 = f.readline()
     assert foundThermoBlock, "Couldn't find a line beginning with THERMO or THERM or THER in {0}".format(thermo_file)
     assert formulaDict, "Didn't read any thermo data from {0}".format(thermo_file)
 
     # Save the formulaDict, converting from {'c':1,'h':4} into "CH4" in the process.
     #self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
-    formulaDict = dict(
+    finalFormulaDict = dict(
         (label, convertFormula(formula))
         for (label, formula) in formulaDict.iteritems())
     # thermoDict contains original thermo as read from chemkin thermo file
     #self.thermoDict = {s.label: s.thermo for s in speciesDict.values() }
-    thermoDict = dict((s.label, s.thermo)
+    finalThermoDict = dict((s.label, s.thermo)
                            for s in speciesDict.values())
-    return formulaDict, thermoDict
+    return finalFormulaDict, finalThermoDict
 
 def convertFormula(formulaDict):
     """
