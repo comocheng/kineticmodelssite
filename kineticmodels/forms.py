@@ -44,9 +44,11 @@ class EditSourceForm(forms.ModelForm):
     """
     class Meta:
         model = Source
-        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName', 'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
+        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName',
+                     'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
-            'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
+            'authors': autocomplete.ModelSelect2Multiple(
+                                                    url='author-autocomplete')
         }
 
 
@@ -71,15 +73,6 @@ class EditKineticModelMetaDataForm(forms.ModelForm):
         widgets =  {
             'source': autocomplete.ModelSelect2(url='source-autocomplete')
         }
- 
-    # mPrimeID = forms.CharField(label = 'mPrIMe ID', max_length=9, strip = True, required=False)
-    # source = forms.ModelChoiceField(label="Source",
-    #     queryset=Source.objects.all(), required=False,
-    #     widget=autocomplete.ModelSelect2Multiple(url='source-autocomplete'))
-    # model_name = forms.CharField(label = 'Model Name', max_length=200, strip = True, required=False)
-    # additional_info = forms.CharField(label = 'Additional Info', max_length=1000, strip = True, required=False)    
-
-
 
 
 class EditKineticModelFileForm(forms.ModelForm):
@@ -89,7 +82,8 @@ class EditKineticModelFileForm(forms.ModelForm):
     class Meta:
         model = KineticModel
     #    exclude = ('kinetics', 'thermo', 'transport')
-        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 'chemkinTransportFile')
+        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 
+                                                    'chemkinTransportFile')
 
 
 class UploadKineticModelForm(forms.ModelForm):
@@ -98,7 +92,8 @@ class UploadKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 'chemkinTransportFile')
+        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 
+                                                    'chemkinTransportFile')
 
 
 # For for editing a Reaction
@@ -128,23 +123,25 @@ class SpeciesSearchForm(forms.Form):
     #     fields = ('formula', 'sPrimeID', 'inchi', 'cas')
 
 
-    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
-    formula = forms.CharField(label = 'Formula', max_length=50, strip = True, required=False)
-    inchi = forms.CharField(label = 'InChI', max_length=500, strip = True, required=False)
-    cas = forms.CharField(label = 'CAS Registry Number', max_length=400, strip = True, required=False)    
+    sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9,
+                                             strip = True, required=False)
+    formula = forms.CharField(label = 'Formula', max_length=50,
+                                             strip = True, required=False)
+    inchi = forms.CharField(label = 'InChI', max_length=500,
+                                             strip = True, required=False)
+    cas = forms.CharField(label = 'CAS Registry Number', max_length=400,
+                                             strip = True, required=False)    
 
-
-
-#     author = forms.ModelChoiceField( queryset=Author.objects.all(), required=False,
-#             widget=autocomplete.ModelSelect2Multiple(url='author-autocomplete') )
 
 class SourceSearchForm(forms.ModelForm):
 
     class Meta:
         model = Source
-        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName', 'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
+        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName',
+                     'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
-            'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
+            'authors': autocomplete.ModelSelect2Multiple(
+                                                url='author-autocomplete')
         }
 
 
@@ -156,7 +153,8 @@ class ReactionSearchForm(forms.Form):
     A django form for searching through a Reaction
     """
 
-    rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9, strip = True, required=False)
+    rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9,
+                                                 strip = True, required=False)
 
    reactants = forms.ModelMultipleChoiceField(label="Reactant(s)",
         queryset=Species.objects.all(), required=False,
@@ -165,7 +163,8 @@ class ReactionSearchForm(forms.Form):
    
 
     CHOICES = (('unknown','Don\'t Care'), ('yes', 'Yes'),('no', 'No'))
-    is_reversible = forms.ChoiceField(label="Is Reversible?", required=False,widget=forms.Select,choices=CHOICES)
+    is_reversible = forms.ChoiceField(label="Is Reversible?",
+                         required=False,widget=forms.Select,choices=CHOICES)
 
     products = forms.ModelMultipleChoiceField(label="Product(s)",
         queryset=Species.objects.all(), required=False,
@@ -177,11 +176,15 @@ class GenerateSMILESForm(forms.Form):
     """
     A django form for generating the SMILES file for a Kinetic Model
     """
-    #In case you want to get rid of the options for an input
-    # c = forms.CharField(label = '[C]', max_length=50, strip = True, required=False)
-    # ch2s= forms.CharField(label = 'singlet[CH2]', max_length=50, strip = True, required=False)
-    # ch2t = forms.CharField(label = 'triplet[CH2]', max_length=50, strip = True, required=False)
-    # c2h2 = forms.CharField(label = 'C#C', max_length=50, strip = True, required=False)  
+    # In case you want to get rid of the options for an input
+    # c = forms.CharField(label = '[C]', max_length=50,
+    #                                      strip = True, required=False)
+    # ch2s= forms.CharField(label = 'singlet[CH2]', max_length=50,
+    #                                      strip = True, required=False)
+    # ch2t = forms.CharField(label = 'triplet[CH2]', max_length=50,
+    #                                      strip = True, required=False)
+    # c2h2 = forms.CharField(label = 'C#C', max_length=50,
+    #                                      strip = True, required=False)  
 
 
     def __init__(self, *args, **kwargs):
@@ -189,10 +192,14 @@ class GenerateSMILESForm(forms.Form):
         CH2 = kwargs.pop('CH2')
         C2H2 = kwargs.pop('C2H2')
         super(GenerateSMILESForm, self).__init__(*args, **kwargs)
-        self.fields['c'] = forms.ChoiceField(label='[C]', required=False,widget=forms.Select,choices=C)
-        self.fields['ch2s'] = forms.ChoiceField(label='singlet[CH2]', required=False,widget=forms.Select,choices=CH2)
-        self.fields['ch2t'] = forms.ChoiceField(label='triplet[CH2]', required=False,widget=forms.Select,choices=CH2)
-        self.fields['c2h2'] = forms.ChoiceField(label='C#C', required=False,widget=forms.Select,choices=C2H2)
+        self.fields['c'] = forms.ChoiceField(label='[C]', required=False,
+                                                widget=forms.Select,choices=C)
+        self.fields['ch2s'] = forms.ChoiceField(label='singlet[CH2]',
+                             required=False,widget=forms.Select,choices=CH2)
+        self.fields['ch2t'] = forms.ChoiceField(label='triplet[CH2]',
+                             required=False,widget=forms.Select,choices=CH2)
+        self.fields['c2h2'] = forms.ChoiceField(label='C#C',
+                             required=False,widget=forms.Select,choices=C2H2)
 
 #Form for adding compounds to the SMILES.txt
 class AddSMILESForm(forms.Form):
@@ -200,6 +207,9 @@ class AddSMILESForm(forms.Form):
     A django form for adding compounds to the SMILES file for a Kinetic Model
     """
 
-    smiles = forms.CharField(label = 'SMILES form of the compound', max_length=50, strip = True, required=False)
-    chemkin = forms.CharField(label = 'The formula of the compound as represented in the CHEMKIN file', max_length=50, strip = True, required=False)
+    smiles = forms.CharField(label = 'SMILES form of the compound',
+                                 max_length=50, strip = True, required=False)
+    chemkin = forms.CharField(
+    label = 'The formula of the compound as represented in the CHEMKIN file',
+                                  max_length=50, strip = True, required=False)
  
