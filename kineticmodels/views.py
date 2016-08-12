@@ -384,8 +384,12 @@ class KineticModelImporter(View):
             if kineticModel not in importer_processes:
                 workingDirectory = kineticModel.getPath(absolute=True)
 
-                reactionsFile = kineticModel.chemkinReactionsFile.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
-                thermoFile = kineticModel.chemkinThermoFile.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                reactionsFile = 
+                        kineticModel.chemkinReactionsFile.name.replace(
+                                kineticModel.getPath(), '').lstrip(os.path.sep)
+                thermoFile = 
+                        kineticModel.chemkinThermoFile.name.replace(
+                                kineticModel.getPath(), '').lstrip(os.path.sep)
                 importCommand = ['python',
                                  os.path.expandvars("$RMGpy/importChemkin.py"),
                                  '--species', reactionsFile,
@@ -399,10 +403,15 @@ class KineticModelImporter(View):
                 p = subprocess.Popen(args=importCommand,
                                      cwd=workingDirectory,
                                      env=None,
-                                     stdout=open(os.path.join(workingDirectory, "importer.log"), 'w'),
+                                     stdout=
+                                        open(os.path.join(workingDirectory, 
+                                                        "importer.log"), 'w'),
                                      stderr=subprocess.STDOUT,
                                      )
-                print("Starting import command {!r} in {} with PID {}".format(' '.join(importCommand), workingDirectory, p.pid))
+                print("Starting import \
+                            command {!r} in {} \
+                                with PID {}".format(' '.join(importCommand),
+                                                     workingDirectory, p.pid))
                 importer_processes[kineticModel] = p
 
         elif 'stop' in request.POST:
