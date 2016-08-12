@@ -44,7 +44,7 @@ class EditSourceForm(forms.ModelForm):
     """
     class Meta:
         model = Source
-        fields = ('bPrimeID', 'publication_year', 'source_title', 'journal_name', 'journal_volume_number', 'page_numbers', 'doi', 'authors')
+        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName', 'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
             'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
         }
@@ -67,7 +67,7 @@ class EditKineticModelMetaDataForm(forms.ModelForm):
     class Meta:
         model = KineticModel
     #    exclude = ('kinetics', 'thermo', 'transport')
-        fields = ('source', 'mPrimeID', 'model_name', 'additional_info')
+        fields = ('source', 'mPrimeID', 'modelName', 'additionalInfo')
         widgets =  {
             'source': autocomplete.ModelSelect2(url='source-autocomplete')
         }
@@ -89,7 +89,7 @@ class EditKineticModelFileForm(forms.ModelForm):
     class Meta:
         model = KineticModel
     #    exclude = ('kinetics', 'thermo', 'transport')
-        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 'chemkinTransportFile')
 
 
 class UploadKineticModelForm(forms.ModelForm):
@@ -98,7 +98,7 @@ class UploadKineticModelForm(forms.ModelForm):
     """
     class Meta:
         model = KineticModel
-        fields = ('chemkin_reactions_file', 'chemkin_thermo_file', 'chemkin_transport_file')
+        fields = ('chemkinReactionsFile', 'chemkinThermoFile', 'chemkinTransportFile')
 
 
 # For for editing a Reaction
@@ -143,9 +143,9 @@ class SpeciesSearchForm(forms.Form):
 #     bPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9, strip = True, required=False)
 #     publication_year = forms.CharField(label = 'Year of Publication', max_length=4, strip = True, required=False)
 #     source_title = forms.CharField(label = 'Source Title', max_length=300, strip = True, required=False)
-#     journal_name = forms.CharField(label = 'Journal Name', max_length=300, strip = True, required=False)
-#     journal_volume_number = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
-#     page_numbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
+#     journalName = forms.CharField(label = 'Journal Name', max_length=300, strip = True, required=False)
+#     journalVolumeNumber = forms.CharField(label = 'Journal Volume Number', max_length=10, strip = True, required=False)
+#     pageNumbers = forms.CharField(label = 'Page Number ([page #]-[page #])', max_length=100, strip = True, required=False)
 #     doi = forms.CharField(label = 'DOI', max_length=80, strip = True, required=False)
 # #    author = forms.CharField(label = 'Author', max_length=80, strip = True, required=False)
 
@@ -156,7 +156,7 @@ class SourceSearchForm(forms.ModelForm):
 
     class Meta:
         model = Source
-        fields = ('bPrimeID', 'publication_year', 'source_title', 'journal_name', 'journal_volume_number', 'page_numbers', 'doi', 'authors')
+        fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName', 'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
             'authors': autocomplete.ModelSelect2Multiple(url='author-autocomplete')
         }
