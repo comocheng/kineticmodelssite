@@ -169,7 +169,6 @@ def sourceSearchHelper(sourceList, authorList, authorNameList):
     filteredSources = sourceList
 
     for authorName in authorNameList:
-        print authorName
         filteredAuthors = authorList.filter(name__exact=authorName)
         filteredAuthorship = Authorship.objects.filter(
                             author_id__in=filteredAuthors.values_list('pk'))
@@ -288,7 +287,6 @@ class SpeciesSearchView(ListView):
         if queries_without_page.has_key('page'):
             del queries_without_page['page']
         context['queries'] = queries_without_page
-        print queries_without_page
         return context
 
 
@@ -473,7 +471,6 @@ class KineticModelUpload(View):
             kineticModel.createDir()
             # Save the form
             form.save()    
-            print "KineticModel Path - ", kineticModel.getPath(absolute=True)
 
             return HttpResponseRedirect(reverse('kineticModelView', 
                                                     args=(kineticModel.id,)))
@@ -555,14 +552,9 @@ class KineticModelGenerateSMILES(View):
             if 'C' == formula[1]:
                 choice = [formula[0], formula[0]]
                 C.append(choice)
-        print "C - ", C
-        print "CH2 - ", CH2
-        print "C2H2 - ", C2H2
         
         form = GenerateSMILESForm(C2H2=C2H2, CH2=CH2, C=C)
 
-        # print "Species List", speciesList
-        # print "Species Dict", speciesDict
         variables = {'kineticModel': kineticModel,
                         'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
@@ -605,7 +597,7 @@ class KineticModelAddSMILES(View):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = AddSMILESForm()
         speciesFile = kineticModel.chemkinReactionsFile
-        speciesList = loadSpecies(self, speciesFile)
+        speciesList, speciesDict = loadSpecies(self, speciesFile)
         variables = {'kineticModel': kineticModel,
                         'form': form, 'speciesList':speciesList}
         return render(request, self.template_name, variables)
@@ -853,7 +845,6 @@ class ReactionSearchView(ListView):
         if queries_without_page.has_key('page'):
             del queries_without_page['page']
         context['queries'] = queries_without_page
-        print queries_without_page
         return context
 
 
