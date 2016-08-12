@@ -40,7 +40,7 @@ class SourceListView(ListView):
     number of items on a page.
     """
     model = Source
-    template_name = 'kineticmodels/source_list.html'
+    template_name = 'kineticmodels/sourceList.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -56,7 +56,7 @@ class SourceView(View):
     Class based view for viewing a source
     """
     model = Source
-    template_name = 'kineticmodels/source_view.html'
+    template_name = 'kineticmodels/sourceView.html'
     def get(self, request, source_id=0):
         source = get_object_or_404(Source, id=source_id)
         variables = {'source': source,}
@@ -68,7 +68,7 @@ class SourceEditor(View):
     Class based view for editing a source
     """
     model = Source
-    template_name = 'kineticmodels/source_editor.html'
+    template_name = 'kineticmodels/sourceEditor.html'
     def get(self, request, source_id=0):
         source = get_object_or_404(Source, id=source_id)
         form = EditSourceForm(instance=source)
@@ -80,9 +80,9 @@ class SourceEditor(View):
         source = get_object_or_404(Source, id=source_id)
         form = EditSourceForm(request.POST, instance=source)
         if form.is_valid():
-            source.save(update_fields=['bPrimeID', 'publication_year',
-                             'source_title', 'journal_name', 
-                              'journal_volume_number', 'page_numbers', 'doi'])
+            source.save(update_fields=['bPrimeID', 'publicationYear',
+                             'sourceTitle', 'journalName', 
+                              'journalVolumeNumber', 'pageNumbers', 'doi'])
             formAuthors = form.cleaned_data['authors']
             Authorship.objects.filter(source_id=source.id).delete()
             for i in range(len(formAuthors)):
@@ -91,7 +91,7 @@ class SourceEditor(View):
                 b.save()
 
             #form.save()
-            return HttpResponseRedirect(reverse('source view',
+            return HttpResponseRedirect(reverse('sourceView',
                                                      args=(source.id,)))
         variables = {'source': source,
                      'form': form, }
@@ -104,7 +104,7 @@ class SourceNew(View):
     """
     def get(self, request, source_id=0):
         source = Source.objects.create()
-        return HttpResponseRedirect(reverse('source editor', 
+        return HttpResponseRedirect(reverse('sourceEditor', 
                                                     args=(source.id,)))
 
 class SourceSearchView(ListView):
@@ -115,7 +115,7 @@ class SourceSearchView(ListView):
     """
     model = Source
     form_class = SourceSearchForm
-    template_name = 'kineticmodels/source_search.html'
+    template_name = 'kineticmodels/sourceSearch.html'
     paginate_by = ITEMSPERPAGE
 
     
@@ -123,22 +123,22 @@ class SourceSearchView(ListView):
         form = SourceSearchForm(self.request.GET)
         if form.is_valid(): 
             author = form.cleaned_data['authors']
-            publication_year = form.cleaned_data['publication_year']
-            source_title = form.cleaned_data['source_title']
-            journal_name = form.cleaned_data['journal_name']
-            journal_volume_number = form.cleaned_data['journal_volume_number']
-            page_numbers = form.cleaned_data['page_numbers']
+            publicationYear = form.cleaned_data['publicationYear']
+            sourceTitle = form.cleaned_data['sourceTitle']
+            journalName = form.cleaned_data['journalName']
+            journalVolumeNumber = form.cleaned_data['journalVolumeNumber']
+            pageNumbers = form.cleaned_data['pageNumbers']
             doi = form.cleaned_data['doi']
             
             filteredSources = sourceSearchHelper(Source.objects.all(), 
                                                 Author.objects.all(), author)
             filteredSources = searchHelper(filteredSources, 
-                                [publication_year,source_title,source_title,
-                                     journal_name, journal_volume_number,
-                                                            page_numbers,doi], 
-                                ['publication_year','source_title',
-                                    'source_title','journal_name',
-                                    'journal_volume_number','page_numbers',
+                                [publicationYear,sourceTitle,
+                                     journalName, journalVolumeNumber,
+                                                            pageNumbers,doi], 
+                                ['publicationYear','sourceTitle',
+                                    'journalName',
+                                    'journalVolumeNumber','pageNumbers',
                                                                     'doi'])
             return filteredSources
         else:
@@ -155,7 +155,7 @@ class SourceSearchView(ListView):
 
 
 
-def sourceSearchHelper(source_list, author_list, authorNameList):
+def sourceSearchHelper(sourceList, authorList, authorNameList):
     """
     helper for source search. The function takes in a formula to filter 
     through a list of species and whether the species is a reactant or not.
@@ -166,11 +166,11 @@ def sourceSearchHelper(source_list, author_list, authorNameList):
     sourceIDs = []
 
     filteredAuthorship = Authorship.objects.all()
-    filteredSources = source_list
+    filteredSources = sourceList
 
     for authorName in authorNameList:
         print authorName
-        filteredAuthors = author_list.filter(name__exact=authorName)
+        filteredAuthors = authorList.filter(name__exact=authorName)
         filteredAuthorship = Authorship.objects.filter(
                             author_id__in=filteredAuthors.values_list('pk'))
         filteredSources = filteredSources.filter(
@@ -203,7 +203,7 @@ class SpeciesListView(ListView):
     ListView to list ITEMSPERPAGE number of items on a page.
     """
     model = Species
-    template_name = 'kineticmodels/species_list.html'
+    template_name = 'kineticmodels/speciesList.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -218,7 +218,7 @@ class SpeciesView(View):
     Class based view for viewing a species 
     """
     model = Species
-    template_name = 'kineticmodels/species_view.html'
+    template_name = 'kineticmodels/speciesView.html'
     def get(self, request, species_id=0):
         from rmgweb.main.tools import getStructureInfo
         species = get_object_or_404(Species, id=species_id)
@@ -237,7 +237,7 @@ class SpeciesEditor(View):
     Class based view for editing a species
     """
     model = Species
-    template_name = 'kineticmodels/species_editor.html'
+    template_name = 'kineticmodels/speciesEditor.html'
     def get(self, request, species_id=0):
         species = get_object_or_404(Species, id=species_id)
         form = EditSpeciesForm(instance=species)
@@ -250,7 +250,7 @@ class SpeciesEditor(View):
         form = EditSpeciesForm(request.POST, instance=species)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('species view', 
+            return HttpResponseRedirect(reverse('speciesView', 
                                                     args=(species.id,)))
         variables = {'species': species,
                      'form': form, }
@@ -264,7 +264,7 @@ class SpeciesSearchView(ListView):
     """
     model = Species
     form_class = SpeciesSearchForm
-    template_name = 'kineticmodels/species_search.html'
+    template_name = 'kineticmodels/speciesSearch.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -317,7 +317,7 @@ class KineticModelListView(ListView):
     pagination in ListView to list ITEMSPERPAGE number of items on a page.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticModel_list.html'
+    template_name = 'kineticmodels/kineticModelList.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -333,7 +333,7 @@ class KineticModelView(View):
     Class based view for viewing a Kinetic Model 
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticModel_view.html'
+    template_name = 'kineticmodels/kineticModelView.html'
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         filePath = os.path.join(kineticModel.getPath(absolute=True), 
@@ -351,7 +351,7 @@ class KineticModelNew(View):
     """
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
-        return HttpResponseRedirect(reverse('kineticmodel editor', 
+        return HttpResponseRedirect(reverse('kineticmodelEditor', 
                                                     args=(kineticModel.id,)))
 
 
@@ -361,7 +361,7 @@ class KineticModelImporter(View):
     For importing a KineticModel.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticModel_importer_status.html'
+    template_name = 'kineticmodels/kineticModelImporterStatus.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
@@ -386,8 +386,8 @@ class KineticModelImporter(View):
             if kineticModel not in importer_processes:
                 workingDirectory = kineticModel.getPath(absolute=True)
 
-                reactionsFile = kineticModel.chemkin_reactions_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
-                thermoFile = kineticModel.chemkin_thermo_file.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                reactionsFile = kineticModel.chemkinReactionsFile.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
+                thermoFile = kineticModel.chemkinThermoFile.name.replace(kineticModel.getPath(), '').lstrip(os.path.sep)
                 importCommand = ['python',
                                  os.path.expandvars("$RMGpy/importChemkin.py"),
                                  '--species', reactionsFile,
@@ -415,7 +415,7 @@ class KineticModelImporter(View):
                     process.terminate()
                 del(importer_processes[kineticModel])
 
-        return HttpResponseRedirect(reverse('kineticmodel importer', 
+        return HttpResponseRedirect(reverse('kineticmodelImporter', 
                                                     args=(kineticModel.id,)))
 
 
@@ -425,7 +425,7 @@ class KineticModelMetaDataEditor(View):
     For editing the meta data for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_metadataeditor.html'
+    template_name = 'kineticmodels/kineticModelMetaDataEditor.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
@@ -443,7 +443,7 @@ class KineticModelMetaDataEditor(View):
             # Save the form
             form.save()
 
-            return HttpResponseRedirect(reverse('kineticmodel view', 
+            return HttpResponseRedirect(reverse('kineticModelView', 
                                                    args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
@@ -456,7 +456,7 @@ class KineticModelUpload(View):
     For uploading the files for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_fileeditor.html'
+    template_name = 'kineticmodels/kineticModelFileEditor.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
@@ -475,7 +475,7 @@ class KineticModelUpload(View):
             form.save()    
             print "KineticModel Path - ", kineticModel.getPath(absolute=True)
 
-            return HttpResponseRedirect(reverse('kineticmodel view', 
+            return HttpResponseRedirect(reverse('kineticModelView', 
                                                     args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
@@ -486,16 +486,16 @@ class KineticModelFileContentEditor(View):
     For editing the files for KineticModel objects.
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_fileeditor.html'
+    template_name = 'kineticmodels/kineticModelFileEditor.html'
 
     def get(self, request, kineticModel_id=0, filetype=''):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         if filetype == 'thermo':
-            file = kineticModel.chemkin_thermo_file.file
+            file = kineticModel.chemkinThermoFile.file
         elif filetype == 'reactions':
-            file = kineticModel.chemkin_reactions_file.file
+            file = kineticModel.chemkinReactionsFile.file
         elif filetype == 'transport':
-            file = kineticModel.chemkin_transport_file.file
+            file = kineticModel.chemkinTransportFile.file
         else:
             raise Exception("Invalid filetype {}".format(filetype))
         form = FileEditorForm()
@@ -508,11 +508,11 @@ class KineticModelFileContentEditor(View):
     def post(self, request, kineticModel_id=0, filetype=''):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         if filetype == 'thermo':
-            file = kineticModel.chemkin_thermo_file.file
+            file = kineticModel.chemkinThermoFile.file
         elif filetype == 'reactions':
-            file = kineticModel.chemkin_reactions_file.file
+            file = kineticModel.chemkinReactionsFile.file
         elif filetype == 'transport':
-            file = kineticModel.chemkin_transport_file.file
+            file = kineticModel.chemkinTransportFile.file
         else:
             raise Exception("Invalid filetype {}".format(filetype))
         form = FileEditorForm(request.POST)
@@ -530,12 +530,12 @@ class KineticModelGenerateSMILES(View):
     Class for the view to generate the SMILES.txt file for a kinetic model
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_SMILES.html'
+    template_name = 'kineticmodels/kineticmodelSMILES.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        speciesFile = kineticModel.chemkin_reactions_file
-        thermoFile = kineticModel.chemkin_thermo_file
+        speciesFile = kineticModel.chemkinReactionsFile
+        thermoFile = kineticModel.chemkinThermoFile
         speciesList, speciesDict = loadSpecies(self, speciesFile)
         formulaDict, thermoDict = loadThermo(self, thermoFile, speciesDict)
         
@@ -586,7 +586,7 @@ class KineticModelGenerateSMILES(View):
                             ['[C]', 'singlet[CH2]', 'triplet[CH2]', 'C#C']))
 
 
-            return HttpResponseRedirect(reverse('kineticmodel view',
+            return HttpResponseRedirect(reverse('kineticModelView',
                                                     args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
@@ -599,12 +599,12 @@ class KineticModelAddSMILES(View):
     model
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodel_SMILES.html'
+    template_name = 'kineticmodels/kineticModelSMILES.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
         form = AddSMILESForm()
-        speciesFile = kineticModel.chemkin_reactions_file
+        speciesFile = kineticModel.chemkinReactionsFile
         speciesList = loadSpecies(self, speciesFile)
         variables = {'kineticModel': kineticModel,
                         'form': form, 'speciesList':speciesList}
@@ -622,7 +622,7 @@ class KineticModelAddSMILES(View):
             SMILESFile = open(filePath, 'a')
             SMILESFile.write(SMILESHelper([chemkin], [smiles]))
 
-            return HttpResponseRedirect(reverse('kineticmodel view', 
+            return HttpResponseRedirect(reverse('kineticModelView', 
                                                     args=(kineticModel.id,)))
         variables = {'kineticModel': kineticModel,
                      'form': form, }
@@ -640,7 +640,7 @@ def SMILESHelper(userInput, SMILESCompound):
 
 
 
-def loadSpecies(self, species_file):
+def loadSpecies(self, speciesFile):
     """
     Load the chemkin list of species
     """
@@ -648,7 +648,7 @@ def loadSpecies(self, species_file):
     speciesDict = {}
 
     speciesList = []
-    f = species_file
+    f = speciesFile
     line0 = f.readline()
     while line0 != '':
         line = removeCommentFromLine(line0)[0]
@@ -661,7 +661,7 @@ def loadSpecies(self, species_file):
 
     return speciesList, speciesDict
 
-def loadThermo(self, thermo_file, speciesDict):
+def loadThermo(self, thermoFile, speciesDict):
     """
     Load the chemkin thermochemistry file
     """
@@ -669,7 +669,7 @@ def loadThermo(self, thermo_file, speciesDict):
     foundThermoBlock = False
     #import codecs
     #with codecs.open(thermo_file, "r", "utf-8") as f:
-    f = thermo_file
+    f = thermoFile
     line0 = f.readline()
     while line0 != '':
         line = removeCommentFromLine(line0)[0]
@@ -685,8 +685,8 @@ def loadThermo(self, thermo_file, speciesDict):
                 raise
             assert formulaDict, "Didn't read any thermo data"
         line0 = f.readline()
-    assert foundThermoBlock, "Couldn't find a line beginning with THERMO or THERM or THER in {0}".format(thermo_file)
-    assert formulaDict, "Didn't read any thermo data from {0}".format(thermo_file)
+    assert foundThermoBlock, "Couldn't find a line beginning with THERMO or THERM or THER in {0}".format(thermoFile)
+    assert formulaDict, "Didn't read any thermo data from {0}".format(thermoFile)
 
     # Save the formulaDict, converting from {'c':1,'h':4} into "CH4" in the process.
     #self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
@@ -745,9 +745,9 @@ class SourceAutocomplete(autocomplete.Select2QuerySetView):
 
         if self.q:
             if re.match("^[0-9]*$", self.q):
-                qs = qs.filter(publication_year__istartswith=self.q)
+                qs = qs.filter(publicationYear__istartswith=self.q)
             else:
-                qs = qs.filter(source_title__istartswith=self.q)
+                qs = qs.filter(sourceTitle__istartswith=self.q)
         return qs
 
 
@@ -756,7 +756,7 @@ class ReactionListView(ListView):
     Class based view for listing reactions using pagination
     """
     model = Reaction
-    template_name = 'kineticmodels/reaction_list.html'
+    template_name = 'kineticmodels/reactionList.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -768,7 +768,7 @@ class ReactionListView(ListView):
 
 class ReactionView(View):
     model = Reaction
-    template_name = 'kineticmodels/reaction_view.html'
+    template_name = 'kineticmodels/reactionView.html'
     def get(self, request, reaction_id=0):
         reaction = get_object_or_404(Reaction, id=reaction_id)
         variables = {'reaction': reaction}
@@ -781,7 +781,7 @@ class ReactionEditor(View):
     Class based view for editing a reaction
     """
     model = Reaction
-    template_name = 'kineticmodels/reaction_editor.html'
+    template_name = 'kineticmodels/reactionEditor.html'
     def get(self, request, reaction_id=0):
         reaction = get_object_or_404(Reaction, id=reaction_id)
         form = EditReactionForm(instance=reaction)
@@ -794,7 +794,7 @@ class ReactionEditor(View):
         form = EditReactionForm(request.POST, instance=reaction)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('reaction view', 
+            return HttpResponseRedirect(reverse('reactionView', 
                                                     rgs=(reaction.id,)))
         variables = {'reaction': reaction,
                      'form': form, }
@@ -808,7 +808,7 @@ class ReactionSearchView(ListView):
     """
     model = Reaction
     form_class = ReactionSearchForm
-    template_name = 'kineticmodels/reaction_search.html'
+    template_name = 'kineticmodels/reactionSearch.html'
     paginate_by = ITEMSPERPAGE
 
     def get_queryset(self):
@@ -837,11 +837,11 @@ class ReactionSearchView(ListView):
             rPrimeID = form.cleaned_data['rPrimeID']
             filteredReactions = searchHelper(filteredReactions,
                                                     [rPrimeID],['rPrimeID'])
-            reversibleChoice = form.cleaned_data['is_reversible']
+            reversibleChoice = form.cleaned_data['isReversible']
             if reversibleChoice != 'unknown':
-                is_reversible= True if reversibleChoice == 'yes' else False
+                isReversible= True if reversibleChoice == 'yes' else False
                 filteredReactions = searchHelper(filteredReactions, 
-                                [is_reversible], ['is_reversible'])
+                                [isReversible], ['isReversible'])
             return filteredReactions
         else:
             return Reaction.objects.none()
@@ -857,7 +857,7 @@ class ReactionSearchView(ListView):
         return context
 
 
-def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
+def reactionSearchHelper(reactionList, speciesList, formula, isReactant):
     """
     helper for reaction search. The function takes in a formula to filter 
     through a list of species and whether the species is a reactant or not. 
@@ -868,7 +868,7 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
     reactionIDs = []
 
     if formula != '':
-        filteredSpecies = species_list.filter(formula__exact=formula)
+        filteredSpecies = speciesList.filter(formula__exact=formula)
         filteredStoich = Stoichiometry.objects.filter(
                             species_id__in=filteredSpecies.values_list('pk'))
         for stoich in filteredStoich:
@@ -877,11 +877,11 @@ def reactionSearchHelper(reaction_list, species_list, formula, isReactant):
             if isReactant==False and stoich.stoichiometry>0:
                 reactionIDs.append(stoich.reaction_id)
 
-        filteredReactions = reaction_list.filter(pk__in=reactionIDs)    
+        filteredReactions = reactionList.filter(pk__in=reactionIDs)    
         return filteredReactions
  
 
-    return reaction_list
+    return reactionList
 
 
 class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
