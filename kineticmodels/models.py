@@ -137,22 +137,22 @@ class Source(models.Model):
     bPrimeID = models.CharField('Prime ID', blank=True,
                                    max_length=9,
                                    default='')
-    publication_year = models.CharField('Year of Publication', blank=True,
+    publicationYear = models.CharField('Year of Publication', blank=True,
                                         default='',
                                         max_length=4)
-    source_title = models.CharField(default='', blank=True, max_length=300)
-    journal_name = models.CharField(blank=True, max_length=300)
-    journal_volume_number = models.CharField('Journal Volume Number',
+    sourceTitle = models.CharField(default='', blank=True, max_length=300)
+    journalName = models.CharField(blank=True, max_length=300)
+    journalVolumeNumber = models.CharField('Journal Volume Number',
                                              blank=True,
                                              max_length=10)
-    page_numbers = models.CharField(blank=True,
+    pageNumbers = models.CharField(blank=True,
                                     help_text='[page #]-[page #]',
                                     max_length=100)
     authors = models.ManyToManyField(Author, blank=True, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
     def __unicode__(self):
-        return u"{s.publication_year} {s.source_title}".format(s=self)
+        return u"{s.publicationYear} {s.sourceTitle}".format(s=self)
 
     class Meta:
         ordering = ('bPrimeID',)
@@ -281,14 +281,14 @@ class Thermo(models.Model):
     source = models.ForeignKey(Source, null=True)
     species = models.ForeignKey(Species)
     thpPrimeID = models.CharField(blank=True, max_length=11)
-    preferred_key = models.CharField(blank=True,
+    preferredKey = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    reference_temperature = models.FloatField('Reference State Temperature',
+    referenceTemperature = models.FloatField('Reference State Temperature',
                                               blank=True,
                                               help_text='units: K',
                                               default=0.0)
-    reference_pressure = models.FloatField('Reference State Pressure',
+    referencePressure = models.FloatField('Reference State Pressure',
                                            blank=True,
                                            help_text='units: Pa',
                                            default=0.0)
@@ -297,25 +297,25 @@ class Thermo(models.Model):
                             help_text='units: J/mol',
                             default=0.0)
     # polynomial 1
-    lower_temp_bound_1 = models.FloatField('Polynomial 1 Lower Temp Bound', help_text='units: K', default=0.0)
-    upper_temp_bound_1 = models.FloatField('Polynomial 1 Upper Temp Bound', help_text='units: K', default=0.0)
-    coefficient_1_1 = models.FloatField('Polynomial 1 Coefficient 1', default=0.0)
-    coefficient_2_1 = models.FloatField('Polynomial 1 Coefficient 2', default=0.0)
-    coefficient_3_1 = models.FloatField('Polynomial 1 Coefficient 3', default=0.0)
-    coefficient_4_1 = models.FloatField('Polynomial 1 Coefficient 4', default=0.0)
-    coefficient_5_1 = models.FloatField('Polynomial 1 Coefficient 5', default=0.0)
-    coefficient_6_1 = models.FloatField('Polynomial 1 Coefficient 6', default=0.0)
-    coefficient_7_1 = models.FloatField('Polynomial 1 Coefficient 7', default=0.0)
+    lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound', help_text='units: K', default=0.0)
+    upperTempBound1 = models.FloatField('Polynomial 1 Upper Temp Bound', help_text='units: K', default=0.0)
+    coefficient11 = models.FloatField('Polynomial 1 Coefficient 1', default=0.0)
+    coefficient21 = models.FloatField('Polynomial 1 Coefficient 2', default=0.0)
+    coefficient31 = models.FloatField('Polynomial 1 Coefficient 3', default=0.0)
+    coefficient41 = models.FloatField('Polynomial 1 Coefficient 4', default=0.0)
+    coefficient51 = models.FloatField('Polynomial 1 Coefficient 5', default=0.0)
+    coefficient61 = models.FloatField('Polynomial 1 Coefficient 6', default=0.0)
+    coefficient71 = models.FloatField('Polynomial 1 Coefficient 7', default=0.0)
     # polynomial 2_1
-    lower_temp_bound_2 = models.FloatField('Polynomial 2 Lower Temp Bound', help_text='units: K', default=0.0)
-    upper_temp_bound_2 = models.FloatField('Polynomial 2 Upper Temp Bound', help_text='units: K', default=0.0)
-    coefficient_1_2 = models.FloatField('Polynomial 2 Coefficient 1', default=0.0)
-    coefficient_2_2 = models.FloatField('Polynomial 2 Coefficient 2', default=0.0)
-    coefficient_3_2 = models.FloatField('Polynomial 2 Coefficient 3', default=0.0)
-    coefficient_4_2 = models.FloatField('Polynomial 2 Coefficient 4', default=0.0)
-    coefficient_5_2 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
-    coefficient_6_2 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
-    coefficient_7_2 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
+    lowerTempBound2 = models.FloatField('Polynomial 2 Lower Temp Bound', help_text='units: K', default=0.0)
+    upperTempBound2 = models.FloatField('Polynomial 2 Upper Temp Bound', help_text='units: K', default=0.0)
+    coefficient12 = models.FloatField('Polynomial 2 Coefficient 1', default=0.0)
+    coefficient22 = models.FloatField('Polynomial 2 Coefficient 2', default=0.0)
+    coefficient32 = models.FloatField('Polynomial 2 Coefficient 3', default=0.0)
+    coefficient42 = models.FloatField('Polynomial 2 Coefficient 4', default=0.0)
+    coefficient52 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
+    coefficient62 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
+    coefficient72 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
@@ -348,21 +348,21 @@ class Transport(models.Model):
     species = models.ForeignKey(Species)
     trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
-    potential_well_depth = models.FloatField('Potential Well Depth',
+    potentialWellDepth = models.FloatField('Potential Well Depth',
                                              blank=True,
                                              help_text='units: K',
                                              default=0.0)
-    collision_diameter = models.FloatField('Collision Diameter',
+    collisionDiameter = models.FloatField('Collision Diameter',
                                            blank=True,
                                            help_text='units: Angstroms',
                                            default=0.0)
-    dipole_moment = models.FloatField(blank=True,
+    dipoleMoment = models.FloatField(blank=True,
                                       help_text='units: Debye',
                                       default=0.0)
     polarizability = models.FloatField(blank=True,
                                        help_text='units: cubic Angstroms',
                                        default=0.0)
-    rotational_relaxation = models.FloatField('Rotational Relaxation',
+    rotationalRelaxation = models.FloatField('Rotational Relaxation',
                                               blank=True,
                                               default=0.0)
 
@@ -390,7 +390,7 @@ class Reaction(models.Model):
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
     rPrimeID = models.CharField('PrIMe ID', max_length=10, unique=True)
-    is_reversible = models.BooleanField(
+    isReversible = models.BooleanField(
         default=True,
         help_text='Is this reaction reversible?')
 
@@ -459,8 +459,8 @@ class Kinetics(models.Model):
     rkPrimeID = models.CharField(blank=True, max_length=10)
     reaction = models.OneToOneField(Reaction)
     source = models.ForeignKey(Source, null=True)
-    relative_uncertainty = models.FloatField(blank=True, null=True)
-    is_reverse = models.BooleanField(
+    relativeUncertainty = models.FloatField(blank=True, null=True)
+    isReverse = models.BooleanField(
         default=False,
         help_text='Is this the rate for the reverse reaction?')
 
@@ -483,13 +483,13 @@ class ArrheniusKinetics(models.Model):
     """
     kinetics = models.OneToOneField(Kinetics)
 
-    A_value = models.FloatField(default=0.0)
-    A_value_uncertainty = models.FloatField(blank=True, null=True)
-    n_value = models.FloatField(default=0.0)
-    E_value = models.FloatField(default=0.0)
-    E_value_uncertainty = models.FloatField(blank=True, null=True)
-    lower_temp_bound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
-    upper_temp_bound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
+    AValue = models.FloatField(default=0.0)
+    AValueUncertainty = models.FloatField(blank=True, null=True)
+    nValue = models.FloatField(default=0.0)
+    EValue = models.FloatField(default=0.0)
+    EValueUncertainty = models.FloatField(blank=True, null=True)
+    lowerTempBound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
+    upperTempBound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
@@ -567,16 +567,16 @@ class KineticModel(models.Model):
 
     source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    model_name = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
+    modelName = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
     kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
     thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
-    additional_info = models.CharField(max_length=1000, blank=True)
+    additionalInfo = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
     #     species=reaction something
-    chemkin_reactions_file = models.FileField( upload_to=upload_chemkin_to,)
-    chemkin_thermo_file = models.FileField( upload_to=upload_thermo_to,)
-    chemkin_transport_file = models.FileField(blank=True,
+    chemkinReactionsFile = models.FileField( upload_to=upload_chemkin_to,)
+    chemkinThermoFile = models.FileField( upload_to=upload_thermo_to,)
+    chemkinTransportFile = models.FileField(blank=True,
                                               upload_to=upload_transport_to,)
 
     def __unicode__(self):
