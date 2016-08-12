@@ -13,27 +13,27 @@
 
 
 {% block page_body %}
-<h2><a href="{% url 'kineticmodel list' %}">Models</a></h2>
+<h2><a href="{% url 'kineticmodelList' %}">Models</a></h2>
 
 <ul>
-<li><a href="{% url 'kineticmodel list' %}">Browse Models</a></li>
+<li><a href="{% url 'kineticmodelList' %}">Browse Models</a></li>
 <li><a >Search Models</a></li>
-<li><a href="{% url 'kineticmodel new' %}">New Kinetic Model</a></li>
+<li><a href="{% url 'kineticmodelNew' %}">New Kinetic Model</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'species list' %}">Species</a></h2>
+<h2><a href="{% url 'speciesList' %}">Species</a></h2>
 
 <ul>
-<li><a href="{% url 'species list' %}">Browse Species</a></li>
-<li><a href="{% url 'species search' %}">Search Species</a></li>
+<li><a href="{% url 'speciesList' %}">Browse Species</a></li>
+<li><a href="{% url 'speciesSearch' %}">Search Species</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'reaction list' %}">Reactions</a></h2>
+<h2><a href="{% url 'reactionList' %}">Reactions</a></h2>
 <ul>
-<li><a href="{% url 'reaction list' %}">Browse Reactions</a></li>
-<li><a href="{% url 'reaction search' %}">Search Reactions</a></li>
+<li><a href="{% url 'reactionList' %}">Browse Reactions</a></li>
+<li><a href="{% url 'reactionSearch' %}">Search Reactions</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
