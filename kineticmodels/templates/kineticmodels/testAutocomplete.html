@@ -1,0 +1,22 @@
+{% extends "kineticmodels/source.html" %}
+
+
+{% block title %}Kinetic Models: Source Search{% endblock %}
+
+{% block page_title %}Source Search{% endblock %}
+
+
+{% block content %}
+<div>
+    <form action="" method="GET">
+        {{ form.as_p }}
+        <input type="submit" />
+    </form>
+</div>
+{% endblock %}
+
+{% block footer %}
+<script type="text/javascript" src="/static/collected/admin/js/vendor/jquery/jquery.js"></script>
+
+{{ form.media }}
+{% endblock %}
