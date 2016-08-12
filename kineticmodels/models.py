@@ -28,9 +28,12 @@ A2: ...but also for r2 and r3 in model m3 (is this relevant?) NO
 
 
 
-#What will we do with all the extra .zip, .pdf, .hdf, and .mat files tied to models, sources, etc. on PrIMe?
-#Basically everything has a bibliography tied to it, so I stopped listing it partway through
-#Accordingly, probably biblio should be highest in the hierarchy because it has everything as a subcategory
+#What will we do with all the extra .zip, .pdf, .hdf, and .mat files tied to
+# models, sources, etc. on PrIMe?
+#Basically everything has a bibliography tied to it, so I stopped listing it 
+# partway through
+#Accordingly, probably biblio should be highest in the hierarchy because it 
+# has everything as a subcategory
 
 PrIMe Fields for objects we are not yet including:
 # Data Attributes
@@ -56,7 +59,8 @@ PrIMe Fields for objects we are not yet including:
 #     model
 #     surrogate models
 #     data set website
-#     *******in data/d00000001/surrogateModels/catalog and data/d00000002/surrogateModels/catalog********
+#     *******in data/d00000001/surrogateModels/catalog and 
+#       data/d00000002/surrogateModels/catalog********
 #     model
 #     optimization variables with formulas and bounds
 #     coefficient values with variable links
@@ -103,9 +107,12 @@ PrIMe Fields for objects we are not yet including:
 #     target value and subcategories/values
 #     description
 
-    Add this to a lot of the models to make entries on the form have to be unique (avoid duplicates):
+    Add this to a lot of the models to make entries on the form have to be 
+    unique (avoid duplicates):
         class Meta:
-        unique_together = ["title", "state", "name"] <-whatever the fields are that should not have multiple of the same combination
+        unique_together = ["title", "state", "name"] <-whatever the 
+                                            fields are that should not have
+                                             multiple of the same combination
 
 """
 
@@ -266,8 +273,10 @@ class Thermo(models.Model):
 
     This is the equivalent of the 'th' data within 'Species/data' in PrIMe,
     which contain:
-    *****in data******* (usually has thp prime ID (shown below), but sometimes near end of list has completely different xml type under a ca prime ID)
-    Preferred Key (in thermo file, group="prime": What does this mean?) (i.e. ATcT /A, RUS 79)
+    *****in data******* (usually has thp prime ID (shown below), but sometimes 
+        near end of list has completely different xml type under a ca prime ID)
+    Preferred Key (in thermo file, group="prime": What does this mean?) 
+                    (i.e. ATcT /A, RUS 79)
     Tref (units K)
     Pref (units Pa)
     dfH (units J/mol)
@@ -297,25 +306,43 @@ class Thermo(models.Model):
                             help_text='units: J/mol',
                             default=0.0)
     # polynomial 1
-    lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound', help_text='units: K', default=0.0)
-    upperTempBound1 = models.FloatField('Polynomial 1 Upper Temp Bound', help_text='units: K', default=0.0)
-    coefficient11 = models.FloatField('Polynomial 1 Coefficient 1', default=0.0)
-    coefficient21 = models.FloatField('Polynomial 1 Coefficient 2', default=0.0)
-    coefficient31 = models.FloatField('Polynomial 1 Coefficient 3', default=0.0)
-    coefficient41 = models.FloatField('Polynomial 1 Coefficient 4', default=0.0)
-    coefficient51 = models.FloatField('Polynomial 1 Coefficient 5', default=0.0)
-    coefficient61 = models.FloatField('Polynomial 1 Coefficient 6', default=0.0)
-    coefficient71 = models.FloatField('Polynomial 1 Coefficient 7', default=0.0)
+    lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound',
+                                            help_text='units: K', default=0.0)
+    upperTempBound1 = models.FloatField('Polynomial 1 Upper Temp Bound', 
+                                            help_text='units: K', default=0.0)
+    coefficient11 = models.FloatField('Polynomial 1 Coefficient 1', 
+                                                                default=0.0)
+    coefficient21 = models.FloatField('Polynomial 1 Coefficient 2', 
+                                                                default=0.0)
+    coefficient31 = models.FloatField('Polynomial 1 Coefficient 3', 
+                                                                default=0.0)
+    coefficient41 = models.FloatField('Polynomial 1 Coefficient 4', 
+                                                                default=0.0)
+    coefficient51 = models.FloatField('Polynomial 1 Coefficient 5', 
+                                                                default=0.0)
+    coefficient61 = models.FloatField('Polynomial 1 Coefficient 6', 
+                                                                default=0.0)
+    coefficient71 = models.FloatField('Polynomial 1 Coefficient 7', 
+                                                                default=0.0)
     # polynomial 2_1
-    lowerTempBound2 = models.FloatField('Polynomial 2 Lower Temp Bound', help_text='units: K', default=0.0)
-    upperTempBound2 = models.FloatField('Polynomial 2 Upper Temp Bound', help_text='units: K', default=0.0)
-    coefficient12 = models.FloatField('Polynomial 2 Coefficient 1', default=0.0)
-    coefficient22 = models.FloatField('Polynomial 2 Coefficient 2', default=0.0)
-    coefficient32 = models.FloatField('Polynomial 2 Coefficient 3', default=0.0)
-    coefficient42 = models.FloatField('Polynomial 2 Coefficient 4', default=0.0)
-    coefficient52 = models.FloatField('Polynomial 2 Coefficient 5', default=0.0)
-    coefficient62 = models.FloatField('Polynomial 2 Coefficient 6', default=0.0)
-    coefficient72 = models.FloatField('Polynomial 2 Coefficient 7', default=0.0)
+    lowerTempBound2 = models.FloatField('Polynomial 2 Lower Temp Bound', 
+                                            help_text='units: K', default=0.0)
+    upperTempBound2 = models.FloatField('Polynomial 2 Upper Temp Bound', 
+                                            help_text='units: K', default=0.0)
+    coefficient12 = models.FloatField('Polynomial 2 Coefficient 1', 
+                                                                default=0.0)
+    coefficient22 = models.FloatField('Polynomial 2 Coefficient 2', 
+                                                                default=0.0)
+    coefficient32 = models.FloatField('Polynomial 2 Coefficient 3',
+                                                                default=0.0)
+    coefficient42 = models.FloatField('Polynomial 2 Coefficient 4', 
+                                                                default=0.0)
+    coefficient52 = models.FloatField('Polynomial 2 Coefficient 5', 
+                                                                default=0.0)
+    coefficient62 = models.FloatField('Polynomial 2 Coefficient 6', 
+                                                                default=0.0)
+    coefficient72 = models.FloatField('Polynomial 2 Coefficient 7', 
+                                                                default=0.0)
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
@@ -323,10 +350,16 @@ class Thermo(models.Model):
         "Returns an RMG object"
         polynomials = []
         for polynomial_number in [1,2]:
-            coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(j=coefficient_number,i=polynomial_number))) for coefficient_number in range(1,8) ]
+            coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(
+                                    j=coefficient_number,i=polynomial_number)))
+                                         for coefficient_number in range(1,8) ]
             polynomial = NASAPolynomial(coeffs=coeffs,
-                           Tmin=float(getattr(self, 'lower_temp_bound_{i}'.format(i=polynomial_number))),
-                           Tmax=float(getattr(self, 'upper_temp_bound_{i}'.format(i=polynomial_number))),
+                           Tmin=float(getattr(
+                                self, 'lower_temp_bound_{i}'.format(
+                                                        i=polynomial_number))),
+                           Tmax=float(getattr(
+                                self, 'upper_temp_bound_{i}'.format(
+                                                        i=polynomial_number))),
                            E0=None,
                            comment=''
                            )
@@ -372,7 +405,8 @@ class Transport(models.Model):
 
 class Reaction(models.Model):
     """
-    A chemical reaction, with several species, has a rate in one or more models.
+    A chemical reaction, with several species, has a rate in one or 
+    more models.
 
     Should have:
      * species (linked via stoichiometry)
@@ -488,8 +522,10 @@ class ArrheniusKinetics(models.Model):
     nValue = models.FloatField(default=0.0)
     EValue = models.FloatField(default=0.0)
     EValueUncertainty = models.FloatField(blank=True, null=True)
-    lowerTempBound = models.FloatField('Lower Temp Bound', help_text='units: K', null=True, blank=True)
-    upperTempBound = models.FloatField('Upper Temp Bound', help_text='units: K', null=True, blank=True)
+    lowerTempBound = models.FloatField('Lower Temp Bound',
+                                help_text='units: K', null=True, blank=True)
+    upperTempBound = models.FloatField('Upper Temp Bound', 
+                                help_text='units: K', null=True, blank=True)
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
@@ -505,8 +541,8 @@ class Stoichiometry(models.Model):
 
     Reactants have negative stoichiometries, products have positive.
     eg. in the reaction A <=> 2B  the stoichiometry of A is -1 and of B is +2
-    In elementary reactions these are always integers, but chemkin allows floats,
-    so we do too.
+    In elementary reactions these are always integers, but chemkin allows 
+    floats, so we do too.
     """
     species = models.ForeignKey(Species)
     reaction = models.ForeignKey(Reaction)
@@ -567,9 +603,12 @@ class KineticModel(models.Model):
 
     source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    modelName = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', blank=True)
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment', blank=True)
+    modelName = models.CharField(default=uuid.uuid4, max_length=200, 
+                                                                unique=True)
+    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', 
+                                                                blank=True)
+    thermo = models.ManyToManyField(Thermo, through='ThermoComment', 
+                                                                blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
     additionalInfo = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
