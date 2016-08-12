@@ -384,10 +384,10 @@ class KineticModelImporter(View):
             if kineticModel not in importer_processes:
                 workingDirectory = kineticModel.getPath(absolute=True)
 
-                reactionsFile = 
+                reactionsFile = \
                         kineticModel.chemkinReactionsFile.name.replace(
                                 kineticModel.getPath(), '').lstrip(os.path.sep)
-                thermoFile = 
+                thermoFile = \
                         kineticModel.chemkinThermoFile.name.replace(
                                 kineticModel.getPath(), '').lstrip(os.path.sep)
                 importCommand = ['python',
