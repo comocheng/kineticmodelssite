@@ -48,7 +48,7 @@ class EditSourceForm(forms.ModelForm):
                      'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
             'authors': autocomplete.ModelSelect2Multiple(
-                                                    url='author-autocomplete')
+                                                    url='authorAutocomplete')
         }
 
 
@@ -71,7 +71,7 @@ class EditKineticModelMetaDataForm(forms.ModelForm):
     #    exclude = ('kinetics', 'thermo', 'transport')
         fields = ('source', 'mPrimeID', 'modelName', 'additionalInfo')
         widgets =  {
-            'source': autocomplete.ModelSelect2(url='source-autocomplete')
+            'source': autocomplete.ModelSelect2(url='sourceAutocomplete')
         }
 
 
@@ -141,7 +141,7 @@ class SourceSearchForm(forms.ModelForm):
                      'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
         widgets =  {
             'authors': autocomplete.ModelSelect2Multiple(
-                                                url='author-autocomplete')
+                                                url='authorAutocomplete')
         }
 
 
@@ -156,9 +156,9 @@ class ReactionSearchForm(forms.Form):
     rPrimeID = forms.CharField(label = 'Reaction PrIMe ID', max_length=9,
                                                  strip = True, required=False)
 
-   reactants = forms.ModelMultipleChoiceField(label="Reactant(s)",
+    reactants = forms.ModelMultipleChoiceField(label="Reactant(s)",
         queryset=Species.objects.all(), required=False,
-        widget=autocomplete.ModelSelect2Multiple(url='species-autocomplete')
+        widget=autocomplete.ModelSelect2Multiple(url='speciesAutocomplete')
     )
    
 
@@ -168,7 +168,7 @@ class ReactionSearchForm(forms.Form):
 
     products = forms.ModelMultipleChoiceField(label="Product(s)",
         queryset=Species.objects.all(), required=False,
-        widget=autocomplete.ModelSelect2Multiple(url='species-autocomplete')
+        widget=autocomplete.ModelSelect2Multiple(url='speciesAutocomplete')
     )
 
 #Form for generating the SMILES.txt
@@ -211,5 +211,5 @@ class AddSMILESForm(forms.Form):
                                  max_length=50, strip = True, required=False)
     chemkin = forms.CharField(
     label = 'The formula of the compound as represented in the CHEMKIN file',
-                                  max_length=50, strip = True, required=False)
+                                 max_length=50, strip = True, required=False)
  
