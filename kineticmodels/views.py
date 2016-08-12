@@ -351,7 +351,7 @@ class KineticModelNew(View):
     """
     def get(self, request, kineticModel_id=0):
         kineticModel = KineticModel.objects.create()
-        return HttpResponseRedirect(reverse('kineticmodelEditor', 
+        return HttpResponseRedirect(reverse('kineticModelEditor', 
                                                     args=(kineticModel.id,)))
 
 
@@ -415,7 +415,7 @@ class KineticModelImporter(View):
                     process.terminate()
                 del(importer_processes[kineticModel])
 
-        return HttpResponseRedirect(reverse('kineticmodelImporter', 
+        return HttpResponseRedirect(reverse('kineticModelImporter', 
                                                     args=(kineticModel.id,)))
 
 
@@ -530,7 +530,7 @@ class KineticModelGenerateSMILES(View):
     Class for the view to generate the SMILES.txt file for a kinetic model
     """
     model = KineticModel
-    template_name = 'kineticmodels/kineticmodelSMILES.html'
+    template_name = 'kineticmodels/kineticModelSMILES.html'
 
     def get(self, request, kineticModel_id=0):
         kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
