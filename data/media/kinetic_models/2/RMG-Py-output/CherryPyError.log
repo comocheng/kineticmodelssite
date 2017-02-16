@@ -1,0 +1,196 @@
+[28/Jul/2016:16:27:03] ENGINE Bus STARTING
+[28/Jul/2016:16:27:03] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Jul/2016:16:27:18] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x10263ca10>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[28/Jul/2016:16:27:18] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[28/Jul/2016:16:27:18] ENGINE Bus STOPPING
+[28/Jul/2016:16:27:18] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[28/Jul/2016:16:27:18] ENGINE Stopped thread '_TimeoutMonitor'.
+[28/Jul/2016:16:27:19] ENGINE Bus STOPPED
+[28/Jul/2016:16:27:19] ENGINE Bus EXITING
+[28/Jul/2016:16:27:19] ENGINE Bus EXITED
+[28/Jul/2016:16:48:06] ENGINE Bus STARTING
+[28/Jul/2016:16:48:06] ENGINE Started monitor thread '_TimeoutMonitor'.
+[28/Jul/2016:16:48:21] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x10263c990>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[28/Jul/2016:16:48:21] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[28/Jul/2016:16:48:21] ENGINE Bus STOPPING
+[28/Jul/2016:16:48:22] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[28/Jul/2016:16:48:22] ENGINE Stopped thread '_TimeoutMonitor'.
+[28/Jul/2016:16:48:22] ENGINE Bus STOPPED
+[28/Jul/2016:16:48:22] ENGINE Bus EXITING
+[28/Jul/2016:16:48:22] ENGINE Bus EXITED
+[29/Jul/2016:10:44:00] ENGINE Bus STARTING
+[29/Jul/2016:10:44:00] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Jul/2016:10:44:16] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x102638950>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[29/Jul/2016:10:44:16] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[29/Jul/2016:10:44:16] ENGINE Bus STOPPING
+[29/Jul/2016:10:44:16] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[29/Jul/2016:10:44:16] ENGINE Stopped thread '_TimeoutMonitor'.
+[29/Jul/2016:10:44:16] ENGINE Bus STOPPED
+[29/Jul/2016:10:44:16] ENGINE Bus EXITING
+[29/Jul/2016:10:44:16] ENGINE Bus EXITED
+[29/Jul/2016:11:22:51] ENGINE Bus STARTING
+[29/Jul/2016:11:22:51] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Jul/2016:11:23:07] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x102640990>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[29/Jul/2016:11:23:07] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[29/Jul/2016:11:23:07] ENGINE Bus STOPPING
+[29/Jul/2016:11:23:07] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[29/Jul/2016:11:23:08] ENGINE Stopped thread '_TimeoutMonitor'.
+[29/Jul/2016:11:23:08] ENGINE Bus STOPPED
+[29/Jul/2016:11:23:08] ENGINE Bus EXITING
+[29/Jul/2016:11:23:08] ENGINE Bus EXITED
+[29/Jul/2016:11:44:02] ENGINE Bus STARTING
+[29/Jul/2016:11:44:02] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Jul/2016:11:44:20] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x101e3c990>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[29/Jul/2016:11:44:20] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[29/Jul/2016:11:44:20] ENGINE Bus STOPPING
+[29/Jul/2016:11:44:20] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[29/Jul/2016:11:44:20] ENGINE Stopped thread '_TimeoutMonitor'.
+[29/Jul/2016:11:44:21] ENGINE Bus STOPPED
+[29/Jul/2016:11:44:21] ENGINE Bus EXITING
+[29/Jul/2016:11:44:21] ENGINE Bus EXITED
+[29/Jul/2016:14:03:42] ENGINE Bus STARTING
+[29/Jul/2016:14:03:42] ENGINE Started monitor thread '_TimeoutMonitor'.
+[29/Jul/2016:14:04:02] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x10263c990>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[29/Jul/2016:14:04:03] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[29/Jul/2016:14:04:03] ENGINE Bus STOPPING
+[29/Jul/2016:14:04:03] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[29/Jul/2016:14:04:03] ENGINE Stopped thread '_TimeoutMonitor'.
+[29/Jul/2016:14:04:03] ENGINE Bus STOPPED
+[29/Jul/2016:14:04:03] ENGINE Bus EXITING
+[29/Jul/2016:14:04:03] ENGINE Bus EXITED
+[01/Aug/2016:11:32:37] ENGINE Bus STARTING
+[01/Aug/2016:11:32:37] ENGINE Started monitor thread '_TimeoutMonitor'.
+[01/Aug/2016:11:32:55] ENGINE Error in 'start' listener <bound method Server.start of <cherrypy._cpserver.Server object at 0x101c3c990>>
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 205, in publish
+    output.append(listener(*args, **kwargs))
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/_cpserver.py", line 168, in start
+    ServerAdapter.start(self)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 170, in start
+    wait_for_free_port(*self.bind_addr)
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/servers.py", line 439, in wait_for_free_port
+    raise IOError("Port %r not free on %r" % (port, host))
+IOError: Port 8156 not free on '0.0.0.0'
+
+[01/Aug/2016:11:32:55] ENGINE Shutting down due to error in start listener:
+Traceback (most recent call last):
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 243, in start
+    self.publish('start')
+  File "/Users/hamzakhan/anaconda/envs/rmg_env/lib/python2.7/site-packages/cherrypy/process/wspbus.py", line 223, in publish
+    raise exc
+ChannelFailures: IOError("Port 8156 not free on '0.0.0.0'",)
+
+[01/Aug/2016:11:32:55] ENGINE Bus STOPPING
+[01/Aug/2016:11:32:56] ENGINE HTTP Server cherrypy._cpwsgi_server.CPWSGIServer(('0.0.0.0', 8156)) already shut down
+[01/Aug/2016:11:32:56] ENGINE Stopped thread '_TimeoutMonitor'.
+[01/Aug/2016:11:32:56] ENGINE Bus STOPPED
+[01/Aug/2016:11:32:56] ENGINE Bus EXITING
+[01/Aug/2016:11:32:56] ENGINE Bus EXITED

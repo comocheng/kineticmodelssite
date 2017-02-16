@@ -1,71 +1,41 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database{% endblock %}
-{% block page_title %}Kinetic Models Database{% endblock %}
+{% block title %}{{ block.super }} Home{% endblock %}
+{% block page_title %}{{ block.super }} Home{% endblock %}
 
-<!-- NRC
-  Index.html file contains Navbar Links to all pages within the kineticmodels site.
-  The linked Sites only have links within the navbar to relevant sites.
-
-  Currently no page for a single species. There is a species list and a species_editor page
-  This setup reflects Biliography and Source Editor
-
-  <a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
-<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a> &raquo;
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Source Edit</a>
-<a href="{% url 'kineticmodels.views.species' %}">Species</a>
-<a href="{% url 'kineticmodels.views.species_editor' source_id=species_for_edit.id%}">Species Edit</a>
--->
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
+{{ block.super }}
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
 
 <!-- Display links to the other parts of the kinetic models database site-->
 
 
-
 {% block page_body %}
-<h2><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Models</a></h2>
+<h2><a href="{% url 'kineticModelList' %}">Models</a></h2>
 
 <ul>
-<li><a href="{% url 'kineticmodels.views.kineticModel_list' %}">Browse Models</a></li>
+<li><a href="{% url 'kineticModelList' %}">Browse Models</a></li>
 <li><a >Search Models</a></li>
+<li><a href="{% url 'kineticModelNew' %}">New Kinetic Model</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.species_list' %}">Species</a></h2>
+<h2><a href="{% url 'speciesList' %}">Species</a></h2>
 
 <ul>
-<li><a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a></li>
-<li><a >Search Species</a></li>
+<li><a href="{% url 'speciesList' %}">Browse Species</a></li>
+<li><a href="{% url 'speciesSearch' %}">Search Species</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.reaction_list' %}">Reactions</a></h2>
+<h2><a href="{% url 'reactionList' %}">Reactions</a></h2>
 <ul>
-<li><a href="{% url 'kineticmodels.views.reaction_list' %}">Browse Reactions</a></li>
-<li><a >Search Reactions</a></li>
+<li><a href="{% url 'reactionList' %}">Browse Reactions</a></li>
+<li><a href="{% url 'reactionSearch' %}">Search Reactions</a></li>
 </ul>
 <!-- TODO Fix the search links-->
 
-<h2><a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a></h2>
+<h2><a href="{% url 'bibliography' %}">Bibliography</a></h2>
 {% endblock %}
-
-
-<!--
-{% if latest_question_list %}
-    <ul>
-    {% for question in latest_question_list %}
-        <li><a href="{% url 'polls:detail' question.id %}">{{ question.question_text }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No polls are available.</p>
-{% endif %}
-
-
- -->

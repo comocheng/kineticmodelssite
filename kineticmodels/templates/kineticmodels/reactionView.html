@@ -1,0 +1,27 @@
+{% extends "kineticmodels/reaction.html" %}
+
+{% block title %}{{ block.super }} {{ reaction.id }}{% endblock %}
+{% block page_title %}{{ block.super }} {{ reaction.id }}{% endblock %}
+
+
+{% block navbar_items %}
+{{ block.super }} &raquo;
+<a href="{% url 'reactionView' reaction_id=reaction.id%}">Reaction {{ reaction.id }}</a>
+{% endblock %}
+
+
+{% block page_body %}
+
+<h1>Reaction: {{reaction.id }}</h1>
+<table>
+    <tr><td>rPrimeID</td><td><a href="http://warehouse.primekinetics.org/depository/reactions/catalog/{{ species.rPrimeID }}.xml">{{ species.rPrimeID }}</a></td></tr>
+    <tr><td>Reactants</td><td>{{ reaction.reactants }}</td></tr>
+    <tr><td>Products</td><td>{{ reaction.products }}</td></tr>
+    <tr><td>isReversible</td><td>{{ reaction.isReversible }}</td></tr>
+    </tr>
+</table>
+<br/>
+<a href="{% url 'reactionEditor' reaction_id=reaction.id%}">Edit</a>
+
+
+{% endblock %}

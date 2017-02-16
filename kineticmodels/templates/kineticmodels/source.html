@@ -1,32 +1,9 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database: Source {{ source.id }}{% endblock %}
-{% block page_title %}Kinetic Models Database: Source {{ source.id }}{% endblock %}
-
-<!-- NRC
-  The below navbar items are only relevant to the source, source_editor, or bibliography links to avoid clutter.
--->
+{% block title %}{{ block.super }}: Source{% endblock %}
+{% block page_title %}{{ block.super }}: Source{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.bibliography' %}">Bibliography</a> &raquo;
-<a href="{% url 'kineticmodels.views.source' source_id=source.id%}">Source {{ source.id }}</a>
-{% endblock %}
-
-{% block sidebar_items %}
-{% endblock %}
-
-{% block page_body %}
-
-<h1>Source: {{source.id}}</h1>
-<table>
-    <tr><td>Title</td><td>{{ source.source_title }}</a></td></tr>
-    <tr><td>Journal</td><td>{{ source.journal_name }}</td></tr>
-    <tr><td>Year</td><td>{{ source.pub_year }}</td></tr>
-    </tr>
-</table>
-<br/>
-<a href="{% url 'kineticmodels.views.source_editor' source_id=source.id%}">Edit</a>
-
-
+{{ block.super }} &raquo;
+<a href="{% url 'bibliography' %}">Bibliography</a>
 {% endblock %}

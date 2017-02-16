@@ -1,33 +1,11 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database: Reaction {{ reaction.id }}{% endblock %}
-{% block page_title %}Kinetic Models Database: Reaction {{ reaction.id }}{% endblock %}
+{% block title %}{{ block.super }}: Reaction{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the reaction, reaction_editor, or bibliography links to avoid clutter.
--->
+{% block page_title %}{{ block.super }}: Reaction{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.reaction_list' %}">Browse Reactions</a> &raquo;
-<a href="{% url 'kineticmodels.views.reaction' reaction_id=reaction.id%}">Reaction {{ reaction.id }}</a>
+{{ block.super }} &raquo;
+<a href="{% url 'reactionList' %}">Reaction List</a>
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
-
-{% block page_body %}
-
-<h1>Reaction: {{reaction.id }}</h1>
-<table>
-    <tr><td>rPrimeID</td><td><a href="http://warehouse.primekinetics.org/depository/reactions/catalog/{{ species.rPrimeID }}.xml">{{ species.rPrimeID }}</a></td></tr>
-    <tr><td>Reactants</td><td>{{ reaction.reactants }}</td></tr>
-    <tr><td>Products</td><td>{{ reaction.products }}</td></tr>
-    <tr><td>is_reversible</td><td>{{ reaction.is_reversible }}</td></tr>
-    </tr>
-</table>
-<br/>
-<a href="{% url 'kineticmodels.views.reaction_editor' reaction_id=reaction.id%}">Edit</a>
-
-
-{% endblock %}

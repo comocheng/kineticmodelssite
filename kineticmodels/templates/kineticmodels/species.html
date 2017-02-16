@@ -1,34 +1,12 @@
-{% extends "base.html" %}
+{% extends "kineticmodels/base.html" %}
 
-{% block title %}Kinetic Models Database: Species {{ species.id }}{% endblock %}
-{% block page_title %}Kinetic Models Database: Species {{ species.id }}{% endblock %}
+{% block title %}{{ block.super }}: Species{% endblock %}
 
-<!-- NRC
-  The below navbar items are only relevant to the species, species_editor, or bibliography links to avoid clutter.
--->
+{% block page_title %}{{ block.super }}: Species{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'kineticmodels.views.index' %}">Kinetic Models Database</a> &raquo;
-<a href="{% url 'kineticmodels.views.species_list' %}">Browse Species</a> &raquo;
-<a href="{% url 'kineticmodels.views.species' species_id=species.id%}">Species {{ species.id }}</a>
+{{ block.super }} &raquo;
+<a href="{% url 'speciesList' %}">Species List</a>
+<a href="{% url 'speciesSearch' %}">Species Search</a>
 {% endblock %}
 
-{% block sidebar_items %}
-{% endblock %}
-
-{% block page_body %}
-
-<h1>Species: {{species.id}}</h1>
-<table>
-    <tr><td>ID</td><td>{{ species.pk }}</a></td></tr>
-    <tr><td>sPrimeID</td><td><a href="http://warehouse.primekinetics.org/depository/species/catalog/{{ species.sPrimeID}}.xml">{{ species.sPrimeID}}</a></td></tr>
-    <tr><td>formula</td><td>{{ species.formula }}</td></tr>
-    <tr><td>inchi</td><td>{{ species.inchi }}</td></tr>
-    <tr><td>CAS</td><td>{{ species.CAS }}</td></tr>    
-    </tr>
-</table>
-<br/>
-<a href="{% url 'kineticmodels.views.species_editor' species_id=species.id%}">Edit</a>
-
-
-{% endblock %}

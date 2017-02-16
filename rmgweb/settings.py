@@ -37,6 +37,18 @@ import os.path
 # Secret and per-configuration settings
 from secretsettings import DEBUG, PROJECT_PATH, DATABASE_PATH, DATABASES, SECRET_KEY, ADMINS
 
+
+DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', 'data')
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+LOG_DIR = os.environ.get('OPENSHIFT_LOG_DIR', 'log')
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+PUBLIC_DIR = os.path.join(os.environ.get('OPENSHIFT_REPO_DIR', ''), 'wsgi/static')
+
+
 try:
     from secretsettings import TEMPLATE_DEBUG as template_debug_setting
 except ImportError:
@@ -137,6 +149,9 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'dal',
+    'dal_select2',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
@@ -149,6 +164,17 @@ INSTALLED_APPS = (
     'rmgweb.rmg',
     'kineticmodels',
 )
+
+STATIC_URL = '/public/static/'
+STATIC_ROOT = os.path.join(PROJECT_PATH, 'public', 'static')
+
+if DATA_DIR:
+    MEDIA_URL = '/static/media/'
+    MEDIA_ROOT = os.path.join(DATA_DIR, 'media')
+
+if PUBLIC_DIR:
+    STATIC_URL = '/static/collected/'
+    STATIC_ROOT = os.path.join(PUBLIC_DIR, 'collected')
 
 # Settings relating to user account management
 LOGIN_URL = '/login'
