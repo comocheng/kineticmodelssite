@@ -325,7 +325,8 @@ class KineticModelSearchView(ListView):
             filteredKineticModels = KineticModel.objects.all()
             return filteredKineticModels
         else:
-            return KineticModel.objects.none()
+            # return KineticModel.objects.none()
+            return KineticModel.objects.all()  # This is just to verify that I can actually get the page to give results
 
     def get_context_data(self, **kwargs):
         context = super(KineticModelSearchView, self).get_context_data(**kwargs)

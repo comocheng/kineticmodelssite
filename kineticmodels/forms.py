@@ -150,7 +150,7 @@ class KineticModelSearchForm(forms.ModelForm):
     class Meta:
         model = KineticModel
         # TODO -- Decide if I'm going to select certain fields or not
-        fields = "__all__"
+        fields = ('source', 'modelName')
         # Also find some way to search by Parent source as well? Or by species?
 
 
