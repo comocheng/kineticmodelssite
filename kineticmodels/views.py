@@ -9,14 +9,12 @@ from django.views.generic import ListView, DetailView, UpdateView, View
 from forms import EditSourceForm, EditSpeciesForm, EditReactionForm, \
                   EditKineticModelMetaDataForm, EditKineticModelFileForm, \
                   SpeciesSearchForm, ReactionSearchForm, SourceSearchForm, \
-                  FileEditorForm, GenerateSMILESForm, AddSMILESForm
-from models import Source, Species, KineticModel, Reaction, \
-                    Stoichiometry, Authorship, Author
+                  FileEditorForm, GenerateSMILESForm, AddSMILESForm, KineticModelSearchForm
+from models import Source, Species, KineticModel, Reaction, Stoichiometry, Authorship, Author
 import math
 import rmgpy, rmgpy.molecule
 import rmgpy.chemkin
-from rmgpy.chemkin import readSpeciesBlock, readThermoBlock, \
-                            removeCommentFromLine
+from rmgpy.chemkin import readSpeciesBlock, readThermoBlock, removeCommentFromLine
 
 import logging
 import subprocess, os, sys, re
@@ -31,6 +29,10 @@ def index(request):
     Home page of the kinetic models site
     """
     return render(request, 'kineticmodels/index.html')
+
+# -------------------------------
+# VIEWS FOR THE SOURCE DB ENTRIES
+# -------------------------------
 
 
 class SourceListView(ListView):
@@ -98,15 +100,6 @@ class SourceEditor(View):
         return render(request, self.template_name, variables)
 
 
-class SourceNew(View):
-    """
-    To create a new source. Redirects to editor for a source.
-    """
-    def get(self, request, source_id=0):
-        source = Source.objects.create()
-        return HttpResponseRedirect(reverse('sourceEditor', 
-                                                    args=(source.id,)))
-
 class SourceSearchView(ListView):
     """
     View to search through the sources. Uses source search helper to filter 
@@ -118,7 +111,6 @@ class SourceSearchView(ListView):
     template_name = 'kineticmodels/sourceSearch.html'
     paginate_by = ITEMSPERPAGE
 
-    
     def get_queryset(self):
         form = SourceSearchForm(self.request.GET)
         if form.is_valid(): 
@@ -154,46 +146,19 @@ class SourceSearchView(ListView):
         return context
 
 
-
-def sourceSearchHelper(sourceList, authorList, authorNameList):
+class SourceNew(View):
     """
-    helper for source search. The function takes in a formula to filter 
-    through a list of species and whether the species is a reactant or not.
-    It uses this data to output a list of reactions which contain the given
-    formula in place of reactants or products where applicable. 
-    """ 
-
-    sourceIDs = []
-
-    filteredAuthorship = Authorship.objects.all()
-    filteredSources = sourceList
-
-    for authorName in authorNameList:
-        filteredAuthors = authorList.filter(name__exact=authorName)
-        filteredAuthorship = Authorship.objects.filter(
-                            author_id__in=filteredAuthors.values_list('pk'))
-        filteredSources = filteredSources.filter(
-                            pk__in=filteredAuthorship.values_list('source_id'))
-  
-    return filteredSources
-
-
-class AuthorAutocomplete(autocomplete.Select2QuerySetView):
+    To create a new source. Redirects to editor for a source.
     """
-    Autocomplete function for authors which is used in source search and 
-    source editor.
-    """
-    def get_queryset(self):
-    #     # Don't forget to filter out results depending on the visitor !
-    #     if not self.request.user.is_authenticated():
-    #         return Country.objects.none()
-        qs = Author.objects.all()
+    def get(self, request, source_id=0):
+        source = Source.objects.create()
+        return HttpResponseRedirect(reverse('sourceEditor',
+                                            args=(source.id,)))
 
-        if self.q:
-            qs = qs.filter(name__istartswith=self.q)
 
-        return qs
-
+# -------------------------------
+# VIEWS FOR THE SPECIES DB ENTRIES
+# -------------------------------
 
 
 class SpeciesListView(ListView):
@@ -237,6 +202,7 @@ class SpeciesEditor(View):
     """
     model = Species
     template_name = 'kineticmodels/speciesEditor.html'
+
     def get(self, request, species_id=0):
         species = get_object_or_404(Species, id=species_id)
         form = EditSpeciesForm(instance=species)
@@ -290,23 +256,9 @@ class SpeciesSearchView(ListView):
         return context
 
 
-
-def searchHelper(items, searchParameterData, searchParameterNames):
-
-    """ Search helper function which takes in the items to be filtered along 
-        with the search parameters and returns an exact match for the given 
-        search parameters
-        items = items.filter(searchParameterNames__exact=searchParameterData)
-    """
-
-    for counter in range(len(searchParameterData)):
-        if searchParameterData[counter] != '':
-            kwargs = {
-                '{0}__{1}'.format(searchParameterNames[counter], 
-                                        'exact'): searchParameterData[counter]
-            }
-            items = items.filter(**kwargs)
-    return items
+# -------------------------------
+# VIEWS FOR THE KINETIC MODEL DB ENTRIES
+# -------------------------------
 
 
 class KineticModelListView(ListView):
@@ -326,6 +278,67 @@ class KineticModelListView(ListView):
         return context
 
 
+class KineticModelNew(View):  # This is probably not the best way to do this... We need to make an actual Create view
+    """
+    To create a new kinetic model. Redirects to editor
+    """
+    def get(self, request, kineticModel_id=0):
+        kineticModel = KineticModel.objects.create()
+        return HttpResponseRedirect(reverse('kineticModelEditor',
+                                                    args=(kineticModel.id,)))
+
+class KineticModelSearchView(ListView):
+    """
+    View to search through the KineticModels. Uses pagination in ListView to list
+    ITEMSPERPAGE number of items on a page.
+    """
+    model = KineticModel
+    form_class = KineticModelSearchForm
+    template_name = 'kineticmodels/KineticModelSearch.html'
+    paginate_by = ITEMSPERPAGE
+
+    def get_queryset(self):
+        form = KineticModelSearchForm(self.request.GET)
+        if form.is_valid():
+            """author = form.cleaned_data['authors']
+            publicationYear = form.cleaned_data['publicationYear']
+            sourceTitle = form.cleaned_data['sourceTitle']
+            journalName = form.cleaned_data['journalName']
+            journalVolumeNumber = form.cleaned_data['journalVolumeNumber']
+            pageNumbers = form.cleaned_data['pageNumbers']
+            doi = form.cleaned_data['doi']"""
+
+            # TODO -- What to do about the search helper funcitons?
+            # This guy is specific to the Source search, but might be useful to duplicate
+            """filteredSources = sourceSearchHelper(KineticModel.objects.all(),
+                                                 Author.objects.all(), author)
+            # And this guy is more generic, but also needs to be passed the right attributes in the list, which I currently have not set
+            filteredSources = searchHelper(filteredSources,
+                                           [publicationYear, sourceTitle,
+                                            journalName, journalVolumeNumber,
+                                            pageNumbers, doi],
+                                           ['publicationYear', 'sourceTitle',
+                                            'journalName',
+                                            'journalVolumeNumber', 'pageNumbers',
+                                            'doi'])"""
+
+            filteredKineticModels = KineticModel.objects.all()
+            return filteredKineticModels
+        else:
+            return KineticModel.objects.none()
+
+    def get_context_data(self, **kwargs):
+        context = super(KineticModelSearchView, self).get_context_data(**kwargs)
+        # ^^^ What does this do? Just create the empty context dictionary with the parent class method? ^^^
+
+        context['form'] = KineticModelSearchForm(self.request.GET)
+        queries_without_page = self.request.GET.copy()
+        if queries_without_page.has_key('page'):
+            del queries_without_page['page']
+        context['queries'] = queries_without_page
+        return context
+
+
 class KineticModelView(View):
     """
     Class based view for viewing a Kinetic Model 
@@ -341,90 +354,6 @@ class KineticModelView(View):
         variables = {'kineticModel': kineticModel, 
                         'SMILESgenerated': SMILESgenerated}
         return render(request, self.template_name, variables)
-
-
-class KineticModelNew(View):
-    """
-    To create a new kinetic model. Redirects to editor
-    """
-    def get(self, request, kineticModel_id=0):
-        kineticModel = KineticModel.objects.create()
-        return HttpResponseRedirect(reverse('kineticModelEditor', 
-                                                    args=(kineticModel.id,)))
-
-
-importer_processes = {}
-class KineticModelImporter(View):
-    """
-    For importing a KineticModel.
-    """
-    model = KineticModel
-    template_name = 'kineticmodels/kineticModelImporterStatus.html'
-
-    def get(self, request, kineticModel_id=0):
-        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-
-        process = importer_processes.get(kineticModel, None)
-        if process is None:
-            status = 'clear'
-        elif process.poll() is None:
-            status = 'active'
-        else:
-            status = 'died'
-
-        variables = {'kineticModel': kineticModel,
-                     'status': status,
-                     'port': 8000 + kineticModel.id,
-                     }
-        return render(request, self.template_name, variables)
-
-    def post(self, request, kineticModel_id=0):
-        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        if 'start' in request.POST:
-            if kineticModel not in importer_processes:
-                workingDirectory = kineticModel.getPath(absolute=True)
-
-                reactionsFile = \
-                        kineticModel.chemkinReactionsFile.name.replace(
-                                kineticModel.getPath(), '').lstrip(os.path.sep)
-                thermoFile = \
-                        kineticModel.chemkinThermoFile.name.replace(
-                                kineticModel.getPath(), '').lstrip(os.path.sep)
-                importCommand = ['python',
-                                 os.path.expandvars("$RMGpy/importChemkin.py"),
-                                 '--species', reactionsFile,
-                                 '--reactions', reactionsFile,
-                                 '--thermo', thermoFile,
-                                 '--known', 'SMILES.txt',
-                                 '--output-directory', 'importer-output',
-                                 '--port', str(8000 + kineticModel.id),
-                                 ]
-
-                p = subprocess.Popen(args=importCommand,
-                                     cwd=workingDirectory,
-                                     env=None,
-                                     stdout=
-                                        open(os.path.join(workingDirectory, 
-                                                        "importer.log"), 'w'),
-                                     stderr=subprocess.STDOUT,
-                                     )
-                print("Starting import \
-                            command {!r} in {} \
-                                with PID {}".format(' '.join(importCommand),
-                                                     workingDirectory, p.pid))
-                importer_processes[kineticModel] = p
-
-        elif 'stop' in request.POST:
-            process = importer_processes.get(kineticModel, None)
-            if process:
-                if process.poll() is None:
-                    print("Killing process with PID {}".process.pid)
-                    process.terminate()
-                del(importer_processes[kineticModel])
-
-        return HttpResponseRedirect(reverse('kineticModelImporter', 
-                                                    args=(kineticModel.id,)))
-
 
 
 class KineticModelMetaDataEditor(View):
@@ -457,7 +386,6 @@ class KineticModelMetaDataEditor(View):
         return render(request, self.template_name, variables)
 
 
-
 class KineticModelUpload(View):
     """
     For uploading the files for KineticModel objects.
@@ -483,49 +411,6 @@ class KineticModelUpload(View):
 
             return HttpResponseRedirect(reverse('kineticModelView', 
                                                     args=(kineticModel.id,)))
-        variables = {'kineticModel': kineticModel,
-                     'form': form, }
-        return render(request, self.template_name, variables)
-
-class KineticModelFileContentEditor(View):
-    """
-    For editing the files for KineticModel objects.
-    """
-    model = KineticModel
-    template_name = 'kineticmodels/kineticModelFileEditor.html'
-
-    def get(self, request, kineticModel_id=0, filetype=''):
-        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        if filetype == 'thermo':
-            file = kineticModel.chemkinThermoFile.file
-        elif filetype == 'reactions':
-            file = kineticModel.chemkinReactionsFile.file
-        elif filetype == 'transport':
-            file = kineticModel.chemkinTransportFile.file
-        else:
-            raise Exception("Invalid filetype {}".format(filetype))
-        form = FileEditorForm()
-        content = file.read()
-        form.initial = {'content':content }
-        variables = {'kineticModel': kineticModel,
-                     'form': form, }
-        return render(request, self.template_name, variables)
-
-    def post(self, request, kineticModel_id=0, filetype=''):
-        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
-        if filetype == 'thermo':
-            file = kineticModel.chemkinThermoFile.file
-        elif filetype == 'reactions':
-            file = kineticModel.chemkinReactionsFile.file
-        elif filetype == 'transport':
-            file = kineticModel.chemkinTransportFile.file
-        else:
-            raise Exception("Invalid filetype {}".format(filetype))
-        form = FileEditorForm(request.POST)
-        if form.is_valid():
-            content = form.cleaned_data['content']
-            with open(file.name, 'w') as f:
-                f.write(content)
         variables = {'kineticModel': kineticModel,
                      'form': form, }
         return render(request, self.template_name, variables)
@@ -629,6 +514,128 @@ class KineticModelAddSMILES(View):
                      'form': form, }
         return render(request, self.template_name, variables)     
 
+
+class KineticModelFileContentEditor(View):
+    """
+    For editing the files for KineticModel objects.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModelFileEditor.html'
+
+    def get(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkinThermoFile.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkinReactionsFile.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkinTransportFile.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
+        form = FileEditorForm()
+        content = file.read()
+        form.initial = {'content':content }
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0, filetype=''):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if filetype == 'thermo':
+            file = kineticModel.chemkinThermoFile.file
+        elif filetype == 'reactions':
+            file = kineticModel.chemkinReactionsFile.file
+        elif filetype == 'transport':
+            file = kineticModel.chemkinTransportFile.file
+        else:
+            raise Exception("Invalid filetype {}".format(filetype))
+        form = FileEditorForm(request.POST)
+        if form.is_valid():
+            content = form.cleaned_data['content']
+            with open(file.name, 'w') as f:
+                f.write(content)
+        variables = {'kineticModel': kineticModel,
+                     'form': form, }
+        return render(request, self.template_name, variables)
+
+
+importer_processes = {}
+class KineticModelImporter(View):
+    """
+    For importing a KineticModel.
+    """
+    model = KineticModel
+    template_name = 'kineticmodels/kineticModelImporterStatus.html'
+
+    def get(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+
+        process = importer_processes.get(kineticModel, None)
+        if process is None:
+            status = 'clear'
+        elif process.poll() is None:
+            status = 'active'
+        else:
+            status = 'died'
+
+        variables = {'kineticModel': kineticModel,
+                     'status': status,
+                     'port': 8000 + kineticModel.id,
+                     }
+        return render(request, self.template_name, variables)
+
+    def post(self, request, kineticModel_id=0):
+        kineticModel = get_object_or_404(KineticModel, id=kineticModel_id)
+        if 'start' in request.POST:
+            if kineticModel not in importer_processes:
+                workingDirectory = kineticModel.getPath(absolute=True)
+
+                reactionsFile = \
+                        kineticModel.chemkinReactionsFile.name.replace(
+                                kineticModel.getPath(), '').lstrip(os.path.sep)
+                thermoFile = \
+                        kineticModel.chemkinThermoFile.name.replace(
+                                kineticModel.getPath(), '').lstrip(os.path.sep)
+                importCommand = ['python',
+                                 os.path.expandvars("$RMGpy/importChemkin.py"),
+                                 '--species', reactionsFile,
+                                 '--reactions', reactionsFile,
+                                 '--thermo', thermoFile,
+                                 '--known', 'SMILES.txt',
+                                 '--output-directory', 'importer-output',
+                                 '--port', str(8000 + kineticModel.id),
+                                 ]
+
+                p = subprocess.Popen(args=importCommand,
+                                     cwd=workingDirectory,
+                                     env=None,
+                                     stdout=
+                                        open(os.path.join(workingDirectory,
+                                                        "importer.log"), 'w'),
+                                     stderr=subprocess.STDOUT,
+                                     )
+                print("Starting import \
+                            command {!r} in {} \
+                                with PID {}".format(' '.join(importCommand),
+                                                     workingDirectory, p.pid))
+                importer_processes[kineticModel] = p
+
+        elif 'stop' in request.POST:
+            process = importer_processes.get(kineticModel, None)
+            if process:
+                if process.poll() is None:
+                    print("Killing process with PID {}".process.pid)
+                    process.terminate()
+                del(importer_processes[kineticModel])
+
+        return HttpResponseRedirect(reverse('kineticModelImporter',
+                                                    args=(kineticModel.id,)))
+
+
+# -----------------------------------------
+# HELPER FUNCTIONS FOR THE KM VIEWS
+# -----------------------------------------
+
 def SMILESHelper(userInput, SMILESCompound):
     """
     SMILES Helper for adding the species and
@@ -636,9 +643,8 @@ def SMILESHelper(userInput, SMILESCompound):
     stringToReturn = ''
     for i in range(len(SMILESCompound)):
         if userInput[i] != '' and SMILESCompound[i] != '':
-            stringToReturn+=userInput[i]+'\t'+SMILESCompound[i]+'\n'
+            stringToReturn += userInput[i] + '\t' + SMILESCompound[i] + '\n'
     return stringToReturn
-
 
 
 def loadSpecies(self, speciesFile):
@@ -662,14 +668,15 @@ def loadSpecies(self, speciesFile):
 
     return speciesList, speciesDict
 
+
 def loadThermo(self, thermoFile, speciesDict):
     """
     Load the chemkin thermochemistry file
     """
     logging.info("Reading thermo file...")
     foundThermoBlock = False
-    #import codecs
-    #with codecs.open(thermo_file, "r", "utf-8") as f:
+    # import codecs
+    # with codecs.open(thermo_file, "r", "utf-8") as f:
     f = thermoFile
     line0 = f.readline()
     while line0 != '':
@@ -690,26 +697,27 @@ def loadThermo(self, thermoFile, speciesDict):
     assert formulaDict, "Didn't read any thermo data from {0}".format(thermoFile)
 
     # Save the formulaDict, converting from {'c':1,'h':4} into "CH4" in the process.
-    #self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
+    # self.formulaDict = {label: convertFormula(formula) for label, formula in formulaDict.iteritems()}
     finalFormulaDict = dict(
         (label, convertFormula(formula))
         for (label, formula) in formulaDict.iteritems())
     # thermoDict contains original thermo as read from chemkin thermo file
-    #self.thermoDict = {s.label: s.thermo for s in speciesDict.values() }
+    # self.thermoDict = {s.label: s.thermo for s in speciesDict.values() }
     finalThermoDict = dict((s.label, s.thermo)
                            for s in speciesDict.values())
     return finalFormulaDict, finalThermoDict
+
 
 def convertFormula(formulaDict):
     """
     Given a formula in dict form {'c':2, 'h':6, 'o':0}
     return a canonical formula string "C2H6"
-    
+
     For comparison reasons, this must be the same algorithm as used in
     rmgpy.molecule.Molecule class.
     """
 
-#    elements = {e.capitalize(): n for e, n in formulaDict.iteritems() if n > 0}
+    #    elements = {e.capitalize(): n for e, n in formulaDict.iteritems() if n > 0}
     elements = dict((e.capitalize(), n) for (e, n) in formulaDict.iteritems() if n > 0)
     hasCarbon = 'C' in elements
     hasHydrogen = 'H' in elements
@@ -733,23 +741,10 @@ def convertFormula(formulaDict):
         formula += '{0}{1:d}'.format(key, count) if count > 1 else key
     return formula
 
-class SourceAutocomplete(autocomplete.Select2QuerySetView):
-    """
-    Autocomplete method for source used in when adding a source to a kinetic
-    model
-    """
-    def get_queryset(self):
-    #     # Don't forget to filter out results depending on the visitor !
-    #     if not self.request.user.is_authenticated():
-    #         return Country.objects.none()
-        qs = Source.objects.all()
 
-        if self.q:
-            if re.match("^[0-9]*$", self.q):
-                qs = qs.filter(publicationYear__istartswith=self.q)
-            else:
-                qs = qs.filter(sourceTitle__istartswith=self.q)
-        return qs
+# -------------------------------
+# VIEWS FOR THE REACTION DB ENTRIES
+# -------------------------------
 
 
 class ReactionListView(ListView):
@@ -776,13 +771,13 @@ class ReactionView(View):
         return render(request, self.template_name, variables)
 
 
-
 class ReactionEditor(View):
     """
     Class based view for editing a reaction
     """
     model = Reaction
     template_name = 'kineticmodels/reactionEditor.html'
+
     def get(self, request, reaction_id=0):
         reaction = get_object_or_404(Reaction, id=reaction_id)
         form = EditReactionForm(instance=reaction)
@@ -800,7 +795,6 @@ class ReactionEditor(View):
         variables = {'reaction': reaction,
                      'form': form, }
         return render(request, self.template_name, variables)
-
 
 
 class ReactionSearchView(ListView):
@@ -825,7 +819,6 @@ class ReactionSearchView(ListView):
                                                     Species.objects.all(), 
                                                         reactant.formula, True)
 
-
             if self.request.GET.has_key('products') :
                 products = form.cleaned_data['products']
                 for product in products:
@@ -833,7 +826,6 @@ class ReactionSearchView(ListView):
                                                 filteredReactions, 
                                                     Species.objects.all(),
                                                         product.formula, False)
-
 
             rPrimeID = form.cleaned_data['rPrimeID']
             filteredReactions = searchHelper(filteredReactions,
@@ -857,31 +849,44 @@ class ReactionSearchView(ListView):
         return context
 
 
-def reactionSearchHelper(reactionList, speciesList, formula, isReactant):
+# -----------------------------------------
+# VIEWS FOR THE AUTOCOMPLETE FUNCTIONALITY
+# -----------------------------------------
+
+class AuthorAutocomplete(autocomplete.Select2QuerySetView):  # TODO -- Group with the other AC fxs, also maybe abstract?
     """
-    helper for reaction search. The function takes in a formula to filter 
-    through a list of species and whether the species is a reactant or not. 
-    It uses this data to output a list of reactions which contain the given 
-    formula in place of reactants or products where applicable. 
-    """ 
+    Autocomplete function for authors which is used in source search and
+    source editor.
+    """
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = Author.objects.all()
 
-    reactionIDs = []
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
 
-    if formula != '':
-        filteredSpecies = speciesList.filter(formula__exact=formula)
-        filteredStoich = Stoichiometry.objects.filter(
-                            species_id__in=filteredSpecies.values_list('pk'))
-        for stoich in filteredStoich:
-            if isReactant==True and stoich.stoichiometry<0:
-                reactionIDs.append(stoich.reaction_id)
-            if isReactant==False and stoich.stoichiometry>0:
-                reactionIDs.append(stoich.reaction_id)
+        return qs
 
-        filteredReactions = reactionList.filter(pk__in=reactionIDs)    
-        return filteredReactions
- 
 
-    return reactionList
+class SourceAutocomplete(autocomplete.Select2QuerySetView):  # TODO -- Maybe group this function with the other ACs?
+    """
+    Autocomplete method for source used in when adding a source to a kinetic
+    model
+    """
+    def get_queryset(self):
+    #     # Don't forget to filter out results depending on the visitor !
+    #     if not self.request.user.is_authenticated():
+    #         return Country.objects.none()
+        qs = Source.objects.all()
+
+        if self.q:
+            if re.match("^[0-9]*$", self.q):
+                qs = qs.filter(publicationYear__istartswith=self.q)
+            else:
+                qs = qs.filter(sourceTitle__istartswith=self.q)
+        return qs
 
 
 class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
@@ -899,6 +904,79 @@ class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
 
         return qs
 
+
+# -----------------------------------------
+#          SEARCH HELPER FUNCTIONS
+# -----------------------------------------
+
+
+def searchHelper(items, searchParameterData, searchParameterNames):
+    # TODO -- Also rename and refactor with underscores
+
+    """ Search helper function which takes in the items to be filtered along
+        with the search parameters and returns an exact match for the given
+        search parameters
+        items = items.filter(searchParameterNames__exact=searchParameterData)
+    """
+
+    for counter in range(len(searchParameterData)):
+        if searchParameterData[counter] != '':
+            kwargs = {
+                '{0}__{1}'.format(searchParameterNames[counter],
+                                        'exact'): searchParameterData[counter]
+            }
+            items = items.filter(**kwargs)
+    return items
+
+
+def sourceSearchHelper(sourceList, authorList, authorNameList):  # TODO -- This is named incorrectly -- rename, refactor
+    """
+    helper function for source search view. The function takes in a formula to
+    filter through a list of species and whether the species is a reactant or not.
+    It uses this data to output a list of reactions which contain the given
+    formula in place of reactants or products where applicable.
+    """
+    # TODO -- This function description is incorrect, and was likely copy-pasted
+
+    sourceIDs = []
+
+    filteredAuthorship = Authorship.objects.all()
+    filteredSources = sourceList
+
+    for authorName in authorNameList:
+        filteredAuthors = authorList.filter(name__exact=authorName)
+        filteredAuthorship = Authorship.objects.filter(
+            author_id__in=filteredAuthors.values_list('pk'))
+        filteredSources = filteredSources.filter(
+            pk__in=filteredAuthorship.values_list('source_id'))
+
+    return filteredSources
+
+
+def reactionSearchHelper(reactionList, speciesList, formula, isReactant):
+    """
+    helper for reaction search. The function takes in a formula to filter
+    through a list of species and whether the species is a reactant or not.
+    It uses this data to output a list of reactions which contain the given
+    formula in place of reactants or products where applicable.
+    """
+
+    reactionIDs = []
+
+    if formula != '':
+        filteredSpecies = speciesList.filter(formula__exact=formula)
+        filteredStoich = Stoichiometry.objects.filter(
+                            species_id__in=filteredSpecies.values_list('pk'))
+        for stoich in filteredStoich:
+            if isReactant is True and stoich.stoichiometry < 0:
+                reactionIDs.append(stoich.reaction_id)
+            if isReactant is False and stoich.stoichiometry > 0:
+                reactionIDs.append(stoich.reaction_id)
+
+        filteredReactions = reactionList.filter(pk__in=reactionIDs)
+        return filteredReactions
+
+    return reactionList
 
 
 
