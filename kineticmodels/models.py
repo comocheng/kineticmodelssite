@@ -613,13 +613,13 @@ class KineticModel(models.Model):
     additionalInfo = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
     #     species=reaction something
-    chemkinReactionsFile = models.FileField( upload_to=upload_chemkin_to,)
-    chemkinThermoFile = models.FileField( upload_to=upload_thermo_to,)
+    chemkinReactionsFile = models.FileField(upload_to=upload_chemkin_to,)
+    chemkinThermoFile = models.FileField(upload_to=upload_thermo_to,)
     chemkinTransportFile = models.FileField(blank=True,
-                                              upload_to=upload_transport_to,)
+                                            upload_to=upload_transport_to,)
 
     def __unicode__(self):
-        return u"{s.id} {s.model_name}".format(s=self)
+        return u"{s.id} {s.modelName}".format(s=self)
 
     class Meta:
         verbose_name_plural = "Kinetic Models"
@@ -656,6 +656,7 @@ class KineticModel(models.Model):
             shutil.rmtree(self.getPath(absolute=True))
         except OSError:
             pass
+
 
 class KineticsComment(models.Model):
     """

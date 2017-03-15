@@ -13,6 +13,8 @@
 
 <h1>Kinetic Model: {{kineticModel.id }}</h1>
 
+    <a href="{% url 'kineticModelList' %}"><button type="button">Return to List</button></a>
+
 <table>
 	<tr><th>Metadata</th><td><a href="{% url 'kineticModelEditor' kineticModel_id=kineticModel.id %}">Edit metadata</a></td></tr>
 	<tr><td>mPrime ID</td><td>{{ kineticModel.mPrimeID }}</a></td></tr> <!-- What was this supposed to link to? -->

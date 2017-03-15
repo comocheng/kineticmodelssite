@@ -20,15 +20,19 @@ Use this form to search for sources in the kinetic models database.
         <th>Year</th>
     </tr>
 
-{% for kineticModel in object_list %}
+{% for km in object_list %}
     <tr>
-        <td>{{ kineticModel.mPrimeID }}<td>
-        <td>{{ kineticModel.modelName }}</td>
-        <td><a href = "{% url 'sourceView' source_id=kineticModel.source.pk %}">
-            {{ kineticModel.source.sourceTitle }}</a></td>
-        <td>{{ kineticModel.additionalInfo }}</td>
-        <td><a href="{% url 'kineticModelView' kineticModel_id=kineticModel.pk %}">View</a></td>
-        <td><a href="{% url 'kineticModelEditor' kineticModel_id=kineticModel.pk%}">Edit</a></td>
+        <td>{{ km.mPrimeID }}<td>
+        <td>{{ km.modelName }}</td>
+        {% if km.source %}
+        <td><a href = "{% url 'sourceView' source_id=km.source.pk %}">
+            {{ km.source.sourceTitle }}</a></td>
+        {% else %}
+            <td></td>
+        {% endif %}
+        <td>{{ km.additionalInfo }}</td>
+        <td><a href="{% url 'kineticModelView' kineticModel_id=km.pk %}">View</a></td>
+        <td><a href="{% url 'kineticModelEditor' kineticModel_id=km.pk%}">Edit</a></td>
     </tr>
 {% empty %}
     <li>Sorry, no results for your search criteria.</li>

@@ -287,6 +287,7 @@ class KineticModelNew(View):  # This is probably not the best way to do this... 
         return HttpResponseRedirect(reverse('kineticModelEditor',
                                                     args=(kineticModel.id,)))
 
+
 class KineticModelSearchView(ListView):
     """
     View to search through the KineticModels. Uses pagination in ListView to list
@@ -300,33 +301,20 @@ class KineticModelSearchView(ListView):
     def get_queryset(self):
         form = KineticModelSearchForm(self.request.GET)
         if form.is_valid():
-            """author = form.cleaned_data['authors']
-            publicationYear = form.cleaned_data['publicationYear']
-            sourceTitle = form.cleaned_data['sourceTitle']
-            journalName = form.cleaned_data['journalName']
-            journalVolumeNumber = form.cleaned_data['journalVolumeNumber']
-            pageNumbers = form.cleaned_data['pageNumbers']
-            doi = form.cleaned_data['doi']"""
+            model_name = form.cleaned_data["model_name"]
+            m_prime_ID = form.cleaned_data["m_prime_ID"]
+            source = form.cleaned_data["source"]
 
-            # TODO -- What to do about the search helper funcitons?
-            # This guy is specific to the Source search, but might be useful to duplicate
-            """filteredSources = sourceSearchHelper(KineticModel.objects.all(),
-                                                 Author.objects.all(), author)
-            # And this guy is more generic, but also needs to be passed the right attributes in the list, which I currently have not set
-            filteredSources = searchHelper(filteredSources,
-                                           [publicationYear, sourceTitle,
-                                            journalName, journalVolumeNumber,
-                                            pageNumbers, doi],
-                                           ['publicationYear', 'sourceTitle',
-                                            'journalName',
-                                            'journalVolumeNumber', 'pageNumbers',
-                                            'doi'])"""
+            filteredKineticModels = searchHelper(KineticModel.objects.all(),
+                                           [model_name, m_prime_ID, source],
+                                           ['modelName', 'mPrimeID', 'source__sourceTitle'])
 
-            filteredKineticModels = KineticModel.objects.all()
+            # filteredKineticModels = KineticModel.objects.all()
             return filteredKineticModels
         else:
-            # return KineticModel.objects.none()
-            return KineticModel.objects.all()  # This is just to verify that I can actually get the page to give results
+            return KineticModel.objects.none()
+            # return KineticModel.objects.all()
+            # This is just to verify that I can actually get the page to give results
 
     def get_context_data(self, **kwargs):
         context = super(KineticModelSearchView, self).get_context_data(**kwargs)

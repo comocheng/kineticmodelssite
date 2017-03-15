@@ -108,12 +108,13 @@ class EditReactionForm(forms.ModelForm):
 
 ################################################################################
 
+
 class FileEditorForm(forms.Form):
     "For editing generic text files"
     content = forms.CharField(label="File content", widget=forms.Textarea(attrs={'rows': 30, 'cols': 80}))
 
 
-#Form for searching Species
+# Form for searching Species
 class SpeciesSearchForm(forms.Form):
     """
     A django form for searching through a Species
@@ -121,7 +122,6 @@ class SpeciesSearchForm(forms.Form):
     # class Meta:
     #     model = Species
     #     fields = ('formula', 'sPrimeID', 'inchi', 'cas')
-
 
     sPrimeID = forms.CharField(label = 'PrIMe ID', max_length=9,
                                              strip = True, required=False)
@@ -139,19 +139,18 @@ class SourceSearchForm(forms.ModelForm):
         model = Source
         fields = ('bPrimeID', 'publicationYear', 'sourceTitle', 'journalName',
                      'journalVolumeNumber', 'pageNumbers', 'doi', 'authors')
-        widgets =  {
+        widgets = {
             'authors': autocomplete.ModelSelect2Multiple(
                                                 url='authorAutocomplete')
         }
 
 
-class KineticModelSearchForm(forms.ModelForm):
+class KineticModelSearchForm(forms.Form):
+    model_name = forms.CharField(label="Model Name", max_length=50, required=False)
+    m_prime_ID = forms.CharField(label="PrIMe ID",    max_length=9,  required=False)
+    source = forms.CharField(label="Source",        max_length=50, required=False)
 
-    class Meta:
-        model = KineticModel
-        # TODO -- Decide if I'm going to select certain fields or not
-        fields = ('source', 'modelName')
-        # Also find some way to search by Parent source as well? Or by species?
+
 
 
 #Form for searching Reactions
