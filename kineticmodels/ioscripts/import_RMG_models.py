@@ -119,7 +119,7 @@ class ThermoLibraryImporter(Importer):
             possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
             if len(possibles) == 1:
                 dj_structure = possibles[0]
-                assert dj_structure.adjacencyList == molecule.toAdjacencyList()
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList, name, molecule.toAdjacencyList(), smiles)
                 dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
             elif len(possibles) == 0:
                 dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
