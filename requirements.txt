@@ -9,4 +9,5 @@ beautifulsoup4
 xlrd
 pydot
 cairocffi
+pandas
 
