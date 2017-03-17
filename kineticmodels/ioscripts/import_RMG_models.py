@@ -26,7 +26,7 @@ django.setup()
 
 from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, \
-    Thermo, ThermoComment, \
+    Thermo, ThermoComment, Structure, Isomer, \
     Source, Author, Authorship, Transport
 
 import rmgpy
@@ -103,6 +103,58 @@ class ThermoLibraryImporter(Importer):
         library.SKIP_DUPLICATES = True
         library.load(filename, local_context=local_context)
         self.library = library
+
+    def import_species(self):
+        """
+        Import the Species only, not their thermo
+        """
+        library = self.library
+        for entry in library.entries:
+            thermo = library.entries[entry].data
+            molecule = library.entries[entry].item
+            name = library.entries[entry].label
+
+            smiles = molecule.toSMILES()
+            inchi = molecule.toInChI()
+            possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
+            if len(possibles) == 1:
+                dj_structure = possibles[0]
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList()
+                dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
+            elif len(possibles) == 0:
+                dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
+                dj_structure.adjacencyList = molecule.toAdjacencyList()
+                # save it once you've added the Isomer (required)
+                dj_isomer = Isomer.objects.create(inchi=inchi)
+                dj_structure.isomer = dj_isomer
+                dj_structure.save()
+            else:
+                raise ImportError("Two structures matching {} {}?".format(smiles, molecule.multiplicity))
+            # See if you can find a Species for it (eg. from Prime) else make one
+            trimmed_inchi = inchi.split('InChI=1S')[-1]
+            formula = inchi.split('/')[1]
+            possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
+            if len(possible_species) == 1:
+                dj_species = possible_species[0]
+                print "Found a unique species {} for structure {} {}".format(dj_species, smiles, molecule.multiplicity)
+                dj_isomer.species.add(dj_species)
+            elif len(possible_species) == 0:
+                print "Found no species for structure {} {}, so making one".format(smiles, molecule.multiplicity),
+                dj_species = Species.objects.create(inchi=inchi, formula=formula)
+                print "{}".format(dj_species)
+            else:
+                print "Found {} species for structure {} {}!".format(len(possible_species), smiles, molecule.multiplicity),
+                print possible_species
+                dj_species = None #TODO: how do we pick one?
+            #import ipdb; ipdb.set_trace()
+            
+            #TODO: now store that this model uses whatever name for this species
+            if dj_species:
+                pass
+            
+            # save the django species so we can add the thermo later?
+            library.entries[entry].dj_species = dj_species
+
 
     def import_data(self):
         """
@@ -530,7 +582,8 @@ def main(args):
         print "Importing thermo library from {}".format(filepath)
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
-        importer.import_data()
+        importer.import_species()
+#        importer.import_data()
 
     print "Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries), '\n - '.join(kinetics_libraries))
 
