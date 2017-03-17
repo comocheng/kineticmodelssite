@@ -499,53 +499,26 @@ class ModelImporter(Importer):
 # if reaction.attrib['reversible']=='false':
 #                 dj_kin.is_reversible=False
 
-def main(top_root):
+
+def main(args):
     """
     The main function. Give it the path to the top of the database mirror
     """
     with open('errors.txt', "w") as errors:
         errors.write("Restarting import at " + time.strftime("%x"))
-    print "Starting at", top_root
-    for root, dirs, files in os.walk(top_root):
-        # if root.endswith('depository\\bibliography'):
-        if root.endswith(os.path.join(os.sep, 'depository', 'bibliography')):
-            print "We have found the Bibliography which we can import!"
-            # print "skipping for now, to test the next importer..."; continue
-            BibliographyImporter(root).import_catalog()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
-            print "We have found the Species which we can import!"
-            print "skipping for now, to test the next importer..."; continue
-            TransportImporter(root).import_data()
-            ThermoImporter(root).import_data()
-            SpeciesImporter(root).import_catalog()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
-            print "We have found the Reactions which we can import!"
-            # print "skipping for now, to test the next importer..."; continue
-            ReactionImporter(root).import_catalog()
-            KineticsImporter(root).import_data()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
-            print "We have found the Kinetic Models which we can import!"
-            print "skipping for now, to test the next importer..."; continue
-            ModelImporter(root).import_catalog()
-        else:
-            # so far nothing else is implemented
-            print "Skipping {}".format(root)
-        # Remove these before iterating further into them
-        for skipdir in ['.git', 'data', '_attic', 'catalog']:
-            if skipdir in dirs:
-                print "skipping {}".format(os.path.join(root, skipdir))
-                dirs.remove(skipdir)
-
+    print "Importing models from", str(args.paths)
 
 if __name__ == "__main__":
-    import argparse
 
     parser = argparse.ArgumentParser(
-        description='Import PRIME database mirror into Django.')
-    parser.add_argument('root',
-                        metavar='root',
-                        nargs=1,
-                        help='location of the mirror on the local filesystem')
+        description='Import RMG models into Django.')
+    parser.add_argument('paths',
+                        metavar='path',
+                        type=str,
+                        nargs='+',
+                        help='the path(s) to search for kinetic models')
     args = parser.parse_args()
-    top_root = os.path.normpath(os.path.abspath(args.root[0]))  # strip eg. a trailing '/'
-    main(top_root)
+    main(args)
+
+
+
