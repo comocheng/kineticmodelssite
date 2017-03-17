@@ -157,9 +157,18 @@ class Source(models.Model):
                                     max_length=100)
     authors = models.ManyToManyField(Author, blank=True, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
+    rmg_import_path = models.CharField(blank=True, max_length=300)
 
     def __unicode__(self):
-        return u"{s.publicationYear} {s.sourceTitle}".format(s=self)
+        self_string = u""
+        self_string += u"{s.sourceTitle}:\n".format(s=self).upper()
+        self_string += u"Published in {s.publicationYear}:\n".format(s=self)
+        self_string += u"\t {s.journalName},\n\t " \
+                       u"Vol. {s.journalVolumeNumber}\n\t " \
+                       u"Pgs. {s.pageNumbers}\n".format(s=self)
+        # self_string += u"Authors: {s.authors}".format(s=self)
+
+        return self_string
 
     class Meta:
         ordering = ('bPrimeID',)

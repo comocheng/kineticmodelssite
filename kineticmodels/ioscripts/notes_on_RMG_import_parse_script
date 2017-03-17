@@ -1,0 +1,20 @@
+WORKFLOW for the new parser for importing KMs from the RMG-Import Github Repo
+
+Make an empty KineticModel, THEN:
+
+Start with parsing for new Species given the Species in the imported files for a KM:
+    - [SMILES | Adjacency List] -> Species
+            - Adjacency Lists found in Thermo .py file and also in dictionary.txt
+    - species-exists?  -- Consider using SMILES, InChi
+
+Establish the "through" relationship for the SpeciesName
+    - So that we know which name the KineticModel uses to refer to the Species
+
+Add Transport Data
+
+Add Thermo Data
+
+Add Kinetics Data
+
+Add Reactions?
+
