@@ -57,12 +57,12 @@ class Importer(object):
         self.name = self.name_from_path(path)
         self.library = None
 
-    def name_from_path(self):
+    def name_from_path(self, path=None):
         """
         Get the library name from the (full) path
         """
         name_path_re = re.compile('\.*\/?(.+?)\/RMG-Py-.*-library.*')
-        match = name_path_re.match(self.path)
+        match = name_path_re.match(path or self.path)
         if match:
             return match.group(1).split('RMG-models/')[-1]
         else:
@@ -523,12 +523,16 @@ def main(args):
         t, k = findLibraryFiles(path)
         thermo_libraries.extend(t)
         kinetics_libraries.extend(k)
+
+    print "Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries))
         
     for filepath in thermo_libraries:
         print "Importing thermo library from {}".format(filepath)
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
         importer.import_data()
+
+    print "Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries), '\n - '.join(kinetics_libraries))
 
     for filepath in kinetics_libraries:
         print "Importing kinetics library from {}".format(filepath)
@@ -556,6 +560,7 @@ if __name__ == "__main__":
                         nargs='+',
                         help='the path(s) to search for kinetic models')
     args = parser.parse_args()
+    args.paths = [os.path.expandvars(path) for path in args.paths]
     main(args)
 
 
