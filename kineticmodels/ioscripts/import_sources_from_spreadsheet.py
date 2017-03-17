@@ -183,5 +183,6 @@ if __name__ == "__main__":
 
     for line in range(len(sheet.index)):
         # clean_my_db(line)
+        # This is here in case we need to do testing on this script again
         row_to_source(line)
 

@@ -39,10 +39,12 @@ from rmgpy.data.kinetics.library import KineticsLibrary
 from rmgpy.data.thermo import ThermoLibrary
 from __builtin__ import True
 
+
 class ImportError(Exception):
     pass
 
-class Importer(object):
+
+class Importer(object):  # TODO -- Consider renaming to AbstractImporter for consistency -- consider using abc?
     """
     A default importer, imports nothing in particular. 
     
@@ -101,6 +103,7 @@ class ThermoLibraryImporter(Importer):
         # Load the library
         library = ThermoLibrary(label=self.name)
         library.SKIP_DUPLICATES = True
+        # NOTE -- In order for this feature to run we have to be on "rmg-py/importer" branch, may require reinstall
         library.load(filename, local_context=local_context)
         self.library = library
 
@@ -145,16 +148,16 @@ class ThermoLibraryImporter(Importer):
             else:
                 print "Found {} species for structure {} {}!".format(len(possible_species), smiles, molecule.multiplicity),
                 print possible_species
-                dj_species = None #TODO: how do we pick one?
-            #import ipdb; ipdb.set_trace()
+                dj_species = None # TODO: how do we pick one?
+            # import ipdb; ipdb.set_trace()
             
-            #TODO: now store that this model uses whatever name for this species
+            # TODO: now store that this model uses whatever name for this species
+            # TODO -- In other words, create the "through" link between KMs and Species via SpeciesName
             if dj_species:
                 pass
             
             # save the django species so we can add the thermo later?
             library.entries[entry].dj_species = dj_species
-
 
     def import_data(self):
         """
@@ -165,7 +168,7 @@ class ThermoLibraryImporter(Importer):
             thermo = library.entries[entry].data
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
-            #TODO: make this do something
+            # TODO: make this do something
 
 class KineticsLibraryImporter(Importer):
     """
@@ -565,6 +568,9 @@ def main(args):
     """
     The main function. Give it the path to the top of the database mirror
     """
+
+    # TODO -- Possibly change this to use logging?
+
     with open('errors.txt', "w") as errors:
         errors.write("Restarting import at " + time.strftime("%x"))
     print "Importing models from", str(args.paths)
@@ -582,8 +588,8 @@ def main(args):
         print "Importing thermo library from {}".format(filepath)
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
-        importer.import_species()
-#        importer.import_data()
+        importer.import_species()  # TODO -- refine and edit (focus on edge cases)
+#        importer.import_data()  # TODO -- write this
 
     print "Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries), '\n - '.join(kinetics_libraries))
 
@@ -591,16 +597,8 @@ def main(args):
         print "Importing kinetics library from {}".format(filepath)
         importer = KineticsLibraryImporter(filepath)
         importer.load_library()
-        importer.import_data()
+        importer.import_data()  # TODO -- Actually write
 
-    """ # Commented out but maybe helpful later
-    with open('names.pkl', 'wb') as outfile:
-        pickle.dump(namesDict, outfile, pickle.HIGHEST_PROTOCOL)
-    with open('thermo.pkl', 'wb') as outfile:
-        pickle.dump(thermoDict, outfile, pickle.HIGHEST_PROTOCOL)
-    with open('kinetics.pkl', 'wb') as outfile:
-        pickle.dump(kineticsDict, outfile, pickle.HIGHEST_PROTOCOL)
-    """
     print 'Finished'
 
 if __name__ == "__main__":
