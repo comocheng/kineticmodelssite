@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
 Run this like so:
  $  python import_prime.py /path/to/local/mirror/warehouse.primekinetics.org/
