@@ -10,37 +10,51 @@ django.setup()
 from kineticmodels.models import Source, Author, Authorship
 
 
+def clean_my_db(row):
+    """
+    Procedure to delete all of the duplicate Sources created during testing of this script
+    Row-Index (Integer) -> None
+    """
+
+    source_info_dict = row_to_dict(row)
+    sources = Source.objects.all().filter(sourceTitle=source_info_dict[u"Title"])
+    for source in sources:
+        logging.info("Deleting source: {}".format(source))
+        source.delete()
+
+
 def row_to_source(row):  # TODO -- needs tests
     """
     Takes a single row in the Sheet (represented by an index), strips its values, and saves a new Kinetic Model instance
-    Integer -> KineticModel
+    Row-Index  (Integer) -> KineticModel
     """
 
     # Get the info we need from the Spreadsheet (DataFrame)
     source_info_dict = row_to_dict(row)
 
     # Make a new kinetic Model
-    s = Source()
+    s, created = Source.objects.get_or_create(sourceTitle=source_info_dict[u"Title"])
 
-    # Store the dictionary values in the Kinetic Model
-    s.publicationYear = source_info_dict[u"Year"][:4]
-    s.sourceTitle = source_info_dict[u"Title"]
-    s.journalName = source_info_dict[u"Publication"]
-    s.journalVolumeNumber = source_info_dict[u"Volume"]
-    s.pageNumbers = source_info_dict[u"Pages "]
-    s.doi = source_info_dict[u"DOI"]
+    if created:  # If it's a new
+        # Store the dictionary values in the Kinetic Model
+        s.publicationYear = source_info_dict[u"Year"][:4]
+        s.sourceTitle = source_info_dict[u"Title"]
+        s.journalName = source_info_dict[u"Publication"]
+        s.journalVolumeNumber = source_info_dict[u"Volume"]
+        s.pageNumbers = source_info_dict[u"Pages "]
+        s.doi = source_info_dict[u"DOI"]
 
-    # Save that instance
-    # TODO IMPORTANT -- check that an identical Source doesn't already exist
-    try:
-        s.save()
-        logging.info("Created the following Source Instance:\n{0}\n".format(s))
-    except Exception, e:
-        logging.error("Error saving the Source: {}".format(e))
+        # Save that instance
+        try:
+            s.save()
+            logging.info("Created the following Source Instance:\n{0}\n".format(s))
+        except Exception, e:
+            logging.error("Error saving the Source: {}".format(e))
 
-    # Then create the Authorships
-    if source_info_dict[u"Authors"] != "" and type(source_info_dict[u"Authors"]) in [str, unicode]:
-        make_authorships(source_info_dict[u"Authors"], s)
+        # Then create the Authorships
+        if source_info_dict[u"Authors"] != "" and type(source_info_dict[u"Authors"]) in [str, unicode]:
+            make_authorships(source_info_dict[u"Authors"], s)
+
     return s
 
 
@@ -168,5 +182,6 @@ if __name__ == "__main__":
     sheet = pandas.read_excel("kineticmodels/ioscripts/imported_kinetic_modeling_metadata.xlsx")
 
     for line in range(len(sheet.index)):
+        # clean_my_db(line)
         row_to_source(line)
 
