@@ -2,18 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
+Import the contents of the RMG-models repository.
+
 Run this like so:
- $  python import_prime.py /path/to/local/mirror/warehouse.primekinetics.org/
+ $  python import_RMG_models.py /path/to/local/RMG-models/
  
-It should dig through all the prime XML files and import them into
+It should dig through all the models and import them into
 the Django database.
 """
 
 import os
-import traceback
 import time
-from xml.etree import ElementTree  # cElementTree is C implementation of xml.etree.ElementTree, but works differently!
-from xml.parsers.expat import ExpatError  # XML formatting errors
+import re
+import argparse
+import logging
+import cPickle as pickle
+
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
 import django
@@ -21,14 +25,22 @@ import django
 django.setup()
 
 from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
-    Species, KineticModel, Comment, SpeciesName, \
-    Thermo, ThermoComment, \
+    Species, KineticModel, SpeciesName, \
+    Thermo, ThermoComment, Structure, Isomer, \
     Source, Author, Authorship, Transport
 
+import rmgpy
+from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
+import rmgpy.constants as constants
+from rmgpy.kinetics import Arrhenius, ArrheniusEP, ThirdBody, Lindemann, Troe, \
+                           PDepArrhenius, MultiArrhenius, MultiPDepArrhenius, \
+                           Chebyshev, KineticsData, PDepKineticsModel
+from rmgpy.data.kinetics.library import KineticsLibrary
+from rmgpy.data.thermo import ThermoLibrary
+from __builtin__ import True
 
-class PrimeError(Exception):
+class ImportError(Exception):
     pass
-
 
 class Importer(object):
     """
@@ -39,140 +51,174 @@ class Importer(object):
     """
 
     "Override this in subclasses:"
-    prime_ID_prefix = 'none'  # eg. 'thp' for thermo polynomials
 
-    def __init__(self, directory_path):
-        self.directory_path = directory_path
-        self.ns = {'prime': 'http://purl.org/NET/prime/'}  # namespace
+    def __init__(self, path):
+        self.path = path
+        self.name = self.name_from_path(path)
+        self.library = None
+
+    def name_from_path(self, path=None):
+        """
+        Get the library name from the (full) path
+        """
+        name_path_re = re.compile('\.*\/?(.+?)\/RMG-Py-.*-library.*')
+        match = name_path_re.match(path or self.path)
+        if match:
+            return match.group(1).split('RMG-models/')[-1]
+        else:
+            return os.path.split(self.path)[0]
+
+    def load_library(self):
+        """
+        Load from file. This method should be overridden in subclasses of this Importer class.
+        """
+        raise NotImplementedError("Should define this in a subclass")
 
     def import_data(self):
         """
-        Import everything beginning with the prime_ID_prefix in subdirectories
-        of the data directory
-        """
-        data_path = os.path.join(self.directory_path, 'data')
-        assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
-        print "Importing from directories within {}".format(data_path)
-        directories = [d for d in os.listdir(data_path)
-                       if os.path.isdir(os.path.join(data_path, d))]
-        for skipdir in ['_attic']:
-            if skipdir in directories:
-                directories.remove(skipdir)
-        for directory in sorted(directories):
-            directory_path = os.path.join(data_path, directory)
-            for file in sorted([f for f in os.listdir(directory_path) if (
-                        f.endswith('.xml') and
-                        f.startswith(self.__class__.prime_ID_prefix)
-            )]):
-                full_path = os.path.join(directory_path, file)
-                self.import_file(full_path)
-
-    def import_catalog(self):
-        """
-        Import all xml files in the catalog directory.
-        """
-        catalog_path = os.path.join(self.directory_path, 'catalog')
-        assert os.path.isdir(catalog_path), "{} isn't a directory!".format(catalog_path)
-        print "Importing xml files from directory {}".format(catalog_path)
-        for file in sorted([f for f in os.listdir(catalog_path)
-                            if f.endswith('.xml')]):
-            full_path = os.path.join(catalog_path, file)
-            self.import_file(full_path)
-
-    def import_file(self, file_path):
-        """
-        Import a single file
-        """
-
-        def save_error(message):
-            with open('errors.txt', "a") as errors:
-                errors.write("{0}\t{1}\n".format(file_path, message))
-
-        print "Parsing file {}".format(file_path)
-        try:
-            tree = ElementTree.parse(file_path)
-        except ExpatError as e:
-            save_error("[XML] Error (line %d): %d" % (e.lineno, e.code))
-            save_error("[XML] Offset: %d" % (e.offset))
-        except IOError as e:
-            save_error("[XML] I/O Error %d: %s" % (e.errno, e.strerror))
-
-        try:
-            root = tree.getroot()
-            self.import_elementtree_root(root)
-        except Exception as e:
-            save_error(traceback.format_exc())
-
-    def import_elementtree_root(self, root):
-        """
-        Import from an ElementTree.Element which is the root of the document.
-        
-        This method should be overridden in subclasses of this Importer class.
+        Import the data to django. This method should be overridden in subclasses of this Importer class.
         """
         raise NotImplementedError("Should define this in a subclass")
 
 
-class BibliographyImporter(Importer):
+class ThermoLibraryImporter(Importer):
     """
-    To import Bibliography items
+    To import a thermodynamic library
+    """
+    def load_library(self):
+        """
+        Load the thermo library from the path, and store it.
+        """
+        filename = self.path
+        # Define local context to allow for loading of the library
+        local_context = {
+                'ThermoData': ThermoData,
+                'Wilhoit': Wilhoit,
+                'NASAPolynomial': NASAPolynomial,
+                'NASA': NASA,
+            }
+
+        # Load the library
+        library = ThermoLibrary(label=self.name)
+        library.SKIP_DUPLICATES = True
+        library.load(filename, local_context=local_context)
+        self.library = library
+
+    def import_species(self):
+        """
+        Import the Species only, not their thermo
+        """
+        library = self.library
+        for entry in library.entries:
+            thermo = library.entries[entry].data
+            molecule = library.entries[entry].item
+            name = library.entries[entry].label
+
+            smiles = molecule.toSMILES()
+            inchi = molecule.toInChI()
+            possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
+            if len(possibles) == 1:
+                dj_structure = possibles[0]
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList, name, molecule.toAdjacencyList(), smiles)
+                dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
+            elif len(possibles) == 0:
+                dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
+                dj_structure.adjacencyList = molecule.toAdjacencyList()
+                # save it once you've added the Isomer (required)
+                dj_isomer = Isomer.objects.create(inchi=inchi)
+                dj_structure.isomer = dj_isomer
+                dj_structure.save()
+            else:
+                raise ImportError("Two structures matching {} {}?".format(smiles, molecule.multiplicity))
+            # See if you can find a Species for it (eg. from Prime) else make one
+            trimmed_inchi = inchi.split('InChI=1S')[-1]
+            formula = inchi.split('/')[1]
+            possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
+            if len(possible_species) == 1:
+                dj_species = possible_species[0]
+                print "Found a unique species {} for structure {} {}".format(dj_species, smiles, molecule.multiplicity)
+                dj_isomer.species.add(dj_species)
+            elif len(possible_species) == 0:
+                print "Found no species for structure {} {}, so making one".format(smiles, molecule.multiplicity),
+                dj_species = Species.objects.create(inchi=inchi, formula=formula)
+                print "{}".format(dj_species)
+            else:
+                print "Found {} species for structure {} {}!".format(len(possible_species), smiles, molecule.multiplicity),
+                print possible_species
+                dj_species = None #TODO: how do we pick one?
+            #import ipdb; ipdb.set_trace()
+            
+            #TODO: now store that this model uses whatever name for this species
+            if dj_species:
+                pass
+            
+            # save the django species so we can add the thermo later?
+            library.entries[entry].dj_species = dj_species
+
+
+    def import_data(self):
+        """
+        Import the loaded thermo library into the django database
+        """
+        library = self.library
+        for entry in library.entries:
+            thermo = library.entries[entry].data
+            chemkinMolecule = library.entries[entry].item
+            name = library.entries[entry].label
+            #TODO: make this do something
+
+class KineticsLibraryImporter(Importer):
+    """
+    To import a kinetics library
     """
 
-    def import_elementtree_root(self, bib_item):
-        ns = self.ns
-        prime_id = bib_item.attrib.get("primeID")
-        dj_item, created = Source.objects.get_or_create(bPrimeID=prime_id)  # dj_ stands for Django
+    def load_library(self):
+        """
+        Load the kinetics library from the path and store it
+        """
+        fileName = self.path
+        # Define local context to allow for loading of the library
+        local_context = {
+                    'KineticsData': KineticsData,
+                    'Arrhenius': Arrhenius,
+                    'ArrheniusEP': ArrheniusEP,
+                    'MultiArrhenius': MultiArrhenius,
+                    'MultiPDepArrhenius': MultiPDepArrhenius,
+                    'PDepArrhenius': PDepArrhenius,
+                    'Chebyshev': Chebyshev,
+                    'ThirdBody': ThirdBody,
+                    'Lindemann': Lindemann,
+                    'Troe': Troe,
+                    'R': constants.R,
+                }
+        # Load the library
+        logging.info("Loading reaction library {0}".format(fileName))
+        library = KineticsLibrary(label=self.name)
+        library.ALLOW_UNMARKED_DUPLICATES = True
+        try:
+            library.load(fileName, local_context=local_context)
+        except Exception, e:
+            logging.error("Error reading {0}:".format(fileName), exc_info=True)
+            logging.warning("Will continue without that model")
+            return False
 
-        # There may or may not be a journal, so have to cope with it being None
-        dj_item.journal_name = bib_item.findtext('prime:journal',
-                                                 namespaces=ns,
-                                                 default='')
+        library.convertDuplicatesToMulti()
+        self.library = library
 
-        # There seems to always be a year in every prime record, so assume it exists:
-        # dj_item.pub_year = bibitem.find('prime:year', namespaces=ns).text
-        # In an older mirror, not everything has a year, so we need to cope with it being None:
-        dj_item.publication_year = bib_item.findtext('prime:year',
-                                                     namespaces=ns,
-                                                     default='')
-
-        # Every source should have a title:
-        dj_item.source_title = bib_item.findtext('prime:title',
-                                                 namespaces=ns,
-                                                 default='')
-
-        # Some might give a volume number:
-        volume = bib_item.find('prime:volume', namespaces=ns)
-        if volume is not None:
-            dj_item.journal_volume_number = volume.text
-
-        # Some might give page numbers:
-        dj_item.page_numbers = bib_item.findtext('prime:pages',
-                                                 namespaces=ns,
-                                                 default='')
-
-        # No sources in PrIMe will come with Digital Object Identifiers,
-        # but we should include this for future importing:
-        dj_item.doi = ''
-
-        dj_item.save()
-
-        authorship_already_in_database = Authorship.objects.all().filter(
-            source=dj_item).exists()
-        for index, author in enumerate(bib_item.findall('prime:author',
-                                                        namespaces=ns)):
-            number = index + 1
-            print u"author {} is {}".format(number, author.text)
-            dj_author, created = Author.objects.get_or_create(name=author.text)
-            Authorship.objects.get_or_create(source=dj_item,
-                                             author=dj_author,
-                                             order=number)
-            "ToDo: make this check for changes and delete old Authorship entries if needed"
-            if authorship_already_in_database:
-                assert not created, "Authorship change detected, and probably not handled correctly"
+    def import_data(self):
+        """
+        Import the loaded kinetics library into the django database
+        """
+        library = self.library
+        for entry in library.entries:
+            kinetics = library.entries[entry].data
+            chemkinReaction = library.entries[entry].item
+            #TODO: make this do something
 
 
-class SpeciesImporter(Importer):
+class PrimeSpeciesImporter(Importer):
     """
-    To import chemical species
+    To import chemical species. Left over from PrIMe importer
     """
 
     def import_elementtree_root(self, species):
@@ -198,9 +244,9 @@ class SpeciesImporter(Importer):
         # import ipdb; ipdb.set_trace()
 
 
-class ThermoImporter(Importer):
+class PrimeThermoImporter(Importer):
     """
-    To import the thermodynamic data of a species (can be multiple for each species)
+    To import the thermodynamic data of a species (can be multiple for each species). Left over from PrIMe importer
     """
     prime_ID_prefix = 'thp'
 
@@ -276,9 +322,9 @@ class ThermoImporter(Importer):
         dj_thermo.save()
 
 
-class TransportImporter(Importer):
+class PrimeTransportImporter(Importer):
     """
-    To import the transport data of a species
+    To import the transport data of a species. Left over from PrIMe importer
     """
     prime_ID_prefix = 'tr'
 
@@ -328,9 +374,9 @@ class TransportImporter(Importer):
         dj_trans.save
 
 
-class ReactionImporter(Importer):
+class PrimeReactionImporter(Importer):
     """
-    To import chemical reactions
+    To import chemical reactions. Left over from PrIMe importer
     """
 
     def import_elementtree_root(self, reaction):
@@ -360,9 +406,9 @@ class ReactionImporter(Importer):
             # import ipdb; ipdb.set_trace()
 
 
-class KineticsImporter(Importer):
+class PrimeKineticsImporter(Importer):
     """
-    To import the kinetics data of a reaction (can be multiple for each species)
+    To import the kinetics data of a reaction (can be multiple for each species). Left over from PrIMe importer
     """
     prime_ID_prefix = 'rk'
 
@@ -394,7 +440,7 @@ class KineticsImporter(Importer):
 
         # Now give the Kinetics object its other properties
         if coefficient is None:
-            raise PrimeError("Couldn't find coefficient (and we can't yet interpret linked rates)")
+            raise ImportError("Couldn't find coefficient (and we can't yet interpret linked rates)")
         if coefficient.attrib['direction'] == 'reverse':
             kinetics.is_reverse = True
         relunc = coefficient.find('prime:uncertainty', namespaces=ns)
@@ -448,9 +494,9 @@ class KineticsImporter(Importer):
 
 
 
-class ModelImporter(Importer):
+class PrimeModelImporter(Importer):
     """
-    To import kinetic models
+    To import kinetic models. Left over from PrIMe importer
     """
 
     def import_elementtree_root(self, mod):
@@ -496,56 +542,79 @@ class ModelImporter(Importer):
             rkPrimeID = kineticslink.attrib.get("primeID")
 
 
-# if reaction.attrib['reversible']=='false':
-#                 dj_kin.is_reversible=False
 
-def main(top_root):
+def findLibraryFiles(path):
+    thermoLibs = []
+    kineticsLibs = []
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            path = os.path.join(root, name)
+            if root.endswith('RMG-Py-thermo-library') and name == 'ThermoLibrary.py':
+                logging.info("Found thermo library {0}".format(path))
+                thermoLibs.append(path)
+            elif root.endswith('RMG-Py-kinetics-library') and name == 'reactions.py':
+                logging.info("Found kinetics file {0}".format(path))
+                kineticsLibs.append(path)
+            else:
+                logging.debug('{0} unread because it is not named like a kinetics or thermo '
+                              'library generated by the chemkin importer'.format(path))
+    return thermoLibs, kineticsLibs
+
+
+def main(args):
     """
     The main function. Give it the path to the top of the database mirror
     """
     with open('errors.txt', "w") as errors:
         errors.write("Restarting import at " + time.strftime("%x"))
-    print "Starting at", top_root
-    for root, dirs, files in os.walk(top_root):
-        # if root.endswith('depository\\bibliography'):
-        if root.endswith(os.path.join(os.sep, 'depository', 'bibliography')):
-            print "We have found the Bibliography which we can import!"
-            # print "skipping for now, to test the next importer..."; continue
-            BibliographyImporter(root).import_catalog()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
-            print "We have found the Species which we can import!"
-            print "skipping for now, to test the next importer..."; continue
-            TransportImporter(root).import_data()
-            ThermoImporter(root).import_data()
-            SpeciesImporter(root).import_catalog()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
-            print "We have found the Reactions which we can import!"
-            # print "skipping for now, to test the next importer..."; continue
-            ReactionImporter(root).import_catalog()
-            KineticsImporter(root).import_data()
-        elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
-            print "We have found the Kinetic Models which we can import!"
-            print "skipping for now, to test the next importer..."; continue
-            ModelImporter(root).import_catalog()
-        else:
-            # so far nothing else is implemented
-            print "Skipping {}".format(root)
-        # Remove these before iterating further into them
-        for skipdir in ['.git', 'data', '_attic', 'catalog']:
-            if skipdir in dirs:
-                print "skipping {}".format(os.path.join(root, skipdir))
-                dirs.remove(skipdir)
+    print "Importing models from", str(args.paths)
 
+    thermo_libraries = []
+    kinetics_libraries = []
+    for path in args.paths:
+        t, k = findLibraryFiles(path)
+        thermo_libraries.extend(t)
+        kinetics_libraries.extend(k)
+
+    print "Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries))
+        
+    for filepath in thermo_libraries:
+        print "Importing thermo library from {}".format(filepath)
+        importer = ThermoLibraryImporter(filepath)
+        importer.load_library()
+        importer.import_species()
+#        importer.import_data()
+
+    print "Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries), '\n - '.join(kinetics_libraries))
+
+    for filepath in kinetics_libraries:
+        print "Importing kinetics library from {}".format(filepath)
+        importer = KineticsLibraryImporter(filepath)
+        importer.load_library()
+        importer.import_data()
+
+    """ # Commented out but maybe helpful later
+    with open('names.pkl', 'wb') as outfile:
+        pickle.dump(namesDict, outfile, pickle.HIGHEST_PROTOCOL)
+    with open('thermo.pkl', 'wb') as outfile:
+        pickle.dump(thermoDict, outfile, pickle.HIGHEST_PROTOCOL)
+    with open('kinetics.pkl', 'wb') as outfile:
+        pickle.dump(kineticsDict, outfile, pickle.HIGHEST_PROTOCOL)
+    """
+    print 'Finished'
 
 if __name__ == "__main__":
-    import argparse
 
     parser = argparse.ArgumentParser(
-        description='Import PRIME database mirror into Django.')
-    parser.add_argument('root',
-                        metavar='root',
-                        nargs=1,
-                        help='location of the mirror on the local filesystem')
+        description='Import RMG models into Django.')
+    parser.add_argument('paths',
+                        metavar='path',
+                        type=str,
+                        nargs='+',
+                        help='the path(s) to search for kinetic models')
     args = parser.parse_args()
-    top_root = os.path.normpath(os.path.abspath(args.root[0]))  # strip eg. a trailing '/'
-    main(top_root)
+    args.paths = [os.path.expandvars(path) for path in args.paths]
+    main(args)
+
+
+
