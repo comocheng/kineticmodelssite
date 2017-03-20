@@ -11,19 +11,20 @@ It should dig through all the models and import them into
 the Django database.
 """
 
+# Not Django-specific imports
 import os
 import time
 import re
 import argparse
 import logging
-import cPickle as pickle
+import abc
 
-
+# Django setup to import models and other files from the Apps
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
 import django
-
 django.setup()
 
+# Django-specific imports
 from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, \
     Thermo, ThermoComment, Structure, Isomer, \
@@ -44,21 +45,21 @@ class ImportError(Exception):
     pass
 
 
-class Importer(object):  # TODO -- Consider renaming to AbstractImporter for consistency -- consider using abc?
+class Importer(object):
     """
-    A default importer, imports nothing in particular. 
-    
-    Make subclasses of this to import specific things.
-    This just contains generic parts common to all.
+    Abstraction of the Importer Classes for Kinetics and Thermo data, each found below
+    Note that all of these methods must be overridden when this class is inherited
     """
 
-    "Override this in subclasses:"
+    __metaclass__ = abc.ABCMeta
 
+    @abc.abstractmethod
     def __init__(self, path):
         self.path = path
         self.name = self.name_from_path(path)
         self.library = None
 
+    @abc.abstractmethod
     def name_from_path(self, path=None):
         """
         Get the library name from the (full) path
@@ -70,12 +71,14 @@ class Importer(object):  # TODO -- Consider renaming to AbstractImporter for con
         else:
             return os.path.split(self.path)[0]
 
+    @abc.abstractmethod
     def load_library(self):
         """
         Load from file. This method should be overridden in subclasses of this Importer class.
         """
         raise NotImplementedError("Should define this in a subclass")
 
+    @abc.abstractmethod
     def import_data(self):
         """
         Import the data to django. This method should be overridden in subclasses of this Importer class.
