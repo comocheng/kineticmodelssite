@@ -125,7 +125,9 @@ class ThermoLibraryImporter(Importer):
             possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
             if len(possibles) == 1:
                 dj_structure = possibles[0]
-                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList, speciesName, molecule.toAdjacencyList(), smiles)
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
+                    "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
+                                                                        speciesName, molecule.toAdjacencyList(), smiles)
                 dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
             elif len(possibles) == 0:
                 dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
@@ -154,9 +156,7 @@ class ThermoLibraryImporter(Importer):
                 logging.warning(possible_species)
                 dj_species = None # TODO: how do we pick one?
             # import ipdb; ipdb.set_trace()
-            
-            # TODO: now store that this model uses whatever name for this species
-            # TODO -- In other words, create the "through" link between KMs and Species via SpeciesName
+
             if dj_species:
                 dj_km, created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
 
