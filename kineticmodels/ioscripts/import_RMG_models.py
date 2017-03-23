@@ -118,14 +118,14 @@ class ThermoLibraryImporter(Importer):
         for entry in library.entries:
             thermo = library.entries[entry].data
             molecule = library.entries[entry].item
-            name = library.entries[entry].label
+            speciesName = library.entries[entry].label
 
             smiles = molecule.toSMILES()
             inchi = molecule.toInChI()
             possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
             if len(possibles) == 1:
                 dj_structure = possibles[0]
-                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList, name, molecule.toAdjacencyList(), smiles)
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList, speciesName, molecule.toAdjacencyList(), smiles)
                 dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
             elif len(possibles) == 0:
                 dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
@@ -158,8 +158,25 @@ class ThermoLibraryImporter(Importer):
             # TODO: now store that this model uses whatever name for this species
             # TODO -- In other words, create the "through" link between KMs and Species via SpeciesName
             if dj_species:
-                pass
-            
+                dj_km, created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
+
+                if created:
+                    dj_km.modelName = self.name
+                    dj_km.additionalInfo = "Created while importing RMG-models"
+
+                    # Save that instance
+                    try:
+                        dj_km.save()
+                        logging.info("Created the following Kinetic Model Instance:\n{0}\n".format(dj_km))
+                    except Exception, e:
+                        logging.error("Error saving the Kinetic Model: {}".format(e))
+                        raise e
+
+                # Create the join between Species and KineticModel through a SpeciesName
+                dj_speciesName = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
+                dj_speciesName.name = speciesName
+                dj_speciesName.save()
+
             # save the django species so we can add the thermo later?
             library.entries[entry].dj_species = dj_species
 
@@ -606,6 +623,11 @@ def main(args):
         importer.import_data()  # TODO -- Actually write
 
     logging.info('Exited kinetics imports!')
+
+
+"""
+MAIN FUNCTION CALL
+"""
 
 if __name__ == "__main__":
     # Configure Logging for the Import

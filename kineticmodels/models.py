@@ -697,7 +697,7 @@ class SpeciesName(models.Model):
     A Species Name specific to a given Kinetic Model
     """
     species = models.ForeignKey(Species)
-    kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True)
+    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True)
     name = models.CharField(blank=True, max_length=200)
 
     def __unicode__(self):
