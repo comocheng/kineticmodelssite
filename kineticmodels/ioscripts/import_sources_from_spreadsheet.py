@@ -50,6 +50,7 @@ def row_to_source(row):  # TODO -- needs tests
             logging.info("Created the following Source Instance:\n{0}\n".format(s))
         except Exception, e:
             logging.error("Error saving the Source: {}".format(e))
+            raise e
 
         # Then create the Authorships
         if source_info_dict[u"Authors"] != "" and type(source_info_dict[u"Authors"]) in [str, unicode]:
