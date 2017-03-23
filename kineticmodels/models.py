@@ -157,7 +157,6 @@ class Source(models.Model):
                                     max_length=100)
     authors = models.ManyToManyField(Author, blank=True, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
-    rmg_import_path = models.CharField(blank=True, max_length=300)
 
     def __unicode__(self):
         self_string = u""
@@ -614,6 +613,7 @@ class KineticModel(models.Model):
     chemkinThermoFile = models.FileField(upload_to=upload_thermo_to,)
     chemkinTransportFile = models.FileField(blank=True,
                                             upload_to=upload_transport_to,)
+    rmgImportPath = models.CharField(blank=True, max_length=300)
 
     def __unicode__(self):
         return u"{s.id} {s.modelName}".format(s=self)
