@@ -224,20 +224,6 @@ class Species(models.Model):
         verbose_name_plural = "Species"
 
 
-class SpeciesName(models.Model):
-    """
-    A Species Name
-    """
-    species = models.ForeignKey(Species)
-    name = models.CharField(blank=True, max_length=200)
-
-    def __unicode__(self):
-        return self.name
-
-    class Meta:
-        verbose_name_plural = "Alternative Species Names"
-
-
 class Isomer(models.Model):
     """
     An isomer of a species which stores the InChI of the species.
@@ -618,6 +604,8 @@ class KineticModel(models.Model):
                                                                 blank=True)
     thermo = models.ManyToManyField(Thermo, through='ThermoComment', 
                                                                 blank=True)
+    species = models.ManyToManyField(Species, through='SpeciesName',
+                                                                blank=True)
     transport = models.ManyToManyField(Transport, blank=True)
     additionalInfo = models.CharField(max_length=1000, blank=True)
     #     reaction=kinetics something
@@ -702,3 +690,18 @@ class ThermoComment(models.Model):
 #     isotope massnumber
 #     isotope relativeatomicmass
 #     atomicmass uncertainty
+
+
+class SpeciesName(models.Model):
+    """
+    A Species Name specific to a given Kinetic Model
+    """
+    species = models.ForeignKey(Species)
+    kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True)
+    name = models.CharField(blank=True, max_length=200)
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Alternative Species Names"
