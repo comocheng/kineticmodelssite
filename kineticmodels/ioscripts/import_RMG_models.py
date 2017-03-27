@@ -164,10 +164,11 @@ class ThermoLibraryImporter(Importer):
                 logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
                     len(possible_species), smiles, molecule.multiplicity))
                 logger.warning(possible_species)
-                dj_species = None # TODO: how do we pick one?
+                dj_species = None  # TODO: how do we pick one?
             # import ipdb; ipdb.set_trace()
 
             if dj_species:
+                # Create a Kinetic Model
                 dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
 
                 if km_created:
@@ -187,19 +188,58 @@ class ThermoLibraryImporter(Importer):
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
-            # save the django species so we can add the thermo later?
+            # TODO -- save the django species so we can add the thermo later?
             library.entries[entry].dj_species = dj_species
 
     def import_data(self):
         """
         Import the loaded thermo library into the django database
+        This is essentially going to have to unpack the coefficients from the NASA object and store them in a Thermo
         """
         library = self.library
         for entry in library.entries:
-            thermo = library.entries[entry].data
+            thermoEntry = library.entries[entry].data
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
-            # TODO: make this do something
+
+        dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
+        # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info? The species?
+
+        """
+        We're given a list of NASAPolynomial objects, each of which needs to be unpacked into its coefficients
+        In the Thermo model instance we're creating, we name the coefficients "coefficient41":
+            - where the first number is the coefficient number (ranges from 1 to 7)
+            - and the second number is the polynomial number (either #1 or #2)
+        To set these attributes, we need to access both the index and the value of the items we're iterating over
+        Normally we would be forced to choose between "for i in list" and "for i in range(len(list))"
+        However, enumerate() lets us iterate over a list of tuples, each of which contains the index and the item itself
+        We even get to set a +1 offset for the indices when making these tuples to avoid naming errors
+        """
+        for nasaPolynomial in list(enumerate(thermoEntry.polynomials, start=1)):  # <-- List of tuples (index, Poly)
+            # So to refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
+            setattr(dj_thermo,
+                    "lowerTempBound{}".format(nasaPolynomial[0]),
+                    nasaPolynomial[1].Tmin)
+            setattr(dj_thermo,
+                    "upperTempBound{}".format(nasaPolynomial[0]),
+                    nasaPolynomial[1].Tmax)
+
+            for coefficient in list(enumerate(nasaPolynomial[1].coeffs, start=1)):  # <-- List of tuples (index, coeff)
+                # Once again, a coefficent's index is coefficient[0], and its value is coefficient[1]
+                setattr(dj_thermo,
+                        "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
+                        coefficient[1])
+
+        # TODO -- Tie the thermo data to a species, as specified by the local variable chemkinMolecule
+
+        # Save the thermo data
+        try:
+            dj_thermo.save()
+            logger.info("Created the following Thermo Data Instance:\n{}\n".format(dj_thermo))
+        except Exception, e:
+            logger.error("Error saving the Thermo data:\n{}\n".format(e))
+            raise e
+
 
 class KineticsLibraryImporter(Importer):
     """
