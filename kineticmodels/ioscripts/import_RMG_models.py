@@ -12,14 +12,17 @@ the Django database.
 """
 
 # Not Django-specific imports
+import sys
 import os
 import time
 import re
 import argparse
 import logging
 import abc
+import datetime
 
 # Django setup to import models and other files from the Apps
+sys.path.append('../..')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
 import django
 django.setup()
@@ -90,6 +93,13 @@ class ThermoLibraryImporter(Importer):
     """
     To import a thermodynamic library
     """
+
+    def __init__(self, path):
+        return super(ThermoLibraryImporter, self).__init__(path=path)
+
+    def name_from_path(self, path=None):
+        return super(ThermoLibraryImporter, self).name_from_path(path=path)
+
     def load_library(self):
         """
         Load the thermo library from the path, and store it.
@@ -144,36 +154,36 @@ class ThermoLibraryImporter(Importer):
             possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
             if len(possible_species) == 1:
                 dj_species = possible_species[0]
-                logging.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles, molecule.multiplicity))
+                logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles, molecule.multiplicity))
                 dj_isomer.species.add(dj_species)
             elif len(possible_species) == 0:
-                logging.debug("Found no species for structure {} {}, so making one".format(smiles, molecule.multiplicity))
+                logger.debug("Found no species for structure {} {}, so making one".format(smiles, molecule.multiplicity))
                 dj_species = Species.objects.create(inchi=inchi, formula=formula)
-                logging.debug("{}".format(dj_species))
+                logger.debug("{}".format(dj_species))
             else:
-                logging.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
+                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
                     len(possible_species), smiles, molecule.multiplicity))
-                logging.warning(possible_species)
+                logger.warning(possible_species)
                 dj_species = None # TODO: how do we pick one?
             # import ipdb; ipdb.set_trace()
 
             if dj_species:
-                dj_km, created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
+                dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
 
-                if created:
+                if km_created:
                     dj_km.modelName = self.name
                     dj_km.additionalInfo = "Created while importing RMG-models"
 
                     # Save that instance
                     try:
                         dj_km.save()
-                        logging.info("Created the following Kinetic Model Instance:\n{0}\n".format(dj_km))
+                        logger.info("Created the following Kinetic Model Instance:\n{0}\n".format(dj_km))
                     except Exception, e:
-                        logging.error("Error saving the Kinetic Model: {}".format(e))
+                        logger.error("Error saving the Kinetic Model: {}".format(e))
                         raise e
 
                 # Create the join between Species and KineticModel through a SpeciesName
-                dj_speciesName = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
+                dj_speciesName, species_created = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
@@ -216,14 +226,14 @@ class KineticsLibraryImporter(Importer):
                     'R': constants.R,
                 }
         # Load the library
-        logging.info("Loading reaction library {0}".format(fileName))
+        logger.info("Loading reaction library {0}".format(fileName))
         library = KineticsLibrary(label=self.name)
         library.ALLOW_UNMARKED_DUPLICATES = True
         try:
             library.load(fileName, local_context=local_context)
         except Exception, e:
-            logging.error("Error reading {0}:".format(fileName), exc_info=True)
-            logging.warning("Will continue without that model")
+            logger.error("Error reading {0}:".format(fileName), exc_info=True)
+            logger.warning("Will continue without that model")
             return False
 
         library.convertDuplicatesToMulti()
@@ -261,7 +271,7 @@ class PrimeSpeciesImporter(Importer):
             else:
                 # it's just a random name
                 if not name.text:
-                    logging.warning("Blank species name in species {}".format(primeID))
+                    logger.warning("Blank species name in species {}".format(primeID))
                     continue
                 SpeciesName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
@@ -334,8 +344,8 @@ class PrimeThermoImporter(Importer):
                             'upper_temp_bound_{0}'.format(polynomial_number),
                             float(bound.text))
         if i == 0:
-            logging.info("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
-            logging.info("Probably the temperature range was too small."
+            logger.info("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
+            logger.info("Probably the temperature range was too small."
                   "We will make up a second one with no T range.")
             dj_thermo.lower_temp_bound_2 = dj_thermo.upper_temp_bound_1
             dj_thermo.upper_temp_bound_2 = dj_thermo.upper_temp_bound_1
@@ -418,7 +428,7 @@ class PrimeReactionImporter(Importer):
             dj_species, created = Species.objects.get_or_create(
                 sPrimeID=species_primeID)
             stoichiometry = float(reactant.text)
-            logging.debug("Stoichiometry of {} is {}".format(species_primeID,
+            logger.debug("Stoichiometry of {} is {}".format(species_primeID,
                                                      stoichiometry))
             dj_stoich, created = Stoichiometry.objects.get_or_create(
                 species=dj_species,
@@ -573,13 +583,13 @@ def findLibraryFiles(path):
         for name in files:
             path = os.path.join(root, name)
             if root.endswith('RMG-Py-thermo-library') and name == 'ThermoLibrary.py':
-                logging.info("Found thermo library {0}".format(path))
+                logger.info("Found thermo library {0}".format(path))
                 thermoLibs.append(path)
             elif root.endswith('RMG-Py-kinetics-library') and name == 'reactions.py':
-                logging.info("Found kinetics file {0}".format(path))
+                logger.info("Found kinetics file {0}".format(path))
                 kineticsLibs.append(path)
             else:
-                logging.debug('{0} unread because it is not named like a kinetics or thermo '
+                logger.debug('{0} unread because it is not named like a kinetics or thermo '
                               'library generated by the chemkin importer'.format(path))
     return thermoLibs, kineticsLibs
 
@@ -593,7 +603,7 @@ def main(args):
 
     with open('errors.txt', "w") as errors:
         errors.write("Restarting import at " + time.strftime("%x"))
-    logging.debug("Importing models from", str(args.paths))
+    logger.debug("Importing models from", str(args.paths))
 
     thermo_libraries = []
     kinetics_libraries = []
@@ -602,27 +612,27 @@ def main(args):
         thermo_libraries.extend(t)
         kinetics_libraries.extend(k)
 
-    logging.debug("Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries)))
+    logger.debug("Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries)))
         
     for filepath in thermo_libraries:
-        logging.info("Importing thermo library from {}".format(filepath))
+        logger.info("Importing thermo library from {}".format(filepath))
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
         importer.import_species()  # TODO -- refine and edit (focus on edge cases)
 #        importer.import_data()  # TODO -- write this
 
-    logging.info('Exited thermo imports!')
+    logger.info('Exited thermo imports!')
 
-    logging.debug("Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries),
+    logger.debug("Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries),
                                                                 '\n - '.join(kinetics_libraries)))
 
     for filepath in kinetics_libraries:
-        logging.info("Importing kinetics library from {}".format(filepath))
+        logger.info("Importing kinetics library from {}".format(filepath))
         importer = KineticsLibraryImporter(filepath)
         importer.load_library()
         importer.import_data()  # TODO -- Actually write
 
-    logging.info('Exited kinetics imports!')
+    logger.info('Exited kinetics imports!')
 
 
 """
@@ -643,6 +653,10 @@ if __name__ == "__main__":
     file_printer.setFormatter(formatter)
     console_printer.setFormatter(formatter)
 
+    logger.addHandler(file_printer)
+    logger.addHandler(console_printer)
+
+    logger.info("STARTING LOGGING FOR RMG IMPORTER RUN ON {}".format(datetime.datetime.now()))
     logger.debug("Parsing the Command Line Arguments...")
     parser = argparse.ArgumentParser(
         description='Import RMG models into Django.')
