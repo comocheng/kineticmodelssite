@@ -194,7 +194,7 @@ class ThermoLibraryImporter(Importer):
     def import_data(self):
         """
         Import the loaded thermo library into the django database
-        This is essentially going to have to unpack the coefficients from the NASA object and store them in a Thermo
+        Unpacks the coefficients from the NASAPolynomials and stores them in a Thermo
         """
         library = self.library
         for entry in library.entries:
@@ -216,19 +216,52 @@ class ThermoLibraryImporter(Importer):
         We even get to set a +1 offset for the indices when making these tuples to avoid naming errors
         """
         for nasaPolynomial in list(enumerate(thermoEntry.polynomials, start=1)):  # <-- List of tuples (index, Poly)
-            # So to refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
-            setattr(dj_thermo,
-                    "lowerTempBound{}".format(nasaPolynomial[0]),
-                    nasaPolynomial[1].Tmin)
-            setattr(dj_thermo,
-                    "upperTempBound{}".format(nasaPolynomial[0]),
-                    nasaPolynomial[1].Tmax)
+            # To refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
 
+            # Assign lower Temp Bound for Polynomial and log success
+            try:
+                setattr(dj_thermo,
+                        "lowerTempBound{}".format(nasaPolynomial[0]),
+                        nasaPolynomial[1].Tmin)
+                logger.debug("Assigned value {1} to lowerTempBound{0}".format(nasaPolynomial[0],
+                                                                              nasaPolynomial[1].Tmin))
+            except Exception, e:
+                logger.error("Error assigning the lower temperature bound to "
+                             "Polynomial {1}:\n{0}\n".format(e,
+                                                             nasaPolynomial[0]))
+                raise e
+
+            # Assign upper Temp Bound for Polynomial and log success
+            try:
+                setattr(dj_thermo,
+                        "upperTempBound{}".format(nasaPolynomial[0]),
+                        nasaPolynomial[1].Tmax)
+                logger.debug("Assigned value {1} to upperTempBound{0}".format(nasaPolynomial[0],
+                                                                              nasaPolynomial[1].Tmax))
+            except Exception, e:
+                logger.error("Error assigning the upper temperature bound to "
+                             "Polynomial {1}:\n{0}\n".format(e,
+                                                             nasaPolynomial[0]))
+                raise e
+
+            # Assign coefficients for Polynomial and log success
             for coefficient in list(enumerate(nasaPolynomial[1].coeffs, start=1)):  # <-- List of tuples (index, coeff)
                 # Once again, a coefficent's index is coefficient[0], and its value is coefficient[1]
-                setattr(dj_thermo,
-                        "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
-                        coefficient[1])
+                try:
+                    setattr(dj_thermo,
+                            "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
+                            coefficient[1])
+                    logger.debug("Assigned value {2} for coefficient {1}"
+                                 " to Polynomial {0}".format(nasaPolynomial[0],
+                                                             coefficient[0],
+                                                             coefficient[1]))
+                except Exception, e:
+                    logger.error("Error assigning the value {3} to coefficient {2} of "
+                                 "Polynomial {1}:\n{0}\n".format(e,
+                                                                 nasaPolynomial[0],
+                                                                 coefficient[0],
+                                                                 coefficient[1]))
+                    raise e
 
         # TODO -- Tie the thermo data to a species, as specified by the local variable chemkinMolecule
 
