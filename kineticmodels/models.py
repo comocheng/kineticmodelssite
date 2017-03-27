@@ -343,7 +343,7 @@ class Thermo(models.Model):
     def toRMG(self):
         "Returns an RMG object"
         polynomials = []
-        for polynomial_number in [1,2]:
+        for polynomial_number in [1, 2]:
             coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(
                                     j=coefficient_number,i=polynomial_number)))
                                          for coefficient_number in range(1,8) ]
