@@ -276,6 +276,9 @@ class ThermoLibraryImporter(Importer):
             if species_pk:
                 dj_thermo.species = Species.objects.get(pk=species_pk)
 
+
+            # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
+
             # Save the thermo data
             try:
                 dj_thermo.save()
@@ -289,6 +292,12 @@ class KineticsLibraryImporter(Importer):
     """
     To import a kinetics library
     """
+
+    def __init__(self, path):
+        return super(KineticsLibraryImporter, self).__init__(path=path)
+
+    def name_from_path(self, path=None):
+        return super(KineticsLibraryImporter, self).name_from_path(path=path)
 
     def load_library(self):
         """
