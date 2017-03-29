@@ -193,8 +193,11 @@ class ThermoLibraryImporter(Importer):
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
-            # TODO -- save the django species so we can add the thermo later?
-            library.entries[entry].dj_species = dj_species
+                # Save the pk of the django Species instances to the Entry so we can lookup add the thermo later
+                library.entries[entry].dj_species_pk = dj_species.pk
+
+        # And then save the new library that contains all the entries updated with Species instances
+        self.library = library
 
     def import_data(self):
         """
@@ -206,6 +209,7 @@ class ThermoLibraryImporter(Importer):
             thermoEntry = library.entries[entry].data
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
+            species_pk = library.entries[entry].dj_species_pk
 
             dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
             # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info?
@@ -268,10 +272,9 @@ class ThermoLibraryImporter(Importer):
                                                                      coefficient[1]))
                         raise e
 
-            # Tie the thermo data to a species, as specified by the local variable chemkinMolecule
-
-            # Get the molecule
-            oh_species_my_species = Species.objects.filter(something=chemkinMolecule)
+            # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
+            if species_pk:
+                dj_thermo.species = Species.objects.get(pk=species_pk)
 
             # Save the thermo data
             try:
@@ -700,8 +703,8 @@ def main(args):
         logger.info("Importing thermo library from {}".format(filepath))
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
-        importer.import_species()  # TODO -- refine and edit (focus on edge cases)
-#       importer.import_data()  # TODO -- write this
+        importer.import_species()
+        importer.import_data()
 
     logger.info('Exited thermo imports!')
 
