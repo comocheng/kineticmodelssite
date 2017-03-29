@@ -28,6 +28,7 @@ import django
 django.setup()
 
 # Django-specific imports
+from django.core.exceptions import MultipleObjectsReturned
 from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, \
     Thermo, ThermoComment, Structure, Isomer, \
@@ -132,6 +133,9 @@ class ThermoLibraryImporter(Importer):
 
             smiles = molecule.toSMILES()
             inchi = molecule.toInChI()
+
+            # Search for Structure matching the SMILES
+            """
             possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
             if len(possibles) == 1:
                 dj_structure = possibles[0]
@@ -148,9 +152,28 @@ class ThermoLibraryImporter(Importer):
                 dj_structure.save()
             else:
                 raise ImportError("Two structures matching {} {}?".format(smiles, molecule.multiplicity))
-            # See if you can find a Species for it (eg. from Prime) else make one
+            """
+
+            dj_structure, structure_created = Structure.objects.get_or_create(smiles=smiles,
+                                                                              electronicState=molecule.multiplicity)
+            if structure_created:
+                dj_structure.adjacencyList = molecule.toAdjacencyList()
+                # save it once you've added the Isomer (required)
+                dj_isomer = Isomer.objects.create(inchi=inchi)
+                dj_structure.isomer = dj_isomer
+                dj_structure.save()
+            else:
+                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
+                    "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
+                                                                        speciesName, molecule.toAdjacencyList(), smiles)
+                dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
+
+            # Find a Species for the Structure (eg. from Prime) else make one
+
             trimmed_inchi = inchi.split('InChI=1S')[-1]
             formula = inchi.split('/')[1]
+
+            """
             possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
             if len(possible_species) == 1:
                 dj_species = possible_species[0]
@@ -166,6 +189,25 @@ class ThermoLibraryImporter(Importer):
                 logger.warning(possible_species)
                 dj_species = None  # TODO: how do we pick one?
             # import ipdb; ipdb.set_trace()
+            """
+            try:
+                dj_species, species_created = Species.objects.get_or_create(inchi__contains=trimmed_inchi)
+
+                if species_created:
+                    logger.debug("Found no species for structure {} {}, so making one".format(smiles,
+                                                                                              molecule.multiplicity))
+                    logger.debug("{}".format(dj_species))
+
+                else:
+                    logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles,
+                                                                                        molecule.multiplicity))
+                    dj_isomer.species.add(dj_species)
+
+            except MultipleObjectsReturned:
+                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
+                    len(possible_species), smiles, molecule.multiplicity))
+                logger.warning(possible_species)
+                dj_species = None  # TODO: how do we pick one?
 
             if dj_species:
                 # Create a Kinetic Model
@@ -184,7 +226,7 @@ class ThermoLibraryImporter(Importer):
                         raise e
 
                 # Create the join between Species and KineticModel through a SpeciesName
-                dj_speciesName, species_created = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
+                dj_speciesName, speciesNameCreated = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
@@ -202,76 +244,79 @@ class ThermoLibraryImporter(Importer):
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
 
-        dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
-        # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info? The species?
+            dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
+            # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info? The species?
 
-        """
-        We're given a list of NASAPolynomial objects, each of which needs to be unpacked into its coefficients
-        In the Thermo model instance we're creating, we name the coefficients "coefficient41":
-            - where the first number is the coefficient number (ranges from 1 to 7)
-            - and the second number is the polynomial number (either #1 or #2)
-        To set these attributes, we need to access both the index and the value of the items we're iterating over
-        Normally we would be forced to choose between "for i in list" and "for i in range(len(list))"
-        However, enumerate() lets us iterate over a list of tuples, each of which contains the index and the item itself
-        We even get to set a +1 offset for the indices when making these tuples to avoid naming errors
-        """
-        for nasaPolynomial in list(enumerate(thermoEntry.polynomials, start=1)):  # <-- List of tuples (index, Poly)
-            # To refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
+            """
+            We're given a list of NASAPolynomial objects, each of which needs to be unpacked into its coefficients
+            In the Thermo model instance we're creating, we name the coefficients "coefficient41":
+                - where the first number is the coefficient number (ranges from 1 to 7)
+                - and the second number is the polynomial number (either #1 or #2)
+            To set these attributes, we need to access both the index and the value of the items we're iterating over
+            Normally we would be forced to choose between "for i in list" and "for i in range(len(list))"
+            However, enumerate() lets us iterate over a list of tuples, each of which contains the index and the item itself
+            We even get to set a +1 offset for the indices when making these tuples to avoid naming errors
+            """
+            for nasaPolynomial in list(enumerate(thermoEntry.polynomials, start=1)):  # <-- List of tuples (index, Poly)
+                # To refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
 
-            # Assign lower Temp Bound for Polynomial and log success
-            try:
-                setattr(dj_thermo,
-                        "lowerTempBound{}".format(nasaPolynomial[0]),
-                        nasaPolynomial[1].Tmin)
-                logger.debug("Assigned value {1} to lowerTempBound{0}".format(nasaPolynomial[0],
-                                                                              nasaPolynomial[1].Tmin))
-            except Exception, e:
-                logger.error("Error assigning the lower temperature bound to "
-                             "Polynomial {1}:\n{0}\n".format(e,
-                                                             nasaPolynomial[0]))
-                raise e
-
-            # Assign upper Temp Bound for Polynomial and log success
-            try:
-                setattr(dj_thermo,
-                        "upperTempBound{}".format(nasaPolynomial[0]),
-                        nasaPolynomial[1].Tmax)
-                logger.debug("Assigned value {1} to upperTempBound{0}".format(nasaPolynomial[0],
-                                                                              nasaPolynomial[1].Tmax))
-            except Exception, e:
-                logger.error("Error assigning the upper temperature bound to "
-                             "Polynomial {1}:\n{0}\n".format(e,
-                                                             nasaPolynomial[0]))
-                raise e
-
-            # Assign coefficients for Polynomial and log success
-            for coefficient in list(enumerate(nasaPolynomial[1].coeffs, start=1)):  # <-- List of tuples (index, coeff)
-                # Once again, a coefficent's index is coefficient[0], and its value is coefficient[1]
+                # Assign lower Temp Bound for Polynomial and log success
                 try:
                     setattr(dj_thermo,
-                            "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
-                            coefficient[1])
-                    logger.debug("Assigned value {2} for coefficient {1}"
-                                 " to Polynomial {0}".format(nasaPolynomial[0],
-                                                             coefficient[0],
-                                                             coefficient[1]))
+                            "lowerTempBound{}".format(nasaPolynomial[0]),
+                            nasaPolynomial[1].Tmin)
+                    logger.debug("Assigned value {1} to lowerTempBound{0}".format(nasaPolynomial[0],
+                                                                                  nasaPolynomial[1].Tmin))
                 except Exception, e:
-                    logger.error("Error assigning the value {3} to coefficient {2} of "
+                    logger.error("Error assigning the lower temperature bound to "
                                  "Polynomial {1}:\n{0}\n".format(e,
-                                                                 nasaPolynomial[0],
-                                                                 coefficient[0],
-                                                                 coefficient[1]))
+                                                                 nasaPolynomial[0]))
                     raise e
 
-        # TODO -- Tie the thermo data to a species, as specified by the local variable chemkinMolecule
+                # Assign upper Temp Bound for Polynomial and log success
+                try:
+                    setattr(dj_thermo,
+                            "upperTempBound{}".format(nasaPolynomial[0]),
+                            nasaPolynomial[1].Tmax)
+                    logger.debug("Assigned value {1} to upperTempBound{0}".format(nasaPolynomial[0],
+                                                                                  nasaPolynomial[1].Tmax))
+                except Exception, e:
+                    logger.error("Error assigning the upper temperature bound to "
+                                 "Polynomial {1}:\n{0}\n".format(e,
+                                                                 nasaPolynomial[0]))
+                    raise e
 
-        # Save the thermo data
-        try:
-            dj_thermo.save()
-            logger.info("Created the following Thermo Data Instance:\n{}\n".format(dj_thermo))
-        except Exception, e:
-            logger.error("Error saving the Thermo data:\n{}\n".format(e))
-            raise e
+                # Assign coefficients for Polynomial and log success
+                for coefficient in list(enumerate(nasaPolynomial[1].coeffs, start=1)):  # <-- List of tuples (index, coeff)
+                    # Once again, a coefficent's index is coefficient[0], and its value is coefficient[1]
+                    try:
+                        setattr(dj_thermo,
+                                "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
+                                coefficient[1])
+                        logger.debug("Assigned value {2} for coefficient {1}"
+                                     " to Polynomial {0}".format(nasaPolynomial[0],
+                                                                 coefficient[0],
+                                                                 coefficient[1]))
+                    except Exception, e:
+                        logger.error("Error assigning the value {3} to coefficient {2} of "
+                                     "Polynomial {1}:\n{0}\n".format(e,
+                                                                     nasaPolynomial[0],
+                                                                     coefficient[0],
+                                                                     coefficient[1]))
+                        raise e
+
+            # Tie the thermo data to a species, as specified by the local variable chemkinMolecule
+
+            # Get the molecule
+            oh_species_my_species = Species.objects.filter(something=chemkinMolecule)
+
+            # Save the thermo data
+            try:
+                dj_thermo.save()
+                logger.info("Created the following Thermo Data Instance:\n{}\n".format(dj_thermo))
+            except Exception, e:
+                logger.error("Error saving the Thermo data:\n{}\n".format(e))
+                raise e
 
 
 class KineticsLibraryImporter(Importer):
@@ -322,11 +367,11 @@ class KineticsLibraryImporter(Importer):
             chemkinReaction = library.entries[entry].item
             #TODO: make this do something
 
-
+"""
 class PrimeSpeciesImporter(Importer):
-    """
+
     To import chemical species. Left over from PrIMe importer
-    """
+
 
     def import_elementtree_root(self, species):
         ns = self.ns
@@ -352,9 +397,9 @@ class PrimeSpeciesImporter(Importer):
 
 
 class PrimeThermoImporter(Importer):
-    """
+
     To import the thermodynamic data of a species (can be multiple for each species). Left over from PrIMe importer
-    """
+
     prime_ID_prefix = 'thp'
 
     def import_elementtree_root(self, thermo):
@@ -430,9 +475,9 @@ class PrimeThermoImporter(Importer):
 
 
 class PrimeTransportImporter(Importer):
-    """
+
     To import the transport data of a species. Left over from PrIMe importer
-    """
+
     prime_ID_prefix = 'tr'
 
     def import_elementtree_root(self, trans):
@@ -482,9 +527,9 @@ class PrimeTransportImporter(Importer):
 
 
 class PrimeReactionImporter(Importer):
-    """
+
     To import chemical reactions. Left over from PrIMe importer
-    """
+
 
     def import_elementtree_root(self, reaction):
         ns = self.ns
@@ -514,9 +559,9 @@ class PrimeReactionImporter(Importer):
 
 
 class PrimeKineticsImporter(Importer):
-    """
+
     To import the kinetics data of a reaction (can be multiple for each species). Left over from PrIMe importer
-    """
+
     prime_ID_prefix = 'rk'
 
     def import_elementtree_root(self, kin):
@@ -601,9 +646,9 @@ class PrimeKineticsImporter(Importer):
 
 
 class PrimeModelImporter(Importer):
-    """
+
     To import kinetic models. Left over from PrIMe importer
-    """
+
 
     def import_elementtree_root(self, mod):
         ns = self.ns
@@ -646,7 +691,7 @@ class PrimeModelImporter(Importer):
             reversible = reaction.attrib.get("reversible")
             kineticslink = reaction.find('prime:reactionRateLink', namespaces=ns)
             rkPrimeID = kineticslink.attrib.get("primeID")
-
+"""
 
 def findLibraryFiles(path):
 
@@ -665,6 +710,8 @@ def findLibraryFiles(path):
                 logger.debug('{0} unread because it is not named like a kinetics or thermo '
                               'library generated by the chemkin importer'.format(path))
     return thermoLibs, kineticsLibs
+
+
 
 
 def main(args):
@@ -692,7 +739,7 @@ def main(args):
         importer = ThermoLibraryImporter(filepath)
         importer.load_library()
         importer.import_species()  # TODO -- refine and edit (focus on edge cases)
-#        importer.import_data()  # TODO -- write this
+#       importer.import_data()  # TODO -- write this
 
     logger.info('Exited thermo imports!')
 
