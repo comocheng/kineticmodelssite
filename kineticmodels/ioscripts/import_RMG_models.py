@@ -133,27 +133,7 @@ class ThermoLibraryImporter(Importer):
 
             smiles = molecule.toSMILES()
             inchi = molecule.toInChI()
-
             # Search for Structure matching the SMILES
-            """
-            possibles = Structure.objects.filter(smiles=smiles, electronicState=molecule.multiplicity)
-            if len(possibles) == 1:
-                dj_structure = possibles[0]
-                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
-                    "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
-                                                                        speciesName, molecule.toAdjacencyList(), smiles)
-                dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
-            elif len(possibles) == 0:
-                dj_structure = Structure(smiles=smiles, electronicState=molecule.multiplicity)
-                dj_structure.adjacencyList = molecule.toAdjacencyList()
-                # save it once you've added the Isomer (required)
-                dj_isomer = Isomer.objects.create(inchi=inchi)
-                dj_structure.isomer = dj_isomer
-                dj_structure.save()
-            else:
-                raise ImportError("Two structures matching {} {}?".format(smiles, molecule.multiplicity))
-            """
-
             dj_structure, structure_created = Structure.objects.get_or_create(smiles=smiles,
                                                                               electronicState=molecule.multiplicity)
             if structure_created:
@@ -169,54 +149,36 @@ class ThermoLibraryImporter(Importer):
                 dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
 
             # Find a Species for the Structure (eg. from Prime) else make one
-
             trimmed_inchi = inchi.split('InChI=1S')[-1]
             formula = inchi.split('/')[1]
-
-            """
-            possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
-            if len(possible_species) == 1:
-                dj_species = possible_species[0]
-                logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles, molecule.multiplicity))
-                dj_isomer.species.add(dj_species)
-            elif len(possible_species) == 0:
-                logger.debug("Found no species for structure {} {}, so making one".format(smiles, molecule.multiplicity))
-                dj_species = Species.objects.create(inchi=inchi, formula=formula)
-                logger.debug("{}".format(dj_species))
-            else:
-                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
-                    len(possible_species), smiles, molecule.multiplicity))
-                logger.warning(possible_species)
-                dj_species = None  # TODO: how do we pick one?
-            # import ipdb; ipdb.set_trace()
-            """
             try:
                 dj_species, species_created = Species.objects.get_or_create(inchi__contains=trimmed_inchi)
-
                 if species_created:
                     logger.debug("Found no species for structure {} {}, so making one".format(smiles,
                                                                                               molecule.multiplicity))
+                    dj_species.inchi = inchi
+                    dj_species.formula = formula
+                    dj_species.save()
                     logger.debug("{}".format(dj_species))
-
                 else:
                     logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles,
                                                                                         molecule.multiplicity))
                     dj_isomer.species.add(dj_species)
 
             except MultipleObjectsReturned:
+                possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
                 logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
                     len(possible_species), smiles, molecule.multiplicity))
                 logger.warning(possible_species)
                 dj_species = None  # TODO: how do we pick one?
 
+            # If we got a unique match for the Species, find a Kinetic Model for that Species else make one
             if dj_species:
                 # Create a Kinetic Model
                 dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
-
                 if km_created:
                     dj_km.modelName = self.name
                     dj_km.additionalInfo = "Created while importing RMG-models"
-
                     # Save that instance
                     try:
                         dj_km.save()
@@ -226,7 +188,8 @@ class ThermoLibraryImporter(Importer):
                         raise e
 
                 # Create the join between Species and KineticModel through a SpeciesName
-                dj_speciesName, speciesNameCreated = SpeciesName.objects.get_or_create(species=dj_species, kineticModel=dj_km)
+                dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
+                                                                                         kineticModel=dj_km)
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
@@ -245,7 +208,7 @@ class ThermoLibraryImporter(Importer):
             name = library.entries[entry].label
 
             dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
-            # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info? The species?
+            # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info?
 
             """
             We're given a list of NASAPolynomial objects, each of which needs to be unpacked into its coefficients
@@ -693,6 +656,7 @@ class PrimeModelImporter(Importer):
             rkPrimeID = kineticslink.attrib.get("primeID")
 """
 
+
 def findLibraryFiles(path):
 
     thermoLibs = []
@@ -710,8 +674,6 @@ def findLibraryFiles(path):
                 logger.debug('{0} unread because it is not named like a kinetics or thermo '
                               'library generated by the chemkin importer'.format(path))
     return thermoLibs, kineticsLibs
-
-
 
 
 def main(args):
