@@ -181,12 +181,6 @@ class KineticModel(models.Model):
                                             upload_to=upload_transport_to,)
     rmgImportPath = models.CharField(blank=True, max_length=300)
 
-    def __unicode__(self):
-        return u"{s.id} {s.modelName}".format(s=self)
-
-    class Meta:
-        verbose_name_plural = "Kinetic Models"
-
     def getPath(self, absolute=False):
         """
         Return the path of the directory that the object uses
@@ -219,6 +213,12 @@ class KineticModel(models.Model):
             shutil.rmtree(self.getPath(absolute=True))
         except OSError:
             pass
+
+    class Meta:
+        verbose_name_plural = "Kinetic Models"
+
+    def __unicode__(self):
+        return u"{s.id} {s.modelName}".format(s=self)
 
 
 class SpeciesName(models.Model):
@@ -367,12 +367,6 @@ class Reaction(models.Model):
         default=True,
         help_text='Is this reaction reversible?')
 
-    def __unicode__(self):
-        return u"{s.id}".format(s=self)
-
-    class Meta:
-        ordering = ('rPrimeID',)
-
     def stoich_species(self):
         """
         Returns a list of tuples like [(-1, reactant), (+1, product)]
@@ -416,6 +410,12 @@ class Reaction(models.Model):
                 raise NotImplementedError
             specs.extend([s] * int(-n))
         return specs
+
+    def __unicode__(self):
+        return u"{s.id}".format(s=self)
+
+    class Meta:
+        ordering = ('rPrimeID',)
 
 
 class Stoichiometry(models.Model):
