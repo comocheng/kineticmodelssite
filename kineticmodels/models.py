@@ -116,80 +116,28 @@ PrIMe Fields for objects we are not yet including:
 
 """
 
-
-class Author(models.Model):
-    """
-    An author of a Source, i.e. a person who published it.
-    """
-    name = models.CharField(help_text='format: surname, firstname',
-                            max_length=80)
-
-    def __unicode__(self):
-        return unicode(self.name)
-
-
-class Source(models.Model):
-    """
-    A source, or bibliography item.
-
-    This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
-    *****in catalog******
-    publication year
-    authors
-    source title
-    journal name
-    journal volume
-    page numbers
-    """
-    bPrimeID = models.CharField('Prime ID',
-                                blank=True,
-                                max_length=9,
-                                default='')
-    publicationYear = models.CharField('Year of Publication',
-                                       blank=True,
-                                       default='',
-                                       max_length=4)
-    sourceTitle = models.CharField(default='', blank=True, max_length=300)
-    journalName = models.CharField(blank=True, max_length=300)
-    journalVolumeNumber = models.CharField('Journal Volume Number',
-                                             blank=True,
-                                             max_length=10)
-    pageNumbers = models.CharField(blank=True,
-                                    help_text='[page #]-[page #]',
-                                    max_length=100)
-    authors = models.ManyToManyField(Author, blank=True, through='Authorship')
-    doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
-
-    def __unicode__(self):
-        self_string = u""
-        self_string += u"{s.sourceTitle}:\n".format(s=self).upper()
-        self_string += u"Published in {s.publicationYear}:\n".format(s=self)
-        self_string += u"\t {s.journalName},\n\t " \
-                       u"Vol. {s.journalVolumeNumber}\n\t " \
-                       u"Pgs. {s.pageNumbers}\n".format(s=self)
-        # self_string += u"Authors: {s.authors}".format(s=self)
-
-        return self_string
-
-    class Meta:
-        ordering = ('bPrimeID',)
-        # unique_together = ["pub_year", "pub_name"]
+# Models
+#     ******in catalog*******
+#     model name
+#     species involved
+#         thermo
+#         transport
+#     reactions involved
+#         kinetics
+#     additional info
 
 
-class Authorship(models.Model):
-    """
-    Who authored what paper.
+def upload_chemkin_to(instance, filename):
+    print "SAVING CHEMKIN FILE"
+    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
 
-    This allows many-to-many join between Sources (publications)
-    and Authors, keeping track of author ordering on each publication.
-    """
-    source = models.ForeignKey(Source)
-    author = models.ForeignKey(Author)
-    order = models.IntegerField('Order of authorship')
 
-    def __unicode__(self):
-        return (u"{s.id} author {s.author} "
-                "was # {s.order} in {s.source}").format(s=self)
+def upload_thermo_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
+
+
+def upload_transport_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
 
 
 class KineticModel(models.Model):
@@ -275,6 +223,88 @@ class KineticModel(models.Model):
             shutil.rmtree(self.getPath(absolute=True))
         except OSError:
             pass
+
+
+class SpeciesName(models.Model):
+    """
+    A Species Name specific to a given Kinetic Model
+    """
+    species = models.ForeignKey(Species)
+    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True)
+    name = models.CharField(blank=True, max_length=200)
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Alternative Species Names"
+
+
+class Species(models.Model):
+    """
+    A chemical species.
+
+    This is the equivalent of 'Species' in PrIMe, which contain:
+    *****in catalog*******
+    bibliography
+    InChI
+    CAS number
+    formula
+    Fuel ID (N/A for now)
+    names (very optional)
+    """
+    sPrimeID = models.CharField('PrIMe ID', max_length=9)
+    formula = models.CharField(blank=True, max_length=50)
+    inchi = models.CharField('InChI', blank=True, max_length=500)
+    cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
+
+    def __unicode__(self):
+        return u"{s.id} {s.formula!s}".format(s=self)
+
+    # This method should output an object in RMG format
+    # Will be used in RMG section to access the PRIME DB
+    def toRMG(self):
+        # This code will output a species in a format acceptable by RMG
+        # *** Output will be rmg_object ***
+        return rmg_object
+
+    class Meta:
+        ordering = ('sPrimeID',)
+        verbose_name_plural = "Species"
+
+
+class Isomer(models.Model):
+    """
+    An isomer of a species which stores the InChI of the species.
+
+    This doesn't have an equivalent term in rmg the most simmilar term would
+    be an InChI
+
+    An Isomer is linked to Structures by a one to many relationship because
+    an isomer may point to multiple structures
+    """
+
+    inchi = models.CharField('InChI', blank=True, max_length=500)
+    species = models.ManyToManyField(Species)
+
+    def __unicode__(self):
+        return u"{s.inchi}".format(s=self)
+
+
+class Structure(models.Model):
+    """
+    A structure is the resonance structure of Isomers.
+
+    The equivalent term in RMG would be a molecule
+    """
+
+    isomer = models.ForeignKey(Isomer)
+    smiles = models.CharField('SMILES', blank=True, max_length=500)
+    adjacencyList = models.TextField('Adjacency List')
+    electronicState = models.IntegerField('Electronic State')
+
+    def __unicode__(self):
+        return u"{s.adjacencyList}".format(s=self)
 
 
 class KineticsComment(models.Model):
@@ -413,26 +443,6 @@ class Stoichiometry(models.Model):
         verbose_name_plural = 'Stoichiometries'
         unique_together = ["species", "reaction", "stoichiometry"]
 
-# Models
-#     ******in catalog*******
-#     model name
-#     species involved
-#         thermo
-#         transport
-#     reactions involved
-#         kinetics
-#     additional info
-
-def upload_chemkin_to(instance, filename):
-    print "SAVING CHEMKIN FILE"
-    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
-
-def upload_thermo_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
-
-def upload_transport_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
-
 
 class ThermoComment(models.Model):
     """
@@ -495,6 +505,7 @@ class Thermo(models.Model):
                             blank=True,
                             help_text='units: J/mol',
                             default=0.0)
+    # <editor-fold desc="Coefficients">
     # polynomial 1
     lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound',
                                             help_text='units: K', default=0.0)
@@ -533,6 +544,7 @@ class Thermo(models.Model):
                                                                 default=0.0)
     coefficient72 = models.FloatField('Polynomial 2 Coefficient 7',
                                                                 default=0.0)
+    # </editor-fold>
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
@@ -593,86 +605,79 @@ class Transport(models.Model):
         return u"{s.id} {s.species}".format(s=self)
 
 
-class SpeciesName(models.Model):
+class Source(models.Model):
     """
-    A Species Name specific to a given Kinetic Model
+    A source, or bibliography item.
+
+    This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
+    *****in catalog******
+    publication year
+    authors
+    source title
+    journal name
+    journal volume
+    page numbers
     """
-    species = models.ForeignKey(Species)
-    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True)
-    name = models.CharField(blank=True, max_length=200)
+    bPrimeID = models.CharField('Prime ID',
+                                blank=True,
+                                max_length=9,
+                                default='')
+    publicationYear = models.CharField('Year of Publication',
+                                       blank=True,
+                                       default='',
+                                       max_length=4)
+    sourceTitle = models.CharField(default='', blank=True, max_length=300)
+    journalName = models.CharField(blank=True, max_length=300)
+    journalVolumeNumber = models.CharField('Journal Volume Number',
+                                           blank=True,
+                                           max_length=10)
+    pageNumbers = models.CharField(blank=True,
+                                   help_text='[page #]-[page #]',
+                                   max_length=100)
+    authors = models.ManyToManyField(Author, blank=True, through='Authorship')
+    doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
     def __unicode__(self):
-        return self.name
+        self_string = u""
+        self_string += u"{s.sourceTitle}:\n".format(s=self).upper()
+        self_string += u"Published in {s.publicationYear}:\n".format(s=self)
+        self_string += u"\t {s.journalName},\n\t " \
+                       u"Vol. {s.journalVolumeNumber}\n\t " \
+                       u"Pgs. {s.pageNumbers}\n".format(s=self)
+        # self_string += u"Authors: {s.authors}".format(s=self)
+
+        return self_string
 
     class Meta:
-        verbose_name_plural = "Alternative Species Names"
+        ordering = ('bPrimeID',)
+        # unique_together = ["pub_year", "pub_name"]
 
 
-class Species(models.Model):
+class Authorship(models.Model):
     """
-    A chemical species.
+    Who authored what paper.
 
-    This is the equivalent of 'Species' in PrIMe, which contain:
-    *****in catalog*******
-    bibliography
-    InChI
-    CAS number
-    formula
-    Fuel ID (N/A for now)
-    names (very optional)
+    This allows many-to-many join between Sources (publications)
+    and Authors, keeping track of author ordering on each publication.
     """
-    sPrimeID = models.CharField('PrIMe ID', max_length=9)
-    formula = models.CharField(blank=True, max_length=50)
-    inchi = models.CharField('InChI', blank=True, max_length=500)
-    cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
+    source = models.ForeignKey(Source)
+    author = models.ForeignKey(Author)
+    order = models.IntegerField('Order of authorship')
 
     def __unicode__(self):
-        return u"{s.id} {s.formula!s}".format(s=self)
-
-    # This method should output an object in RMG format
-    # Will be used in RMG section to access the PRIME DB
-    def toRMG(self):
-        # This code will output a species in a format acceptable by RMG
-        # *** Output will be rmg_object ***
-        return rmg_object
-
-    class Meta:
-        ordering = ('sPrimeID',)
-        verbose_name_plural = "Species"
+        return (u"{s.id} author {s.author} "
+                "was # {s.order} in {s.source}").format(s=self)
 
 
-class Isomer(models.Model):
+class Author(models.Model):
     """
-    An isomer of a species which stores the InChI of the species.
-
-    This doesn't have an equivalent term in rmg the most simmilar term would
-    be an InChI
-
-    An Isomer is linked to Structures by a one to many relationship because
-    an isomer may point to multiple structures
+    An author of a Source, i.e. a person who published it.
     """
-
-    inchi = models.CharField('InChI', blank=True, max_length=500)
-    species = models.ManyToManyField(Species)
+    name = models.CharField(help_text='format: surname, firstname',
+                            max_length=80)
 
     def __unicode__(self):
-        return u"{s.inchi}".format(s=self)
-
-
-class Structure(models.Model):
-    """
-    A structure is the resonance structure of Isomers.
-
-    The equivalent term in RMG would be a molecule
-    """
-
-    isomer = models.ForeignKey(Isomer)
-    smiles = models.CharField('SMILES', blank=True, max_length=500)
-    adjacencyList = models.TextField('Adjacency List')
-    electronicState = models.IntegerField('Electronic State')
-
-    def __unicode__(self):
-        return u"{s.adjacencyList}".format(s=self)
+        return unicode(self.name)
 
 
 # ----------------------------------------------------------------------------------------------------
