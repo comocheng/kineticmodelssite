@@ -127,19 +127,6 @@ PrIMe Fields for objects we are not yet including:
 #     additional info
 
 
-def upload_chemkin_to(instance, filename):
-    print "SAVING CHEMKIN FILE"
-    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
-
-
-def upload_thermo_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
-
-
-def upload_transport_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
-
-
 class KineticModel(models.Model):
     """
     A kinetic model.
@@ -165,18 +152,27 @@ class KineticModel(models.Model):
     additional info
     """
 
-    source = models.ForeignKey(Source, null=True, blank=True)
     mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    modelName = models.CharField(default=uuid.uuid4, max_length=200, 
-                                                                unique=True)
-    kinetics = models.ManyToManyField(Kinetics, through='KineticsComment', 
-                                                                blank=True)
-    thermo = models.ManyToManyField(Thermo, through='ThermoComment', 
-                                                                blank=True)
-    transport = models.ManyToManyField(Transport, blank=True)
-    species = models.ManyToManyField(Species, through='SpeciesName',
-                                                                blank=True)
-    additionalInfo = models.CharField(max_length=1000, blank=True)
+    modelName = models.CharField(default=uuid.uuid4,
+                                 max_length=200,
+                                 unique=True)
+
+    species = models.ManyToManyField(Species,
+                                     through='SpeciesName',
+                                     blank=True)
+    kinetics = models.ManyToManyField(Kinetics,
+                                      through='KineticsComment',
+                                      blank=True)
+    thermo = models.ManyToManyField(Thermo,
+                                    through='ThermoComment',
+                                    blank=True)
+    transport = models.ManyToManyField(Transport,
+                                       blank=True)
+    source = models.ForeignKey(Source, null=True,
+                               blank=True)
+
+    additionalInfo = models.CharField(max_length=1000,
+                                      blank=True)
     #     reaction=kinetics something
     #     species=reaction something
     chemkinReactionsFile = models.FileField(upload_to=upload_chemkin_to,)
@@ -680,8 +676,22 @@ class Author(models.Model):
         return unicode(self.name)
 
 
-# ----------------------------------------------------------------------------------------------------
+def upload_chemkin_to(instance, filename):
+    print "SAVING CHEMKIN FILE"
+    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
 
+
+def upload_thermo_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
+
+
+def upload_transport_to(instance, filename):
+    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
+
+
+# ----------------------------------------------------------------------------------------------------
+# ---------------------------- Different forms of Kinetics Data --------------------------------------
+# ----------------------------------------------------------------------------------------------------
 
 class Arrhenius(models.Model):
     """
