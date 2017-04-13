@@ -88,12 +88,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='comment',
             name='kinetics',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='kineticmodels.ArrheniusKinetics'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='kineticmodels.models.Arrhenius'),
         ),
         migrations.AlterField(
             model_name='kineticmodel',
             name='kinetics',
-            field=models.ManyToManyField(through='kineticmodels.Comment', to='kineticmodels.ArrheniusKinetics'),
+            field=models.ManyToManyField(through='kineticmodels.Comment', to='kineticmodels.models.Arrhenius'),
         ),
         migrations.DeleteModel(
             name='Kinetics',

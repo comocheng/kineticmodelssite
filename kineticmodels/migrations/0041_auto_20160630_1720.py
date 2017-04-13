@@ -16,17 +16,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='kineticmodel',
             name='chemkin_reactions_file',
-            field=models.FileField(blank=True, upload_to=kineticmodels.models.upload_chemkin_to),
+            field=models.FileField(blank=True, upload_to=kineticmodels.models.kinetic_model.upload_chemkin_to),
         ),
         migrations.AlterField(
             model_name='kineticmodel',
             name='chemkin_thermo_file',
-            field=models.FileField(blank=True, upload_to=kineticmodels.models.upload_thermo_to),
+            field=models.FileField(blank=True, upload_to=kineticmodels.models.kinetic_model.upload_thermo_to),
         ),
         migrations.AlterField(
             model_name='kineticmodel',
             name='chemkin_transport_file',
-            field=models.FileField(blank=True, upload_to=kineticmodels.models.upload_transport_to),
+            field=models.FileField(blank=True, upload_to=kineticmodels.models.kinetic_model.upload_transport_to),
         ),
         migrations.AlterField(
             model_name='source',

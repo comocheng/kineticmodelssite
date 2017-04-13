@@ -11,7 +11,7 @@ It should dig through all the models and import them into
 the Django database.
 """
 
-# Not Django-specific imports
+# General Imports
 import sys
 import os
 import time
@@ -21,6 +21,7 @@ import logging
 import abc
 import datetime
 
+# <editor-fold desc="RMG-Specific Imports">
 # Django setup to import models and other files from the Apps
 sys.path.append('../..')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
@@ -29,7 +30,7 @@ django.setup()
 
 # Django-specific imports
 from django.core.exceptions import MultipleObjectsReturned
-from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
+from kineticmodels.models import Kinetics, Arrhenius, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, \
     Thermo, ThermoComment, Structure, Isomer, \
     Source, Author, Authorship, Transport
@@ -43,6 +44,7 @@ from rmgpy.kinetics import Arrhenius, ArrheniusEP, ThirdBody, Lindemann, Troe, \
 from rmgpy.data.kinetics.library import KineticsLibrary
 from rmgpy.data.thermo import ThermoLibrary
 from __builtin__ import True
+# </editor-fold>
 
 
 class ImportError(Exception):
@@ -197,6 +199,7 @@ class ThermoLibraryImporter(Importer):
                 library.entries[entry].dj_species_pk = dj_species.pk
 
         # And then save the new library that contains all the entries updated with Species instances
+        # TODO -- Not necessary
         self.library = library
 
     def import_data(self):

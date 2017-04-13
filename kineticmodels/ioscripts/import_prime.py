@@ -20,7 +20,7 @@ import django
 
 django.setup()
 
-from kineticmodels.models import Kinetics, ArrheniusKinetics, Reaction, Stoichiometry, \
+from kineticmodels.models import Kinetics, Arrhenius, Reaction, Stoichiometry, \
     Species, KineticModel, Comment, SpeciesName, \
     Thermo, ThermoComment, \
     Source, Author, Authorship, Transport
@@ -410,7 +410,7 @@ class KineticsImporter(Importer):
         for expression in expressions:
             if expression.attrib['form'].lower() == 'arrhenius':
                 ### ARRHENIUS
-                arrhenius, created = ArrheniusKinetics.objects.get_or_create(
+                arrhenius, created = Arrhenius.objects.get_or_create(
                     kinetics=kinetics)
 
                 for parameter in expression.findall('prime:parameter', namespaces=ns):

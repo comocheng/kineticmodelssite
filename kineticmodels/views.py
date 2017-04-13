@@ -21,8 +21,8 @@ import subprocess, os, sys, re
 from dal import autocomplete
 
 
-
 ITEMSPERPAGE = 20
+
 
 def index(request):
     """

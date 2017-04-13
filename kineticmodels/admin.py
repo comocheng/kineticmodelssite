@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Kinetics, ArrheniusKinetics, Reaction, Species, Stoichiometry, Author, Source, KineticModel, KineticsComment, SpeciesName, Thermo, ThermoComment, Transport
+from .models import Kinetics, Arrhenius, Reaction, Species, Stoichiometry, Author, Source, KineticModel, KineticsComment, SpeciesName, Thermo, ThermoComment, Transport
 
 # class ReactionInline(admin.TabularInline):
 #     model=Reaction
@@ -19,7 +19,7 @@ from .models import Kinetics, ArrheniusKinetics, Reaction, Species, Stoichiometr
 admin.site.register(Reaction)
 admin.site.register(Species)
 admin.site.register(Stoichiometry)
-admin.site.register(ArrheniusKinetics)
+admin.site.register(Arrhenius)
 admin.site.register(Source)
 admin.site.register(Author)
 admin.site.register(KineticModel)
