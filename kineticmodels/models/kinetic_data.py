@@ -28,7 +28,31 @@ class Kinetics(models.Model):
         verbose_name_plural = "Kinetics"
 
 
-class Arrhenius(models.Model):
+class BaseKineticsData(models.Model):
+
+    # Necessary for proper inheritance of this base class within Django
+    objects = InheritanceManager()
+
+    kinetics = models.OneToOneField(Kinetics)
+    collider_efficiencies = models.ManyToManyField(Species, through="Efficiency",
+                                                   blank=True)
+
+    min_temp = models.FloatField('Lower Temp Bound',
+                                       help_text='units: K', null=True, blank=True)
+    max_temp = models.FloatField('Upper Temp Bound',
+                                       help_text='units: K', null=True, blank=True)
+    min_pressure = models.FloatField('Lower Pressure Bound',
+                                       help_text='units: Pa', null=True, blank=True)
+    max_pressure = models.FloatField('Upper Pressure Bound',
+                                       help_text='units: Pa', null=True, blank=True)
+
+
+class KineticsData(BaseKineticsData):
+    temp_array = models.TextField()  # JSON might be appropriate here
+    rate_coefficients = models.TextField()  # JSON also appropriate here
+
+
+class Arrhenius(BaseKineticsData):
     """
     A reaction rate expression in modified Arrhenius form
 
@@ -41,17 +65,12 @@ class Arrhenius(models.Model):
     e value
     bibliography
     """
-    kinetics = models.OneToOneField(Kinetics)
 
     AValue = models.FloatField(default=0.0)
     AValueUncertainty = models.FloatField(blank=True, null=True)
     nValue = models.FloatField(default=0.0)
     EValue = models.FloatField(default=0.0)
     EValueUncertainty = models.FloatField(blank=True, null=True)
-    lowerTempBound = models.FloatField('Lower Temp Bound',
-                                       help_text='units: K', null=True, blank=True)
-    upperTempBound = models.FloatField('Upper Temp Bound',
-                                       help_text='units: K', null=True, blank=True)
 
     def __unicode__(self):
         return u"{s.id} with A={s.A_value:g} n={s.n_value:g} E={s.E_value:g}".format(
@@ -60,22 +79,6 @@ class Arrhenius(models.Model):
     class Meta:
         verbose_name_plural = "Arrhenius Kinetics"
 
-
-class BaseKineticsData(models.Model):
-
-    # Necessary for proper inheritance of this base class within Django
-    objects = InheritanceManager()
-
-    kinetics = models.OneToOneField(Kinetics)  # meant to mimic the field in the class Arrhenius above
-    min_temp = models.FloatField()
-    max_temp = models.FloatField()
-    min_pressure = models.FloatField()
-    max_pressure = models.FloatField()
-
-
-class KineticsData(BaseKineticsData):
-    temp_array = models.TextField()  # JSON might be appropriate here
-    rate_coefficients = models.TextField()  # JSON also appropriate here
 
 
 class ArrheniusEP(BaseKineticsData):
@@ -86,17 +89,16 @@ class ArrheniusEP(BaseKineticsData):
 
 
 class PDepArrhenius(BaseKineticsData):
-    arrheniuses = models.ManyToManyField(Arrhenius, through="Pressure")
-    chemical_species_efficiencies = models.ManyToManyField(Species, through="Efficiency")
+    arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
     # TODO -- reaction_order = None  # ???
 
 
 class MultiArrhenius(BaseKineticsData):
-    arrheniuses = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
+    arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
 
 
 class MultiPDepArrhenius(BaseKineticsData):
-    pdep_arrheniuses = models.ManyToManyField(PDepArrhenius)
+    pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
 
 
 class Chebyshev(BaseKineticsData):
@@ -111,15 +113,12 @@ class Chebyshev(BaseKineticsData):
 
 class ThirdBody(BaseKineticsData):
     low_arrhenius = models.ForeignKey(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
-    chemical_species_efficiencies = models.ManyToManyField(Species, through="Efficiency")
 
 
 class Lindemann(BaseKineticsData):
     low_arrhenius = models.ForeignKey(Arrhenius, related_name="low_lindemann")  # TODO -- come up with better names
     high_arrhenius = models.ForeignKey(Arrhenius, related_name="high_lindemann")
     # Cannot be ArrheniusEP according to Dr. West
-
-    chemical_species_efficiencies = models.ManyToManyField(Species, through="Efficiency")
 
     alpha = models.FloatField()
     t1 = models.FloatField()
@@ -135,8 +134,6 @@ class Pressure(models.Model):
 
 class Efficiency(models.Model):
     species = models.ForeignKey(Species)
-    lindemann = models.ForeignKey(Lindemann, null=True, blank=True)
-    pdep_arrhenius = models.ForeignKey(PDepArrhenius, null=True, blank=True)
-    third_body = models.ForeignKey(ThirdBody, null=True, blank=True)
+    kinetics_data = models.ForeignKey(BaseKineticsData)
     efficiency = models.FloatField()
 
