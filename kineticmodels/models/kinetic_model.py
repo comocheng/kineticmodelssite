@@ -1,7 +1,11 @@
+from django.db import models
 import os
 import uuid
-from .thermo_transport import *
-from .kinetic_data import *
+from .species import Species
+from .source import Source
+from .thermo_transport import Thermo, Transport
+from .kinetic_data import Kinetics
+from django.conf import settings
 
 
 def upload_chemkin_to(instance, filename):
