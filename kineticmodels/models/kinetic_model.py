@@ -1,7 +1,7 @@
 from django.db import models
 import os
 import uuid
-from .species import Species
+from .reaction_species import Species
 from .source import Source
 from .thermo_transport import Thermo, Transport
 from .kinetic_data import Kinetics
@@ -61,6 +61,7 @@ class KineticModel(models.Model):
                                     through='ThermoComment',
                                     blank=True)
     transport = models.ManyToManyField(Transport,
+                                       through='TransportComment',
                                        blank=True)
     source = models.ForeignKey(Source, null=True,
                                blank=True)
@@ -166,4 +167,9 @@ class ThermoComment(models.Model):
         #     isotope relativeatomicmass
         #     atomicmass uncertainty
 
+
+class TransportComment(models.Model):
+    transport = models.ForeignKey(Transport)
+    kineticModel = models.ForeignKey(KineticModel)
+    comment = models.CharField(blank=True, max_length=1000)
 

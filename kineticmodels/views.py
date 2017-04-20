@@ -59,6 +59,7 @@ class SourceView(View):
     """
     model = Source
     template_name = 'kineticmodels/sourceView.html'
+
     def get(self, request, source_id=0):
         source = get_object_or_404(Source, id=source_id)
         variables = {'source': source,}

@@ -30,10 +30,21 @@ django.setup()
 
 # Django-specific imports
 from django.core.exceptions import MultipleObjectsReturned
-from kineticmodels.models import Kinetics, Arrhenius, Reaction, Stoichiometry, \
+from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, \
     Thermo, ThermoComment, Structure, Isomer, \
-    Source, Author, Authorship, Transport
+    Source, Author, Authorship, Transport, Pressure, Efficiency
+
+from kineticmodels.models import KineticsData as KineticsData_dj
+from kineticmodels.models import Arrhenius as Arrhenius_dj
+from kineticmodels.models import ArrheniusEP as ArrheniusEP_dj
+from kineticmodels.models import PDepArrhenius as PDepArrhenius_dj
+from kineticmodels.models import MultiArrhenius as MultiArrhenius_dj
+from kineticmodels.models import MultiPDepArrhenius as MultiPDepArrhenius_dj
+from kineticmodels.models import Chebyshev as Chebyshev_dj
+from kineticmodels.models import ThirdBody as ThirdBody_dj
+from kineticmodels.models import Lindemann as Lindemann_dj
+
 
 import rmgpy
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
@@ -98,10 +109,10 @@ class ThermoLibraryImporter(Importer):
     """
 
     def __init__(self, path):
-        return super(ThermoLibraryImporter, self).__init__(path=path)
+        super(ThermoLibraryImporter, self).__init__(path=path)
 
     def name_from_path(self, path=None):
-        return super(ThermoLibraryImporter, self).name_from_path(path=path)
+        super(ThermoLibraryImporter, self).name_from_path(path=path)
 
     def load_library(self):
         """
@@ -297,10 +308,10 @@ class KineticsLibraryImporter(Importer):
     """
 
     def __init__(self, path):
-        return super(KineticsLibraryImporter, self).__init__(path=path)
+        super(KineticsLibraryImporter, self).__init__(path=path)
 
     def name_from_path(self, path=None):
-        return super(KineticsLibraryImporter, self).name_from_path(path=path)
+        super(KineticsLibraryImporter, self).name_from_path(path=path)
 
     def load_library(self):
         """
@@ -343,333 +354,52 @@ class KineticsLibraryImporter(Importer):
         for entry in library.entries:
             kinetics = library.entries[entry].data
             chemkinReaction = library.entries[entry].item
-            #TODO: make this do something
 
-"""
-class PrimeSpeciesImporter(Importer):
+            # Determine: what kind of KineticsData is this?
+            if type(kinetics) == KineticsData:
+                dj_kinetics_data = KineticsData_dj()
+                try:
+                    dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
+                    dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
+                except Exception, e:
+                    logger.error("Error: {}".format(e))
+                    raise e
 
-    To import chemical species. Left over from PrIMe importer
-
-
-    def import_elementtree_root(self, species):
-        ns = self.ns
-        primeID = species.attrib.get("primeID")
-        dj_item, created = Species.objects.get_or_create(sPrimeID=primeID)
-        identifier = species.find('prime:chemicalIdentifier', namespaces=ns)
-        for name in identifier.findall('prime:name', namespaces=ns):
-            if 'type' in name.attrib:
-                if name.attrib['type'] == 'formula':
-                    dj_item.formula = name.text
-                elif name.attrib['type'] == 'CASRegistryNumber':
-                    dj_item.CAS = name.text
-                elif name.attrib['type'] == 'InChI':
-                    dj_item.inchi = name.text
+            elif type(kinetics) == Arrhenius:
+                dj_kinetics_data = make_arrhenius_dj(kinetics)
+                dj_kinetics_data.save()
+            elif type(kinetics) == ArrheniusEP:
+                dj_kinetics_data = ArrheniusEP_dj()
+            elif type(kinetics) == MultiArrhenius:
+                dj_kinetics_data = MultiArrhenius_dj()
+            elif type(kinetics) == MultiPDepArrhenius:
+                dj_kinetics_data = MultiPDepArrhenius_dj()
+            elif type(kinetics) == PDepArrhenius:
+                dj_kinetics_data = PDepArrhenius_dj()
+            elif type(kinetics) == Chebyshev:
+                dj_kinetics_data = Chebyshev()
+            elif type(kinetics) == ThirdBody:
+                dj_kinetics_data = ThirdBody()
+            elif type(kinetics) == Lindemann:
+                pass
+            elif type(kinetics) == Troe:
+                pass
             else:
-                # it's just a random name
-                if not name.text:
-                    logger.warning("Blank species name in species {}".format(primeID))
-                    continue
-                SpeciesName.objects.get_or_create(species=dj_item, name=name.text)
-        dj_item.save()
-        # import ipdb; ipdb.set_trace()
+                logger.error("Cannot identify this type of Kinetics Data: \n" + kinetics.__str__())
+                raise ImportError
+
+            dj_kinetics_data.save()
 
 
-class PrimeThermoImporter(Importer):
-
-    To import the thermodynamic data of a species (can be multiple for each species). Left over from PrIMe importer
-
-    prime_ID_prefix = 'thp'
-
-    def import_elementtree_root(self, thermo):
-        ns = self.ns
-        # Get the Prime ID for the thermo polynomial
-        if thermo.attrib.get("primeID") != 'thp00000000':
-            thpPrimeID = thermo.attrib.get("primeID")
-        else:
-            return
-        # Get the Prime ID for the species to which it belongs, and get (or create) the species
-        specieslink = thermo.find('prime:speciesLink', namespaces=ns)
-        sPrimeID = specieslink.attrib['primeID']
-        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
-        # Now get (or create) the django Thermo object for that species and polynomial
-        dj_thermo, created = Thermo.objects.get_or_create(
-            thpPrimeID=thpPrimeID,
-            species=species)
-
-        # Start by finding the source link, and looking it up in the bibliography
-        bibliography_link = thermo.find('prime:bibliographyLink',
-                                        namespaces=ns)
-        bPrimeID = bibliography_link.attrib['primeID']
-        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        dj_thermo.source = source
-
-        # Now give the Thermo object its other properties
-        dj_thermo.preferred_key = thermo.findtext('prime:preferredKey',
-                                                  namespaces=ns,
-                                                  default='')
-
-        dfH = thermo.find('prime:dfH', namespaces=ns)
-        if dfH is not None and dfH.text.strip():
-            dj_thermo.dfH = float(dfH.text)
-        reference = thermo.find('prime:referenceState', namespaces=ns)
-        Tref = reference.find('prime:Tref', namespaces=ns)
-        if Tref is not None:
-            dj_thermo.reference_temperature = float(Tref.text)
-        Pref = reference.find('prime:Pref', namespaces=ns)
-        if Pref is not None:
-            dj_thermo.reference_pressure = float(Pref.text)
-        for i, polynomial in enumerate(thermo.findall('prime:polynomial',
-                                                      namespaces=ns)):
-            polynomial_number = i + 1
-            for j, coefficient in enumerate(polynomial.findall('prime:coefficient', namespaces=ns)):
-                coefficient_number = j + 1
-                assert coefficient_number == int(coefficient.attrib['id'])
-                value = float(coefficient.text)
-                # Equivalent of: dj_item.coefficient_1_1 = value
-                setattr(dj_thermo,
-                        'coefficient_{0}_{1}'.format(coefficient_number, polynomial_number),
-                        value)
-            temperature_range = polynomial.find('prime:validRange', namespaces=ns)
-            for bound in temperature_range.findall('prime:bound', namespaces=ns):
-                if bound.attrib['kind'] == 'lower':
-                    setattr(dj_thermo,
-                            'lower_temp_bound_{0}'.format(polynomial_number),
-                            float(bound.text))
-                if bound.attrib['kind'] == 'upper':
-                    setattr(dj_thermo,
-                            'upper_temp_bound_{0}'.format(polynomial_number),
-                            float(bound.text))
-        if i == 0:
-            logger.info("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
-            logger.info("Probably the temperature range was too small."
-                  "We will make up a second one with no T range.")
-            dj_thermo.lower_temp_bound_2 = dj_thermo.upper_temp_bound_1
-            dj_thermo.upper_temp_bound_2 = dj_thermo.upper_temp_bound_1
-            for j in range(1, 8):
-                setattr(dj_thermo, 'coefficient_{0}_2'.format(j), 0.0)
-
-        assert dj_thermo.upper_temp_bound_1 == dj_thermo.lower_temp_bound_2, "Temperatures don't match in the middle!"
-        dj_thermo.save()
-
-
-class PrimeTransportImporter(Importer):
-
-    To import the transport data of a species. Left over from PrIMe importer
-
-    prime_ID_prefix = 'tr'
-
-    def import_elementtree_root(self, trans):
-        ns = self.ns
-        # Get the Prime ID for the transport data
-        if trans.attrib.get("primeID") != 'tr00000000':
-            trPrimeID = trans.attrib.get("primeID")
-        else:
-            return
-        # Get the Prime ID for the species to which it belongs, and get (or create) the species
-        specieslink = trans.find('prime:speciesLink', namespaces=ns)
-        sPrimeID = specieslink.attrib['primeID']
-        species, created = Species.objects.get_or_create(sPrimeID=sPrimeID)
-        # Now get (or create) the django Transport object for that species
-        dj_trans, created = Transport.objects.get_or_create(
-            trPrimeID=trPrimeID,
-            species=species)
-
-        # Start by finding the source link, and looking it up in the bibliography
-        bibliography_link = trans.find('prime:bibliographyLink',
-                                       namespaces=ns)
-        bPrimeID = bibliography_link.attrib['primeID']
-        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        dj_trans.source = source
-        # Now give the Transport object its other properties
-        expression = trans.find('prime:expression', namespace=ns)
-        for parameter in expression.findall('prime:parameter', namespaces=ns):
-            if parameter.attrib['name'] == 'geometry':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.geometry = float(value.text)
-            elif parameter.attrib['name'] == 'potentialWellDepth':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.potential_well_depth = float(value.text)
-            elif parameter.attrib['name'] == 'collisionDiameter':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.collision_diameter = float(value.text)
-            elif parameter.attrib['name'] == 'dipoleMoment':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.dipole_moment = float(value.text)
-            elif parameter.attrib['name'] == 'polarizability':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.polarizability = float(value.text)
-            elif parameter.attrib['name'] == 'rotationalRelaxation':
-                value = parameter.find('prime:value', namespaces=ns)
-                dj_trans.rotational_relaxation = float(value.text)
-        dj_trans.save
-
-
-class PrimeReactionImporter(Importer):
-
-    To import chemical reactions. Left over from PrIMe importer
-
-
-    def import_elementtree_root(self, reaction):
-        ns = self.ns
-        primeID = reaction.attrib.get("primeID")
-        dj_reaction, created = Reaction.objects.get_or_create(rPrimeID=primeID)
-        reactants = reaction.find('prime:reactants',
-                                  namespaces=ns).findall('prime:speciesLink',
-                                                         namespaces=ns)
-        stoichiometry_already_in_database = Stoichiometry.objects.all().filter(
-            reaction=dj_reaction).exists()
-
-        for reactant in reactants:
-            species_primeID = reactant.attrib['primeID']
-            dj_species, created = Species.objects.get_or_create(
-                sPrimeID=species_primeID)
-            stoichiometry = float(reactant.text)
-            logger.debug("Stoichiometry of {} is {}".format(species_primeID,
-                                                     stoichiometry))
-            dj_stoich, created = Stoichiometry.objects.get_or_create(
-                species=dj_species,
-                reaction=dj_reaction,
-                stoichiometry=stoichiometry)
-            # This test currently broken or finds false failures:
-            # if stoichiometry_already_in_database:
-            #    assert not created, "Stoichiometry change detected! probably a mistake?"
-            # import ipdb; ipdb.set_trace()
-
-
-class PrimeKineticsImporter(Importer):
-
-    To import the kinetics data of a reaction (can be multiple for each species). Left over from PrIMe importer
-
-    prime_ID_prefix = 'rk'
-
-    def import_elementtree_root(self, kin):
-        ns = self.ns
-        # Get the Prime ID for the kinetics
-        if kin.attrib.get("primeID") != 'rk00000000':
-            rkPrimeID = kin.attrib.get("primeID")
-        else:
-            return
-        # Get the Prime ID for the reaction to which it belongs, and get (or create) the reaction
-        reactionlink = kin.find('prime:reactionLink', namespaces=ns)
-        rPrimeID = reactionlink.attrib['primeID']
-        reaction, created = Reaction.objects.get_or_create(rPrimeID=rPrimeID)
-        # Now get (or create) the django Kinetics object for that reaction
-        kinetics, created = Kinetics.objects.get_or_create(
-                                rkPrimeID=rkPrimeID,
-                                reaction=reaction)
-
-        # Start by finding the source link, and looking it up in the bibliography
-        bibliography_link = kin.find('prime:bibliographyLink',
-                                     namespaces=ns)
-        bPrimeID = bibliography_link.attrib['primeID']
-        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        kinetics.source = source
-
-        # Now identify the type and try to make that objecttoo
-        coefficient = kin.find('prime:rateCoefficient', namespaces=ns)
-
-        # Now give the Kinetics object its other properties
-        if coefficient is None:
-            raise ImportError("Couldn't find coefficient (and we can't yet interpret linked rates)")
-        if coefficient.attrib['direction'] == 'reverse':
-            kinetics.is_reverse = True
-        relunc = coefficient.find('prime:uncertainty', namespaces=ns)
-        if relunc is not None:
-            kinetics.relative_uncertainty = float(relunc.text)
-
-        kinetics.save()
-
-        # now find the expression(s) and create those
-        expressions = coefficient.findall('prime:expression', namespaces=ns)
-        if len(expressions) != 1:
-            raise NotImplementedError("Can only do single expression (for now)")
-        for expression in expressions:
-            if expression.attrib['form'].lower() == 'arrhenius':
-                ### ARRHENIUS
-                arrhenius, created = ArrheniusKinetics.objects.get_or_create(
-                    kinetics=kinetics)
-
-                for parameter in expression.findall('prime:parameter', namespaces=ns):
-                    if parameter.attrib['name'] == 'a' or parameter.attrib['name'] == 'A':
-                        value = parameter.find('prime:value', namespaces=ns)
-                        arrhenius.A_value = float(value.text)
-                        try:
-                            uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
-                            arrhenius.A_value_uncertainty = float(uncertainty.text)
-                        except:
-                            pass
-                    elif parameter.attrib['name'] == 'n':
-                        value = parameter.find('prime:value', namespaces=ns)
-                        arrhenius.n_value = float(value.text)
-                    elif parameter.attrib['name'] == 'e' or parameter.attrib['name'] == 'E':
-                        value = parameter.find('prime:value', namespaces=ns)
-                        arrhenius.E_value = float(value.text)
-                        try:
-                            uncertainty = parameter.find('prime:uncertainty', namespaces=ns)
-                            arrhenius.E_value_uncertainty = float(uncertainty.text)
-                        except:
-                            pass
-                temperature_range = kin.find('prime:validRange', namespaces=ns)
-                if temperature_range is not None:
-                    for bound in temperature_range.findall('prime:bound', namespaces=ns):
-                        if bound.attrib['kind'] == 'lower':
-                            arrhenius.lower_temp_bound = float(bound.text)
-                        if bound.attrib['kind'] == 'upper':
-                            arrhenius.upper_temp_bound = float(bound.text)
-                arrhenius.save()
-
-            #### HERE IS WHERE WE EXTEND FOR OTHER TYPES with elif statements
-            else:
-                raise NotImplementedError("Can't import kinetics type {}".format(expression.attrib['form']))
-
-
-class PrimeModelImporter(Importer):
-
-    To import kinetic models. Left over from PrIMe importer
-
-
-    def import_elementtree_root(self, mod):
-        ns = self.ns
-        primeID = mod.attrib.get("primeID")
-        dj_mod, created = KineticModel.objects.get_or_create(mPrimeID=primeID)
-        # Start by finding the source link, and looking it up in the bibliography
-        bibliography_link = mod.find('prime:bibliographyLink',
-                                     namespaces=ns)
-        bPrimeID = bibliography_link.attrib['primeID']
-        source, created = Source.objects.get_or_create(bPrimeID=bPrimeID)
-        dj_mod.source = source
-        dj_mod.model_name = mod.findtext('prime:preferredKey',
-                                         namespaces=ns,
-                                         default='')
-        # parse additional info
-        additionalinfo = mod.find('prime:additionalDataItem', namespaces=ns)
-        info = additionalinfo.text
-        description = additionalinfo.attrib.get('description')
-        if description != 'Model description':
-            if info is not None:
-                dj_mod.additional_info = description + " = " + info
-            else:
-                dj_mod.additional_info = description
-        # parse species links
-        species_set = mod.find('prime:speciesSet', namespaces=ns)
-        specieslink = species_set.findall('prime:speciesLink', namespaces=ns)
-        for species in specieslink:
-            sPrimeID = species.attrib.get("primeID")
-            thermolink = species.find('prime:thermodynamicDataLink', namespaces=ns)
-            thpPrimeID = thermolink.attrib.get("primeID")
-            transportlink = species.find('prime:transportDataLink', namespaces=ns)
-            if transportlink is not None:
-                trPrimeID = transportlink.attrib.get("primeID")
-
-        # parse reaction links
-        reaction_set = mod.find('prime:reactionSet', namespaces=ns)
-        reactionlink = reaction_set.findall('prime:reactionLink', namespaces=ns)
-        for reaction in reactionlink:
-            rPrimeID = reaction.attrib.get("primeID")
-            reversible = reaction.attrib.get("reversible")
-            kineticslink = reaction.find('prime:reactionRateLink', namespaces=ns)
-            rkPrimeID = kineticslink.attrib.get("primeID")
-"""
+# Converts a dictionary entry Arrhenius to a Django Model Instance
+# NOTE that this functiion does NOT save the Arrhenius instance to the database
+# Arrhenius (RMG) -> Arrhenius_dj (Django)
+def make_arrhenius_dj(k):
+    a = Arrhenius_dj()
+    a.AValue = k.A[0]
+    a.NValue = k.n
+    a.EValue = k.Ea[0]
+    return a
 
 
 def findLibraryFiles(path):

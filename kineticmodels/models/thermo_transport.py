@@ -3,7 +3,7 @@ from django.db import models
 from rmgpy.thermo import NASA, NASAPolynomial
 
 from .source import Source
-from .species import Species
+from .reaction_species import Species
 
 
 class Thermo(models.Model):

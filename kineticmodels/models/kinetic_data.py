@@ -2,7 +2,7 @@ from django.db import models
 from model_utils.managers import InheritanceManager  # pip install "django_model_uitls"
 
 from .source import Source
-from .species import Reaction, Species
+from .reaction_species import Reaction, Species
 
 
 class Kinetics(models.Model):
@@ -78,7 +78,6 @@ class Arrhenius(BaseKineticsData):
 
     class Meta:
         verbose_name_plural = "Arrhenius Kinetics"
-
 
 
 class ArrheniusEP(BaseKineticsData):
