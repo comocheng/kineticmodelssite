@@ -72,6 +72,7 @@ class SourceEditor(View):
     """
     model = Source
     template_name = 'kineticmodels/sourceEditor.html'
+
     def get(self, request, source_id=0):
         source = get_object_or_404(Source, id=source_id)
         form = EditSourceForm(instance=source)
