@@ -115,10 +115,19 @@ class ThirdBody(BaseKineticsData):
 
 
 class Lindemann(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, related_name="low_lindemann")  # TODO -- come up with better names
-    high_arrhenius = models.ForeignKey(Arrhenius, related_name="high_lindemann")
+    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
+    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
     # Cannot be ArrheniusEP according to Dr. West
 
+    alpha = models.FloatField()
+    t1 = models.FloatField()
+    t2 = models.FloatField()
+    t3 = models.FloatField()
+
+
+class Troe(BaseKineticsData):
+    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
+    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
     alpha = models.FloatField()
     t1 = models.FloatField()
     t2 = models.FloatField()
