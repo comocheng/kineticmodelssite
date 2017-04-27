@@ -20,6 +20,7 @@ import argparse
 import logging
 import abc
 import datetime
+import pickle
 
 # <editor-fold desc="RMG-Specific Imports">
 # Django setup to import models and other files from the Apps
@@ -44,6 +45,7 @@ from kineticmodels.models import MultiPDepArrhenius as MultiPDepArrhenius_dj
 from kineticmodels.models import Chebyshev as Chebyshev_dj
 from kineticmodels.models import ThirdBody as ThirdBody_dj
 from kineticmodels.models import Lindemann as Lindemann_dj
+from kineticmodels.models import Troe as Troe_dj
 
 
 import rmgpy
@@ -350,56 +352,134 @@ class KineticsLibraryImporter(Importer):
         """
         Import the loaded kinetics library into the django database
         """
-        library = self.library
-        for entry in library.entries:
-            kinetics = library.entries[entry].data
+        library = self.library  # refers to one of the "reactions.py" files in the RMG-models repository
+        for entry in library.entries:  # refers to an "entry()" line in that file
+            kinetics = library.entries[entry].data  # "data" refers to the "kinetics" attribute of an "entry"
             chemkinReaction = library.entries[entry].item
 
             # Determine: what kind of KineticsData is this?
-            if type(kinetics) == KineticsData:
-                dj_kinetics_data = KineticsData_dj()
-                try:
+            try:  # This will still cause the program to quit in an Exception, it just logs it first
+                if type(kinetics) == KineticsData:
+                    dj_kinetics_data = KineticsData_dj()  # make the django model instance
                     dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
                     dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
-                except Exception, e:
-                    logger.error("Error: {}".format(e))
-                    raise e
 
-            elif type(kinetics) == Arrhenius:
-                dj_kinetics_data = make_arrhenius_dj(kinetics)
-                dj_kinetics_data.save()
-            elif type(kinetics) == ArrheniusEP:
-                dj_kinetics_data = ArrheniusEP_dj()
-            elif type(kinetics) == MultiArrhenius:
-                dj_kinetics_data = MultiArrhenius_dj()
-            elif type(kinetics) == MultiPDepArrhenius:
-                dj_kinetics_data = MultiPDepArrhenius_dj()
-            elif type(kinetics) == PDepArrhenius:
-                dj_kinetics_data = PDepArrhenius_dj()
-            elif type(kinetics) == Chebyshev:
-                dj_kinetics_data = Chebyshev()
-            elif type(kinetics) == ThirdBody:
-                dj_kinetics_data = ThirdBody()
-            elif type(kinetics) == Lindemann:
-                pass
-            elif type(kinetics) == Troe:
-                pass
-            else:
-                logger.error("Cannot identify this type of Kinetics Data: \n" + kinetics.__str__())
-                raise ImportError
+                elif type(kinetics) == Arrhenius:
+                    dj_kinetics_data = make_arrhenius_dj(kinetics)  # use function to make model instance
 
-            dj_kinetics_data.save()
+                elif type(kinetics) == ArrheniusEP:
+                    dj_kinetics_data = ArrheniusEP_dj()  # make the django model instance
+                    # FIXME -- NO FUNCTIONAL EXAMPLES
+
+                elif type(kinetics) == MultiArrhenius:
+                    dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
+                    # No atomic data (numbers, strings, etc.,)
+                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    for simple_arr in kinetics.arrhenius:
+                        # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
+                        # simple_arr is one of those Arrhenius objects
+                        dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr))
+
+                elif type(kinetics) == MultiPDepArrhenius:
+                    dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
+                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    for pdep_arr in kinetics.arrhenius:
+                        # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
+                        dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr))
+
+                elif type(kinetics) == PDepArrhenius:
+                    make_pdep_arrhenius_dj(kinetics)  # use function to make model instance
+
+                elif type(kinetics) == Chebyshev:
+                    dj_kinetics_data = Chebyshev_dj()  # make the django model instance
+                    dj_kinetics_data.coefficient_matrix = pickle.dumps(kinetics.coeffs)
+                    dj_kinetics_data.units = kinetics.kunits
+
+                elif type(kinetics) == ThirdBody:
+                    dj_kinetics_data = ThirdBody_dj()  # make the django model instance
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
+                    dj_kinetics_data.save()
+                    make_efficiencies(dj_kinetics_data, kinetics)
+
+                elif type(kinetics) == Lindemann:
+                    dj_kinetics_data = Lindemann_dj()  # make the django model instance
+                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh)
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
+                    dj_kinetics_data.save()
+                    make_efficiencies(dj_kinetics_data, kinetics)
+
+                elif type(kinetics) == Troe:
+                    dj_kinetics_data = Troe_dj()  # make the django model instance
+                    # Add atomic attributes
+                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh)
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
+                    dj_kinetics_data.alpha = kinetics.alpha
+                    dj_kinetics_data.t1 = kinetics.T1
+                    dj_kinetics_data.t1 = kinetics.T2
+                    dj_kinetics_data.t1 = kinetics.T3
+                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    make_efficiencies(dj_kinetics_data, kinetics)
+                else:
+                    logger.error("Cannot identify this type of Kinetics Data: \n" + kinetics.__str__())
+                    raise ImportError
+            except Exception, e:
+                logger.error("Error: {}".format(e))
+                raise e
+
+            try:  # Assign the temp and pressure bounds
+                dj_kinetics_data.min_temp = kinetics.Tmin
+                dj_kinetics_data.max_temp = kinetics.Tmax
+                dj_kinetics_data.min_pressure = kinetics.Pmin
+                dj_kinetics_data.max_pressure = kinetics.Pmax
+            except:  # most kinetics data don't have the Temp/Pressure bounds
+                pass
+
+            dj_kinetics_data.save()  # Save the Django model instance, no matter what type it is
 
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
-# NOTE that this functiion does NOT save the Arrhenius instance to the database
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
 def make_arrhenius_dj(k):
     a = Arrhenius_dj()
     a.AValue = k.A[0]
     a.NValue = k.n
     a.EValue = k.Ea[0]
+    a.save()
     return a
+
+
+# Converts a dictionary entry PDepArrhenius to a Django Model Instance
+# PDepArrhenius (RMG) -> PDepArrhenius_dj (Django)
+def make_pdep_arrhenius_dj(k):
+    dj_k = PDepArrhenius_dj()  # make the django model instance
+    # No atomic data (numbers, strings, etc.,)
+    dj_k.save()
+    for index in range(len(k.pressures)):
+        # We use the index because the two lists for Pressure and Arrhenius are ordered together
+        dj_pressure = Pressure()
+        dj_pressure.pdep_arrhenius = dj_k
+        dj_pressure.pressure = k.pressures[index]
+        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index])
+        dj_pressure.save()
+    dj_k.save()
+    return dj_k
+
+
+# Converts the efficiency dictionary into a through relationship for the model
+# BaseKineticsData (Django), Kinetics (RMG) ->
+def make_efficiencies(dj_k, k):
+    for species_string, efficiency_number in k.efficiencies:
+        # make the django model instance for efficiency
+        dj_efficiency = Efficiency()
+        # Add foreign key to Kinetics Data
+        dj_efficiency.kinetics_data = dj_k
+        # Search for Species by "species" string
+        dj_species = Species.objects.get_or_create(some_attribute=species_string)  # TODO -- which attribute to use?
+        # Add foreign key to the species
+        dj_efficiency.species = dj_species
+        dj_efficiency.efficiency = efficiency_number
+        dj_efficiency.save()
+    dj_k.save()
 
 
 def findLibraryFiles(path):
@@ -502,7 +582,3 @@ if __name__ == "__main__":
     # Close the log handlers
     file_printer.close()
     console_printer.close()
-
-
-
-
