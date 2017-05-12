@@ -59,6 +59,17 @@ from rmgpy.data.thermo import ThermoLibrary
 from __builtin__ import True
 # </editor-fold>
 
+# Saves any Django model and logs it appropriately
+# Models.model -> Models.model
+def save_model(mod):
+    try:
+        mod.save()
+        logger.info("Created the following {1} Instance:\n{0}\n".format(mod, type(mod)))
+    except Exception, e:
+        logger.error("Error saving the Kinetic Model: {}".format(e))
+        raise e
+    return mod
+
 
 class ImportError(Exception):
     pass
@@ -72,13 +83,13 @@ class Importer(object):
 
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
     def __init__(self, path):
         self.path = path
         self.name = self.name_from_path(path)
+        self.dj_km = self.get_kinetic_model()
         self.library = None
 
-    @abc.abstractmethod
+
     def name_from_path(self, path=None):
         """
         Get the library name from the (full) path
@@ -104,17 +115,25 @@ class Importer(object):
         """
         raise NotImplementedError("Should define this in a subclass")
 
+    def get_kinetic_model(self):
+        """
+        Get or Create a Kinetic Model
+        :return: dj_km, the django instance of the KineticModel
+        """
+        assert self.name
+        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
+        if km_created:
+            dj_km.modelName = self.name
+            dj_km.additionalInfo = "Created while importing RMG-models"
+        # Save that instance
+        return save_model(dj_km)
+
 
 class ThermoLibraryImporter(Importer):
     """
     To import a thermodynamic library
     """
 
-    def __init__(self, path):
-        super(ThermoLibraryImporter, self).__init__(path=path)
-
-    def name_from_path(self, path=None):
-        super(ThermoLibraryImporter, self).name_from_path(path=path)
 
     def load_library(self):
         """
@@ -135,6 +154,7 @@ class ThermoLibraryImporter(Importer):
         # NOTE -- In order for this feature to run we have to be on "rmg-py/importer" branch, may require reinstall
         library.load(filename, local_context=local_context)
         self.library = library
+
 
     def import_species(self):
         """
@@ -185,31 +205,20 @@ class ThermoLibraryImporter(Importer):
                 logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
                     len(possible_species), smiles, molecule.multiplicity))
                 logger.warning(possible_species)
-                dj_species = None  # TODO: how do we pick one?
+                dj_species = None  # FIXME -- how would we pick one?
 
             # If we got a unique match for the Species, find a Kinetic Model for that Species else make one
             if dj_species:
-                # Create a Kinetic Model
-                dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
-                if km_created:
-                    dj_km.modelName = self.name
-                    dj_km.additionalInfo = "Created while importing RMG-models"
-                    # Save that instance
-                    try:
-                        dj_km.save()
-                        logger.info("Created the following Kinetic Model Instance:\n{0}\n".format(dj_km))
-                    except Exception, e:
-                        logger.error("Error saving the Kinetic Model: {}".format(e))
-                        raise e
+
 
                 # Create the join between Species and KineticModel through a SpeciesName
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
-                                                                                         kineticModel=dj_km)
+                                                                                         kineticModel=self.dj_km)
                 dj_speciesName.name = speciesName
                 dj_speciesName.save()
 
                 # Save the pk of the django Species instances to the Entry so we can lookup add the thermo later
-                library.entries[entry].dj_species_pk = dj_species.pk
+                library.entries[entry].dj_species_pk = dj_species.pk  # FIXME -- Do I need to store just pk, or can I store the entire object?
 
         # And then save the new library that contains all the entries updated with Species instances
         # TODO -- Not necessary
@@ -288,6 +297,9 @@ class ThermoLibraryImporter(Importer):
                                                                      coefficient[1]))
                         raise e
 
+            # Save before adding M2M links
+            save_model(dj_thermo)
+
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
             if species_pk:
                 dj_thermo.species = Species.objects.get(pk=species_pk)
@@ -295,25 +307,14 @@ class ThermoLibraryImporter(Importer):
 
             # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
 
-            # Save the thermo data
-            try:
-                dj_thermo.save()
-                logger.info("Created the following Thermo Data Instance:\n{}\n".format(dj_thermo))
-            except Exception, e:
-                logger.error("Error saving the Thermo data:\n{}\n".format(e))
-                raise e
+            # Save the thermo data again
+            save_model(dj_thermo)
 
 
 class KineticsLibraryImporter(Importer):
     """
     To import a kinetics library
     """
-
-    def __init__(self, path):
-        super(KineticsLibraryImporter, self).__init__(path=path)
-
-    def name_from_path(self, path=None):
-        super(KineticsLibraryImporter, self).name_from_path(path=path)
 
     def load_library(self):
         """
@@ -368,8 +369,7 @@ class KineticsLibraryImporter(Importer):
                     dj_kinetics_data = make_arrhenius_dj(kinetics)  # use function to make model instance
 
                 elif type(kinetics) == ArrheniusEP:
-                    dj_kinetics_data = ArrheniusEP_dj()  # make the django model instance
-                    # FIXME -- NO FUNCTIONAL EXAMPLES
+                    raise NotImplementedError
 
                 elif type(kinetics) == MultiArrhenius:
                     dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
@@ -434,7 +434,7 @@ class KineticsLibraryImporter(Importer):
             except:  # most kinetics data don't have the Temp/Pressure bounds
                 pass
 
-            dj_kinetics_data.save()  # Save the Django model instance, no matter what type it is
+            save_model(dj_kinetics_data)  # Save the Django model instance, no matter what type it is
 
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
@@ -582,3 +582,16 @@ if __name__ == "__main__":
     # Close the log handlers
     file_printer.close()
     console_printer.close()
+
+"""
+properties = { 'a': 3e5, 'n'=0.9, 'e0'=364.}
+ArrheniusEP(**properties)
+# make a new
+a = ArrheniusEP(a=3e5, n=0.9, e0=364)
+a.save()
+# get if its there
+a = ArrheniusEP.objects.get_or_create(**properties)
+# complicated search
+ArrheniusEP.objects.get(**properties)
+# filter etc, check its what we want...
+"""
