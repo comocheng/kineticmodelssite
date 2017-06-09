@@ -11,7 +11,9 @@ It should dig through all the models and import them into
 the Django database.
 """
 
-# General Imports
+"""
+General Imports
+"""
 import sys
 import os
 import time
@@ -22,7 +24,10 @@ import abc
 import datetime
 import pickle
 
-# <editor-fold desc="RMG-Specific Imports">
+
+"""
+RMG-Specific Imports
+"""
 # Django setup to import models and other files from the Apps
 sys.path.append('../..')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
@@ -31,10 +36,9 @@ django.setup()
 
 # Django-specific imports
 from django.core.exceptions import MultipleObjectsReturned
-from kineticmodels.models import Kinetics, Reaction, Stoichiometry, \
-    Species, KineticModel, SpeciesName, \
-    Thermo, ThermoComment, Structure, Isomer, \
-    Source, Author, Authorship, Transport, Pressure, Efficiency
+from kineticmodels.models import Kinetics, KineticsComment, Reaction, Stoichiometry, \
+    Species, KineticModel, SpeciesName, Thermo, ThermoComment, Structure, Isomer, \
+    Transport, Pressure, Efficiency
 
 from kineticmodels.models import KineticsData as KineticsData_dj
 from kineticmodels.models import Arrhenius as Arrhenius_dj
@@ -57,18 +61,6 @@ from rmgpy.kinetics import Arrhenius, ArrheniusEP, ThirdBody, Lindemann, Troe, \
 from rmgpy.data.kinetics.library import KineticsLibrary
 from rmgpy.data.thermo import ThermoLibrary
 from __builtin__ import True
-# </editor-fold>
-
-# Saves any Django model and logs it appropriately
-# Models.model -> Models.model
-def save_model(mod):
-    try:
-        mod.save()
-        logger.info("Created the following {1} Instance:\n{0}\n".format(mod, type(mod)))
-    except Exception, e:
-        logger.error("Error saving the Kinetic Model: {}".format(e))
-        raise e
-    return mod
 
 
 class ImportError(Exception):
@@ -134,7 +126,6 @@ class ThermoLibraryImporter(Importer):
     To import a thermodynamic library
     """
 
-
     def load_library(self):
         """
         Load the thermo library from the path, and store it.
@@ -154,7 +145,6 @@ class ThermoLibraryImporter(Importer):
         # NOTE -- In order for this feature to run we have to be on "rmg-py/importer" branch, may require reinstall
         library.load(filename, local_context=local_context)
         self.library = library
-
 
     def import_species(self):
         """
@@ -176,7 +166,7 @@ class ThermoLibraryImporter(Importer):
                 # save it once you've added the Isomer (required)
                 dj_isomer = Isomer.objects.create(inchi=inchi)
                 dj_structure.isomer = dj_isomer
-                dj_structure.save()
+                save_model(dj_structure)
             else:
                 assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
                     "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
@@ -186,14 +176,14 @@ class ThermoLibraryImporter(Importer):
             # Find a Species for the Structure (eg. from Prime) else make one
             trimmed_inchi = inchi.split('InChI=1S')[-1]
             formula = inchi.split('/')[1]
-            try:
+            try:  #TODO -- Write a helper function to encapsulate get_or_create in a try-except block
                 dj_species, species_created = Species.objects.get_or_create(inchi__contains=trimmed_inchi)
                 if species_created:
                     logger.debug("Found no species for structure {} {}, so making one".format(smiles,
                                                                                               molecule.multiplicity))
                     dj_species.inchi = inchi
                     dj_species.formula = formula
-                    dj_species.save()
+                    save_model(dj_species)
                     logger.debug("{}".format(dj_species))
                 else:
                     logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles,
@@ -215,14 +205,10 @@ class ThermoLibraryImporter(Importer):
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
                                                                                          kineticModel=self.dj_km)
                 dj_speciesName.name = speciesName
-                dj_speciesName.save()
+                save_model(dj_speciesName)
 
                 # Save the pk of the django Species instances to the Entry so we can lookup add the thermo later
                 library.entries[entry].dj_species_pk = dj_species.pk  # FIXME -- Do I need to store just pk, or can I store the entire object?
-
-        # And then save the new library that contains all the entries updated with Species instances
-        # TODO -- Not necessary
-        self.library = library
 
     def import_data(self):
         """
@@ -307,7 +293,6 @@ class ThermoLibraryImporter(Importer):
 
             # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
 
-            # Save the thermo data again
             save_model(dj_thermo)
 
 
@@ -340,7 +325,7 @@ class KineticsLibraryImporter(Importer):
         library = KineticsLibrary(label=self.name)
         library.ALLOW_UNMARKED_DUPLICATES = True
         try:
-            library.load(fileName, local_context=local_context)
+            library.load(fileName, local_context=local_context)  # Where dj_km attributes are renamed from entry() attr.
         except Exception, e:
             logger.error("Error reading {0}:".format(fileName), exc_info=True)
             logger.warning("Will continue without that model")
@@ -374,7 +359,7 @@ class KineticsLibraryImporter(Importer):
                 elif type(kinetics) == MultiArrhenius:
                     dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
                     # No atomic data (numbers, strings, etc.,)
-                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
                     for simple_arr in kinetics.arrhenius:
                         # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
                         # simple_arr is one of those Arrhenius objects
@@ -382,7 +367,7 @@ class KineticsLibraryImporter(Importer):
 
                 elif type(kinetics) == MultiPDepArrhenius:
                     dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
-                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
                     for pdep_arr in kinetics.arrhenius:
                         # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
                         dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr))
@@ -398,14 +383,14 @@ class KineticsLibraryImporter(Importer):
                 elif type(kinetics) == ThirdBody:
                     dj_kinetics_data = ThirdBody_dj()  # make the django model instance
                     dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
-                    dj_kinetics_data.save()
+                    save_model(dj_kinetics_data)
                     make_efficiencies(dj_kinetics_data, kinetics)
 
                 elif type(kinetics) == Lindemann:
                     dj_kinetics_data = Lindemann_dj()  # make the django model instance
                     dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh)
                     dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
-                    dj_kinetics_data.save()
+                    save_model(dj_kinetics_data)
                     make_efficiencies(dj_kinetics_data, kinetics)
 
                 elif type(kinetics) == Troe:
@@ -417,7 +402,7 @@ class KineticsLibraryImporter(Importer):
                     dj_kinetics_data.t1 = kinetics.T1
                     dj_kinetics_data.t1 = kinetics.T2
                     dj_kinetics_data.t1 = kinetics.T3
-                    dj_kinetics_data.save()  # Have to save the model before you can ".add()" onto a ManyToMany
+                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
                     make_efficiencies(dj_kinetics_data, kinetics)
                 else:
                     logger.error("Cannot identify this type of Kinetics Data: \n" + kinetics.__str__())
@@ -433,8 +418,64 @@ class KineticsLibraryImporter(Importer):
                 dj_kinetics_data.max_pressure = kinetics.Pmax
             except:  # most kinetics data don't have the Temp/Pressure bounds
                 pass
+            save_model(dj_kinetics_data)  # Save the Kinetics Data once its internal attributes are complete
 
-            save_model(dj_kinetics_data)  # Save the Django model instance, no matter what type it is
+            # Make Kinetics object to link the Kinetics Data to the Kinetic Model
+            dj_kinetics_object = Kinetics()
+            save_model(dj_kinetics_object)
+
+            # Establish one-to-one link between kinetics and kinetics data
+            dj_kinetics_data.kinetics = dj_kinetics_object
+            save_model(dj_kinetics_data)
+
+            # Link the kinetics data to self.dj_km through kinetics comment
+            dj_kinetics_comment = KineticsComment()
+            save_model(dj_kinetics_comment)
+            dj_kinetics_comment.kinetics = dj_kinetics_object
+            dj_kinetics_comment.kineticModel = self.dj_km
+            save_model(dj_kinetics_comment)
+
+            # Then, make a reaction object and tie it to a Kinetics Object
+            dj_reaction = Reaction()
+            dj_kinetics_object.reaction = dj_reaction
+
+            # Link that kinetics object to species objects via reaction
+            dj_species_set = self.dj_km.species  # QuerySet containing all species in the Kinetic Model
+            dj_species_set.filter(inchi__in=SMILES_to_species(self.dj_km.label).keys())
+            # Filter for the species in the kinetic model's string representation of the reaction
+            if len(dj_species_set) < 1:
+                raise ImportError
+
+            for species in dj_species_set:
+                stoich = Stoichiometry()
+                save_model(stoich)
+                stoich.reaction = dj_reaction
+                stoich.species = species
+                stoich.coefficient = float()  # TODO-- find a nice way to move coeffs from dict
+                save_model(stoich)
+
+
+"""
+HELPER FUNCTIONS
+"""
+
+# Takes a string representation of a Chemical Reaction from a kinetic model,
+# and parses it for the species and their corresponding coefficients
+# String rep. Reaction -> Dictionary (keys= String rep. Species; values=Integers)
+def SMILES_to_species(reaction_string):
+    return dict()
+
+
+# Saves any Django model and logs it appropriately
+# Models.model -> Models.model
+def save_model(mod):
+    try:
+        mod.save()
+        logger.info("Created/updated the following {1} Instance:\n{0}\n".format(mod, type(mod)))
+    except Exception, e:
+        logger.error("Error saving the Kinetic Model: {}".format(e))
+        raise e
+    return mod
 
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
@@ -444,7 +485,7 @@ def make_arrhenius_dj(k):
     a.AValue = k.A[0]
     a.NValue = k.n
     a.EValue = k.Ea[0]
-    a.save()
+    save_model(a)
     return a
 
 
@@ -453,16 +494,15 @@ def make_arrhenius_dj(k):
 def make_pdep_arrhenius_dj(k):
     dj_k = PDepArrhenius_dj()  # make the django model instance
     # No atomic data (numbers, strings, etc.,)
-    dj_k.save()
+    save_model(dj_k)
     for index in range(len(k.pressures)):
         # We use the index because the two lists for Pressure and Arrhenius are ordered together
         dj_pressure = Pressure()
         dj_pressure.pdep_arrhenius = dj_k
         dj_pressure.pressure = k.pressures[index]
         dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index])
-        dj_pressure.save()
-    dj_k.save()
-    return dj_k
+        save_model(dj_pressure)
+    return save_model(dj_k)
 
 
 # Converts the efficiency dictionary into a through relationship for the model
@@ -474,12 +514,12 @@ def make_efficiencies(dj_k, k):
         # Add foreign key to Kinetics Data
         dj_efficiency.kinetics_data = dj_k
         # Search for Species by "species" string
-        dj_species = Species.objects.get_or_create(some_attribute=species_string)  # TODO -- which attribute to use?
+        dj_species = Structure.objects.get_or_create(some_attribute=species_string)  # TODO -- use KineticModel based search
         # Add foreign key to the species
         dj_efficiency.species = dj_species
         dj_efficiency.efficiency = efficiency_number
-        dj_efficiency.save()
-    dj_k.save()
+        save_model(dj_efficiency)
+    save_model(dj_k)
 
 
 def findLibraryFiles(path):
@@ -500,6 +540,9 @@ def findLibraryFiles(path):
                               'library generated by the chemkin importer'.format(path))
     return thermoLibs, kineticsLibs
 
+"""
+MAIN FUNCTION CALL
+"""
 
 def main(args):
     """
@@ -541,10 +584,6 @@ def main(args):
 
     logger.info('Exited kinetics imports!')
 
-
-"""
-MAIN FUNCTION CALL
-"""
 
 if __name__ == "__main__":
     # Configure Logging for the Import

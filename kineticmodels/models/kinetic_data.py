@@ -38,13 +38,13 @@ class BaseKineticsData(models.Model):
                                                    blank=True)
 
     min_temp = models.FloatField('Lower Temp Bound',
-                                       help_text='units: K', null=True, blank=True)
+                                 help_text='units: K', null=True, blank=True)
     max_temp = models.FloatField('Upper Temp Bound',
-                                       help_text='units: K', null=True, blank=True)
+                                 help_text='units: K', null=True, blank=True)
     min_pressure = models.FloatField('Lower Pressure Bound',
-                                       help_text='units: Pa', null=True, blank=True)
+                                     help_text='units: Pa', null=True, blank=True)
     max_pressure = models.FloatField('Upper Pressure Bound',
-                                       help_text='units: Pa', null=True, blank=True)
+                                     help_text='units: Pa', null=True, blank=True)
 
 
 class KineticsData(BaseKineticsData):
@@ -89,7 +89,6 @@ class ArrheniusEP(BaseKineticsData):
 
 class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
-    # TODO -- reaction_order = None  # ???
 
 
 class MultiArrhenius(BaseKineticsData):
@@ -101,13 +100,8 @@ class MultiPDepArrhenius(BaseKineticsData):
 
 
 class Chebyshev(BaseKineticsData):
-    coefficient_matrix = models.TextField()  # Array of Constants
-    # That would be a good one for JSON serialization
-    # Or a pickled dictionary perhaps
-
+    coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
     units = models.CharField(max_length=25)
-    inv_temp_terms = models.IntegerField()
-    log_pressure_terms = models.IntegerField()
 
 
 class ThirdBody(BaseKineticsData):
@@ -144,4 +138,3 @@ class Efficiency(models.Model):
     species = models.ForeignKey(Species)
     kinetics_data = models.ForeignKey(BaseKineticsData)
     efficiency = models.FloatField()
-
