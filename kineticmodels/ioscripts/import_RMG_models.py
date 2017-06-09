@@ -412,7 +412,7 @@ class KineticsLibraryImporter(Importer):
                 raise e
 
             try:  # Assign the temp and pressure bounds
-                dj_kinetics_data.min_temp = kinetics.Tmin
+                dj_kinetics_data.min_temp = kinetics.Tmin  # TODO -- Better try-catch
                 dj_kinetics_data.max_temp = kinetics.Tmax
                 dj_kinetics_data.min_pressure = kinetics.Pmin
                 dj_kinetics_data.max_pressure = kinetics.Pmax
@@ -428,7 +428,7 @@ class KineticsLibraryImporter(Importer):
             dj_kinetics_data.kinetics = dj_kinetics_object
             save_model(dj_kinetics_data)
 
-            # Link the kinetics data to self.dj_km through kinetics comment
+            # Link the kinetics object to self.dj_km through kinetics comment
             dj_kinetics_comment = KineticsComment()
             save_model(dj_kinetics_comment)
             dj_kinetics_comment.kinetics = dj_kinetics_object
@@ -439,32 +439,28 @@ class KineticsLibraryImporter(Importer):
             dj_reaction = Reaction()
             dj_kinetics_object.reaction = dj_reaction
 
-            # Link that kinetics object to species objects via reaction
-            dj_species_set = self.dj_km.species  # QuerySet containing all species in the Kinetic Model
-            dj_species_set.filter(inchi__in=SMILES_to_species(self.dj_km.label).keys())
-            # Filter for the species in the kinetic model's string representation of the reaction
-            if len(dj_species_set) < 1:
-                raise ImportError
+            from collections import defaultdict
 
-            for species in dj_species_set:
-                stoich = Stoichiometry()
-                save_model(stoich)
-                stoich.reaction = dj_reaction
-                stoich.species = species
-                stoich.coefficient = float()  # TODO-- find a nice way to move coeffs from dict
-                save_model(stoich)
+            for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
+                stoichiometries = defaultdict(float)
+                for species in reagent_list:
+                    name = species.name  # (or .label??)
+                    dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
+                    dj_species = dj_speciesname.species
+                    stoichiometries[dj_species] += direction_coefficient
 
+                for dj_species, coeff in stoichiometries:
+                    stoich = Stoichiometry()
+                    save_model(stoich)
+                    stoich.reaction = dj_reaction
+                    stoich.species = dj_species
+                    stoich.coefficient = coeff
+                    save_model(stoich)
+        save_model(self.dj_km)
 
 """
 HELPER FUNCTIONS
 """
-
-# Takes a string representation of a Chemical Reaction from a kinetic model,
-# and parses it for the species and their corresponding coefficients
-# String rep. Reaction -> Dictionary (keys= String rep. Species; values=Integers)
-def SMILES_to_species(reaction_string):
-    return dict()
-
 
 # Saves any Django model and logs it appropriately
 # Models.model -> Models.model
