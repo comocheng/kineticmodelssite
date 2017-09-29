@@ -23,6 +23,7 @@ import logging
 import abc
 import datetime
 import pickle
+from collections import defaultdict
 
 
 """
@@ -158,20 +159,21 @@ class ThermoLibraryImporter(Importer):
 
             smiles = molecule.toSMILES()
             inchi = molecule.toInChI()
+
+            dj_isomer, isomer_created = Isomer.objects.get_or_create(inchi=inchi)
             # Search for Structure matching the SMILES
             dj_structure, structure_created = Structure.objects.get_or_create(smiles=smiles,
-                                                                              electronicState=molecule.multiplicity)
+                                                                              electronicState=molecule.multiplicity,
+                                                                              isomer=dj_isomer)
+
             if structure_created:
                 dj_structure.adjacencyList = molecule.toAdjacencyList()
-                # save it once you've added the Isomer (required)
-                dj_isomer = Isomer.objects.create(inchi=inchi)
-                dj_structure.isomer = dj_isomer
                 save_model(dj_structure)
             else:
                 assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
                     "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
                                                                         speciesName, molecule.toAdjacencyList(), smiles)
-                dj_isomer = dj_structure.isomer  # might there be more than one? (no?)
+                assert dj_isomer == dj_structure.isomer  # might there be more than one? (no?)
 
             # Find a Species for the Structure (eg. from Prime) else make one
             trimmed_inchi = inchi.split('InChI=1S')[-1]
@@ -439,8 +441,6 @@ class KineticsLibraryImporter(Importer):
             dj_reaction = Reaction()
             dj_kinetics_object.reaction = dj_reaction
 
-            from collections import defaultdict
-
             for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
                 stoichiometries = defaultdict(float)
                 for species in reagent_list:
@@ -449,13 +449,14 @@ class KineticsLibraryImporter(Importer):
                     dj_species = dj_speciesname.species
                     stoichiometries[dj_species] += direction_coefficient
 
-                for dj_species, coeff in stoichiometries:
+                for species, coeff in stoichiometries:
                     stoich = Stoichiometry()
                     save_model(stoich)
                     stoich.reaction = dj_reaction
-                    stoich.species = dj_species
+                    stoich.species = species
                     stoich.coefficient = coeff
                     save_model(stoich)
+
         save_model(self.dj_km)
 
 """
@@ -469,7 +470,7 @@ def save_model(mod):
         mod.save()
         logger.info("Created/updated the following {1} Instance:\n{0}\n".format(mod, type(mod)))
     except Exception, e:
-        logger.error("Error saving the Kinetic Model: {}".format(e))
+        logger.error("Error saving the {1} model of type {2}: {0}".format(e, mod, type(mod)))
         raise e
     return mod
 
