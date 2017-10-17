@@ -131,6 +131,7 @@ class ThermoLibraryImporter(Importer):
         """
         Load the thermo library from the path, and store it.
         """
+        logger.info("Starting the load_library method on ThermoLibraryImporter...")
         filename = self.path
         # Define local context to allow for loading of the library
         local_context = {
@@ -146,11 +147,13 @@ class ThermoLibraryImporter(Importer):
         # NOTE -- In order for this feature to run we have to be on "rmg-py/importer" branch, may require reinstall
         library.load(filename, local_context=local_context)
         self.library = library
+        logger.info("Exiting the load_library method on ThermoLibraryImporter.")
 
     def import_species(self):
         """
         Import the Species only, not their thermo
         """
+        logger.info("Starting the import_species method on ThermoLibraryImporter...")
         library = self.library
         for entry in library.entries:
             thermo = library.entries[entry].data
@@ -202,7 +205,6 @@ class ThermoLibraryImporter(Importer):
             # If we got a unique match for the Species, find a Kinetic Model for that Species else make one
             if dj_species:
 
-
                 # Create the join between Species and KineticModel through a SpeciesName
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
                                                                                          kineticModel=self.dj_km)
@@ -210,19 +212,21 @@ class ThermoLibraryImporter(Importer):
                 save_model(dj_speciesName)
 
                 # Save the pk of the django Species instances to the Entry so we can lookup add the thermo later
-                library.entries[entry].dj_species_pk = dj_species.pk  # FIXME -- Do I need to store just pk, or can I store the entire object?
+                library.entries[entry].dj_species_pk = dj_species.pk
+                # FIXME -- Do I need to store just pk, or can I store the entire object?
+        logger.info("Exiting the import_species method on ThermoLibraryImporter...")
 
     def import_data(self):
         """
         Import the loaded thermo library into the django database
         Unpacks the coefficients from the NASAPolynomials and stores them in a Thermo
         """
+        logger.info("Starting the import_data method on ThermoLibraryImporter...")
         library = self.library
         for entry in library.entries:
             thermoEntry = library.entries[entry].data
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
-            species_pk = library.entries[entry].dj_species_pk
 
             dj_thermo = Thermo()  # Empty Thermo model instance from Django kineticmodelssite
             # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info?
@@ -289,13 +293,17 @@ class ThermoLibraryImporter(Importer):
             save_model(dj_thermo)
 
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
-            if species_pk:
-                dj_thermo.species = Species.objects.get(pk=species_pk)
+            try:
+                dj_thermo.species = Species.objects.get(pk=library.entries[entry].dj_species_pk)
+            except:
+                pass
 
 
             # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
 
             save_model(dj_thermo)
+
+        logger.info("Exiting the import_data method on ThermoLibraryImporter...")
 
 
 class KineticsLibraryImporter(Importer):
@@ -463,15 +471,19 @@ class KineticsLibraryImporter(Importer):
 HELPER FUNCTIONS
 """
 
+FAILED_WHEN_SAVING = []  # This is a list where we can store a record of all the imports that fail when we save them
+
 # Saves any Django model and logs it appropriately
 # Models.model -> Models.model
 def save_model(mod):
+    global FAILED_WHEN_SAVING
     try:
         mod.save()
         logger.info("Created/updated the following {1} Instance:\n{0}\n".format(mod, type(mod)))
     except Exception, e:
-        logger.error("Error saving the {1} model of type {2}: {0}".format(e, mod, type(mod)))
-        raise e
+        error_msg = "Error saving the {1} model of type {2}: {0}".format(e, mod, type(mod))
+        logger.error(error_msg)
+        FAILED_WHEN_SAVING += error_msg
     return mod
 
 
@@ -585,7 +597,7 @@ def main(args):
 if __name__ == "__main__":
     # Configure Logging for the Import
     logger = logging.getLogger('THE_LOG')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     file_printer = logging.FileHandler('rmg_models_importer_log.txt')
     file_printer.setLevel(logging.INFO)
