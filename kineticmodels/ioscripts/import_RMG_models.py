@@ -145,7 +145,12 @@ class ThermoLibraryImporter(Importer):
         library = ThermoLibrary(label=self.name)
         library.SKIP_DUPLICATES = True
         # NOTE -- In order for this feature to run we have to be on "rmg-py/importer" branch, may require reinstall
-        library.load(filename, local_context=local_context)
+        try:
+            library.load(filename, local_context=local_context)
+        except Exception, e:
+            logger.error("Error reading {0}:".format(filename), exc_info=True)
+            logger.warning("Skipping over {0} -- Will continue without that model".format(filename))
+            return False
         self.library = library
         logger.info("Exiting the load_library method on ThermoLibraryImporter.")
 
@@ -153,8 +158,14 @@ class ThermoLibraryImporter(Importer):
         """
         Import the Species only, not their thermo
         """
-        logger.info("Starting the import_species method on ThermoLibraryImporter...")
-        library = self.library
+        if not self.library:
+            logger.warning("Exiting early due to NoneType Library")
+            return False
+        else:
+            library = self.library
+            logger.warning(
+                "Starting the import_species method on KineticsLibraryImporter with library {}".format(library.name))
+
         for entry in library.entries:
             thermo = library.entries[entry].data
             molecule = library.entries[entry].item
@@ -171,12 +182,20 @@ class ThermoLibraryImporter(Importer):
 
             if structure_created:
                 dj_structure.adjacencyList = molecule.toAdjacencyList()
-                save_model(dj_structure)
+                save_model(dj_structure, library_name=library.name)
             else:
-                assert dj_structure.adjacencyList == molecule.toAdjacencyList(), \
-                    "{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
-                                                                        speciesName, molecule.toAdjacencyList(), smiles)
-                assert dj_isomer == dj_structure.isomer  # might there be more than one? (no?)
+                try:
+                    assert dj_structure.adjacencyList == molecule.toAdjacencyList()
+                except AssertionError:
+                    logger.error("Assertion Error for the library {}".format(library.name))
+                    logger.error("{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
+                                                                    speciesName, molecule.toAdjacencyList(), smiles))
+                try:
+                    assert dj_isomer == dj_structure.isomer  # might there be more than one? (no?)
+                except AssertionError:
+                    logger.error("Assertion Error for the library {}".format(library.name))
+                    logger.error("{} not equal {}".format(dj_isomer.inchi, dj_structure.isomer.inchi))
+
 
             # Find a Species for the Structure (eg. from Prime) else make one
             trimmed_inchi = inchi.split('InChI=1S')[-1]
@@ -188,7 +207,7 @@ class ThermoLibraryImporter(Importer):
                                                                                               molecule.multiplicity))
                     dj_species.inchi = inchi
                     dj_species.formula = formula
-                    save_model(dj_species)
+                    save_model(dj_species, library_name=library.name)
                     logger.debug("{}".format(dj_species))
                 else:
                     logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles,
@@ -197,8 +216,10 @@ class ThermoLibraryImporter(Importer):
 
             except MultipleObjectsReturned:
                 possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
-                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} {}!".format(
-                    len(possible_species), smiles, molecule.multiplicity))
+                logger.warning("In Library {}:".format(library.name))
+                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} with "
+                               "multiplicity {}".format(
+                                len(possible_species), smiles, molecule.multiplicity))
                 logger.warning(possible_species)
                 dj_species = None  # FIXME -- how would we pick one?
 
@@ -209,7 +230,7 @@ class ThermoLibraryImporter(Importer):
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
                                                                                          kineticModel=self.dj_km)
                 dj_speciesName.name = speciesName
-                save_model(dj_speciesName)
+                save_model(dj_speciesName, library_name=library.name)
 
                 # Save the pk of the django Species instances to the Entry so we can lookup add the thermo later
                 library.entries[entry].dj_species_pk = dj_species.pk
@@ -221,8 +242,14 @@ class ThermoLibraryImporter(Importer):
         Import the loaded thermo library into the django database
         Unpacks the coefficients from the NASAPolynomials and stores them in a Thermo
         """
-        logger.info("Starting the import_data method on ThermoLibraryImporter...")
-        library = self.library
+        if not self.library:
+            logger.warning("Exiting early due to NoneType Library")
+            return False
+        else:
+            library = self.library
+            logger.warning(
+                "Starting the import_data method on ThermoLibraryImporter with library {}".format(library.name))
+
         for entry in library.entries:
             thermoEntry = library.entries[entry].data
             chemkinMolecule = library.entries[entry].item
@@ -252,9 +279,8 @@ class ThermoLibraryImporter(Importer):
                     logger.debug("Assigned value {1} to lowerTempBound{0}".format(nasaPolynomial[0],
                                                                                   nasaPolynomial[1].Tmin))
                 except Exception, e:
-                    logger.error("Error assigning the lower temperature bound to "
-                                 "Polynomial {1}:\n{0}\n".format(e,
-                                                                 nasaPolynomial[0]))
+                    logger.error("Library {2} has an Error assigning the lower temperature bound to "
+                                 "Polynomial {1}:\n{0}\n".format(e, nasaPolynomial[0], library.name))
                     raise e
 
                 # Assign upper Temp Bound for Polynomial and log success
@@ -265,9 +291,8 @@ class ThermoLibraryImporter(Importer):
                     logger.debug("Assigned value {1} to upperTempBound{0}".format(nasaPolynomial[0],
                                                                                   nasaPolynomial[1].Tmax))
                 except Exception, e:
-                    logger.error("Error assigning the upper temperature bound to "
-                                 "Polynomial {1}:\n{0}\n".format(e,
-                                                                 nasaPolynomial[0]))
+                    logger.error("Library {2} has an Error assigning the upper temperature bound to "
+                                 "Polynomial {1}:\n{0}\n".format(e, nasaPolynomial[0], library.name))
                     raise e
 
                 # Assign coefficients for Polynomial and log success
@@ -282,15 +307,16 @@ class ThermoLibraryImporter(Importer):
                                                                  coefficient[0],
                                                                  coefficient[1]))
                     except Exception, e:
-                        logger.error("Error assigning the value {3} to coefficient {2} of "
+                        logger.error("Library {4} has an Error assigning the value {3} to coefficient {2} of "
                                      "Polynomial {1}:\n{0}\n".format(e,
                                                                      nasaPolynomial[0],
                                                                      coefficient[0],
-                                                                     coefficient[1]))
+                                                                     coefficient[1],
+                                                                     library.name))
                         raise e
 
             # Save before adding M2M links
-            save_model(dj_thermo)
+            save_model(dj_thermo, library_name=library.name)
 
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
             try:
@@ -301,7 +327,7 @@ class ThermoLibraryImporter(Importer):
 
             # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
 
-            save_model(dj_thermo)
+            save_model(dj_thermo, library_name=library.name)
 
         logger.info("Exiting the import_data method on ThermoLibraryImporter...")
 
@@ -315,6 +341,7 @@ class KineticsLibraryImporter(Importer):
         """
         Load the kinetics library from the path and store it
         """
+        logger.info("Starting the load_library method on KineticsLibraryImporter...")
         fileName = self.path
         # Define local context to allow for loading of the library
         local_context = {
@@ -344,11 +371,20 @@ class KineticsLibraryImporter(Importer):
         library.convertDuplicatesToMulti()
         self.library = library
 
+        logger.info("Exiting the load_library method on KineticsLibraryImporter...")
+
     def import_data(self):
         """
         Import the loaded kinetics library into the django database
         """
-        library = self.library  # refers to one of the "reactions.py" files in the RMG-models repository
+        if not self.library:
+            logger.warning("Exiting early due to NoneType Library")
+            return False
+        else:
+            library = self.library  # refers to one of the "reactions.py" files in the RMG-models repository
+            logger.warning(
+                "Starting the import_data method on KineticsLibraryImporter with library {}".format(library.name))
+
         for entry in library.entries:  # refers to an "entry()" line in that file
             kinetics = library.entries[entry].data  # "data" refers to the "kinetics" attribute of an "entry"
             chemkinReaction = library.entries[entry].item
@@ -361,7 +397,7 @@ class KineticsLibraryImporter(Importer):
                     dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
 
                 elif type(kinetics) == Arrhenius:
-                    dj_kinetics_data = make_arrhenius_dj(kinetics)  # use function to make model instance
+                    dj_kinetics_data = make_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
                 elif type(kinetics) == ArrheniusEP:
                     raise NotImplementedError
@@ -369,21 +405,21 @@ class KineticsLibraryImporter(Importer):
                 elif type(kinetics) == MultiArrhenius:
                     dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
                     # No atomic data (numbers, strings, etc.,)
-                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
+                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                     for simple_arr in kinetics.arrhenius:
                         # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
                         # simple_arr is one of those Arrhenius objects
-                        dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr))
+                        dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
 
                 elif type(kinetics) == MultiPDepArrhenius:
                     dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
-                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
+                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                     for pdep_arr in kinetics.arrhenius:
                         # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
-                        dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr))
+                        dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr, library_name=library.name))
 
                 elif type(kinetics) == PDepArrhenius:
-                    make_pdep_arrhenius_dj(kinetics)  # use function to make model instance
+                    make_pdep_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
                 elif type(kinetics) == Chebyshev:
                     dj_kinetics_data = Chebyshev_dj()  # make the django model instance
@@ -392,58 +428,73 @@ class KineticsLibraryImporter(Importer):
 
                 elif type(kinetics) == ThirdBody:
                     dj_kinetics_data = ThirdBody_dj()  # make the django model instance
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
-                    save_model(dj_kinetics_data)
-                    make_efficiencies(dj_kinetics_data, kinetics)
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
+                    save_model(dj_kinetics_data, library_name=library.name)
+                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
 
                 elif type(kinetics) == Lindemann:
                     dj_kinetics_data = Lindemann_dj()  # make the django model instance
-                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh)
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
-                    save_model(dj_kinetics_data)
-                    make_efficiencies(dj_kinetics_data, kinetics)
+                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
+                    save_model(dj_kinetics_data, library_name=library.name)
+                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
 
                 elif type(kinetics) == Troe:
                     dj_kinetics_data = Troe_dj()  # make the django model instance
                     # Add atomic attributes
-                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh)
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow)
+                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
+                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
                     dj_kinetics_data.alpha = kinetics.alpha
                     dj_kinetics_data.t1 = kinetics.T1
                     dj_kinetics_data.t1 = kinetics.T2
                     dj_kinetics_data.t1 = kinetics.T3
-                    save_model(dj_kinetics_data)  # Have to save the model before you can ".add()" onto a ManyToMany
-                    make_efficiencies(dj_kinetics_data, kinetics)
+                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
+                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
                 else:
-                    logger.error("Cannot identify this type of Kinetics Data: \n" + kinetics.__str__())
+                    logger.error("Library {} Cannot identify this type of Kinetics Data: "
+                                 "{}".format(library.name, kinetics.__str__()))
                     raise ImportError
             except Exception, e:
-                logger.error("Error: {}".format(e))
-                raise e
+                logger.error("KineticsLibraryImporter.import_data, library {}: Error in initializing "
+                             "dj_kinetics_data{}".format(library.name, e))
+                logger.warning("Skipping this kinetics data instance...")
+                continue
 
             try:  # Assign the temp and pressure bounds
-                dj_kinetics_data.min_temp = kinetics.Tmin  # TODO -- Better try-catch
-                dj_kinetics_data.max_temp = kinetics.Tmax
-                dj_kinetics_data.min_pressure = kinetics.Pmin
-                dj_kinetics_data.max_pressure = kinetics.Pmax
+                dj_kinetics_data.min_temp = kinetics.Tmin
             except:  # most kinetics data don't have the Temp/Pressure bounds
+                pass # Hence all the try/excepts here
+            try:
+                dj_kinetics_data.max_temp = kinetics.Tmax
+            except:
                 pass
-            save_model(dj_kinetics_data)  # Save the Kinetics Data once its internal attributes are complete
+            try:
+                dj_kinetics_data.min_pressure = kinetics.Pmin
+            except:
+                pass
+            try:
+                dj_kinetics_data.max_pressure = kinetics.Pmax
+            except:
+                pass
+
+            # Save the Kinetics Data once its internal attributes are complete
+            save_model(dj_kinetics_data, library_name=library.name)
+
 
             # Make Kinetics object to link the Kinetics Data to the Kinetic Model
             dj_kinetics_object = Kinetics()
-            save_model(dj_kinetics_object)
+            save_model(dj_kinetics_object, library_name=library.name)
 
             # Establish one-to-one link between kinetics and kinetics data
             dj_kinetics_data.kinetics = dj_kinetics_object
-            save_model(dj_kinetics_data)
+            save_model(dj_kinetics_data, library_name=library.name)
 
             # Link the kinetics object to self.dj_km through kinetics comment
             dj_kinetics_comment = KineticsComment()
-            save_model(dj_kinetics_comment)
+            save_model(dj_kinetics_comment, library_name=library.name)
             dj_kinetics_comment.kinetics = dj_kinetics_object
             dj_kinetics_comment.kineticModel = self.dj_km
-            save_model(dj_kinetics_comment)
+            save_model(dj_kinetics_comment, library_name=library.name)
 
             # Then, make a reaction object and tie it to a Kinetics Object
             dj_reaction = Reaction()
@@ -452,71 +503,71 @@ class KineticsLibraryImporter(Importer):
             for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
                 stoichiometries = defaultdict(float)
                 for species in reagent_list:
-                    name = species.name  # (or .label??)
+                    name = species.name  # FIXME -- What do I put here? Also should the line below be get_or_create?
                     dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
                     dj_species = dj_speciesname.species
                     stoichiometries[dj_species] += direction_coefficient
 
                 for species, coeff in stoichiometries:
                     stoich = Stoichiometry()
-                    save_model(stoich)
+                    save_model(stoich, library_name=library.name)
                     stoich.reaction = dj_reaction
                     stoich.species = species
                     stoich.coefficient = coeff
-                    save_model(stoich)
+                    save_model(stoich, library_name=library.name)
 
-        save_model(self.dj_km)
+        save_model(self.dj_km, library_name=library.name)
+
+        logger.info("Exiting the import_data method on KineticsLibraryImporter...")
 
 """
 HELPER FUNCTIONS
 """
 
-FAILED_WHEN_SAVING = []  # This is a list where we can store a record of all the imports that fail when we save them
 
 # Saves any Django model and logs it appropriately
-# Models.model -> Models.model
-def save_model(mod):
-    global FAILED_WHEN_SAVING
+# Models.model (String) -> Models.model
+def save_model(mod, library_name=None):
     try:
         mod.save()
-        logger.info("Created/updated the following {1} Instance:\n{0}\n".format(mod, type(mod)))
+        logger.info("Created/updated the following {1} Instance: {0}\n".format(mod, type(mod)))
     except Exception, e:
-        error_msg = "Error saving the {1} model of type {2}: {0}".format(e, mod, type(mod))
+        error_msg = "Error saving the {1} model of type {2} from Library {0}".format(library_name, mod, type(mod))
         logger.error(error_msg)
-        FAILED_WHEN_SAVING += error_msg
+        logger.exception(e)
     return mod
 
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
-def make_arrhenius_dj(k):
+def make_arrhenius_dj(k, library_name=None):
     a = Arrhenius_dj()
     a.AValue = k.A[0]
     a.NValue = k.n
     a.EValue = k.Ea[0]
-    save_model(a)
+    save_model(a, library_name=library_name)
     return a
 
 
 # Converts a dictionary entry PDepArrhenius to a Django Model Instance
 # PDepArrhenius (RMG) -> PDepArrhenius_dj (Django)
-def make_pdep_arrhenius_dj(k):
+def make_pdep_arrhenius_dj(k, library_name=None):
     dj_k = PDepArrhenius_dj()  # make the django model instance
     # No atomic data (numbers, strings, etc.,)
-    save_model(dj_k)
+    save_model(dj_k, library_name=library_name)
     for index in range(len(k.pressures)):
         # We use the index because the two lists for Pressure and Arrhenius are ordered together
         dj_pressure = Pressure()
         dj_pressure.pdep_arrhenius = dj_k
         dj_pressure.pressure = k.pressures[index]
-        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index])
-        save_model(dj_pressure)
-    return save_model(dj_k)
+        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index], library_name=library.name)
+        save_model(dj_pressure, library_name=library_name)
+    return save_model(dj_k, library_name=library_name)
 
 
 # Converts the efficiency dictionary into a through relationship for the model
 # BaseKineticsData (Django), Kinetics (RMG) ->
-def make_efficiencies(dj_k, k):
+def make_efficiencies(dj_k, k, library_name=None):
     for species_string, efficiency_number in k.efficiencies:
         # make the django model instance for efficiency
         dj_efficiency = Efficiency()
@@ -527,8 +578,8 @@ def make_efficiencies(dj_k, k):
         # Add foreign key to the species
         dj_efficiency.species = dj_species
         dj_efficiency.efficiency = efficiency_number
-        save_model(dj_efficiency)
-    save_model(dj_k)
+        save_model(dj_efficiency, library_name=library_name)
+    save_model(dj_k, library_name=library_name)
 
 
 def findLibraryFiles(path):
@@ -589,7 +640,7 @@ def main(args):
         logger.info("Importing kinetics library from {}".format(filepath))
         importer = KineticsLibraryImporter(filepath)
         importer.load_library()
-        importer.import_data()  # TODO -- Actually write
+        importer.import_data()
 
     logger.info('Exited kinetics imports!')
 
@@ -597,21 +648,22 @@ def main(args):
 if __name__ == "__main__":
     # Configure Logging for the Import
     logger = logging.getLogger('THE_LOG')
+    logger.propagate = False
     logger.setLevel(logging.INFO)
 
-    file_printer = logging.FileHandler('rmg_models_importer_log.txt')
-    file_printer.setLevel(logging.INFO)
+    file_printer = logging.FileHandler('rmg_models_importer_errors.txt')
+    file_printer.setLevel(logging.WARNING)
     console_printer = logging.StreamHandler()
-    console_printer.setLevel(logging.DEBUG)
+    console_printer.setLevel(logging.INFO)
 
-    formatter = logging.Formatter("%(levelname)s: %(message)s")
+    formatter = logging.Formatter("%(levelname)s @ %(asctime)s: %(message)s \n")
     file_printer.setFormatter(formatter)
     console_printer.setFormatter(formatter)
 
     logger.addHandler(file_printer)
     logger.addHandler(console_printer)
 
-    logger.info("STARTING LOGGING FOR RMG IMPORTER RUN ON {}".format(datetime.datetime.now()))
+    logger.warning("STARTING LOGGING FOR RMG IMPORTER RUN ON {}".format(datetime.datetime.now()))
     logger.debug("Parsing the Command Line Arguments...")
     parser = argparse.ArgumentParser(
         description='Import RMG models into Django.')
