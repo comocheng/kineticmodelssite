@@ -43,3 +43,16 @@ rmgweb/media/rmg/tools/*
 
 # WSGI
 apache/django.wsgi
+.idea/dictionaries/
+.idea/kineticmodelssite.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml
+alpha_testing.log
+
+kineticmodels/ioscripts/errors.txt
+kineticmodels/ioscripts/imported_kinetic_modeling_metadata.xlsx
+kineticmodels/ioscripts/rmg_models_importer_log.txt
+rmg_models_importer_errors.txt
+
