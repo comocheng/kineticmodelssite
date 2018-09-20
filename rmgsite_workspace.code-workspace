@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "/home/sync/RMG-website"
+        },
+        {
+            "path": "/home/sync/RMG-Py"
+        }
+    ],
+    "settings": {
+        "python.pythonPath": "/home/sync/.conda/envs/rmgsite_env/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "files.exclude": {
+            "**/*.pyc": true,
+        },
+        "explorer.autoReveal": false
+    }
+}
