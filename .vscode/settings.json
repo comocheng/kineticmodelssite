@@ -1,0 +1,6 @@
+{
+  "python.pythonPath": "/home/sync/anaconda3/envs/rmg_env/bin/python",
+  "python.linting.pylintEnabled": true,
+  "python.linting.flake8Enabled": false,
+  "python.linting.enabled": true
+}

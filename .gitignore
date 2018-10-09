@@ -39,10 +39,8 @@ rmgweb/media/rmg/tools/*
 /rmgweb/nbproject/project.properties
 /rmgweb/nbproject/project.xml
 
-# Eclipse project files
-.project
-.pydevproject
-.settings/*
+# workspace files
+rmgsite/rmgsite_workspace.code-workspace
 
 # WSGI
 apache/django.wsgi
