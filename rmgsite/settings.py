@@ -147,3 +147,10 @@ STATICFILES_DIRS = [
 ]
 
 MEDIA_ROOT = os.path.join(PROJECT_PATH, 'media')
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'mydatabase',
+    }
+}

@@ -8,6 +8,9 @@
         },
         {
             "path": "/home/sync/RMG-Py"
+        },
+        {
+            "path": "/home/sync/RMG-models"
         }
     ],
     "settings": {

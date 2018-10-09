@@ -36,10 +36,8 @@ rmgweb/media/rmg/tools/*
 /rmgweb/nbproject/project.properties
 /rmgweb/nbproject/project.xml
 
-# Eclipse project files
-.project
-.pydevproject
-.settings/*
+# workspace files
+rmgsite/rmgsite_workspace.code-workspace
 
 # WSGI
 apache/django.wsgi
@@ -55,4 +53,3 @@ kineticmodels/ioscripts/errors.txt
 kineticmodels/ioscripts/imported_kinetic_modeling_metadata.xlsx
 kineticmodels/ioscripts/rmg_models_importer_log.txt
 rmg_models_importer_errors.txt
-
