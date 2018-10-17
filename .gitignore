@@ -23,9 +23,6 @@ rmgweb/media/jsMath/*
 # Highcharts
 rmgweb/media/Highcharts/*
 
-# Database files
-database/*
-
 # Uploaded MEASURE files
 rmgweb/media/pdep/networks/*
 

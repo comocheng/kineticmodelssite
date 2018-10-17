@@ -1,0 +1,33 @@
+
+<table class="reference">
+   {% if reference %}
+    <tr>
+        <td class="label">Reference:</td>
+        <td class="reference">{{ reference }}</td>
+    </tr>
+{% endif %}
+{% if reference.doi %}
+    <tr>
+        <td class="label">Reference&nbsp;doi:</td>
+        <td><a href="http://dx.doi.org/{{ reference.doi }}">{{ reference.doi }}</a></td>
+    </tr>
+{% endif %}
+{% if reference.url %}
+    <tr>
+        <td class="label">Reference&nbsp;link:</td>
+        <td><a href="{{ reference.url }}">{{ reference.url }}</a></td>
+    </tr>
+{% endif %}
+    <tr>
+        <td class="label">Reference&nbsp;type:</td>
+        <td>{{ entry.referenceType|title }}</td>
+    </tr>
+    <tr>
+        <td class="label">Short&nbsp;description:</td>
+        <td>{{ entry.shortDesc }}</td>
+    </tr>
+    <tr>
+        <td class="label">Long&nbsp;description:</td>
+        <td style="white-space: pre-wrap;">{{ entry.longDesc }}</td>
+    </tr>
+</table>

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+{% load gravatar %}
+
+
+
+{% block title %}Search Kinetics Database{% endblock %}
+
+{% block extrahead %}
+<script type="text/javascript">
+// the function used to resolve the identifier into an adjacency list
+function resolve(fieldName){
+   var spField = $('#id_'+fieldName);
+   var identifier = $('#id_'+fieldName+'_identifier').val();
+   var url = '/database/adjacencylist/' + escape(identifier);
+   spField.val("Loading...");
+   var jqxhr = $.get(url,function(structure) {
+                    spField.val(structure);
+                    spField.change();
+                })
+                .fail(function(obj, status, error) {
+                    spField.val(error+'\n'+obj.responseText.split('\n')[0]);
+                });
+};
+// convert an adjancency list into an image url
+function adjlist2img(s) {
+   adjlist = encodeURI(s);
+   return "{% url 'database.views.drawMolecule' adjlist='ADJLIST' %}".replace('ADJLIST',adjlist);
+}
+
+$(document).ready(function() {
+// prevent "enter" keypress in the form fields from submitting the form,
+// but instead make them select the submit button.
+   $(".identifier").bind("keypress", function(e) {
+    var c = e.which ? e.which : e.keyCode;
+    if (c == 13) {
+       if ($("input:submit").is(":focus")) { return true;}
+       else {
+          $("input:submit:first").focus();
+          return false;
+       };
+    }
+   });
+// add images to the right of all the text areas
+   $("textarea").closest('tr').append("<img src='{% static 'img/moleculedraw-logo-small.png' %}'>");
+// add onChange handlers to all the text areas to modify the image sources
+   $("textarea").change( function() {
+      var src = adjlist2img( $(this).val() );
+      $(this).closest('tr').find('img').attr('src',src);
+    });
+// if you got to the page with pre-filled fields (eg. by hitting the back or forward button) the images will be stale
+   $("textarea").each(function(){
+      if ($(this).val()) { $(this).change(); }
+      })
+// end of $(document).ready(function() {
+})
+</script>
+
+{% endblock %}
+
+{% block navbar_items %}
+<li><a href="{% url 'database.views.index' %}">Database</a></li>
+<li><a href="{% url 'database.views.kinetics' %}">Kinetics</a></li>
+<li><a href="{% url 'database.views.kineticsSearch' %}">Search</a></li>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_title %}Search Kinetics Database{% endblock %}
+
+{% block page_body %}
+
+<p>You can search either by reactants only or by both reactants and products.</p>
+<p>Use the identifier fields to quickly fill the adjacency list boxes; they accept SMILES, InChI, species name
+ <a href="http://cactus.nci.nih.gov/chemical/structure/documentation" title="Chemical identifier resolver documentation.">etc.</a></p>
+
+<form action="" method="POST">{% csrf_token %}
+<table>
+{{ form.as_table }}
+<tr>
+<th></th><td><input type="submit" value="Search" name="submit"></td></tr>
+</table>
+</form>
+{% endblock %}

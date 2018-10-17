@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+
+
+{% block title %}RMG: RMG Tools{% endblock %}
+
+{% block extrahead %}{% endblock %}
+
+{% block navbar_items %}
+<li><a href="{% url 'tools' %}">RMG Tools</a></li>
+{% endblock %}
+
+{% block sidebar_items %}
+{% endblock %}
+
+{% block page_title %}{% endblock %}
+
+{% block page_body %}
+
+
+    <ol>
+        <li><a href ="{% url 'convert-chemkin' %}">Visualize Chemkin File</a>: visualize a model by supplying its chemkin file
+            and RMG-generated species dictionary.<P>
+        <li><a href ="{% url 'compare-models' %}">Model Comparison</a>: compare two RMG-generated models by supplying
+            their individual chemkin files and species dictionaries.<P>
+        <li><a href ="{% url 'convert-adjlists' %}">Convert Adjacency Lists</a>: convert adjacency lists in a text file to old-style adjacency lists
+        which are compatible with RMG-Java.<P>
+        <li><a href ="{% url 'merge-models' %}">Merge Models</a>: merge two RMG-generated models by supplying
+            their individual chemkin files and species dictionaries.<P>
+        <li><a href ="{% url 'generate-flux' %}">Generate Flux Diagram</a>: generate a flux diagram video by supplying a RMG input file and
+            completed mechanism, or with a customized set of concentration profiles from a Chemkin job.<P>
+		<li><a href ="{% url 'run-populate-reactions' %}">PopulateReactions</a>: generate all possible reactions from a set of initial species.<P>
+		<li><a href="{% url 'plot-kinetics' %}">Plot Kinetics</a>: plot forward and reverse kinetics by supplying a list of reactions in chemkin format along with a RMG dictionary.<P>
+		<li><a href="{% url 'java-kinetics-library' %}">Create RMG-Java Kinetics Library</a>: create an RMG-Java kinetics library for use as a seed-mechanism or reaction library by supplying a chemkin file along with a RMG dictionary.<P>
+		<li><a href="{% url 'evaluate-nasa' %}">Evaluate NASA Polynomial</a>: View enthalpy, entropy, and heat capacity information in human readable format for a CHEMKIN format NASA polynomial.<P>
+		<li><a href="{% url 'group-draw' %}">Draw Functional Group</a>: Draw an RMG group definition from its Adjacency List.<P>
+					</ol>
+	
+{% endblock %}
