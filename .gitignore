@@ -26,9 +26,6 @@ static/*
 # Highcharts
 #rmgweb/static/js/highcharts.js
 
-# Database files
-database/*
-
 # Uploaded MEASURE files
 rmgweb/media/pdep/networks/*
 
