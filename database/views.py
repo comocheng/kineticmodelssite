@@ -829,8 +829,8 @@ def thermo_data(request, species):
     # href -> thermoEntry reverse
     # nasa_string -> repr(to_rmg())
 
-    species_names = SpeciesName.objects.get(species=species)
-    thermo = [t.to_rmg() for t in Thermo.objects.get(species=species)]
+    species_names = SpeciesName.objects.filter(species=species)
+    thermo = [t.to_rmg() for t in Thermo.objects.filter(species=species)]
     sources = [species_name.kineticModel.source.sourceTitle for species_name in species_names]
     hrefs = [None] * len(thermo)
     nasa_strings = [repr(t.to_rmg()) for t in thermo]
@@ -843,6 +843,9 @@ def thermo_data(request, species):
                                                 'structures': structures,
                                                 'plot_width': 500,
                                                 'plot_height': 400 + 15 * len(thermo_data_list)})
+
+def thermo_entry(request):
+    pass
 
 ################################################################################
 
@@ -2577,25 +2580,35 @@ def moleculeSearch(request):
                                'form': form,
                                'oldAdjlist': oldAdjlist})
 
-def inchi_search(request):
+def molecule_search(request):
     """
     Molecule Search by InChi
     """
-    form = InChiSearchForm()
+    form = NewMoleculeSearchForm()
     species = None
 
     if request.method == 'POST':
-        posted = InChiSearchForm(request.POST, error_class=DivErrorList)
+        posted = NewMoleculeSearchForm(request.POST, error_class=DivErrorList)
         if posted.is_valid():
-            inchi = posted.cleaned_data['inchi']
-            species = models.Species.objects.get(inchi=inchi)
+            query = posted.cleaned_data['query']
+            species = find_species()
 
     return render(request, 'inchi_search.html', context={'form': form, 'species': species})
 
-def general_data(request):
-    """
-    General information view
-    """
+def find_species(query):
+    try:
+        # try query as Species name
+        SpeciesName.objects.get(name=query).species
+        # try query as adjlist
+        Species.objects.filter(isomer__structure__adjacencyList=query)
+        # try query as SMILES
+        Species.objects.filter(isomer__structure__smiles=query)
+        # try query as InChI
+        Species.objects.get(inchi=query)
+        #try query as Isomer InChI
+        Species.objects.get(isomer__inchi=query)
+    except SpeciesName.DoesNotExist, Structure.DoesNotExist, Structure.DoesNotExist, Species.DoesNotExist, Isomer.DoesNotExist:
+        pass
 
 def solvationSearch(request):
     """

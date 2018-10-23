@@ -152,11 +152,11 @@ class KineticsSearchForm(forms.Form):
             raise forms.ValidationError('Invalid adjacency list.')
         return str(self.cleaned_data['product2'])
 
-class InChiSearchForm(forms.Form):
+class NewMoleculeSearchForm(forms.Form):
     """
-    Form for InChi search
+    Form for molecule_search results
     """
-    inchi = forms.CharField(label="InChi", widget=forms.TextInput(attrs={'style': 'width:100%;'}), required=True)
+    query = forms.CharField(label="Search Query", widget=forms.TextInput(attrs={'style': 'width:100%;'}), required=True)
 
 class MoleculeSearchForm(forms.Form):
     """
