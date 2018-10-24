@@ -5,7 +5,7 @@ from . import views
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
-    url(r'^molecule_search$', views.inchi_search, name='inchi_search'),
+    url(r'^molecule_search$', views.molecule_search, name='molecule_search'),
     url(r'^kinetics_search$', views.kineticsSearch, name='kinetics_search'),
     url(r'^resources$', views.resources, name='resources'),
     # url(r'^tools$', views.tools, name='tools'),
@@ -15,7 +15,7 @@ urlpatterns = [
 
     # Thermodynamics database
     url(r'^thermo/$', views.thermo),
-    url(r'^thermo/search/$', views.inchi_search),
+    url(r'^thermo/search/$', views.molecule_search),
     url(r'^thermo/molecule/(?P<adjlist>[\S\s]+)$', views.thermoData),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.thermoEntry),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<adjlist>[\S\s]+)/new$', views.thermoEntryNew),
@@ -25,7 +25,7 @@ urlpatterns = [
 
     # Transport database
     url(r'^transport/$', views.transport),
-    url(r'^transport/search/$', views.inchi_search),
+    url(r'^transport/search/$', views.molecule_search),
     url(r'^transport/molecule/(?P<adjlist>[\S\s]+)$', views.transportData),
     url(r'^transport/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.transportEntry),
     url(r'^transport/(?P<section>\w+)/(?P<subsection>.+)/$', views.transport),

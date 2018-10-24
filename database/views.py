@@ -79,7 +79,7 @@ from .tools import database, generateReactions, generateSpeciesThermo, reactionH
 
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from models import *
-from forms import DivErrorList, InChiSearchForm
+from forms import DivErrorList, NewMoleculeSearchForm
 
 ################################################################################
 
@@ -2582,33 +2582,50 @@ def moleculeSearch(request):
 
 def molecule_search(request):
     """
-    Molecule Search by InChi
+    Molecule Search with Models
     """
     form = NewMoleculeSearchForm()
     species = None
 
     if request.method == 'POST':
         posted = NewMoleculeSearchForm(request.POST, error_class=DivErrorList)
+        initial = request.POST.copy()
         if posted.is_valid():
             query = posted.cleaned_data['query']
-            species = find_species()
+            species = find_species(query)
+            print species
+            form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
+        if "reset" in request.POST:
+            form = NewMoleculeSearchForm()
 
-    return render(request, 'inchi_search.html', context={'form': form, 'species': species})
+    return render(request, 'molecule_search.html', context={'form': form, 'species': species})
 
 def find_species(query):
-    try:
+    attempts = [
         # try query as Species name
-        SpeciesName.objects.get(name=query).species
+        # Test
+        lambda q: Species.objects.filter(speciesname__name=q),
         # try query as adjlist
-        Species.objects.filter(isomer__structure__adjacencyList=query)
+        # adjtest
+        lambda q: Species.objects.filter(isomer__structure__adjacencyList=q),
         # try query as SMILES
-        Species.objects.filter(isomer__structure__smiles=query)
+        # smilestest
+        lambda q: Species.objects.filter(isomer__structure__smiles=q),
         # try query as InChI
-        Species.objects.get(inchi=query)
+        # speciesinchitest
+        lambda q: Species.objects.filter(inchi=q),
         #try query as Isomer InChI
-        Species.objects.get(isomer__inchi=query)
-    except SpeciesName.DoesNotExist, Structure.DoesNotExist, Structure.DoesNotExist, Species.DoesNotExist, Isomer.DoesNotExist:
-        pass
+        # isomerinchitest
+        lambda q: Species.objects.filter(isomer__inchi=q)
+    ]
+
+    for attempt in attempts:
+        try:
+            return attempt(query)
+        except Exception:
+            continue
+    else:
+        return None
 
 def solvationSearch(request):
     """
