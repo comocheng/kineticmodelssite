@@ -44,14 +44,14 @@
 {% endblock %}
 
 {% block navbar_items %}
-<li><a href="{% url 'database.views.inchi_search' %}">Molecule Search</a></li>
+<li><a href="{% url 'database.views.molecule_search' %}">Molecule Search</a></li>
 {% endblock %}
 
-{% block page_title %}InChI Search{% endblock %}
+{% block page_title %}Molecule Search{% endblock %}
 
 {% block page_body %}
 
-<p>InChi Search Form</p>
+<p>Molecule Search Form</p>
 
 <form method="post" id="species_form">
     <table>
@@ -59,7 +59,7 @@
         <tr>
            <th>{% csrf_token %}</th>
            <td>
-              <input type="submit" value="Draw Molecule" name="draw" />
+              <input type="submit" value="Search" name="draw" />
               <input type="submit" value="Search Thermochemistry" name="thermo" />
               <input type="submit" value="Search Transport Properties" name="transport" />
               <input type="submit" value="Reset Form" name="reset" />
@@ -69,52 +69,27 @@
 </form>
 
 {% if species %}
+{% for s in species %}
 <table>
     <tr class="result">
         <th>InChI:</th>
-        <td>{{ species.inchi }}</td>
+        <td>{{ s.inchi }}</td>
     </tr>
     <tr class ="result">
         <th>Molecular Formula:</th>
-        <td>{{ species.formula }}</td>
+        <td>{{ s.formula }}</td>
     </tr>
     <tr class ="result">
         <th>SPrimeID:</th>
-        <td>{{ species.sPrimeID }}</td>
+        <td>{{ s.sPrimeID }}</td>
     </tr>
     <tr class ="result">
         <th>CAS Number:</th>
-        <td>{{ species.cas }}</td>
-    </tr>
-<!-- <tr class="result">
-<th>Molecule Structure:</th>
-<td style="padding: 40px;">structure_markup|safe</td>
-</tr> -->
-<!-- <tr class ="result">
-    <th>Molecular Weight:</th>
-    <td>molecule.getMolecularWeight|renderMW</td>
-</tr> -->
-<!-- <tr class="result">
-<th>SMILES:</th>
-     if smiles
-        <td> smiles</td>
-     else
-        <td>Unable to generate SMILES</td>
-     endif
-</tr> -->
-<!-- <tr class="result">
-<th valign="top">Adjacency List:</th>
-<td> adjlist|renderAdjlist</td>
-</tr>
-<tr class="result">
-<th valign="top">Old Adjacency List:</th>
-<td> oldAdjlist|renderAdjlist</td>
-</tr> -->
-<!-- <tr class="result" style="white-space: pre-wrap;">
-<th style="vertical-align: top;">Names:</th>
-<td id="species_names"></td>
-</tr> -->
-</table>
+        <td>{{ s.cas }}</td>
+    </table>
+{% endfor %}
+{% else %}
+<h1>Species Not Found!</h1>
 {% endif %}
 
 {% endblock %}
