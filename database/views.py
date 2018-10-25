@@ -2593,7 +2593,6 @@ def molecule_search(request):
         if posted.is_valid():
             query = posted.cleaned_data['query']
             species = find_species(query)
-            print species
             form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
         if "reset" in request.POST:
             form = NewMoleculeSearchForm()
@@ -2603,26 +2602,35 @@ def molecule_search(request):
 def find_species(query):
     attempts = [
         # try query as Species name
-        # Test
+        # test identifier: 'Test'
         lambda q: Species.objects.filter(speciesname__name=q),
+        # try query as sPrimeID
+        # test identifier: 'idtest'
+        lambda q: Species.objects.filter(sPrimeID=q),
+        # try query as formula
+        # test identifier: 'formulatest'
+        lambda q: Species.objects.filter(formula__iexact=q),
+        # try query as CAS Number
+        # test identifier: 1234
+        lambda q: Species.objects.filter(cas=q),
         # try query as adjlist
-        # adjtest
+        # test identifier: 'adjtest'
         lambda q: Species.objects.filter(isomer__structure__adjacencyList=q),
         # try query as SMILES
-        # smilestest
+        # test identifier: 'smilestest'
         lambda q: Species.objects.filter(isomer__structure__smiles=q),
         # try query as InChI
-        # speciesinchitest
+        # test identifier: 'speciesinchitest'
         lambda q: Species.objects.filter(inchi=q),
         #try query as Isomer InChI
-        # isomerinchitest
+        # test identifier: 'isomerinchitest'
         lambda q: Species.objects.filter(isomer__inchi=q)
     ]
 
-    for attempt in attempts:
-        try:
+    for i, attempt in enumerate(attempts):
+        if attempt(query):
             return attempt(query)
-        except Exception:
+        else:
             continue
     else:
         return None
