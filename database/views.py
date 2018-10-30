@@ -2586,6 +2586,11 @@ def molecule_search(request):
     """
     form = NewMoleculeSearchForm()
     species = None
+    nci_species = None
+    nci_molecule = None
+    nci_smiles = None
+    nci_inchi = None
+    nci_adjlist = None
 
     if request.method == 'POST':
         posted = NewMoleculeSearchForm(request.POST, error_class=DivErrorList)
@@ -2593,11 +2598,31 @@ def molecule_search(request):
         if posted.is_valid():
             query = posted.cleaned_data['query']
             species = find_species(query)
+            nci_adjlist, nci_molecule = nci_resolve(query)
+            nci_species = find_species(nci_adjlist)
+            if nci_molecule:
+                try:
+                    nci_inchi = nci_molecule.toInChI()
+                except Exception:
+                    pass
+                try:
+                    nci_smiles = nci_molecule.toSMILES()
+                except Exception:
+                    pass
+
             form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
         if "reset" in request.POST:
             form = NewMoleculeSearchForm()
 
-    return render(request, 'molecule_search.html', context={'form': form, 'species': species})
+    return render(request,
+                  'molecule_search.html',
+                  context={'form': form,
+                           'species': species,
+                           'nci_species': nci_species,
+                           'nci_molecule': nci_molecule,
+                           'nci_inchi': nci_inchi,
+                           'nci_smiles': nci_smiles,
+                           'nci_adjlist': nci_adjlist})
 
 def find_species(query):
     attempts = [
@@ -2627,13 +2652,71 @@ def find_species(query):
         lambda q: Species.objects.filter(isomer__inchi=q)
     ]
 
-    for i, attempt in enumerate(attempts):
+    for attempt in attempts:
         if attempt(query):
             return attempt(query)
         else:
             continue
     else:
         return None
+
+
+def nci_resolve(query):
+    """
+    Returns an adjacency list of the species corresponding to `identifier`.
+    
+    `identifier` should be something recognized by NCI resolver, eg.
+    SMILES, InChI, CACTVS, chemical name, etc.
+    
+    The NCI resolver has some bugs regarding reading SMILES of radicals.
+    E.g. it thinks CC[CH] is CCC, so we first try to use the identifier
+    directly as a SMILES string, and only pass it through the resolver
+    if that does not work. 
+    
+    For specific problematic cases, the NCI resolver is bypassed and the SMILES
+    is returned from a dictionary of values. For O2, the resolver returns the singlet
+    form which is inert in RMG. For oxygen, the resolver returns 'O' as the SMILES, which
+    is the SMILES for water.
+    """
+    from rmgpy.molecule import AtomTypeError
+    from ssl import SSLError
+
+    if query.strip() == '':
+        print "Empty Query"
+        return None, None
+    from rmgpy.molecule.molecule import Molecule
+    adjlist = None
+    smiles = None
+    molecule = None
+    try:
+        # try using the string as a SMILES directly
+        molecule = Molecule().fromSMILES(str(query))
+    except AtomTypeError:
+        pass
+    except KeyError:
+        pass
+    except (IOError, ValueError):
+        known_names = {'O2': '[O][O]',
+                       'oxygen': '[O][O]'}
+        key = str(query)
+        if key in known_names:
+            smiles = known_names[key]
+        else:
+            # try converting it to a SMILES using the NCI chemical resolver
+            url = "https://cactus.nci.nih.gov/chemical/structure/{0}/smiles".format(
+                urllib.quote(query))
+            try:
+                f = urllib2.urlopen(url, timeout=5)
+                smiles = f.read()
+            except Exception:
+                print "SMILES not found"
+    try:
+        molecule = Molecule().fromSMILES(smiles)
+        adjlist = molecule.toAdjacencyList(removeH=False)
+    except Exception:
+        print "Failed to find RMG Molecule"
+
+    return adjlist, molecule
 
 def solvationSearch(request):
     """
