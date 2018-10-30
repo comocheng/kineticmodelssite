@@ -86,10 +86,60 @@
     <tr class ="result">
         <th>CAS Number:</th>
         <td>{{ s.cas }}</td>
-    </table>
+</table>
 {% endfor %}
-<h2>NCI Response:</h2>
-<!-- todo -->
+<br/>
+<h2>NCI Results</h2>
+{% if nci_species %}
+<table>
+    <tr class="result">
+        <th>InChI:</th>
+        <td>{{ nci_species.inchi }}</td>
+    </tr>
+    <tr class ="result">
+        <th>Molecular Formula:</th>
+        <td>{{ nci_species.formula }}</td>
+    </tr>
+    <tr class ="result">
+        <th>SPrimeID:</th>
+        <td>{{ nci_species.sPrimeID }}</td>
+    </tr>
+    <tr class ="result">
+        <th>CAS Number:</th>
+        <td>{{ nci_species.cas }}</td>
+</table>
+{% endif %}
+{% if nci_molecule %}
+<table>
+    <tr class="result">
+        <th>InChI:</th>
+        {% if inchi %}
+        <td>{{ inchi }}</td>
+        {% else %}
+        <td>Unable to generate InChI</td>
+        {% endif %}
+    </tr>
+    <tr class="result">
+    <th>SMILES:</th>
+        {% if nci_smiles %}
+        <td>{{ nci_smiles }}</td>
+        {% else %}
+        <td>Unable to generate SMILES</td>
+        {% endif %}
+    </tr>
+    <th>Adjacency List:</th>
+    {% if nci_adjlist %}
+    <td>{{ nci_adjlist }}</td>
+    {% else %}
+    <td>Unable to generate Adjacency List</td>
+    {% endif %}
+    </tr>
+    <tr class="result">
+        <th>Molecular Formula:</th>
+        <td>{{ nci_molecule.getFormula|renderMF }}</td>
+    </tr>
+</table>
+{% endif %}
 {% else %}
 <h2>Species Not Found!</h2>
 {% endif %}
