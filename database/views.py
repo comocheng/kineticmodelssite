@@ -2595,11 +2595,19 @@ def molecule_search(request):
     if request.method == 'POST':
         posted = NewMoleculeSearchForm(request.POST, error_class=DivErrorList)
         initial = request.POST.copy()
+
         if posted.is_valid():
+            form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
             query = posted.cleaned_data['query']
             species = find_species(query)
+            if species: 
+                species = [(s,
+                            Structure.objects.filter(isomer__species=s).values_list('adjacencyList', flat=True),
+                            Isomer.objects.filter(species=s).values_list('inchi', flat=True)) 
+                           for s in species]
             nci_adjlist, nci_molecule = nci_resolve(query)
             nci_species = find_species(nci_adjlist)
+            print "nci_adjlist: {0} nci_species: {1}".format(nci_adjlist, nci_species)
             if nci_molecule:
                 try:
                     nci_inchi = nci_molecule.toInChI()
@@ -2610,7 +2618,6 @@ def molecule_search(request):
                 except Exception:
                     pass
 
-            form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
         if "reset" in request.POST:
             form = NewMoleculeSearchForm()
 
@@ -2628,7 +2635,7 @@ def find_species(query):
     attempts = [
         # try query as Species name
         # test identifier: 'Test'
-        lambda q: Species.objects.filter(speciesname__name=q),
+        lambda q: Species.objects.filter(speciesname__name__iexact=q),
         # try query as sPrimeID
         # test identifier: 'idtest'
         lambda q: Species.objects.filter(sPrimeID=q),
@@ -2653,7 +2660,7 @@ def find_species(query):
     ]
 
     for attempt in attempts:
-        if attempt(query):
+        if query and attempt(query):
             return attempt(query)
         else:
             continue

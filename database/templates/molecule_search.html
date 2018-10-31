@@ -67,9 +67,9 @@
         </tr>
     </table>
 </form>
-
+{% if species or nci_species or nci_molecule %}
 {% if species %}
-{% for s in species %}
+{% for s, adjlists, inchis in species %}
 <table>
     <tr class="result">
         <th>InChI:</th>
@@ -86,10 +86,26 @@
     <tr class ="result">
         <th>CAS Number:</th>
         <td>{{ s.cas }}</td>
+    </tr>
+    <tr class ="result">
+        <th>Isomer InChIs:</th>
+        {% for inchi in inchis %}
+        <td>{{ inchi }}</td>
+        {% endfor %}
+    </tr>
+    <tr class ="result">
+        <th>Resonance Structure Adjacency Lists:</th>
+        {% for adjlist in adjlists %}
+        <td>{{ adjlist }}</td>
+        {% endfor %}
+    </tr>
 </table>
-{% endfor %}
 <br/>
+{% endfor %}
+{% endif %}
+{% if nci_species or nci_molecule %}
 <h2>NCI Results</h2>
+{% endif %}
 {% if nci_species %}
 <table>
     <tr class="result">
@@ -107,32 +123,21 @@
     <tr class ="result">
         <th>CAS Number:</th>
         <td>{{ nci_species.cas }}</td>
+    </tr>
 </table>
 {% endif %}
 {% if nci_molecule %}
 <table>
     <tr class="result">
         <th>InChI:</th>
-        {% if inchi %}
-        <td>{{ inchi }}</td>
-        {% else %}
-        <td>Unable to generate InChI</td>
-        {% endif %}
+        <td>{{ nci_inchi }}</td>
     </tr>
     <tr class="result">
-    <th>SMILES:</th>
-        {% if nci_smiles %}
+        <th>SMILES:</th>
         <td>{{ nci_smiles }}</td>
-        {% else %}
-        <td>Unable to generate SMILES</td>
-        {% endif %}
     </tr>
-    <th>Adjacency List:</th>
-    {% if nci_adjlist %}
-    <td>{{ nci_adjlist }}</td>
-    {% else %}
-    <td>Unable to generate Adjacency List</td>
-    {% endif %}
+        <th>Adjacency List:</th>
+        <td>{{ nci_adjlist }}</td>
     </tr>
     <tr class="result">
         <th>Molecular Formula:</th>
@@ -140,8 +145,8 @@
     </tr>
 </table>
 {% endif %}
-{% else %}
-<h2>Species Not Found!</h2>
-{% endif %}
 
+{% else %}
+<h2>No Species Data Found</h2>
+{% endif %}
 {% endblock %}
