@@ -816,13 +816,13 @@ def thermoData(request, adjlist):
     return render(request, 'thermoData.html', {'molecule': molecule, 'structure': structure, 'thermoDataList': thermoDataList, 'symmetryNumber': symmetryNumber, 'plotWidth': 500, 'plotHeight': 400 + 15 * len(thermoDataList)})
 
 
-def thermo_data(request, species):
+def thermo_data(request, species_id):
     """
     species: models.reaction_species.Species()
     """
 
     symmetryNumber = None   # Species().getSymmetryNumber()
-
+    species = Species.objects.get(id=species_id)
     # entry -> SpeciesName
     # data -> to_rmg()
     # source -> Source.sourceTitle (add link?)
@@ -830,7 +830,7 @@ def thermo_data(request, species):
     # nasa_string -> repr(to_rmg())
 
     species_names = SpeciesName.objects.filter(species=species)
-    thermo = [t.to_rmg() for t in Thermo.objects.filter(species=species)]
+    thermo = [t.toRMG() for t in Thermo.objects.filter(species=species)]
     sources = [species_name.kineticModel.source.sourceTitle for species_name in species_names]
     hrefs = [None] * len(thermo)
     nasa_strings = [repr(t.to_rmg()) for t in thermo]
@@ -839,10 +839,12 @@ def thermo_data(request, species):
     adjlists = [structure.adjacencyList for structure in Structure.objects.filter(isomer__species=species)]
     structures = [getStructureInfo(Molecule().fromAdjacencyList(a)) for a in adjlists]
 
-    return render(request, 'thermo_data.html', {'thermo_data_list': thermo_data_list,
-                                                'structures': structures,
-                                                'plot_width': 500,
-                                                'plot_height': 400 + 15 * len(thermo_data_list)})
+    return render(request,
+                  'thermo_data.html',
+                  context={'thermo_data_list': thermo_data_list,
+                           'structures': structures,
+                           'plot_width': 500,
+                           'plot_height': 400 + 15 * len(thermo_data_list)})
 
 def thermo_entry(request):
     pass
@@ -2607,7 +2609,6 @@ def molecule_search(request):
                            for s in species]
             nci_adjlist, nci_molecule = nci_resolve(query)
             nci_species = find_species(nci_adjlist)
-            print "nci_adjlist: {0} nci_species: {1}".format(nci_adjlist, nci_species)
             if nci_molecule:
                 try:
                     nci_inchi = nci_molecule.toInChI()
