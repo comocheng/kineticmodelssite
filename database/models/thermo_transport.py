@@ -93,19 +93,19 @@ class Thermo(models.Model):
         "Returns an RMG object"
         polynomials = []
         for polynomial_number in [1, 2]:
-            coeffs=[float(getattr(self, 'coefficient_{j}_{i}'.format(
-                                    j=coefficient_number,i=polynomial_number)))
-                                         for coefficient_number in range(1,8) ]
-            polynomial = NASAPolynomial(coeffs=coeffs,
-                           Tmin=float(getattr(
-                                self, 'lower_temp_bound_{i}'.format(
-                                                        i=polynomial_number))),
-                           Tmax=float(getattr(
-                                self, 'upper_temp_bound_{i}'.format(
-                                                        i=polynomial_number))),
-                           E0=None,
-                           comment=''
-                           )
+            coeffs=[float(getattr(self, 
+                                  'coefficient{j}{i}'.format(j=coefficient_number,
+                                                             i=polynomial_number)))
+                    for coefficient_number in range(1,8)]
+            polynomial = NASAPolynomial(
+                            coeffs=coeffs,
+                            Tmin=float(getattr(self,
+                                               'lowerTempBound{i}'.format(i=polynomial_number))),
+                            Tmax=float(getattr(self,
+                                               'upperTempBound{i}'.format(i=polynomial_number))),
+                            E0=None,
+                            comment=''
+                         )
             polynomials.append(polynomial)
         rmg_object = NASA(polynomials=polynomials,
                           Tmin=polynomials[0].Tmin,

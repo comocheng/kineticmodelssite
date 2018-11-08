@@ -57,19 +57,20 @@
     <table>
         {{ form.as_table }}
         <tr>
-           <th>{% csrf_token %}</th>
-           <td>
-              <input type="submit" value="Search" name="draw" />
-              <input type="submit" value="Search Thermochemistry" name="thermo" />
-              <input type="submit" value="Search Transport Properties" name="transport" />
-              <input type="submit" value="Reset Form" name="reset" />
-           </td>
+            <th>{% csrf_token %}</th>
+            <td>
+                <input type="submit" value="Search" name="draw" />
+                <input type="submit" value="Search Thermochemistry" name="thermo" />
+                <input type="submit" value="Search Transport Properties" name="transport" />
+                <input type="submit" value="Reset Form" name="reset" />
+            </td>
         </tr>
     </table>
 </form>
 {% if species or nci_species or nci_molecule %}
 {% if species %}
 {% for s, adjlists, inchis in species %}
+<a href="{% url 'thermo_data' s.id %}">Thermo Data</a>
 <table>
     <tr class="result">
         <th>InChI:</th>
@@ -107,6 +108,8 @@
 <h2>NCI Results</h2>
 {% endif %}
 {% if nci_species %}
+<a href="{% url 'thermo_data' nci_species %}">Thermo Data</a>
+<!-- <a href="{% url 'transport_data' s %}">Transport Data</a> -->
 <table>
     <tr class="result">
         <th>InChI:</th>

@@ -16,7 +16,7 @@ urlpatterns = [
     # Thermodynamics database
     url(r'^thermo/$', views.thermo),
     url(r'^thermo/search/$', views.molecule_search),
-    url(r'^thermo/molecule/(?P<adjlist>[\S\s]+)$', views.thermoData),
+    url(r'^thermo/molecule/(?P<species_id>[\S\s]+)$', views.thermo_data, name='thermo_data'),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.thermoEntry),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<adjlist>[\S\s]+)/new$', views.thermoEntryNew),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/edit$', views.thermoEntryEdit),
