@@ -446,7 +446,7 @@ def solvationData(request, solute_adjlist, solvent=''):
     """
     Returns an entry with the solute data for a given molecule
     when the solute_adjlist is provided. If solvent is provided,
-    the interaction solvation quantities are also displayed. 
+    the interaction solvation quantities are also displayed.
     The solvation data is estimated by RMG.
     """
     #from rmgpy.data.solvation import getAllSoluteData
@@ -833,12 +833,12 @@ def thermo_data(request, species_id):
     thermo = [t.toRMG() for t in Thermo.objects.filter(species=species)]
     sources = [species_name.kineticModel.source.sourceTitle for species_name in species_names]
     hrefs = [None] * len(thermo)
-    nasa_strings = [repr(t.to_rmg()) for t in thermo]
-    thermo_data_list = zip(species_names, thermo_data, sources, hrefs, nasa_strings)
+    nasa_strings = [repr(t) for t in thermo]
+    thermo_data_list = zip(species_names, thermo, sources, hrefs, nasa_strings)
 
     adjlists = [structure.adjacencyList for structure in Structure.objects.filter(isomer__species=species)]
-    structures = [getStructureInfo(Molecule().fromAdjacencyList(a)) for a in adjlists]
-
+    # structures = [getStructureInfo(Molecule().fromAdjacencyList(str(a))) for a in adjlists]
+    structures = [None] * len(thermo)
     return render(request,
                   'thermo_data.html',
                   context={'thermo_data_list': thermo_data_list,
@@ -1466,7 +1466,7 @@ def kineticsUntrained(request, family):
 def getReactionUrl(reaction, family=None, estimator=None, resonance=True):
     """
     Get the URL (for kinetics data) of a reaction.
-    
+
     Returns '' if the reaction contains functional Groups or LogicNodes instead
     of real Species or Molecules."""
     kwargs = dict()
@@ -1536,7 +1536,7 @@ def kineticsEntryNew(request, family, type):
                         forward_url = reverse(kineticsEntry, kwargs=kwargs)
                         if type == 'training':
                             message = """
-                            This reaction is already in the {0} training set.<br> 
+                            This reaction is already in the {0} training set.<br>
                             View or edit it at <a href="{1}">{1}</a>.
                             """.format(family, forward_url)
                             title = '- Reaction already in {0}.'.format(
@@ -1851,7 +1851,7 @@ def thermoEntryNew(request, section, subsection, adjlist):
     else:  # not POST
         entry_string = """
 label = "{label}",
-molecule = "\"\" 
+molecule = "\"\"
 {adjlist}
 "\"\",\n
 thermo = ThermoData(
@@ -1861,9 +1861,9 @@ thermo = ThermoData(
     S298 = (,'cal/(mol*K)'),
 ),\n
 shortDesc = u"\"\" "\"\",
-longDesc = 
+longDesc =
     u"\"\"
-    
+
     "\"\",
         """.format(label=molecule.toSMILES(), adjlist=molecule.toAdjacencyList())
 
@@ -2602,10 +2602,10 @@ def molecule_search(request):
             form = NewMoleculeSearchForm(initial, error_class=DivErrorList)
             query = posted.cleaned_data['query']
             species = find_species(query)
-            if species: 
+            if species:
                 species = [(s,
                             Structure.objects.filter(isomer__species=s).values_list('adjacencyList', flat=True),
-                            Isomer.objects.filter(species=s).values_list('inchi', flat=True)) 
+                            Isomer.objects.filter(species=s).values_list('inchi', flat=True))
                            for s in species]
             nci_adjlist, nci_molecule = nci_resolve(query)
             nci_species = find_species(nci_adjlist)
@@ -2672,15 +2672,15 @@ def find_species(query):
 def nci_resolve(query):
     """
     Returns an adjacency list of the species corresponding to `identifier`.
-    
+
     `identifier` should be something recognized by NCI resolver, eg.
     SMILES, InChI, CACTVS, chemical name, etc.
-    
+
     The NCI resolver has some bugs regarding reading SMILES of radicals.
     E.g. it thinks CC[CH] is CCC, so we first try to use the identifier
     directly as a SMILES string, and only pass it through the resolver
-    if that does not work. 
-    
+    if that does not work.
+
     For specific problematic cases, the NCI resolver is bypassed and the SMILES
     is returned from a dictionary of values. For O2, the resolver returns the singlet
     form which is inert in RMG. For oxygen, the resolver returns 'O' as the SMILES, which
@@ -2909,15 +2909,15 @@ def json_to_adjlist(request):
 def getAdjacencyList(request, identifier):
     """
     Returns an adjacency list of the species corresponding to `identifier`.
-    
+
     `identifier` should be something recognized by NCI resolver, eg.
     SMILES, InChI, CACTVS, chemical name, etc.
-    
+
     The NCI resolver has some bugs regarding reading SMILES of radicals.
     E.g. it thinks CC[CH] is CCC, so we first try to use the identifier
     directly as a SMILES string, and only pass it through the resolver
-    if that does not work. 
-    
+    if that does not work.
+
     For specific problematic cases, the NCI resolver is bypassed and the SMILES
     is returned from a dictionary of values. For O2, the resolver returns the singlet
     form which is inert in RMG. For oxygen, the resolver returns 'O' as the SMILES, which
@@ -3208,7 +3208,7 @@ def compareModels(request):
 
 def mergeModels(request):
     """
-    Merge 2 RMG models with their chemkin and species dictionaries.  
+    Merge 2 RMG models with their chemkin and species dictionaries.
     Produces a merged chemkin file and species dictionary.
     """
     model = Diff()
