@@ -761,6 +761,18 @@ def thermoEntry(request, section, subsection, index):
     reference = entry.reference
     return render(request, 'thermoEntry.html', {'section': section, 'subsection': subsection, 'databaseName': db.name, 'entry': entry, 'structure': structure, 'reference': reference, 'referenceType': referenceType, 'thermo': thermo, 'nasa_string': nasa_string})
 
+def thermo_entry(request, adjlist):
+    thermo = Thermo.objects.get(species__isomer__structure_adjacencyList=adjlist)
+    thermo_rmg = thermo.toRMG()
+    nasa_string = repr(thermo)
+    structure = None
+
+    return render(request,
+                  'thermo_entry.html',
+                  context={'thermo': thermo_rmg,
+                           'nasa_string': nasa_string,
+                           'structure': structure})
+
 
 def thermoData(request, adjlist):
     """
@@ -823,20 +835,21 @@ def thermo_data(request, species_id):
 
     symmetryNumber = None   # Species().getSymmetryNumber()
     species = Species.objects.get(id=species_id)
+
     # entry -> SpeciesName
     # data -> to_rmg()
     # source -> Source.sourceTitle (add link?)
     # href -> thermoEntry reverse
     # nasa_string -> repr(to_rmg())
 
+    adjlists = [structure.adjacencyList for structure in Structure.objects.filter(isomer__species=species)]
     species_names = SpeciesName.objects.filter(species=species)
     thermo = [t.toRMG() for t in Thermo.objects.filter(species=species)]
     sources = [species_name.kineticModel.source.sourceTitle for species_name in species_names]
+    # hrefs = [reverse(thermo_entry, kwargs={'adjlist': adjlist}) for adjlist in adjlists]
     hrefs = [None] * len(thermo)
     nasa_strings = [repr(t) for t in thermo]
     thermo_data_list = zip(species_names, thermo, sources, hrefs, nasa_strings)
-
-    adjlists = [structure.adjacencyList for structure in Structure.objects.filter(isomer__species=species)]
     # structures = [getStructureInfo(Molecule().fromAdjacencyList(str(a))) for a in adjlists]
     structures = [None] * len(thermo)
     return render(request,
@@ -846,8 +859,6 @@ def thermo_data(request, species_id):
                            'plot_width': 500,
                            'plot_height': 400 + 15 * len(thermo_data_list)})
 
-def thermo_entry(request):
-    pass
 
 ################################################################################
 
