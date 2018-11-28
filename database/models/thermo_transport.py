@@ -89,8 +89,8 @@ class Thermo(models.Model):
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
-    def toRMG(self):
-        "Returns an RMG object"
+    def to_NASA(self):
+        "Returns a NASA representation"
         polynomials = []
         for polynomial_number in [1, 2]:
             coeffs=[float(getattr(self,

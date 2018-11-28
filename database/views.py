@@ -762,9 +762,10 @@ def thermoEntry(request, section, subsection, index):
     return render(request, 'thermoEntry.html', {'section': section, 'subsection': subsection, 'databaseName': db.name, 'entry': entry, 'structure': structure, 'reference': reference, 'referenceType': referenceType, 'thermo': thermo, 'nasa_string': nasa_string})
 
 def thermo_entry(request, adjlist):
-    thermo = Thermo.objects.get(species__isomer__structure_adjacencyList=adjlist)
-    thermo_rmg = thermo.toRMG()
-    nasa_string = repr(thermo)
+    thermo = Thermo.objects.get(species__isomer__structure__adjacencyList=adjlist)
+    thermo_rmg = thermo.to_NASA()
+    nasa_string = repr(thermo_rmg)
+    # structure = getStructureInfo(Molecule.fromAdjacencyList(adjlist))
     structure = None
 
     return render(request,
@@ -844,14 +845,15 @@ def thermo_data(request, species_id):
 
     adjlists = [structure.adjacencyList for structure in Structure.objects.filter(isomer__species=species)]
     species_names = SpeciesName.objects.filter(species=species)
-    thermo = [t.toRMG() for t in Thermo.objects.filter(species=species)]
+    thermo = [t.to_NASA() for t in Thermo.objects.filter(species=species)]
     sources = [species_name.kineticModel.source.sourceTitle for species_name in species_names]
-    # hrefs = [reverse(thermo_entry, kwargs={'adjlist': adjlist}) for adjlist in adjlists]
-    hrefs = [None] * len(thermo)
+    hrefs = [reverse(thermo_entry, args=[adjlist]) for adjlist in adjlists]
+    # hrefs = [None] * len(thermo)
     nasa_strings = [repr(t) for t in thermo]
     thermo_data_list = zip(species_names, thermo, sources, hrefs, nasa_strings)
     # structures = [getStructureInfo(Molecule().fromAdjacencyList(str(a))) for a in adjlists]
     structures = [None] * len(thermo)
+
     return render(request,
                   'thermo_data.html',
                   context={'thermo_data_list': thermo_data_list,
