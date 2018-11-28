@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^thermo/search/$', views.molecule_search),
     url(r'^thermo/molecule/(?P<species_id>[\S\s]+)$', views.thermo_data, name='thermo_data'),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.thermoEntry),
+    url(r'^thermo/(?P<adjlist>[\S\s]+)$', views.thermo_entry),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<adjlist>[\S\s]+)/new$', views.thermoEntryNew),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/edit$', views.thermoEntryEdit),
     url(r'^thermo/(?P<section>\w+)/(?P<subsection>.+)/$', views.thermo),
@@ -37,7 +38,7 @@ urlpatterns = [
 
     url(r'^kinetics/families/(?P<family>[^/]+)/(?P<type>\w+)/new$', views.kineticsEntryNew),
     url(r'^kinetics/families/(?P<family>[^/]+)/untrained/$', views.kineticsUntrained),
-    
+
     url(r'^kinetics/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>\d+)/edit$', views.kineticsEntryEdit),
     url(r'^kinetics/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.kineticsEntry),
     url(r'^kinetics/(?P<section>\w+)/(?P<subsection>.+)/$', views.kinetics),
