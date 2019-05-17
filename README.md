@@ -12,3 +12,6 @@ Running the prime importer:
 ```
 $ python import_prime path/to/prime/database
 ```
+
+Check out this project's wiki for more details
+https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-the-Site
