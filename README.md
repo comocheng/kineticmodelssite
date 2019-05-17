@@ -6,6 +6,7 @@ After installing RMG-Py and its dependencies, add the new ones with:
 ```
 $ conda env update -n rmg_env -f environment.yml
 $ pip install django-autocomplete-light
+$ pip install django_model_utils
 ```
 
 Running the prime importer: 

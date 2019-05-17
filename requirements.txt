@@ -11,3 +11,4 @@ pydot
 cairocffi
 pandas
 django-autocomplete-light
+django_model_utils
