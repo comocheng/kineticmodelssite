@@ -5,8 +5,8 @@
 {% block title %}Convert Adjacency Lists{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'rmg.views.index' %}">Simulation and Tools</a> &raquo;
-<a href="{% url 'rmg.views.convertAdjlists' %}">Convert Adjacency Lists</a>
+<li><a href="{% url 'rmg:index' %}">RMG Tools</a></li>
+<li><a href="{% url 'rmg:convert-adjlists' %}">Convert Adjacency Lists</a></li>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -19,8 +19,10 @@
 <p>
 Upload your RMG Dictionary text file and convert them back into old style 
 adjacency lists compatible with RMG-Java. 
+</p>
 
-Not that adjacency lists containing heteroatoms such as N, Ar, Ne, and He are
+<p>
+Note that adjacency lists containing heteroatoms such as N, Ar, Ne, and He are
 not compatible with old style adjacency lists and will result in conversion
 failure.
 </p>

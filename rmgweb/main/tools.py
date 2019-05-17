@@ -1,32 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-################################################################################
-#
-#	RMG Website - A Django-powered website for Reaction Mechanism Generator
-#
-#	Copyright (c) 2011 Prof. William H. Green (whgreen@mit.edu) and the
-#	RMG Team (rmg_dev@mit.edu)
-#
-#	Permission is hereby granted, free of charge, to any person obtaining a
-#	copy of this software and associated documentation files (the 'Software'),
-#	to deal in the Software without restriction, including without limitation
-#	the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#	and/or sell copies of the Software, and to permit persons to whom the
-#	Software is furnished to do so, subject to the following conditions:
-#
-#	The above copyright notice and this permission notice shall be included in
-#	all copies or substantial portions of the Software.
-#
-#	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#	DEALINGS IN THE SOFTWARE.
-#
-################################################################################
+###############################################################################
+#                                                                             #
+# RMG Website - A Django-powered website for Reaction Mechanism Generator     #
+#                                                                             #
+# Copyright (c) 2011-2018 Prof. William H. Green (whgreen@mit.edu),           #
+# Prof. Richard H. West (r.west@neu.edu) and the RMG Team (rmg_dev@mit.edu)   #
+#                                                                             #
+# Permission is hereby granted, free of charge, to any person obtaining a     #
+# copy of this software and associated documentation files (the 'Software'),  #
+# to deal in the Software without restriction, including without limitation   #
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,    #
+# and/or sell copies of the Software, and to permit persons to whom the       #
+# Software is furnished to do so, subject to the following conditions:        #
+#                                                                             #
+# The above copyright notice and this permission notice shall be included in  #
+# all copies or substantial portions of the Software.                         #
+#                                                                             #
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR  #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,    #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER      #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING     #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER         #
+# DEALINGS IN THE SOFTWARE.                                                   #
+#                                                                             #
+###############################################################################
 
 import math
 import numpy
@@ -41,7 +41,7 @@ from rmgpy.molecule.group import Group
 
 ################################################################################
 
-def moleculeToURL(molecule):
+def moleculeToAdjlist(molecule):
     """
     Convert a given :class:`Molecule` object `molecule` to a string 
     representation of its structure suitable for a URL.
@@ -49,17 +49,14 @@ def moleculeToURL(molecule):
     mol = molecule.copy(deep=True)
     mol.clearLabeledAtoms()
     adjlist = mol.toAdjacencyList(removeH=False)
-    url = urllib.quote(adjlist)
-    return url
+    return adjlist
 
 def moleculeToInfo(molecule):
     """
     Creates an html rendering which includes molecule structure image but
     also allows you to click on it to enter a molecule info page.
     """
-
-    from rmgweb.database.views import moleculeEntry
-    href = reverse(moleculeEntry, kwargs={'adjlist': molecule.toAdjacencyList()})
+    href = reverse('database:molecule-entry', kwargs={'adjlist': molecule.toAdjacencyList()})
     structureMarkup = getStructureMarkup(molecule)
     markup = '<a href="'+ href + '">' + structureMarkup + '</a>'
     return markup
@@ -83,17 +80,14 @@ def groupToURL(group):
     gro = group.copy(deep=True)
     gro.clearLabeledAtoms()
     adjlist = gro.toAdjacencyList(removeH=False)
-    url = urllib.quote(adjlist)
-    return url
+    return adjlist
 
 def groupToInfo(group):
     """
     Creates an html rendering which includes group structure image but
     also allows you to click on it to enter a group info page.
     """
-
-    from rmgweb.database.views import groupEntry
-    href = reverse(groupEntry, kwargs={'adjlist': group.toAdjacencyList()})
+    href = reverse('database:group-entry', kwargs={'adjlist': group.toAdjacencyList()})
     structureMarkup = getStructureMarkup(group)
     markup = '<a href="'+ href + '">' + structureMarkup + '</a>'
     return markup
@@ -115,7 +109,7 @@ def getStructureInfo(object):
     markup containing a clickable image of the group or molecule that contains 
     a link to its information page.
     """
-    from rmgpy.data.base import Entry
+    from rmgpy.data.base import Entry, LogicNode, LogicOr, LogicAnd
     from rmgpy.species import Species
     
     if isinstance(object, Entry):
@@ -127,6 +121,8 @@ def getStructureInfo(object):
         return moleculeToInfo(object.molecule[0])
     elif isinstance(object, Group):
         return groupToInfo(object)
+    elif isinstance(object, (LogicNode, LogicOr, LogicAnd)):
+        return str(object)
     else:
         return ''
 ################################################################################
@@ -163,12 +159,12 @@ def getStructureMarkup(item):
         # We can draw Molecule objects, so use that instead of an adjacency list
         adjlist = item.toAdjacencyList(removeH=False)
         url = urllib.quote(adjlist)
-        structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('rmgweb.main.views.drawMolecule', kwargs={'adjlist': url}), adjlist)
+        structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('draw-molecule', kwargs={'adjlist': url}), adjlist)
     elif isinstance(item, Species) and len(item.molecule) > 0:
         # We can draw Species objects, so use that instead of an adjacency list
         adjlist = item.molecule[0].toAdjacencyList(removeH=False)
         url = urllib.quote(adjlist)
-        structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('rmgweb.main.views.drawMolecule', kwargs={'adjlist': url}), item.label)
+        structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('draw-molecule', kwargs={'adjlist': url}), item.label)
     elif isinstance(item, Species) and len(item.molecule) == 0:
         # We can draw Species objects, so use that instead of an adjacency list
         structure = item.label
@@ -176,7 +172,7 @@ def getStructureMarkup(item):
         # We can draw Group objects, so use that instead of an adjacency list
         adjlist = item.toAdjacencyList()
         url = urllib.quote(adjlist)
-        structure = '<img src="{0}" alt="{1}" title="{1}" />'.format(reverse('rmgweb.main.views.drawGroup', kwargs={'adjlist': url}), adjlist)
+        structure = '<img src="{0}" alt="{1}" title="{1}" />'.format(reverse('draw-group', kwargs={'adjlist': url}), adjlist)
         #structure += '<pre style="font-size:small;" class="adjacancy_list">{0}</pre>'.format(adjlist)
     elif isinstance(item, str) or isinstance(item, unicode):
         structure = item

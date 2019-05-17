@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 
 
@@ -17,8 +18,8 @@ $().ready(function() {
 
 {%endblock%}
 {% block navbar_items %}
-<a href="{% url 'rmg.views.index' %}">Simulation and Tools</a> &raquo;
-<a href="{% url 'rmg.views.compareModels' %}">Model Comparison</a>
+<li><a href="{% url 'rmg:index' %}">RMG Tools</a></li>
+<li><a href="{% url 'rmg:compare-models' %}">Model Comparison</a></li>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -34,7 +35,7 @@ page comparing the two models..  You must include an adjacency list for all spec
 inerts.
 </p>
 <hr/>
-<img src="../media/loading.gif" alt="Loading..." style="display:none" id="loading_image">
+<img src="{% static 'img/loading.gif' %}" alt="Loading..." style="display:none" id="loading_image">
 {% if path %}
 <a href ="../{{path}}">Click here for your generated output file.</a>
 {% endif %}

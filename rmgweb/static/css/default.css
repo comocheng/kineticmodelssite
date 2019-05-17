@@ -1,0 +1,530 @@
+/* This file contains most of the styles for the base template */
+
+body {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 11pt;
+    margin: 0;
+}
+
+/* Colors */
+
+body, #document {
+    background-color: #FFFFFF;
+}
+
+h1, h2, h3 {
+    color: #333333;
+}
+
+a, #logo {
+    color: #F04040;
+}
+
+/* Hyperlinks */
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.biglink {
+    font-size: 150%;
+    text-align: center;
+}
+
+/* Headings */
+
+h1, h2, h3 {
+    margin: 0pt 0pt 12pt 0pt;
+    font-weight: normal;
+}
+
+h1 {
+    font-size: 200%;
+}
+
+h2 {
+    font-size: 150%;
+}
+
+h3 {
+    font-size: 125%;
+}
+
+/* Document structure */
+
+html, body {
+    height: 100%;
+}
+
+#document {
+    width: 100%;
+    height: 100%;
+}
+
+#sidebar {
+    display: flex;
+    flex-direction: column;
+    float: left;
+    width: 250px;
+    height: 100%;
+    position: fixed;
+    background-color: #404040;
+    z-index: 1;
+    top: 0;
+    left: 0;
+}
+
+#logo {
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 150%;
+    font-weight: bold;
+    height: 75px;
+    padding: 20px;
+}
+
+#mainbar {
+    position: relative;
+    background-color: #FFFFFF;
+    margin-left: 250px;
+    min-height: 100%;
+}
+
+#navbar {
+    font-size: 100%;
+}
+
+#navbar, #main, #contents {
+    padding: 5px 10px;
+}
+
+#main {
+    padding-bottom: 80px;
+}
+
+/* Breadcrumb */
+#breadcrumb {
+    list-style: none;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+#breadcrumb li {
+    float: left;
+}
+
+#breadcrumb li a {
+    color: #FFFFFF;
+    display: block;
+    background: #F04040;
+    text-decoration: none;
+    position: relative;
+    height: 30px;
+    line-height: 30px;
+    padding: 0 10px 0 5px;
+    text-align: center;
+    margin-right: 23px;
+}
+
+#breadcrumb li:first-child a {
+    padding-left: 15px;
+    border-radius: 4px 0 0 4px;
+}
+
+#breadcrumb li:first-child a:before {
+    border: none;
+}
+
+#breadcrumb li:last-child a {
+    padding-right: 15px;
+    border-radius: 0 4px 4px 0;
+}
+
+#breadcrumb li:last-child a:after {
+    border: none;
+}
+
+#breadcrumb li:only-child a {
+    border-radius: 4px;
+}
+
+#breadcrumb li a:before, #breadcrumb li a:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    border: 0 solid #F04040;
+    border-width: 15px 10px;
+    width: 0;
+    height: 0;
+}
+
+#breadcrumb li a:before {
+    left: -20px;
+    border-left-color: transparent;
+}
+
+#breadcrumb li a:after {
+    left: 100%;
+    border-color: transparent;
+    border-left-color: #F04040;
+}
+
+#breadcrumb li a:hover {
+    background-color: #F06060;
+}
+
+#breadcrumb li a:hover:before {
+    border-color: #F06060;
+    border-left-color: transparent;
+}
+
+#breadcrumb li a:hover:after {
+    border-left-color: #F06060;
+}
+
+#breadcrumb li a:active {
+    background-color: #F02020;
+}
+
+#breadcrumb li a:active:before {
+    border-color: #F02020;
+    border-left-color: transparent;
+}
+
+#breadcrumb li a:active:after {
+    border-left-color: #F02020;
+}
+
+/* Header and footer */
+
+#header {
+    display: flex;
+    justify-content: flex-end;
+    background-color: #404040;
+    width: 100%;
+    padding: 10px 0;
+}
+
+#announcement {
+    flex: 1 1 auto;
+    font-size: 120%;
+    font-weight: bold;
+    text-align: center;
+    min-height: 30px;
+    line-height: 30px;
+    padding: 0px 10px;
+}
+
+#announcement span {
+    display: inline-block;
+    background-color: #FFFFFF;
+    color: #F04040;
+    text-align: center;
+    border: none;
+    border-radius: 4px;
+    padding: 0px 10px;
+}
+
+#footer {
+    font-size: 80%;
+    display: flex;
+    align-items: flex-end;
+    position: absolute;
+    bottom: 0;
+    height: 60px;
+    width: 100%;
+    padding: 10px 0;
+}
+
+#footer-content {
+    text-align: center;
+    width: 100%;
+}
+
+/* Sidebar list */
+
+#sidebar .icon {
+    float: left;
+    width: 40px;
+    padding: 5px;
+}
+
+#sidebar div.menuitem {
+    padding: 5px;
+}
+
+
+#sidebar div.menutext {
+    text-align: left;
+    margin-left: 50px;
+    padding: 1px 5px;
+}
+
+#sidebar div.menutitle {
+    color: #F04040;
+    font-size: 125%;
+    vertical-align: bottom;
+}
+
+#sidebar div.menudesc {
+    color: #FFFFFF;
+    font-weight: 300;
+    font-size: 90%;
+    vertical-align: top;
+}
+
+#sidebar-content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+#sidebar-content a {
+    text-decoration: none;
+}
+
+#sidebar-content div.menuitem:hover {
+    background-color: #606060;
+}
+
+#sidebar-extra {
+    flex: 0 0 auto;
+    overflow-y: auto;
+}
+
+#sidebar-extra a {
+    color: #FFFFFF;
+}
+
+#sidebar-footer {
+    flex: 0 0 auto;
+    text-align: center;
+    padding: 10px 0px;
+}
+
+/* Header button styles */
+
+#header div.user-toolbar {
+    height: 30px;
+    line-height: 30px;
+    padding: 0px 10px;
+}
+
+#header a.user-button {
+    display: inline-block;
+    background-color: #F04040;
+    color: #FFFFFF;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    padding: 0px 10px;
+}
+
+#header a.user-button:hover {
+    background-color: #F06060;
+}
+
+#header a.user-button:active {
+    background-color: #F02020;
+}
+
+/* Database styles */
+
+div.error {
+    color: #F04040;
+    border: 2px solid #F04040;
+    padding: 0.5em;
+    margin: 0.5em;
+}
+
+.comment, .history {
+    width: 100%;
+    background-color: #EEEEEE;
+    padding: 2px;
+    margin: 2px 0px 2px 0px;
+}
+
+td.commentText p, td.historyText p {
+    margin: 0px;
+}
+
+.commentIcon, .historyIcon {
+    padding: 0 4px 0 0;
+    vertical-align: middle;
+}
+
+.commentText, .historyText {
+    width: 100%;
+}
+
+.commentMeta, .historyMeta {
+    font-size: 80%;
+    color: #808080;
+}
+
+table.data {
+    width: 100%;
+}
+
+table.data td.heading {
+    text-align: center;
+    font-weight: normal;
+    text-decoration: underline;
+    width: 100%;
+}
+
+table.data td.key {
+    text-align: right;
+    font-weight: bold;
+    vertical-align: top;
+    width: 50%;
+}
+
+table.data td.value {
+    text-align: left;
+    width: 50%;
+}
+
+.avatar img {
+    vertical-align: middle;
+}
+
+table.thermoData, table.kineticsData {
+    display: block;
+    overflow-x: auto;
+    width: fit-content;
+    max-width: 100%;
+}
+
+table.thermoData tr td , table.kineticsData tr td {
+    border-bottom: 1px solid #808080;
+}
+
+table.thermoData th, table.kineticsData th {
+    text-align: left;
+}
+
+.reactants img, .products img {
+    vertical-align: middle;
+}
+
+td.reactants {
+    text-align: right;
+}
+
+td.products {
+    text-align: left;
+}
+
+td.reactionArrow {
+    font-size: 125%;
+    text-align: center;
+    vertical-align: middle;
+}
+
+table.reference {
+    margin-bottom: 1em;
+}
+
+table.reference td.label {
+    font-weight: bold;
+    text-align: right;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+table.reference td.section {
+    text-decoration: underline;
+    font-weight: bold;
+    text-align: left;
+    padding-top: 1em;
+}
+
+table.reference td p {
+    margin: 0px;
+}
+
+table.KineticsData {
+    margin: auto;
+}
+
+img.family {
+    max-height: 50%;
+    max-width: 500px;
+}
+
+#entry_form label {
+    display: block;
+    font-weight: bold;
+}
+#entry_form li {
+    list-style: none;
+}
+#entry_form .data_entry {
+    font-family: 'Menlo', 'Andalae Mono', 'Lucida Console', 'Monaco', monospace;
+}
+#entry_form .change_summary{
+    width: 100%;
+}
+
+#resonance h2{
+    margin: 20px 0px;
+}
+
+#resonance div.structures{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#resonance .origin {
+    border: 2px solid #F04040;
+    padding: 10px;
+}
+
+#resonance .repr_both, .repr_oct, .repr_expoct, .unre {
+    padding: 12px;
+}
+
+/*------------------------------------*\
+  IPHONE
+\*------------------------------------*/
+@media screen and (max-device-width: 960px) {
+    body{
+        -webkit-text-size-adjust: auto;
+        font-family: Helvetica, Arial, Verdana, sans-serif;
+        padding: 5px;
+    }
+    #main {
+        clear: left;
+    }
+    #mainbar {
+        margin: 0px;
+        min-height: auto;
+    }
+    #sidebar {
+        float: none;
+        position: relative;
+        height: auto;
+        width: 100%;
+        padding-top: 5px;
+    }
+    #sidebar .icon {
+        width: 20px;
+        padding: 2px 15px;
+    }
+    #sidebar div.menuitem {
+        height: 20px;
+        padding: 2px;
+    }
+    #document{
+        width: 100%
+    }
+    #sidebar .menudesc {
+        display: none;
+    }
+} /* End of iPhone-specific bit */

@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 
 
 
 {% block title %}Edit Input File{% endblock %}
 
 {% block navbar_items %}
-<a href="{% url 'pdep.views.index' %}">Pressure Dependent Networks</a> &raquo;
-<a href="{% url 'pdep.views.networkIndex' networkKey=networkKey%}">Network {{ networkKey }}</a> &raquo;
-<a href="{% url 'pdep.views.networkEditor' networkKey=networkKey%}">Edit</a>
+<li><a href="{% url 'pdep:index' %}">Pressure Dependent Networks</a></li>
+<li><a href="{% url 'pdep:network-index' networkKey=networkKey%}">Network {{ networkKey }}</a></li>
+<li><a href="{% url 'pdep:network-editor' networkKey=networkKey%}">Edit</a></li>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -15,7 +16,7 @@
 {% endblock %}
 
 {% block extrahead %}
-<link href="/media/pdep.css" rel="stylesheet" type="text/css"/>
+<link href="{% static 'css/pdep.css' %}" rel="stylesheet" type="text/css"/>
 <style type="text/css">
 #id_inputText {
     width: 100%;
@@ -29,8 +30,8 @@
 {% block page_body %}
 
 <p>
-For more information on the CanTherm input file format for pressure dependent networks,
-<a href="http://reactionmechanismgenerator.github.io/RMG-Py/users/cantherm/input_pdep.html">click here</a>.
+For more information on the Arkane input file format for pressure dependent networks,
+<a href="http://reactionmechanismgenerator.github.io/RMG-Py/users/arkane/input_pdep.html">click here</a>.
 </p>
 
 <form action="" method="POST">{% csrf_token %}

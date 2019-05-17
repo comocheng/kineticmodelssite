@@ -4,10 +4,10 @@
 # You will first need RMG-Py installed and working
 
 # These are the additional dependencies
-Django>=1.8.4
+Django>=1.11
 beautifulsoup4
 xlrd
 pydot
 cairocffi
 pandas
-
+django-autocomplete-light

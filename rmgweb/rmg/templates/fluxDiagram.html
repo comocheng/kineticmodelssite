@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 
 
@@ -19,8 +20,8 @@ $().ready(function() {
 {%endblock%}
 
 {% block navbar_items %}
-<a href="{% url 'rmg.views.index' %}">Simulation and Tools</a> &raquo;
-<a href="{% url 'rmg.views.generateFlux' %}">Generate Flux Diagram</a>
+<li><a href="{% url 'rmg:index' %}">RMG Tools</a></li>
+<li><a href="{% url 'rmg:generate-flux' %}">Generate Flux Diagram</a></li>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -43,14 +44,14 @@ $().ready(function() {
     the .out file associated with a chemkin simulation output for a shock tube or RCM, etc.  Use
     the .out file containing species concentrations.
 <hr/>
-<img src="../media/loading.gif" alt="Loading..." style="display:none" id="loading_image">
+<img src="{% static 'img/loading.gif' %}" alt="Loading..." style="display:none" id="loading_image">
 <P>
 {% if path %}
 <div id="videos">
 <b>Generated Videos for Reaction Systems</b>
 <ol>
 {% for item in path %}
-<li><a href ="../media/rmg/tools/flux/{{item}}/flux_diagram.avi">Flux Diagram Video</a>
+<li><a href ="{{  MEDIA_URL }}rmg/tools/flux/{{item}}/flux_diagram.avi">Flux Diagram Video</a>
 {% endfor%}
 </ol>
 </div>

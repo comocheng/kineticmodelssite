@@ -12,6 +12,6 @@ dependencies: # Only those in addition to normal RMG
   - openbabel
   - psutil
   - graphviz
-  - django
+  - django >=1.11
   - beautifulsoup4
   - docutils

@@ -1,32 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-################################################################################
-#
-#	RMG Website - A Django-powered website for Reaction Mechanism Generator
-#
-#	Copyright (c) 2011 Prof. William H. Green (whgreen@mit.edu) and the
-#	RMG Team (rmg_dev@mit.edu)
-#
-#	Permission is hereby granted, free of charge, to any person obtaining a
-#	copy of this software and associated documentation files (the 'Software'),
-#	to deal in the Software without restriction, including without limitation
-#	the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#	and/or sell copies of the Software, and to permit persons to whom the
-#	Software is furnished to do so, subject to the following conditions:
-#
-#	The above copyright notice and this permission notice shall be included in
-#	all copies or substantial portions of the Software.
-#
-#	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#	DEALINGS IN THE SOFTWARE.
-#
-################################################################################
+###############################################################################
+#                                                                             #
+# RMG Website - A Django-powered website for Reaction Mechanism Generator     #
+#                                                                             #
+# Copyright (c) 2011-2018 Prof. William H. Green (whgreen@mit.edu),           #
+# Prof. Richard H. West (r.west@neu.edu) and the RMG Team (rmg_dev@mit.edu)   #
+#                                                                             #
+# Permission is hereby granted, free of charge, to any person obtaining a     #
+# copy of this software and associated documentation files (the 'Software'),  #
+# to deal in the Software without restriction, including without limitation   #
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,    #
+# and/or sell copies of the Software, and to permit persons to whom the       #
+# Software is furnished to do so, subject to the following conditions:        #
+#                                                                             #
+# The above copyright notice and this permission notice shall be included in  #
+# all copies or substantial portions of the Software.                         #
+#                                                                             #
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR  #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,    #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER      #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING     #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER         #
+# DEALINGS IN THE SOFTWARE.                                                   #
+#                                                                             #
+###############################################################################
 
 """
 Provides template tags for rendering kinetics models in various ways.
@@ -69,8 +69,22 @@ def getNumberOfReactantsFromUnits(units):
         'cm**3/(molecule*s)': 2,
         'cm^3/molecule/s': 2,
         'cm**3/molecule/s': 2,
+        'm^6/(mol^2*s)': 3,
+        'm**6/(mol^2*s)': 3,
+        'm^6/mol^2/s': 3,
+        'm**6/mol^2/s': 3,
         'cm^6/(mol^2*s)': 3,
         'cm**6/(mol^2*s)': 3,
+        'cm^6/mol^2/s': 3,
+        'cm**6/mol^2/s': 3,
+        'm^6/(molecule^2*s)': 3,
+        'm**6/(molecule^2*s)': 3,
+        'm^6/molecule^2/s': 3,
+        'm**6/molecule^2/s': 3,
+        'cm^6/(molecule^2*s)': 3,
+        'cm**6/(molecule^2*s)': 3,
+        'cm^6/molecule^2/s': 3,
+        'cm**6/molecule^2/s': 3,
     }
     return si_units[units]
 
@@ -107,7 +121,7 @@ def getRateCoefficientUnits(kinetics, user=None):
     elif isinstance(kinetics, KineticsData):
         numReactants = getNumberOfReactantsFromUnits(kinetics.kdata.units)
     elif isinstance(kinetics, PDepArrhenius):
-        numReactants = getNumberOfReactantsFromUnits(kinetics.arrhenius[0].A.units)
+        return getRateCoefficientUnits(kinetics.arrhenius[0])
     elif isinstance(kinetics, Chebyshev):
         numReactants = getNumberOfReactantsFromUnits(kinetics.kunits)
     elif isinstance(kinetics, Troe):
@@ -170,7 +184,7 @@ def getRateCoefficientUnits(kinetics, user=None):
 @register.filter
 def render_kinetics_math(kinetics, user=None):
     """
-    Return a math representation of the given `kinetics` using jsMath. If a 
+    Return a math representation of the given `kinetics` using MathJax. If a
     `user` is specified, the user's preferred units will be used; otherwise 
     default units will be used.
     """
@@ -198,7 +212,7 @@ def render_kinetics_math(kinetics, user=None):
     
     if isinstance(kinetics, Arrhenius):
         # The kinetics is in Arrhenius format
-        result += r'<div class="math">k(T) = {0!s}</div>'.format(getArrheniusJSMath(
+        result += r'<script type="math/tex; mode=display">k(T) = {0!s}</script>'.format(getArrheniusJSMath(
             kinetics.A.value_si * kfactor, kunits, 
             kinetics.n.value_si, '', 
             kinetics.Ea.value_si * Efactor, Eunits, 
@@ -207,23 +221,23 @@ def render_kinetics_math(kinetics, user=None):
     
     elif isinstance(kinetics, ArrheniusEP):
         # The kinetics is in ArrheniusEP format
-        result += r'<div class="math">k(T) = {0!s}'.format(getLaTeXScientificNotation(kinetics.A.value_si * kfactor))
+        result += r'<script type="math/tex; mode=display">k(T) = {0!s}'.format(getLaTeXScientificNotation(kinetics.A.value_si * kfactor))
         if kinetics.n.value_si != 0:
             result += r' T^{{ {0:.2f} }}'.format(kinetics.n.value_si)
         result += r' \exp \left( - \, \frac{{ {0:.2f} \ \mathrm{{ {1!s} }} + {2:.2f} \Delta H_\mathrm{{rxn}}^\circ }}{{ R T }} \right)'.format(kinetics.E0.value_si * Efactor, Eunits, kinetics.alpha.value_si)
-        result += ' \ \mathrm{{ {0!s} }}</div>'.format(kunits)
+        result += ' \ \mathrm{{ {0!s} }}</script>'.format(kunits)
     
     elif isinstance(kinetics, KineticsData):
         # The kinetics is in KineticsData format
         result += r'<table class="KineticsData">'
         result += r'<tr><th>Temperature</th><th>Rate coefficient</th></tr>'
         for T, k in zip(kinetics.Tdata.value_si, kinetics.kdata.value_si):
-            result += r'<tr><td><span class="math">{0:g} \ \mathrm{{ {1!s} }}</span></td><td><span class="math">{2!s} \ \mathrm{{ {3!s} }}</span></td></tr>'.format(T * Tfactor, Tunits, getLaTeXScientificNotation(k * kfactor), kunits)
+            result += r'<tr><td><script type="math/tex">{0:g} \ \mathrm{{ {1!s} }}</script></td><td><script type="math/tex">{2!s} \ \mathrm{{ {3!s} }}</script></td></tr>'.format(T * Tfactor, Tunits, getLaTeXScientificNotation(k * kfactor), kunits)
         result += r'</table>'
         # fit to an arrhenius
         arr = kinetics.toArrhenius()
         result += "Fitted to an Arrhenius:"
-        result += r'<div class="math">k(T) = {0!s}</div>'.format(getArrheniusJSMath(
+        result += r'<script type="math/tex; mode=display">k(T) = {0!s}</script>'.format(getArrheniusJSMath(
             arr.A.value_si * kfactor, kunits, 
             arr.n.value_si, '', 
             arr.Ea.value_si * Efactor, Eunits, 
@@ -233,39 +247,57 @@ def render_kinetics_math(kinetics, user=None):
     elif isinstance(kinetics, PDepArrhenius):
         # The kinetics is in PDepArrhenius format
         for P, arrh in zip(kinetics.pressures.value_si, kinetics.arrhenius):
-            result += r'<div class="math">k(T, \ {0:.3g} \ \mathrm{{ {1!s} }}) = {2}</div>'.format(
-                P * Pfactor, Punits, 
-                getArrheniusJSMath(
-                    arrh.A.value_si * kfactor, kunits, 
-                    arrh.n.value_si, '', 
-                    arrh.Ea.value_si * Efactor, Eunits, 
-                    arrh.T0.value_si * Tfactor, Tunits,
-                ),
-            )
+            if isinstance(arrh, Arrhenius):
+                result += r'<script type="math/tex; mode=display">k(T, {0} \mathrm{{ {1!s} }}) = {2}</script>'.format(
+                    getLaTeXScientificNotation(P * Pfactor), Punits,
+                    getArrheniusJSMath(
+                        arrh.A.value_si * kfactor, kunits,
+                        arrh.n.value_si, '',
+                        arrh.Ea.value_si * Efactor, Eunits,
+                        arrh.T0.value_si * Tfactor, Tunits,
+                    ),
+                )
+            elif isinstance(arrh, MultiArrhenius):
+                start = (r'<script type="math/tex; mode=display">'
+                         r'k(T, {0} \mathrm{{ {1!s} }}) = '.format(getLaTeXScientificNotation(P * Pfactor), Punits))
+                res = ''
+                for i, k in enumerate(arrh.arrhenius):
+                    start += 'k_{{ {0:d} }}(T, {1} \mathrm{{ {2!s} }}) + '.format(i + 1, getLaTeXScientificNotation(P * Pfactor), Punits)
+                    res += r'<script type="math/tex; mode=display">k_{{ {0:d} }}(T, {1} \mathrm{{ {2!s} }}) = {3}</script>'.format(
+                        i + 1, getLaTeXScientificNotation(P * Pfactor), Punits,
+                        getArrheniusJSMath(
+                            k.A.value_si * kfactor, kunits,
+                            k.n.value_si, '',
+                            k.Ea.value_si * Efactor, Eunits,
+                            k.T0.value_si * Tfactor, Tunits,
+                        ),
+                    )
+                result += start[:-3] + '</script>\n' + res + '<br/>'
+
             
     elif isinstance(kinetics, Chebyshev):
         # The kinetics is in Chebyshev format
-        result += r"""<div class="math">
+        result += r"""<script type="math/tex; mode=display">
 \begin{split}
 \log k(T,P) &= \sum_{t=1}^{N_T} \sum_{p=1}^{N_P} C_{tp} \phi_t(\tilde{T}) \phi_p(\tilde{P}) [\mathrm{""" + kinetics.kunits + r""" }] \\
 \tilde{T} &\equiv \frac{2T^{-1} - T_\mathrm{min}^{-1} - T_\mathrm{max}^{-1}}{T_\mathrm{max}^{-1} - T_\mathrm{min}^{-1}} \\
 \tilde{P} &\equiv \frac{2 \log P - \log P_\mathrm{min} - \log P_\mathrm{max}}{\log P_\mathrm{max} - \log P_\mathrm{min}}
-\end{split}</div><br/>
-<div class="math">\mathbf{C} = \begin{bmatrix}
+\end{split}</script><br/>
+<script type="math/tex; mode=display">\mathbf{C} = \begin{bmatrix}
         """
         for t in range(kinetics.degreeT):
             for p in range(kinetics.degreeP):
                 if p > 0: result += ' & '
                 result += '{0:g}'.format(kinetics.coeffs.value_si[t,p])
             result += '\\\\ \n'
-        result += '\end{bmatrix}</div>'
+        result += '\end{bmatrix}</script>'
     
     elif isinstance(kinetics, Troe):
         # The kinetics is in Troe format
         Fcent = r'(1 - \alpha) \exp \left( -T/T_3 \right) + \alpha \exp \left( -T/T_1 \right) + \exp \left( -T_2/T \right)'
         if kinetics.T2 is not None:
             Fcent += r' + \exp \left( -T_2/T \right)'
-        result += r"""<div class="math">
+        result += r"""<script type="math/tex; mode=display">
 \begin{{split}}
 k(T,P) &= k_\infty(T) \left[ \frac{{P_\mathrm{{r}}}}{{1 + P_\mathrm{{r}}}} \right] F \\
 P_\mathrm{{r}} &= \frac{{k_0(T)}}{{k_\infty(T)}} [\mathrm{{M}}] \\
@@ -275,7 +307,7 @@ n &= 0.75 - 1.27 \log F_\mathrm{{cent}} \\
 d &= 0.14 \\
 F_\mathrm{{cent}} &= {0}
 \end{{split}}
-</div><div class="math">\begin{{split}}
+</script><script type="math/tex; mode=display">\begin{{split}}
         """.format(Fcent)
         result += r'k_\infty(T) &= {0!s} \\'.format(getArrheniusJSMath(
             kinetics.arrheniusHigh.A.value_si * kfactor, kunits, 
@@ -294,16 +326,16 @@ F_\mathrm{{cent}} &= {0}
         result += r'T_1 &= {0:g} \ \mathrm{{ {1!s} }} \\'.format(kinetics.T1.value_si * Tfactor, Tunits)
         if kinetics.T2 is not None:
             result += r'T_2 &= {0:g} \ \mathrm{{ {1!s} }} \\'.format(kinetics.T2.value_si * Tfactor, Tunits)
-        result += r'\end{split}</div>'
+        result += r'\end{split}</script>'
     
     elif isinstance(kinetics, Lindemann):
         # The kinetics is in Lindemann format
-        result += r"""<div class="math">
+        result += r"""<script type="math/tex; mode=display">
 \begin{{split}}
 k(T,P) &= k_\infty(T) \left[ \frac{{P_\mathrm{{r}}}}{{1 + P_\mathrm{{r}}}} \right] \\
 P_\mathrm{{r}} &= \frac{{k_0(T)}}{{k_\infty(T)}} [\mathrm{{M}}] \\
 \end{{split}}
-</div><div class="math">\begin{{split}}
+</script><script type="math/tex; mode=display">\begin{{split}}
         """.format()
         result += r'k_\infty(T) &= {0!s} \\'.format(getArrheniusJSMath(
             kinetics.arrheniusHigh.A.value_si * kfactor, kunits, 
@@ -317,13 +349,13 @@ P_\mathrm{{r}} &= \frac{{k_0(T)}}{{k_\infty(T)}} [\mathrm{{M}}] \\
             kinetics.arrheniusLow.Ea.value_si * Efactor, Eunits, 
             kinetics.arrheniusLow.T0.value_si * Tfactor, Tunits,
         ))
-        result += r'\end{split}</div>'
+        result += r'\end{split}</script>'
     
     elif isinstance(kinetics, ThirdBody):
         # The kinetics is in ThirdBody format
-        result += r"""<div class="math">
+        result += r"""<script type="math/tex; mode=display">
 k(T,P) = k_0(T) [\mathrm{{M}}]
-</div><div class="math">
+</script><script type="math/tex; mode=display">
         """.format()
         result += r'k_0(T) = {0!s}'.format(getArrheniusJSMath(
             kinetics.arrheniusLow.A.value_si * kfactor * kfactor, kunits_low, 
@@ -331,24 +363,21 @@ k(T,P) = k_0(T) [\mathrm{{M}}]
             kinetics.arrheniusLow.Ea.value_si * Efactor, Eunits, 
             kinetics.arrheniusLow.T0.value_si * Tfactor, Tunits,
         ))
-        result += '</div>'
+        result += '</script>'
         
     elif isinstance(kinetics, (MultiArrhenius,MultiPDepArrhenius)):
         # The kinetics is in MultiArrhenius or MultiPDepArrhenius format
         result = ''
-        start = ''
+        start = r'<script type="math/tex; mode=display">k(T, P) = '
         for i, k in enumerate(kinetics.arrhenius):
             res = render_kinetics_math(k, user=user)
-            start += '{0} + '.format(res.split(' = ')[0].replace('<div class="math">k(T', 'k_{{ {0:d} }}(T'.format(i+1), 1))
-            result += res.replace('k(T', 'k_{{ {0:d} }}(T'.format(i+1), 1) + '<br/>'
+            start += 'k_{{ {0:d} }}(T, P) + '.format(i+1)
+            result += res.replace('k(T', 'k_{{ {0:d} }}(T'.format(i+1)) + '<br/>'
         
-        result = r"""<div class="math">
-k(T,P) = {0!s}
-</div><br/>
-        """.format(start[:-3]) + result
+        result = start[:-3] + '</script><br/>' + result
 
     # Collision efficiencies
-    if hasattr(kinetics, 'efficiencies'):
+    if hasattr(kinetics, 'efficiencies') and kinetics.efficiencies:
         result += '<table>\n'
         result += '<tr><th colspan="2">Collision efficiencies</th></tr>'
         for smiles, eff in kinetics.efficiencies.iteritems():
@@ -358,9 +387,9 @@ k(T,P) = {0!s}
     # Temperature and pressure ranges
     result += '<table class="kineticsEntryData">'
     if kinetics.Tmin is not None and kinetics.Tmax is not None:
-        result += '<tr><td class="key">Temperature range</td><td class="equals">=</td><td class="value">{0:g} to {1:g} {2!s}</td></tr>'.format(kinetics.Tmin.value * Tfactor, kinetics.Tmax.value * Tfactor, Tunits)
+        result += '<tr><td class="key">Temperature range</td><td class="equals">=</td><td class="value">{0:g} to {1:g} {2!s}</td></tr>'.format(kinetics.Tmin.value_si * Tfactor, kinetics.Tmax.value_si * Tfactor, Tunits)
     if kinetics.Pmin is not None and kinetics.Pmax is not None:
-        result += '<tr><td class="key">Pressure range</td><td class="equals">=</td><td class="value">{0:g} to {1:g} {2!s}</td></tr>'.format(kinetics.Pmin.value * Pfactor, kinetics.Pmax.value * Pfactor, Punits)
+        result += '<tr><td class="key">Pressure range</td><td class="equals">=</td><td class="value">{0:g} to {1:g} {2!s}</td></tr>'.format(kinetics.Pmin.value_si * Pfactor, kinetics.Pmax.value_si * Pfactor, Punits)
     result += '</table>'
 
     return mark_safe(result)
@@ -404,8 +433,12 @@ def get_rate_coefficients(kinetics, user=None):
     # Generate data to use for plots
     Tdata = []; Pdata = []; kdata = []
     if kinetics.Tmin is not None and kinetics.Tmax is not None:
-        Tmin = kinetics.Tmin.value_si
-        Tmax = kinetics.Tmax.value_si
+        if kinetics.Tmin.value_si == kinetics.Tmax.value_si:
+            Tmin = kinetics.Tmin.value_si - 5
+            Tmax = kinetics.Tmax.value_si + 5
+        else:
+            Tmin = kinetics.Tmin.value_si
+            Tmax = kinetics.Tmax.value_si
     else:
         Tmin = 300
         Tmax = 2000
@@ -506,8 +539,8 @@ def get_specific_rate(kinetics, eval):
     temperature, pressure = eval
     kunits, kunits_low, kfactor, numReactants = getRateCoefficientUnits(kinetics)
     rate = kinetics.getRateCoefficient(temperature, pressure)*kfactor
-    result = '<div class="math">k(T, P) = {0!s}'.format(getLaTeXScientificNotation(rate))
-    result += '\ \mathrm{{ {0!s} }}</div>'.format(kunits)
+    result = '<script type="math/tex; mode=display">k(T, P) = {0!s}'.format(getLaTeXScientificNotation(rate))
+    result += '\ \mathrm{{ {0!s} }}</script>'.format(kunits)
     return mark_safe(result)
 
 ###############################################################################

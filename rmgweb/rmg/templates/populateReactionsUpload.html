@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 
 
@@ -19,8 +20,8 @@ $().ready(function() {
 {%endblock%}
 
 {% block navbar_items %}
-<a href="{% url 'rmg.views.index' %}">Simulation and Tools</a> &raquo;
-<a href="{% url 'rmg.views.runPopulateReactions' %}">Populate Reactions</a>
+<li><a href="{% url 'rmg:index' %}">RMG Tools</a></li>
+<li><a href="{% url 'rmg:run-populate-reactions' %}">Populate Reactions</a></li>
 {% endblock %}
 
 {% block sidebar_items %}
@@ -36,7 +37,7 @@ HTML and chemkin format.
 </p>
 <hr/>
 
-<img src="../media/loading.gif" alt="Loading..." style="display:none" id="loading_image">
+<img src="{% static 'img/loading.gif' %}" alt="Loading..." style="display:none" id="loading_image">
 <P>
 
 {% if output %}

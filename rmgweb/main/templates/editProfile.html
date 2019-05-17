@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% load gravatar %}
 
 
@@ -6,18 +7,7 @@
 {% block title %}Edit {{ user.username }}'s profile - RMG{% endblock %}
 
 {% block extrahead %}
-<link href="/media/main.css" rel="stylesheet" type="text/css"/>
-<style type="text/css">
-td.fieldValue input, td.fieldValue textarea {
-    width: 400px;
-}
-
-td.section {
-    color: #993333;
-    font-size: 125%;
-    font-weight: bold;
-}
-</style>
+<link href="{% static 'css/main.css' %}" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block navbar_items %}{% endblock %}

@@ -1,32 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-################################################################################
-#
-#	RMG Website - A Django-powered website for Reaction Mechanism Generator
-#
-#	Copyright (c) 2011 Prof. William H. Green (whgreen@mit.edu) and the
-#	RMG Team (rmg_dev@mit.edu)
-#
-#	Permission is hereby granted, free of charge, to any person obtaining a
-#	copy of this software and associated documentation files (the 'Software'),
-#	to deal in the Software without restriction, including without limitation
-#	the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#	and/or sell copies of the Software, and to permit persons to whom the
-#	Software is furnished to do so, subject to the following conditions:
-#
-#	The above copyright notice and this permission notice shall be included in
-#	all copies or substantial portions of the Software.
-#
-#	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#	DEALINGS IN THE SOFTWARE.
-#
-################################################################################
+###############################################################################
+#                                                                             #
+# RMG Website - A Django-powered website for Reaction Mechanism Generator     #
+#                                                                             #
+# Copyright (c) 2011-2018 Prof. William H. Green (whgreen@mit.edu),           #
+# Prof. Richard H. West (r.west@neu.edu) and the RMG Team (rmg_dev@mit.edu)   #
+#                                                                             #
+# Permission is hereby granted, free of charge, to any person obtaining a     #
+# copy of this software and associated documentation files (the 'Software'),  #
+# to deal in the Software without restriction, including without limitation   #
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,    #
+# and/or sell copies of the Software, and to permit persons to whom the       #
+# Software is furnished to do so, subject to the following conditions:        #
+#                                                                             #
+# The above copyright notice and this permission notice shall be included in  #
+# all copies or substantial portions of the Software.                         #
+#                                                                             #
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR  #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,    #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER      #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING     #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER         #
+# DEALINGS IN THE SOFTWARE.                                                   #
+#                                                                             #
+###############################################################################
 
 """
 Provides template tags for rendering statmech models in various ways.
@@ -53,7 +53,7 @@ import math
 @register.filter
 def render_states_math(states, user=None):
     """
-    Return a math representation of the given `states` using jsMath. If a 
+    Return a math representation of the given `states` using MathJax. If a
     `user` is specified, the user's preferred units will be used; otherwise 
     default units will be used.
     """
@@ -124,19 +124,19 @@ def render_states_math(states, user=None):
                 fourierA = ', '.join(['{0:g}'.format(a_k) for a_k in mode.fourier.value_si[0,:]])  
                 fourierB = ', '.join(['{0:g}'.format(b_k) for b_k in mode.fourier.value_si[1,:]])
                 result += '<tr>'
-                result += r'    <td colspan="2"><span class="math">V(\phi) = A + \sum_k \left( a_k \cos k \phi + b_k \sin k \phi \right)</span></td>'
+                result += r'    <td colspan="2"><script type="math/tex">V(\phi) = A + \sum_k \left( a_k \cos k \phi + b_k \sin k \phi \right)</script></td>'
                 result += '</tr>\n'
                 result += '<tr>'
-                result += r'    <td class="label"><span class="math">a_k</span></td>'
+                result += r'    <td class="label"><script type="math/tex">a_k</script></td>'
                 result += r'    <td>{0}</td>'.format(fourierA)
                 result += '</tr>\n'
                 result += '<tr>'
-                result += r'    <td class="label"><span class="math">b_k</span></td>'
+                result += r'    <td class="label"><script type="math/tex">b_k</script></td>'
                 result += r'    <td>{0}</td>'.format(fourierB)
                 result += '</tr>\n'
             else:
                 result += '<tr>'
-                result += r'    <td colspan="2"><span class="math">V(\phi) = \frac{1}{2} V_0 \left[1 - \cos \left( \sigma \phi \right) \right]</span></td>'
+                result += r'    <td colspan="2"><script type="math/tex">V(\phi) = \frac{1}{2} V_0 \left[1 - \cos \left( \sigma \phi \right) \right]</script></td>'
                 result += '</tr>\n'
                 result += '<tr>'
                 result += r'    <td class="label">Barrier height ({0!s}):</td>'.format(Eunits)

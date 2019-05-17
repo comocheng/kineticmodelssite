@@ -1,66 +1,49 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-################################################################################
-#
-#	RMG Website - A Django-powered website for Reaction Mechanism Generator
-#
-#	Copyright (c) 2011 Prof. William H. Green (whgreen@mit.edu) and the
-#	RMG Team (rmg_dev@mit.edu)
-#
-#	Permission is hereby granted, free of charge, to any person obtaining a
-#	copy of this software and associated documentation files (the 'Software'),
-#	to deal in the Software without restriction, including without limitation
-#	the rights to use, copy, modify, merge, publish, distribute, sublicense,
-#	and/or sell copies of the Software, and to permit persons to whom the
-#	Software is furnished to do so, subject to the following conditions:
-#
-#	The above copyright notice and this permission notice shall be included in
-#	all copies or substantial portions of the Software.
-#
-#	THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-#	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-#	DEALINGS IN THE SOFTWARE.
-#
-################################################################################
+###############################################################################
+#                                                                             #
+# RMG Website - A Django-powered website for Reaction Mechanism Generator     #
+#                                                                             #
+# Copyright (c) 2011-2018 Prof. William H. Green (whgreen@mit.edu),           #
+# Prof. Richard H. West (r.west@neu.edu) and the RMG Team (rmg_dev@mit.edu)   #
+#                                                                             #
+# Permission is hereby granted, free of charge, to any person obtaining a     #
+# copy of this software and associated documentation files (the 'Software'),  #
+# to deal in the Software without restriction, including without limitation   #
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,    #
+# and/or sell copies of the Software, and to permit persons to whom the       #
+# Software is furnished to do so, subject to the following conditions:        #
+#                                                                             #
+# The above copyright notice and this permission notice shall be included in  #
+# all copies or substantial portions of the Software.                         #
+#                                                                             #
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR  #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,    #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE #
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER      #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING     #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER         #
+# DEALINGS IN THE SOFTWARE.                                                   #
+#                                                                             #
+###############################################################################
 
-import os.path
-import re
+import os
 
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-from django.http import Http404, HttpResponseRedirect
-from django.core.urlresolvers import reverse
 from django.forms.models import BaseInlineFormSet, inlineformset_factory
+from django.shortcuts import render
+from django.template import RequestContext
 
 from rmgweb.rmg.models import *
 from rmgweb.rmg.forms import *
 
-from rmgpy.molecule.molecule import Molecule
-from rmgpy.molecule.group import Group
-from rmgpy.thermo import *
-from rmgpy.kinetics import *
-
-from rmgpy.data.base import Entry
-from rmgpy.data.thermo import ThermoDatabase
-from rmgpy.data.kinetics import *
-from rmgpy.data.rmg import RMGDatabase
-
-from rmgweb.main.tools import *
-from rmgweb.database.views import loadDatabase
-
 ################################################################################
-
 
 def index(request):
     """
     The RMG simulation homepage.
     """
-    return render_to_response('rmg.html', context_instance=RequestContext(request))
+    return render(request, 'rmg.html')
 
 def convertChemkin(request):
     """
@@ -75,18 +58,18 @@ def convertChemkin(request):
         form = UploadChemkinForm(request.POST, request.FILES, instance=chemkin)
         if form.is_valid():
             form.save()
-            path = 'media/rmg/tools/output.html'
+            path = 'media/rmg/tools/chemkin/output.html'
             # Generate the output HTML file
             chemkin.createOutput()
             # Go back to the network's main page
-            return render_to_response('chemkinUpload.html', {'form': form, 'path':path}, context_instance=RequestContext(request))
+            return render(request, 'chemkinUpload.html', {'form': form, 'path':path})
 
 
     # Otherwise create the form
     else:
         form = UploadChemkinForm(instance=chemkin)
         
-    return render_to_response('chemkinUpload.html', {'form': form,'path':path}, context_instance=RequestContext(request))
+    return render(request, 'chemkinUpload.html', {'form': form,'path':path})
 
 def convertAdjlists(request):
     """
@@ -105,13 +88,13 @@ def convertAdjlists(request):
             # Generate the output HTML file
             conversion.createOutput()
             # Go back to the network's main page
-            return render_to_response('dictionaryUpload.html', {'form': form, 'path':path}, context_instance=RequestContext(request))
+            return render(request, 'dictionaryUpload.html', {'form': form, 'path':path})
 
     # Otherwise create the form
     else:
         form = UploadDictionaryForm(instance=conversion)
         
-    return render_to_response('dictionaryUpload.html', {'form': form,'path':path}, context_instance=RequestContext(request))
+    return render(request, 'dictionaryUpload.html', {'form': form,'path':path})
 
 def compareModels(request):
     """
@@ -130,14 +113,14 @@ def compareModels(request):
             path = 'media/rmg/tools/compare/diff.html'
             # Generate the output HTML file
             diff.createOutput()
-            return render_to_response('modelCompare.html', {'form': form, 'path':path}, context_instance=RequestContext(request))
+            return render(request, 'modelCompare.html', {'form': form, 'path':path})
 
 
     # Otherwise create the form
     else:
         form = ModelCompareForm(instance=diff)
 
-    return render_to_response('modelCompare.html', {'form': form,'path':path}, context_instance=RequestContext(request))
+    return render(request, 'modelCompare.html', {'form': form,'path':path})
 
 
 def mergeModels(request):
@@ -157,11 +140,11 @@ def mergeModels(request):
             model.merge()
             path = 'media/rmg/tools/compare'
             #[os.path.join(model.path,'chem.inp'), os.path.join(model.path,'species_dictionary.txt'), os.path.join(model.path,'merging_log.txt')]
-            return render_to_response('mergeModels.html', {'form': form, 'path':path}, context_instance=RequestContext(request))
+            return render(request, 'mergeModels.html', {'form': form, 'path':path})
     else:
         form = ModelCompareForm(instance=model)
 
-    return render_to_response('mergeModels.html', {'form': form,'path':path}, context_instance=RequestContext(request))
+    return render(request, 'mergeModels.html', {'form': form,'path':path})
 
 
 
@@ -196,16 +179,16 @@ def generateFlux(request):
             settings['concentrationTolerance'] = form.cleaned_data['ConcentrationTolerance']
             settings['speciesRateTolerance'] = form.cleaned_data['SpeciesRateTolerance']
        
-            createFluxDiagram(flux.path, input, chemkin, dict, java, settings, chemkinOutput)
+            createFluxDiagram(input, chemkin, dict, savePath=flux.path, java=java, settings=settings, chemkinOutput=chemkinOutput)
             # Look at number of subdirectories to determine where the flux diagram videos are
             subdirs = [name for name in os.listdir(flux.path) if os.path.isdir(os.path.join(flux.path, name))]
             subdirs.remove('species')
-            return render_to_response('fluxDiagram.html', {'form': form, 'path':subdirs}, context_instance=RequestContext(request))
+            return render(request, 'fluxDiagram.html', {'form': form, 'path':subdirs})
 
     else:
         form = FluxDiagramForm(instance=flux)
 
-    return render_to_response('fluxDiagram.html', {'form': form,'path':path}, context_instance=RequestContext(request))
+    return render(request, 'fluxDiagram.html', {'form': form,'path':path})
 
 
 def runPopulateReactions(request):
@@ -227,14 +210,14 @@ def runPopulateReactions(request):
             # Generate the output HTML file
             populateReactions.createOutput()
             # Go back to the network's main page
-            return render_to_response('populateReactionsUpload.html', {'form': form, 'output': outputPath, 'chemkin': chemkinPath}, context_instance=RequestContext(request))
+            return render(request, 'populateReactionsUpload.html', {'form': form, 'output': outputPath, 'chemkin': chemkinPath})
 
 
     # Otherwise create the form
     else:
         form = PopulateReactionsForm(instance=populateReactions)
         
-    return render_to_response('populateReactionsUpload.html', {'form': form, 'output': outputPath, 'chemkin': chemkinPath}, context_instance=RequestContext(request))
+    return render(request, 'populateReactionsUpload.html', {'form': form, 'output': outputPath, 'chemkin': chemkinPath})
 
 
 
@@ -319,16 +302,22 @@ def input(request):
                 posted = Input.objects.all()[0]
                 input.saveForm(posted, form)            
                 path = 'media/rmg/tools/input/input.py'            
-                return render_to_response('inputResult.html', {'path': path})
+                return render(request, 'inputResult.html', {'path': path})
             
             else:
                 # Will need more useful error messages later.
                 input_error = 'Your form was invalid.  Please edit the form and try again.'
        
-    return render_to_response('input.html', {'uploadform': uploadform, 'form': form, 'thermolibformset':thermolibformset,
-                                             'reactionlibformset':reactionlibformset, 'reactorspecformset':reactorspecformset,
-                                             'reactorformset':reactorformset, 'upload_error': upload_error, 
-                                             'input_error': input_error}, context_instance=RequestContext(request))
+    return render(request, 'input.html',
+                  {'uploadform': uploadform,
+                   'form': form,
+                   'thermolibformset':thermolibformset,
+                   'reactionlibformset': reactionlibformset,
+                   'reactorspecformset':reactorspecformset,
+                   'reactorformset': reactorformset,
+                   'upload_error': upload_error,
+                   'input_error': input_error,
+                   })
     
     
     
@@ -360,12 +349,13 @@ def plotKinetics(request):
         
                 
             
-        return render_to_response('plotKineticsData.html', {'kineticsDataList': kineticsDataList,
-                                                'plotWidth': 500,
-                                                'plotHeight': 400 + 15 * len(kineticsDataList),
-                                                'form': rateForm,
-                                                'eval':eval },
-                                         context_instance=RequestContext(request))
+        return render(request, 'plotKineticsData.html',
+                      {'kineticsDataList': kineticsDataList,
+                       'plotWidth': 500,
+                       'plotHeight': 400 + 15 * len(kineticsDataList),
+                       'form': rateForm,
+                       'eval': eval,
+                       })
 
     # Otherwise create the form
     else:
@@ -375,15 +365,14 @@ def plotKinetics(request):
         chemkin.deleteDir()
         form = UploadChemkinForm(instance=chemkin)
         
-    return render_to_response('plotKinetics.html', {'form': form}, context_instance=RequestContext(request))
+    return render(request, 'plotKinetics.html', {'form': form})
 
 
 def javaKineticsLibrary(request):
     """
     Allows user to upload chemkin files to generate a plot of reaction kinetics.
     """
-    from rmgpy.quantity import Quantity
-            
+
     eval = False
     
     if request.method == 'POST':
@@ -397,9 +386,8 @@ def javaKineticsLibrary(request):
         
                 
             
-        return render_to_response('javaKineticsLibrary.html', {'form': form,
-                                                'eval': eval },
-                                         context_instance=RequestContext(request))
+        return render(request, 'javaKineticsLibrary.html',
+                      {'form': form, 'eval': eval})
 
     # Otherwise create the form
     else:
@@ -409,7 +397,7 @@ def javaKineticsLibrary(request):
         chemkin.deleteDir()
         form = UploadChemkinForm(instance=chemkin)
         
-    return render_to_response('javaKineticsLibrary.html', {'form': form}, context_instance=RequestContext(request))
+    return render(request, 'javaKineticsLibrary.html', {'form': form})
 
 
 def evaluateNASA(request):
@@ -438,4 +426,4 @@ def evaluateNASA(request):
         
         form = NASAForm(initial, error_class=DivErrorList)
     
-    return render_to_response('NASA.html', {'form': form, 'thermo':thermo, 'thermoData':thermoData}, context_instance=RequestContext(request))
+    return render(request, 'NASA.html', {'form': form, 'thermo':thermo, 'thermoData':thermoData})
