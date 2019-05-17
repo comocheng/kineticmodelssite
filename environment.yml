@@ -2,35 +2,16 @@ name: rmg_env
 channels:
   - defaults
   - rmg
-dependencies:
-  - libgcc # [unix]
-  - python
-  - numpy
-  - cython ==0.21
-  - matplotlib
-  - rdkit
-  - pydas
-  - pydqed
-  - quantities
-  - scipy
+dependencies: # Only those in addition to normal RMG
+  - xlrd
   - xlwt
   - markupsafe
   - jinja2
-  #- argparse # [py26]
-  - pyparsing
-  - pydot
-  - nose
-  - coverage
-  - guppy
-  - gprof2dot
   - cairo
   - cairocffi
   - openbabel
   - psutil
-  - symmetry
-  - mopac
   - graphviz
   - django
   - beautifulsoup4
-  - xlrd
   - docutils
