@@ -1,14 +1,28 @@
 import os.path
 from rmgpy import settings
 
+# Setting to enable display of detailed traceback information upon encountering an error
+# Should be set to False for deployment
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
+
+# Hosts/domain names that are valid for this site.
+# "*" matches anything, ".example.com" matches example.com and all subdomains
+ALLOWED_HOSTS = [
+    '*'
+]
 
 # The website administrators
 ADMINS = [
     ('Richard West', 'R.West@northeastern.edu')
     # ('Your Name', 'your_email@domain.com'),
 ]
+
+# Email settings
+# Host for sending email (SMTP server)
+EMAIL_HOST = 'outgoing.mit.edu'
+# Email address that outgoing error notifications are sent from
+SERVER_EMAIL = 'web@rmg.mit.edu'
 
 # The full path of the Django project (as determined from the location of this file)
 PROJECT_PATH = os.path.realpath(os.path.dirname(__file__))
