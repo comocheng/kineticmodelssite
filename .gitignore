@@ -39,9 +39,14 @@ rmgweb/media/rmg/tools/*
 /rmgweb/nbproject/project.properties
 /rmgweb/nbproject/project.xml
 
+.pydevproject
+.settings/*
+
+# VSCode user settings etc.
+.vscode/settings.json
+
 # WSGI
 apache/django.wsgi
-
 # IDE settings
 .vscode/
 .idea/dictionaries/
