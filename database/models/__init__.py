@@ -5,5 +5,5 @@ from .source import Author, Source, Authorship
 from .reaction_species import Species, Isomer, Structure, Reaction, Stoichiometry
 from .kinetic_data import Kinetics, Arrhenius, BaseKineticsData, KineticsData, ArrheniusEP, PDepArrhenius, \
     MultiArrhenius, MultiPDepArrhenius, Chebyshev, ThirdBody, Lindemann, Troe, Pressure, Efficiency
-from thermo_transport import Thermo, Transport
+from .thermo_transport import Thermo, Transport
 from .kinetic_model import KineticModel, SpeciesName, KineticsComment, ThermoComment, TransportComment

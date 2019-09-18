@@ -9,7 +9,7 @@ from django.conf import settings
 
 
 def upload_chemkin_to(instance, filename):
-    print "SAVING CHEMKIN FILE"
+    print("SAVING CHEMKIN FILE")
     return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
 
 
@@ -172,4 +172,3 @@ class TransportComment(models.Model):
     transport = models.ForeignKey(Transport)
     kineticModel = models.ForeignKey(KineticModel)
     comment = models.CharField(blank=True, max_length=1000)
-
