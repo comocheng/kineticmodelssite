@@ -1,6 +1,5 @@
 from django.db import models
 # Added to support RMG integration
-from rmgpy.thermo import NASA, NASAPolynomial
 
 from .source import Source
 from .reaction_species import Species
@@ -89,26 +88,26 @@ class Thermo(models.Model):
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
-    def to_NASA(self):
-        "Returns a NASA representation"
-        polynomials = []
-        for polynomial_number in [1, 2]:
-            coeffs=[float(getattr(self,
-                                  'coefficient{j}{i}'.format(j=coefficient_number,
-                                                             i=polynomial_number)))
-                    for coefficient_number in range(1,8)]
-            polynomial = NASAPolynomial(
-                            coeffs=coeffs,
-                            Tmin=(float(getattr(self, 'lowerTempBound{i}'.format(i=polynomial_number))), 'K'),
-                            Tmax=(float(getattr(self, 'upperTempBound{i}'.format(i=polynomial_number))), 'K'),
-                            E0=None,
-                            comment=''
-                         )
-            polynomials.append(polynomial)
-        rmg_object = NASA(polynomials=polynomials,
-                          Tmin=polynomials[0].Tmin,
-                          Tmax=polynomials[1].Tmin)
-        return rmg_object
+    # def to_NASA(self):
+    #     "Returns a NASA representation"
+    #     polynomials = []
+    #     for polynomial_number in [1, 2]:
+    #         coeffs=[float(getattr(self,
+    #                               'coefficient{j}{i}'.format(j=coefficient_number,
+    #                                                          i=polynomial_number)))
+    #                 for coefficient_number in range(1,8)]
+    #         polynomial = NASAPolynomial(
+    #                         coeffs=coeffs,
+    #                         Tmin=(float(getattr(self, 'lowerTempBound{i}'.format(i=polynomial_number))), 'K'),
+    #                         Tmax=(float(getattr(self, 'upperTempBound{i}'.format(i=polynomial_number))), 'K'),
+    #                         E0=None,
+    #                         comment=''
+    #                      )
+    #         polynomials.append(polynomial)
+    #     rmg_object = NASA(polynomials=polynomials,
+    #                       Tmin=polynomials[0].Tmin,
+    #                       Tmax=polynomials[1].Tmin)
+    #     return rmg_object
 
     def __unicode__(self):
         return unicode(self.id)
@@ -142,4 +141,3 @@ class Transport(models.Model):
 
     def __unicode__(self):
         return u"{s.id} {s.species}".format(s=self)
-
