@@ -67,13 +67,10 @@ class Authorship(models.Model):
     This allows many-to-many join between Sources (publications)
     and Authors, keeping track of author ordering on each publication.
     """
-    source = models.ForeignKey(Source)
-    author = models.ForeignKey(Author)
+    source = models.ForeignKey(Source, on_delete=models.CASCADE)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
     order = models.IntegerField('Order of authorship')
 
     def __unicode__(self):
         return (u"{s.id} author {s.author} "
                 "was # {s.order} in {s.source}").format(s=self)
-
-
-

@@ -17,8 +17,8 @@ class Kinetics(models.Model):
     in PrIMe, which contain:
     """
     rkPrimeID = models.CharField(blank=True, max_length=10)
-    reaction = models.OneToOneField(Reaction)
-    source = models.ForeignKey(Source, null=True)
+    reaction = models.OneToOneField(Reaction, on_delete=models.CASCADE)
+    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     relativeUncertainty = models.FloatField(blank=True, null=True)
     isReverse = models.BooleanField(
         default=False,
@@ -33,7 +33,7 @@ class BaseKineticsData(models.Model):
     # Necessary for proper inheritance of this base class within Django
     objects = InheritanceManager()
 
-    kinetics = models.OneToOneField(Kinetics)
+    kinetics = models.OneToOneField(Kinetics, on_delete=models.CASCADE)
     collider_efficiencies = models.ManyToManyField(Species, through="Efficiency",
                                                    blank=True)
 
@@ -105,12 +105,12 @@ class Chebyshev(BaseKineticsData):
 
 
 class ThirdBody(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
+    low_arrhenius = models.ForeignKey(Arrhenius, on_delete=models.CASCADE)  # Cannot be ArrheniusEP according to Dr. West
 
 
 class Lindemann(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
-    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
+    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
+    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
     # Cannot be ArrheniusEP according to Dr. West
 
     alpha = models.FloatField()
@@ -120,8 +120,8 @@ class Lindemann(BaseKineticsData):
 
 
 class Troe(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
-    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+")
+    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
+    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
     alpha = models.FloatField()
     t1 = models.FloatField()
     t2 = models.FloatField()
@@ -129,12 +129,12 @@ class Troe(BaseKineticsData):
 
 
 class Pressure(models.Model):
-    arrhenius = models.ForeignKey(Arrhenius)
-    pdep_arrhenius = models.ForeignKey(PDepArrhenius)
+    arrhenius = models.ForeignKey(Arrhenius, on_delete=models.CASCADE)
+    pdep_arrhenius = models.ForeignKey(PDepArrhenius, on_delete=models.CASCADE)
     pressure = models.FloatField()
 
 
 class Efficiency(models.Model):
-    species = models.ForeignKey(Species)
-    kinetics_data = models.ForeignKey(BaseKineticsData)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    kinetics_data = models.ForeignKey(BaseKineticsData, on_delete=models.CASCADE)
     efficiency = models.FloatField()

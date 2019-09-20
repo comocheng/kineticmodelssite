@@ -59,7 +59,7 @@ class Structure(models.Model):
     The equivalent term in RMG would be a molecule
     """
 
-    isomer = models.ForeignKey(Isomer)
+    isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
     smiles = models.CharField('SMILES', blank=True, max_length=500)
     adjacencyList = models.TextField('Adjacency List')
     electronicState = models.IntegerField('Electronic State')
@@ -153,8 +153,8 @@ class Stoichiometry(models.Model):
     In elementary reactions these are always integers, but chemkin allows
     floats, so we do too.
     """
-    species = models.ForeignKey(Species)
-    reaction = models.ForeignKey(Reaction)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     stoichiometry = models.FloatField(default=0.0)
 
     def __unicode__(self):
@@ -164,7 +164,3 @@ class Stoichiometry(models.Model):
     class Meta:
         verbose_name_plural = 'Stoichiometries'
         unique_together = ["species", "reaction", "stoichiometry"]
-
-
-
-

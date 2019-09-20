@@ -63,8 +63,7 @@ class KineticModel(models.Model):
     transport = models.ManyToManyField(Transport,
                                        through='TransportComment',
                                        blank=True)
-    source = models.ForeignKey(Source, null=True,
-                               blank=True)
+    source = models.ForeignKey(Source, null=True, blank=True, on_delete=models.CASCADE)
 
     additionalInfo = models.CharField(max_length=1000,
                                       blank=True)
@@ -120,8 +119,8 @@ class SpeciesName(models.Model):
     """
     A Species Name specific to a given Kinetic Model
     """
-    species = models.ForeignKey(Species)
-    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(blank=True, max_length=200)
 
     def __unicode__(self):
@@ -139,8 +138,8 @@ class KineticsComment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
-    kinetics = models.ForeignKey(Kinetics)
-    kineticModel = models.ForeignKey(KineticModel)
+    kinetics = models.ForeignKey(Kinetics, on_delete=models.CASCADE)
+    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
@@ -155,8 +154,8 @@ class ThermoComment(models.Model):
     but an entry in this table or the existence of this object
     links that thermo entry with that kinetic model.
     """
-    thermo = models.ForeignKey(Thermo)
-    kineticModel = models.ForeignKey(KineticModel)
+    thermo = models.ForeignKey(Thermo, on_delete=models.CASCADE)
+    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __unicode__(self):
@@ -169,6 +168,6 @@ class ThermoComment(models.Model):
 
 
 class TransportComment(models.Model):
-    transport = models.ForeignKey(Transport)
-    kineticModel = models.ForeignKey(KineticModel)
+    transport = models.ForeignKey(Transport, on_delete=models.CASCADE)
+    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)

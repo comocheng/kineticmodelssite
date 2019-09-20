@@ -27,8 +27,8 @@ class Thermo(models.Model):
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
     """
-    source = models.ForeignKey(Source, null=True)
-    species = models.ForeignKey(Species)
+    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
     thpPrimeID = models.CharField(blank=True, max_length=11)
     preferredKey = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
@@ -117,8 +117,8 @@ class Transport(models.Model):
     """
     Some Transport data for a species
     """
-    source = models.ForeignKey(Source, null=True)
-    species = models.ForeignKey(Species)
+    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
     trPrimeID = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
     potentialWellDepth = models.FloatField('Potential Well Depth',
