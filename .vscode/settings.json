@@ -1,6 +1,6 @@
 {
-  "python.pythonPath": "/home/sync/anaconda3/envs/rmg_env/bin/python",
-  "python.linting.pylintEnabled": true,
-  "python.linting.flake8Enabled": false,
+  "python.pythonPath": "/home/sync/.local/share/virtualenvs/kineticmodelssite-WG9hvTVb/bin/python",
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
   "python.linting.enabled": true
 }

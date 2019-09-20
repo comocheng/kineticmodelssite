@@ -38,7 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'kineticmodels',
+    'database.apps.DatabaseConfig',
 )
 
 MIDDLEWARE_CLASSES = (
