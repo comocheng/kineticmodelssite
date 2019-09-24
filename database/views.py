@@ -3,11 +3,11 @@ from django.views.generic import TemplateView, DetailView
 from .models import Species, SpeciesName
 
 
-class Index(TemplateView):
+class IndexView(TemplateView):
     template_name = "index.html"
 
 
-class Resources(TemplateView):
+class ResourcesView(TemplateView):
     template_name = "resources.html"
 
     @staticmethod
@@ -44,7 +44,7 @@ class Resources(TemplateView):
 def molecule_search(request):
     
 
-class MoleculeResult(DetailView):
+class MoleculeResultView(DetailView):
     model = Species
 
     def get_context_data(self, **kwargs):
