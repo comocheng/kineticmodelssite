@@ -1,18 +1,15 @@
 # kineticmodelssite
 A django site for kinetic models
 
-After installing RMG-Py and its dependencies, add the new ones with:
+The project is using pipenv for now.
 
-```
-$ conda env update -n rmg_env -f environment.yml
-$ pip install django-autocomplete-light
-$ pip install django_model_utils
-```
+Install Dependencies:
+- Install pipenv: https://pipenv-es.readthedocs.io/es/stable/#install-pipenv-today
+- ```pipenv install --three```
 
-Running the prime importer: 
-```
-$ python import_prime path/to/prime/database
-```
+Project Structure:
+- The main project is `kms/`
+- The main app is `database/`
 
 Check out this project's wiki for more details
 https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-the-Site
