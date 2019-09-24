@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 flake8 = "*"
+black = "*"
 
 [packages]
 beautifulsoup4 = "*"
@@ -15,7 +16,6 @@ pandas = "*"
 django-autocomplete-light = "*"
 django-model-utils = "*"
 django = "*"
-stringio = "*"
 
 [requires]
 python_version = "3.7"
