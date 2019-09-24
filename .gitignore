@@ -5,7 +5,7 @@
 ################################################################################
 
 # Python bytecode files
-*.pyc
+*.py[cod]
 
 # SQLite database files
 rmgweb/sqlitedb/*
@@ -15,7 +15,7 @@ rmgweb/rmgweb.db
 rmgweb/secretsettings.py
 
 # Static files for deployment
-static/*
+# static/*
 
 # jQuery
 #rmgweb/static/js/jquery.js
@@ -36,17 +36,18 @@ rmgweb/media/rmg/tools/*
 /rmgweb/nbproject/project.properties
 /rmgweb/nbproject/project.xml
 
-# workspace files
-rmgsite/rmgsite_workspace.code-workspace
-
 # WSGI
 apache/django.wsgi
+
+# IDE settings
+.vscode/
 .idea/dictionaries/
 .idea/kineticmodelssite.iml
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
 .idea/workspace.xml
+
 alpha_testing.log
 
 kineticmodels/ioscripts/errors.txt
