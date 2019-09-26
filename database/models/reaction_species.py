@@ -27,7 +27,7 @@ class Species(models.Model):
     def toRMG(self):
         # This code will output a species in a format acceptable by RMG
         # *** Output will be rmg_object ***
-        return rmg_object
+        pass
 
     class Meta:
         ordering = ('sPrimeID',)
