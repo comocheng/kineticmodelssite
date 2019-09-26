@@ -42,16 +42,18 @@ class ResourcesView(TemplateView):
 
 
 def molecule_search(request):
-    
+    pass
 
 class MoleculeResultView(DetailView):
     model = Species
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["names"] = self.get_object().species_name_set.all()
+        context["names"] = self.get_object().species_name_set.all().values_list("name", flat=True)
+        context["adjlists"] = self.get_object().isomer_set.select_related("structure").values_list("adjacencyList", flat=True)
+        
 
-def molecule_result(request, species_id):
+def molecule_result(request, pk):
     pass
 
 def transport_results(request):
