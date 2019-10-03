@@ -1,6 +1,10 @@
 from functools import lru_cache
-from django.views.generic import TemplateView, DetailView
-from .models import Species, SpeciesName
+
+from django.views.generic import TemplateView, DetailView, FormView, SingleObjectMixin, ListView
+from django.urls import reverse
+
+from .models import Species, SpeciesName, KineticModel
+from .forms import SpeciesForm
 
 
 class IndexView(TemplateView):
@@ -41,26 +45,33 @@ class ResourcesView(TemplateView):
         return context
 
 
-def molecule_search(request):
-    pass
-
-class MoleculeResultView(DetailView):
+class SpeciesSearch(SingleObjectMixin, FormView):
     model = Species
+    form_class = SpeciesForm
+    template_name = "species_detail.html"
 
+    def get_success_url(self):
+        return reverse("species-detail", kwargs={"pk": self.get_object().pk})
+    
+
+class SpeciesDetail(DetailView):
+    model = Species
+    template_name = "species_detail.html"
+    
     def get_context_data(self, **kwargs):
+        structures = self.get_object().isomer_set.select_related("structure")
         context = super().get_context_data(**kwargs)
         context["names"] = self.get_object().species_name_set.all().values_list("name", flat=True)
-        context["adjlists"] = self.get_object().isomer_set.select_related("structure").values_list("adjacencyList", flat=True)
+        context["adjlists"] = structures.values_list("adjacencyList", flat=True)
+        context["smiles"] = structures.values_list("smiles", flat=True)
+        context["isomer_inchis"] = self.get_object().isomer_set.values_list("inchi", flat=True)
         
+        return context
 
-def molecule_result(request, pk):
-    pass
 
 def transport_results(request):
     pass
 
-def thermo_results(request):
-    pass
 
 def kinetics_results(request):
     pass
