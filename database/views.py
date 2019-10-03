@@ -69,8 +69,40 @@ class SpeciesDetail(DetailView):
         return context
 
 
-def transport_results(request):
-    pass
+class Results(SingleObjectMixin, ListView):
+    
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object(queryset=Species.objects.all())
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["species"] = self.object
+
+        return context
+
+    def get_queryset(self):
+        return self.object.kinetic_model_set.all()
+
+
+class TransportResults(Results):
+    template_name = "transport_results.html"
+
+
+class ThermoResults(DetailView):
+    template_name = "thermo_results.html"
+
+
+class KineticModelDetail(DetailView):
+    model = KineticModel
+
+
+class ThermoDetail(KineticModelDetail):
+    template_name = "thermo_detail.html"
+
+
+class TransportDetail(KineticModelDetail):
+    template_name = "transport_detail.html"
 
 
 def kinetics_results(request):
