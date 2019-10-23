@@ -1,0 +1,11 @@
+<h1>Species</h1>
+
+{% block content %}
+    <form action="" method="get">
+        {{ filter.form.as_p }}
+        <input type="submit" />
+    </form>
+    {% for species in filter.qs %}
+        {{ species.sPrimeID }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas }}<br/>
+    {% endfor %}
+{% endblock %}
