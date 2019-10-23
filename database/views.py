@@ -76,24 +76,23 @@ class SpeciesDetail(DetailView):
         return context
 
 
-class Results(SingleObjectMixin, ListView):
+# class Results(SingleObjectMixin, ListView):
     
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object(queryset=Species.objects.all())
-        return super().get(request, *args, **kwargs)
+#     def get(self, request, *args, **kwargs):
+#         self.object = self.get_object(queryset=Species.objects.all())
+#         return super().get(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["species"] = self.object
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["species"] = self.object
+#         return context
 
-        return context
-
-    def get_queryset(self):
-        return self.object.kinetic_model_set.all()
+#     def get_queryset(self):
+#         return self.object.kinetic_model_set.all()
 
 
-class TransportResults(Results):
-    template_name = "transport_results.html"
+# class TransportResults(Results):
+#     template_name = "transport_results.html"
 
 
 class ThermoResults(DetailView):
