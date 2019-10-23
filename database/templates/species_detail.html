@@ -1,0 +1,32 @@
+<h1>Detail</h1>
+
+{% block content %}
+    {{ species.sPrimeID }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas }}
+    <h2>Names</h2>
+    <ul>
+        {% for name in names %}
+            <li>{{ name }}</li>
+        {% endfor %}
+    </ul>
+    <hr>
+    <h2>Adjacency Lists</h2>
+    <ul>
+        {% for adjlist in adjlists %}
+            <li>{{ adjlist }}</li>
+        {% endfor %}
+    </ul>
+    <hr>
+    <h2>SMILEs</h2>
+    <ul>
+        {% for smile in smiles %}
+            <li>{{ smile }}</li>
+        {% endfor %}
+    </ul>
+    <hr>
+    <h2>Isomer Inchis</h2>
+    <ul>
+        {% for isomer_inchi in isomer_inchis %}
+            <li>{{ isomer_inchi }}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}
