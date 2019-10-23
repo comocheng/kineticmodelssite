@@ -1,5 +1,4 @@
 from django.db import models
-from model_utils.managers import InheritanceManager  # pip install "django_model_uitls"
 
 from .source import Source
 from .reaction_species import Reaction, Species
@@ -29,9 +28,6 @@ class Kinetics(models.Model):
 
 
 class BaseKineticsData(models.Model):
-
-    # Necessary for proper inheritance of this base class within Django
-    objects = InheritanceManager()
 
     kinetics = models.OneToOneField(Kinetics, on_delete=models.CASCADE)
     collider_efficiencies = models.ManyToManyField(Species, through="Efficiency",

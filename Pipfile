@@ -14,7 +14,6 @@ pydot = "*"
 cairocffi = "*"
 pandas = "*"
 django-autocomplete-light = "*"
-django-model-utils = "*"
 django = "*"
 
 [requires]
