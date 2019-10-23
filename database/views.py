@@ -26,7 +26,7 @@ class ResourcesView(TemplateView):
         return (title, date, file_name)
 
     @property
-    @lru_cache
+    @lru_cache()
     def presentations(self):
         pres_list = []
         folder = os.path.join(settings.STATIC_ROOT, 'presentations')
