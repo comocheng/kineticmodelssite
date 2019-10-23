@@ -6,6 +6,6 @@
         <input type="submit" />
     </form>
     {% for species in filter.qs %}
-        {{ species.sPrimeID }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas }}<br/>
+        <a href="{% url "species-detail" species.pk %}">Species</a>: {{ species.sPrimeID }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas }}<br/>
     {% endfor %}
 {% endblock %}
