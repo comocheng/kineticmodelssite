@@ -4,7 +4,7 @@ import django_filters
 from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 
-from .models import Species, SpeciesName, KineticModel
+from .models import Species, Structure, SpeciesName, KineticModel
 from .forms import SpeciesForm
 
 
@@ -63,9 +63,9 @@ class SpeciesDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        structures = self.get_object().isomer_set.select_related("structure")
+        structures = Structure.objects.filter(isomer__species=self.get_object())
         context["names"] = (
-            self.get_object().species_name_set.all().values_list("name", flat=True)
+            self.get_object().speciesname_set.all().values_list("name", flat=True)
         )
         context["adjlists"] = structures.values_list("adjacencyList", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
