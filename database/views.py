@@ -1,6 +1,7 @@
 from functools import lru_cache
 
-from django.views.generic import TemplateView, DetailView, FormView, SingleObjectMixin, ListView
+import django_filters
+from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 
 from .models import Species, SpeciesName, KineticModel
@@ -45,14 +46,20 @@ class ResourcesView(TemplateView):
         return context
 
 
-class SpeciesSearch(SingleObjectMixin, FormView):
-    model = Species
-    form_class = SpeciesForm
-    template_name = "species_detail.html"
+class SpeciesFilter(django_filters.FilterSet):
+    class Meta:
+        model = Species
+        fields = ["sPrimeID", "formula", "inchi", "cas"]
+        # fields = {
+        #     "sPrimeID": ["sPrimeID"],
+        #     "formula": ["formula"],
+        #     "inchi": ["inchi"],
+        #     "cas": ["cas"],
+        #     # "species_name": ["name"],
+        #     # "isomer": ["inchi"],
+        #     # "isomer__structure": ["smiles", "adjacencyList", "electronicState"],
+        # }
 
-    def get_success_url(self):
-        return reverse("species-detail", kwargs={"pk": self.get_object().pk})
-    
 
 class SpeciesDetail(DetailView):
     model = Species
