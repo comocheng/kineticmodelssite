@@ -46,18 +46,15 @@ class ResourcesView(TemplateView):
 
 
 class SpeciesFilter(django_filters.FilterSet):
+    speciesname__name = django_filters.CharFilter(field_name="speciesname", lookup_expr="name")
+    isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi")
+    isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles")
+    isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList")
+    isomer__structure__electronicState = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__electronicState")
+    
     class Meta:
         model = Species
         fields = ["sPrimeID", "formula", "inchi", "cas"]
-        # fields = {
-        #     "sPrimeID": ["sPrimeID"],
-        #     "formula": ["formula"],
-        #     "inchi": ["inchi"],
-        #     "cas": ["cas"],
-        #     # "species_name": ["name"],
-        #     # "isomer": ["inchi"],
-        #     # "isomer__structure": ["smiles", "adjacencyList", "electronicState"],
-        # }
 
 
 class SpeciesDetail(DetailView):
