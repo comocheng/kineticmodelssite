@@ -59,7 +59,6 @@ class SpeciesFilter(django_filters.FilterSet):
 
 class SpeciesDetail(DetailView):
     model = Species
-    template_name = "species_detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
