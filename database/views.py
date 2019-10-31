@@ -45,10 +45,10 @@ class ResourcesView(TemplateView):
 
 
 class SpeciesFilter(django_filters.FilterSet):
-    speciesname__name = django_filters.CharFilter(field_name="speciesname", lookup_expr="name")
-    isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi")
-    isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles")
-    isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList")
+    speciesname__name = django_filters.CharFilter(field_name="speciesname", lookup_expr="name", label="Species Name")
+    isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi", label="Isomer InChI")
+    isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES")
+    isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList", label="Structure Adjacency List")
     isomer__structure__electronicState = django_filters.NumberFilter(field_name="isomer", lookup_expr="structure__electronicState", label="Structure Electronic State")
     
     class Meta:
