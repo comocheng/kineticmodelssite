@@ -49,7 +49,7 @@ class SpeciesFilter(django_filters.FilterSet):
     isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi")
     isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles")
     isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList")
-    isomer__structure__electronicState = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__electronicState")
+    isomer__structure__electronicState = django_filters.NumberFilter(field_name="isomer", lookup_expr="structure__electronicState", label="Structure Electronic State")
     
     class Meta:
         model = Species
