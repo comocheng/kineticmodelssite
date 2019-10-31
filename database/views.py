@@ -5,7 +5,6 @@ from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 
 from .models import Species, Structure, SpeciesName, KineticModel
-from .forms import SpeciesForm
 
 
 class IndexView(TemplateView):
