@@ -1,0 +1,9 @@
+{% load utils %}
+
+<h1><a href="{% url "source-detail" thermo.source.pk %}">{{ thermo.source.sourceTitle }}</a> | {{ species_name }}
+    Thermo Data</h1>
+<ul>
+    {% for name, val in thermo|fields %}
+    <li><b>{{ name }} =</b> {{ val }}</li>
+    {% endfor %}
+</ul>
