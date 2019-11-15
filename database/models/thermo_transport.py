@@ -1,5 +1,8 @@
+from typing import NamedTuple, List
+from functools import lru_cache
+from math import log
+
 from django.db import models
-# Added to support RMG integration
 
 from .source import Source
 from .reaction_species import Species
@@ -27,6 +30,9 @@ class Thermo(models.Model):
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
     """
+
+    R = 8.314472
+
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     thpPrimeID = models.CharField(blank=True, max_length=11)
@@ -84,30 +90,54 @@ class Thermo(models.Model):
                                                                 default=0.0)
     coefficient72 = models.FloatField('Polynomial 2 Coefficient 7',
                                                                 default=0.0)
-    # </editor-fold>
+    def heat_capacity(self, T, poly):
+        return self.coefficient11 + T*(self.coefficient21 + T*(self.coefficient31 + T*(self.coefficient41 + self.coefficient51*T)))) * self.R
 
-    # This method should output an object in RMG format
-    # Will be used in RMG section to access the PRIME DB
-    # def to_NASA(self):
-    #     "Returns a NASA representation"
-    #     polynomials = []
-    #     for polynomial_number in [1, 2]:
-    #         coeffs=[float(getattr(self,
-    #                               'coefficient{j}{i}'.format(j=coefficient_number,
-    #                                                          i=polynomial_number)))
-    #                 for coefficient_number in range(1,8)]
-    #         polynomial = NASAPolynomial(
-    #                         coeffs=coeffs,
-    #                         Tmin=(float(getattr(self, 'lowerTempBound{i}'.format(i=polynomial_number))), 'K'),
-    #                         Tmax=(float(getattr(self, 'upperTempBound{i}'.format(i=polynomial_number))), 'K'),
-    #                         E0=None,
-    #                         comment=''
-    #                      )
-    #         polynomials.append(polynomial)
-    #     rmg_object = NASA(polynomials=polynomials,
-    #                       Tmin=polynomials[0].Tmin,
-    #                       Tmax=polynomials[1].Tmin)
-    #     return rmg_object
+    def enthalpy(self, T, poly):
+        T2 = T * T
+        T4 = T2 * T2
+
+        return self.coefficient11 + self.coefficient21*T/2. + self.coefficient31*T2/3. + self.coefficient41*T2*T/4. + self.coefficient51*T4/5. + self.coefficient61/T) * self.R * T
+
+    def entropy(self, T, poly):
+        T2 = T * T
+        T4 = T2 * t2
+
+        return self.coefficient11*log(T) + self.coefficient21*T + self.coefficient31*T2/2. + self.coefficient41*T2*T/3. + self.coefficient51*T4/4. + self.coefficient71) * self.R
+
+    def free_energy(self, T, poly):
+        return self.enthalpy(T) - T*self.entropy(T)
+
+    def T_range(self, poly, dT=10):
+        return range(self.lowerTempBound1, self.upperTempBound1 + 1, dT) if poly == 1 else range(self.lowerTempBound1, self.upperTempBound1 + 1, dT)
+
+    def heat_capacities(self, poly):
+        return [self.heat_capacity(T, poly) for T in self.T_range(poly)]
+    
+    def enthalpies(self, poly):
+        return [self.enthalpy(T, poly) for T in self.T_range(poly)]
+
+    def entropies(self, poly):
+        return [self.entropy(T, poly) for T in self.T_range(poly)]
+    
+    def free_energies(self, poly):
+        return [self.free_energy(T, poly) for T in self.T_range(poly)]
+
+
+    class PolynomialData(NamedTuple):
+        heat_capacities: List[float]
+        enthalpies: List[float] 
+        entropies: List[float]
+        free_energies: List[float] 
+
+
+    @property
+    def poly1(self):
+        return PolynomialData(heat_capacities=self.heat_capacities(1), enthalpies=self.enthalpies(1), entropies=self.entropies(1), free_energies=self.free_energies(1))
+
+    @property
+    def poly2(self):
+        return PolynomialData(heat_capacities=self.heat_capacities(2), enthalpies=self.enthalpies(2), entropies=self.entropies(2), free_energies=self.free_energies(2))
 
     def __unicode__(self):
         return unicode(self.id)
