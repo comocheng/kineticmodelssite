@@ -35,60 +35,60 @@ class Thermo(models.Model):
 
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    thpPrimeID = models.CharField(blank=True, max_length=11)
-    preferredKey = models.CharField(blank=True,
+    prime_id = models.CharField(blank=True, max_length=11)
+    preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    referenceTemperature = models.FloatField('Reference State Temperature',
+    reference_temp = models.FloatField('Reference State Temperature',
                                               blank=True,
                                               help_text='units: K',
                                               default=0.0)
-    referencePressure = models.FloatField('Reference State Pressure',
+    reference_pressure = models.FloatField('Reference State Pressure',
                                            blank=True,
                                            help_text='units: Pa',
                                            default=0.0)
-    dfH = models.FloatField('Enthalpy of Formation',
+    dHf = models.FloatField('Enthalpy of Formation',
                             blank=True,
                             help_text='units: J/mol',
                             default=0.0)
     # <editor-fold desc="Coefficients">
     # polynomial 1
-    lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound',
+    Tmin1 = models.FloatField('Polynomial 1 Lower Temp Bound',
                                             help_text='units: K', default=0.0)
-    upperTempBound1 = models.FloatField('Polynomial 1 Upper Temp Bound',
+    Tmax1 = models.FloatField('Polynomial 1 Upper Temp Bound',
                                             help_text='units: K', default=0.0)
-    coefficient11 = models.FloatField('Polynomial 1 Coefficient 1',
+    coeff11 = models.FloatField('Polynomial 1 Coefficient 1',
                                                                 default=0.0)
-    coefficient21 = models.FloatField('Polynomial 1 Coefficient 2',
+    coeff12 = models.FloatField('Polynomial 1 Coefficient 2',
                                                                 default=0.0)
-    coefficient31 = models.FloatField('Polynomial 1 Coefficient 3',
+    coeff13 = models.FloatField('Polynomial 1 Coefficient 3',
                                                                 default=0.0)
-    coefficient41 = models.FloatField('Polynomial 1 Coefficient 4',
+    coeff14 = models.FloatField('Polynomial 1 Coefficient 4',
                                                                 default=0.0)
-    coefficient51 = models.FloatField('Polynomial 1 Coefficient 5',
+    coeff15 = models.FloatField('Polynomial 1 Coefficient 5',
                                                                 default=0.0)
-    coefficient61 = models.FloatField('Polynomial 1 Coefficient 6',
+    coeff16 = models.FloatField('Polynomial 1 Coefficient 6',
                                                                 default=0.0)
-    coefficient71 = models.FloatField('Polynomial 1 Coefficient 7',
+    coeff17 = models.FloatField('Polynomial 1 Coefficient 7',
                                                                 default=0.0)
     # polynomial 2_1
-    lowerTempBound2 = models.FloatField('Polynomial 2 Lower Temp Bound',
+    Tmin2 = models.FloatField('Polynomial 2 Lower Temp Bound',
                                             help_text='units: K', default=0.0)
-    upperTempBound2 = models.FloatField('Polynomial 2 Upper Temp Bound',
+    Tmax2 = models.FloatField('Polynomial 2 Upper Temp Bound',
                                             help_text='units: K', default=0.0)
-    coefficient12 = models.FloatField('Polynomial 2 Coefficient 1',
+    coeff21 = models.FloatField('Polynomial 2 Coefficient 1',
                                                                 default=0.0)
-    coefficient22 = models.FloatField('Polynomial 2 Coefficient 2',
+    coeff22 = models.FloatField('Polynomial 2 Coefficient 2',
                                                                 default=0.0)
-    coefficient32 = models.FloatField('Polynomial 2 Coefficient 3',
+    coeff23 = models.FloatField('Polynomial 2 Coefficient 3',
                                                                 default=0.0)
-    coefficient42 = models.FloatField('Polynomial 2 Coefficient 4',
+    coeff24 = models.FloatField('Polynomial 2 Coefficient 4',
                                                                 default=0.0)
-    coefficient52 = models.FloatField('Polynomial 2 Coefficient 5',
+    coeff25 = models.FloatField('Polynomial 2 Coefficient 5',
                                                                 default=0.0)
-    coefficient62 = models.FloatField('Polynomial 2 Coefficient 6',
+    coeff26 = models.FloatField('Polynomial 2 Coefficient 6',
                                                                 default=0.0)
-    coefficient72 = models.FloatField('Polynomial 2 Coefficient 7',
+    coeff27 = models.FloatField('Polynomial 2 Coefficient 7',
                                                                 default=0.0)
     def heat_capacity(self, T, poly):
         return self.coefficient11 + T*(self.coefficient21 + T*(self.coefficient31 + T*(self.coefficient41 + self.coefficient51*T)))) * self.R
@@ -109,7 +109,7 @@ class Thermo(models.Model):
         return self.enthalpy(T) - T*self.entropy(T)
 
     def T_range(self, poly, dT=10):
-        return range(self.lowerTempBound1, self.upperTempBound1 + 1, dT) if poly == 1 else range(self.lowerTempBound1, self.upperTempBound1 + 1, dT)
+        return range(self.Tmin1, self.Tmax1 + 1, dT) if poly == 1 else range(self.Tmin2, self.Tmax2 + 1, dT)
 
     def heat_capacities(self, poly):
         return [self.heat_capacity(T, poly) for T in self.T_range(poly)]
