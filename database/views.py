@@ -4,7 +4,7 @@ import django_filters
 from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 
-from .models import Species, Structure, SpeciesName, KineticModel
+from .models import Species, Structure, SpeciesName, KineticModel, Thermo, Transport, Source
 
 
 class IndexView(TemplateView):
@@ -70,59 +70,21 @@ class SpeciesDetail(DetailView):
         context["isomer_inchis"] = self.get_object().isomer_set.values_list(
             "inchi", flat=True
         )
+        context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
 
         return context
 
 
-# class Results(SingleObjectMixin, ListView):
+class ThermoDetail(DetailView):
+    model = Thermo
 
-#     def get(self, request, *args, **kwargs):
-#         self.object = self.get_object(queryset=Species.objects.all())
-#         return super().get(request, *args, **kwargs)
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context["species"] = self.object
-#         return context
-
-#     def get_queryset(self):
-#         return self.object.kinetic_model_set.all()
-
-
-# class TransportResults(Results):
-#     template_name = "transport_results.html"
-
-
-class ThermoResults(DetailView):
-    template_name = "thermo_results.html"
-
-
-class KineticModelDetail(DetailView):
-    model = KineticModel
-
-
-class ThermoDetail(KineticModelDetail):
-    template_name = "thermo_detail.html"
-
-
-class TransportDetail(KineticModelDetail):
-    template_name = "transport_detail.html"
-
-
-def kinetics_results(request):
-    pass
-
-
-def transport_result(request):
-    pass
-
-
-def thermo_result(request):
-    pass
-
-
-def kinetics_result(request):
-    pass
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        thermo = self.get_object()
+        kinetic_model = KineticModel.objects.get(thermo=thermo)
+        context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
+        
+        return context
 
 
 def kinetics_search(request):
