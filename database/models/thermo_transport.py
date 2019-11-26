@@ -92,8 +92,8 @@ class Thermo(models.Model):
                                                                 default=0.0)
     def heat_capacity(self, T, poly):
         if poly == 1:
-            return self.coeff11 + T*(self.coeff12 + T*(self.coeff13 + T*(self.coeff14 + self.coeff15*T))) * self.R
-        return self.coeff21 + T*(self.coeff22 + T*(self.coeff23 + T*(self.coeff24 + self.coeff25*T))) * self.R
+            return (self.coeff11 + T*(self.coeff12 + T*(self.coeff13 + T*(self.coeff14 + self.coeff15*T)))) * self.R
+        return (self.coeff21 + T*(self.coeff22 + T*(self.coeff23 + T*(self.coeff24 + self.coeff25*T)))) * self.R
 
     def enthalpy(self, T, poly):
         T2 = T * T
