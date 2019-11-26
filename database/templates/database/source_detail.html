@@ -1,0 +1,9 @@
+{% load utils %}
+
+<h1>{{ source.sourceTitle }}</h1>
+
+<ul>
+    {% for name, val in source|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>

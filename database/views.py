@@ -100,3 +100,5 @@ class TransportDetail(DetailView):
         return context
 
 
+class SourceDetail(DetailView):
+    model = Source
