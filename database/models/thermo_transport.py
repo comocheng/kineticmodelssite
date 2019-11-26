@@ -93,23 +93,23 @@ class Thermo(models.Model):
     def heat_capacity(self, T, poly):
         if poly == 1:
             return self.coeff11 + T*(self.coeff12 + T*(self.coeff13 + T*(self.coeff14 + self.coeff15*T))) * self.R
-        return self.coeff21 + T*(self.coeff22 + T*(self.coeff23 + T*(self.coeff24 + self.coeff25*T)))) * self.R
+        return self.coeff21 + T*(self.coeff22 + T*(self.coeff23 + T*(self.coeff24 + self.coeff25*T))) * self.R
 
     def enthalpy(self, T, poly):
         T2 = T * T
         T4 = T2 * T2
 
         if poly == 1:
-            return self.coeff11 + self.coeff12*T/2. + self.coeff13*T2/3. + self.coeff14*T2*T/4. + self.coeff15*T4/5. + self.coeff16/T) * self.R * T
-        return self.coeff21 + self.coeff22*T/2. + self.coeff23*T2/3. + self.coeff24*T2*T/4. + self.coeff25*T4/5. + self.coeff26/T) * self.R * T
+            return (self.coeff11 + self.coeff12*T/2. + self.coeff13*T2/3. + self.coeff14*T2*T/4. + self.coeff15*T4/5. + self.coeff16/T) * self.R * T
+        return (self.coeff21 + self.coeff22*T/2. + self.coeff23*T2/3. + self.coeff24*T2*T/4. + self.coeff25*T4/5. + self.coeff26/T) * self.R * T
 
     def entropy(self, T, poly):
         T2 = T * T
         T4 = T2 * t2
 
         if poly == 1:
-            return self.coeff11*log(T) + self.coeff12*T + self.coeff13*T2/2. + self.coeff14*T2*T/3. + self.coeff15*T4/4. + self.coeff17) * self.R 
-        return self.coeff21*log(T) + self.coeff22*T + self.coeff23*T2/2. + self.coeff24*T2*T/3. + self.coeff25*T4/4. + self.coeff27) * self.R
+            return (self.coeff11*log(T) + self.coeff12*T + self.coeff13*T2/2. + self.coeff14*T2*T/3. + self.coeff15*T4/4. + self.coeff17) * self.R 
+        return (self.coeff21*log(T) + self.coeff22*T + self.coeff23*T2/2. + self.coeff24*T2*T/3. + self.coeff25*T4/4. + self.coeff27) * self.R
 
     def free_energy(self, T, poly):
         return self.enthalpy(T) - T*self.entropy(T)
