@@ -35,4 +35,10 @@
             <li><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.sourceTitle }}</a> - {{ thermo.thpPrimeID  }}</li>
         {% endfor %}
     </ul>
+    <h2>Transport Results</h2>
+    <ul>
+        {% for transport in transport_list %}
+            <li><a href="{% url 'transport-detail' transport.pk %}">{{ transport.source.sourceTitle }}</a> - {{ transport.trPrimeID  }}</li>
+        {% endfor %}
+    </ul>
 {% endblock %}
