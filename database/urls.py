@@ -7,4 +7,5 @@ urlpatterns = [
     path(r"species_search/", FilterView.as_view(filterset_class=views.SpeciesFilter), name="species-search"),
     path(r"species/<int:pk>", views.SpeciesDetail.as_view(), name="species-detail"),
     path(r"thermo/<int:pk>", views.ThermoDetail.as_view(), name="thermo-detail"),
+    path(r"transport/<int:pk>", views.TransportDetail.as_view(), name="transport-detail"),
 ]
