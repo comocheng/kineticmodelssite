@@ -5,6 +5,6 @@ from . import views
 
 urlpatterns = [
     path(r"species_search/", FilterView.as_view(filterset_class=views.SpeciesFilter), name="species-search"),
-    path(r"species_detail/<int:pk>", views.SpeciesDetail.as_view(), name="species-detail")
+    path(r"species_detail/<int:pk>", views.SpeciesDetail.as_view(), name="species-detail"),
     path(r"thermo/<int:pk>", views.ThermoDetail.as_view(), name="thermo-detail"),
 ]
