@@ -98,3 +98,6 @@ class TransportDetail(DetailView):
         context["species_name"] = kinetic_model.speciesname_set.get(species=transport.species).name
 
         return context
+        
+class SourceDetail(DetailView):
+    model = Source
