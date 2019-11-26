@@ -88,13 +88,7 @@ class ThermoDetail(DetailView):
         return context
 
 
-def kinetics_search(request):
-    pass
 
 
-def reaction_results(request):
-    pass
 
 
-def solvation_search(request):
-    pass
