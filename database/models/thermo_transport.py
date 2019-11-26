@@ -1,5 +1,8 @@
+from typing import NamedTuple, List
+from functools import lru_cache
+from math import log
+
 from django.db import models
-# Added to support RMG integration
 
 from .source import Source
 from .reaction_species import Species
@@ -27,87 +30,119 @@ class Thermo(models.Model):
         lower/upper temp bounds (units K)
         coefficients 1 thru 7
     """
+
+    R = 8.314472
+
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    thpPrimeID = models.CharField(blank=True, max_length=11)
-    preferredKey = models.CharField(blank=True,
+    prime_id = models.CharField(blank=True, max_length=11)
+    preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
                                      max_length=20)
-    referenceTemperature = models.FloatField('Reference State Temperature',
+    reference_temp = models.FloatField('Reference State Temperature',
                                               blank=True,
                                               help_text='units: K',
                                               default=0.0)
-    referencePressure = models.FloatField('Reference State Pressure',
+    reference_pressure = models.FloatField('Reference State Pressure',
                                            blank=True,
                                            help_text='units: Pa',
                                            default=0.0)
-    dfH = models.FloatField('Enthalpy of Formation',
+    dHf = models.FloatField('Enthalpy of Formation',
                             blank=True,
                             help_text='units: J/mol',
                             default=0.0)
     # <editor-fold desc="Coefficients">
     # polynomial 1
-    lowerTempBound1 = models.FloatField('Polynomial 1 Lower Temp Bound',
+    Tmin1 = models.FloatField('Polynomial 1 Lower Temp Bound',
                                             help_text='units: K', default=0.0)
-    upperTempBound1 = models.FloatField('Polynomial 1 Upper Temp Bound',
+    Tmax1 = models.FloatField('Polynomial 1 Upper Temp Bound',
                                             help_text='units: K', default=0.0)
-    coefficient11 = models.FloatField('Polynomial 1 Coefficient 1',
+    coeff11 = models.FloatField('Polynomial 1 Coefficient 1',
                                                                 default=0.0)
-    coefficient21 = models.FloatField('Polynomial 1 Coefficient 2',
+    coeff12 = models.FloatField('Polynomial 1 Coefficient 2',
                                                                 default=0.0)
-    coefficient31 = models.FloatField('Polynomial 1 Coefficient 3',
+    coeff13 = models.FloatField('Polynomial 1 Coefficient 3',
                                                                 default=0.0)
-    coefficient41 = models.FloatField('Polynomial 1 Coefficient 4',
+    coeff14 = models.FloatField('Polynomial 1 Coefficient 4',
                                                                 default=0.0)
-    coefficient51 = models.FloatField('Polynomial 1 Coefficient 5',
+    coeff15 = models.FloatField('Polynomial 1 Coefficient 5',
                                                                 default=0.0)
-    coefficient61 = models.FloatField('Polynomial 1 Coefficient 6',
+    coeff16 = models.FloatField('Polynomial 1 Coefficient 6',
                                                                 default=0.0)
-    coefficient71 = models.FloatField('Polynomial 1 Coefficient 7',
+    coeff17 = models.FloatField('Polynomial 1 Coefficient 7',
                                                                 default=0.0)
     # polynomial 2_1
-    lowerTempBound2 = models.FloatField('Polynomial 2 Lower Temp Bound',
+    Tmin2 = models.FloatField('Polynomial 2 Lower Temp Bound',
                                             help_text='units: K', default=0.0)
-    upperTempBound2 = models.FloatField('Polynomial 2 Upper Temp Bound',
+    Tmax2 = models.FloatField('Polynomial 2 Upper Temp Bound',
                                             help_text='units: K', default=0.0)
-    coefficient12 = models.FloatField('Polynomial 2 Coefficient 1',
+    coeff21 = models.FloatField('Polynomial 2 Coefficient 1',
                                                                 default=0.0)
-    coefficient22 = models.FloatField('Polynomial 2 Coefficient 2',
+    coeff22 = models.FloatField('Polynomial 2 Coefficient 2',
                                                                 default=0.0)
-    coefficient32 = models.FloatField('Polynomial 2 Coefficient 3',
+    coeff23 = models.FloatField('Polynomial 2 Coefficient 3',
                                                                 default=0.0)
-    coefficient42 = models.FloatField('Polynomial 2 Coefficient 4',
+    coeff24 = models.FloatField('Polynomial 2 Coefficient 4',
                                                                 default=0.0)
-    coefficient52 = models.FloatField('Polynomial 2 Coefficient 5',
+    coeff25 = models.FloatField('Polynomial 2 Coefficient 5',
                                                                 default=0.0)
-    coefficient62 = models.FloatField('Polynomial 2 Coefficient 6',
+    coeff26 = models.FloatField('Polynomial 2 Coefficient 6',
                                                                 default=0.0)
-    coefficient72 = models.FloatField('Polynomial 2 Coefficient 7',
+    coeff27 = models.FloatField('Polynomial 2 Coefficient 7',
                                                                 default=0.0)
-    # </editor-fold>
+    def heat_capacity(self, T, poly):
+        if poly == 1:
+            return self.coeff11 + T*(self.coeff12 + T*(self.coeff13 + T*(self.coeff14 + self.coeff15*T))) * self.R
+        return self.coeff21 + T*(self.coeff22 + T*(self.coeff23 + T*(self.coeff24 + self.coeff25*T))) * self.R
 
-    # This method should output an object in RMG format
-    # Will be used in RMG section to access the PRIME DB
-    # def to_NASA(self):
-    #     "Returns a NASA representation"
-    #     polynomials = []
-    #     for polynomial_number in [1, 2]:
-    #         coeffs=[float(getattr(self,
-    #                               'coefficient{j}{i}'.format(j=coefficient_number,
-    #                                                          i=polynomial_number)))
-    #                 for coefficient_number in range(1,8)]
-    #         polynomial = NASAPolynomial(
-    #                         coeffs=coeffs,
-    #                         Tmin=(float(getattr(self, 'lowerTempBound{i}'.format(i=polynomial_number))), 'K'),
-    #                         Tmax=(float(getattr(self, 'upperTempBound{i}'.format(i=polynomial_number))), 'K'),
-    #                         E0=None,
-    #                         comment=''
-    #                      )
-    #         polynomials.append(polynomial)
-    #     rmg_object = NASA(polynomials=polynomials,
-    #                       Tmin=polynomials[0].Tmin,
-    #                       Tmax=polynomials[1].Tmin)
-    #     return rmg_object
+    def enthalpy(self, T, poly):
+        T2 = T * T
+        T4 = T2 * T2
+
+        if poly == 1:
+            return (self.coeff11 + self.coeff12*T/2. + self.coeff13*T2/3. + self.coeff14*T2*T/4. + self.coeff15*T4/5. + self.coeff16/T) * self.R * T
+        return (self.coeff21 + self.coeff22*T/2. + self.coeff23*T2/3. + self.coeff24*T2*T/4. + self.coeff25*T4/5. + self.coeff26/T) * self.R * T
+
+    def entropy(self, T, poly):
+        T2 = T * T
+        T4 = T2 * t2
+
+        if poly == 1:
+            return (self.coeff11*log(T) + self.coeff12*T + self.coeff13*T2/2. + self.coeff14*T2*T/3. + self.coeff15*T4/4. + self.coeff17) * self.R 
+        return (self.coeff21*log(T) + self.coeff22*T + self.coeff23*T2/2. + self.coeff24*T2*T/3. + self.coeff25*T4/4. + self.coeff27) * self.R
+
+    def free_energy(self, T, poly):
+        return self.enthalpy(T) - T*self.entropy(T)
+
+    def T_range(self, poly, dT=10):
+        return range(self.Tmin1, self.Tmax1 + 1, dT) if poly == 1 else range(self.Tmin2, self.Tmax2 + 1, dT)
+
+    def heat_capacities(self, poly):
+        return [self.heat_capacity(T, poly) for T in self.T_range(poly)]
+    
+    def enthalpies(self, poly):
+        return [self.enthalpy(T, poly) for T in self.T_range(poly)]
+
+    def entropies(self, poly):
+        return [self.entropy(T, poly) for T in self.T_range(poly)]
+    
+    def free_energies(self, poly):
+        return [self.free_energy(T, poly) for T in self.T_range(poly)]
+
+
+    class PolynomialData(NamedTuple):
+        heat_capacities: List[float]
+        enthalpies: List[float] 
+        entropies: List[float]
+        free_energies: List[float] 
+
+    @property
+    def poly1(self):
+        return PolynomialData(heat_capacities=self.heat_capacities(1), enthalpies=self.enthalpies(1), entropies=self.entropies(1), free_energies=self.free_energies(1))
+
+    @property
+    def poly2(self):
+        return PolynomialData(heat_capacities=self.heat_capacities(2), enthalpies=self.enthalpies(2), entropies=self.entropies(2), free_energies=self.free_energies(2))
 
     def __unicode__(self):
         return unicode(self.id)

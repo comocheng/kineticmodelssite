@@ -29,4 +29,10 @@
             <li>{{ isomer_inchi }}</li>
         {% endfor %}
     </ul>
+    <h2>Thermo Results</h2>
+    <ul>
+        {% for thermo in thermo_list %}
+            <li><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.sourceTitle }}</a> - {{ thermo.prime_id  }}</li>
+        {% endfor %}
+    </ul>
 {% endblock %}
