@@ -71,6 +71,7 @@ class SpeciesDetail(DetailView):
             "inchi", flat=True
         )
         context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
+        context["transport_list"] = Transport.objects.filter(species=self.get_object())
 
         return context
 
@@ -87,13 +88,13 @@ class ThermoDetail(DetailView):
         return context
 
 
-def kinetics_search(request):
-    pass
+class TransportDetail(DetailView):
+    model = Transport
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        transport = self.get_object()
+        kinetic_model = KineticModel.objects.get(transport=transport)
+        context["species_name"] = kinetic_model.speciesname_set.get(species=transport.species).name
 
-def reaction_results(request):
-    pass
-
-
-def solvation_search(request):
-    pass
+        return context
