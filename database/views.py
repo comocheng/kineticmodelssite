@@ -71,6 +71,7 @@ class SpeciesDetail(DetailView):
             "inchi", flat=True
         )
         context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
+        context["transport_list"] = Transport.objects.filter(species=self.get_object())
 
         return context
 
