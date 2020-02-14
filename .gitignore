@@ -4,6 +4,10 @@
 #
 ################################################################################
 
+# Adding an `ignore` directory 
+
+ignore/*
+
 # Python bytecode files
 *.py[cod]
 
