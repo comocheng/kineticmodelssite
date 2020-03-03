@@ -1,9 +1,0 @@
-{% extends "kineticmodels/base.html" %}
-
-{% block title %}{{ block.super }}: Source{% endblock %}
-{% block page_title %}{{ block.super }}: Source{% endblock %}
-
-{% block navbar_items %}
-{{ block.super }} &raquo;
-<a href="{% url 'bibliography' %}">Bibliography</a>
-{% endblock %}
