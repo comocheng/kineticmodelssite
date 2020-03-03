@@ -7,6 +7,10 @@ from django.urls import reverse
 from .models import Species, Structure, SpeciesName, KineticModel, Thermo, Transport, Source
 
 
+class BaseView(TemplateView):
+    template_name = "base.html"
+
+    
 class IndexView(TemplateView):
     template_name = "index.html"
 
