@@ -163,7 +163,7 @@ class ThermoLibraryImporter(Importer):
         else:
             library = self.library
             logger.warning(
-                "Starting the import_species method on KineticsLibraryImporter with library {}".format(library.name))
+                "Starting the import_species method on ThermoLibraryImporter with library {}".format(library.name))
 
         for entry in library.entries:
             thermo = library.entries[entry].data
@@ -174,27 +174,25 @@ class ThermoLibraryImporter(Importer):
             inchi = molecule.to_inchi()
 
             dj_isomer, isomer_created = Isomer.objects.get_or_create(inchi=inchi)
-            # Search for Structure matching the SMILES
+            if isomer_created:
+                logger.info(f"Made new Isomer for {inchi}")
+            else:
+                logger.info(f"Found existing Isomer for {inchi}")
+
+            # Search for (resonance) Structure matching the SMILES
             dj_structure, structure_created = Structure.objects.get_or_create(smiles=smiles,
                                                                               electronicState=molecule.multiplicity,
                                                                               isomer=dj_isomer)
 
             if structure_created:
+                logger.info(f"Made new Structure for {smiles} {molecule.multiplicity}")
                 dj_structure.adjacencyList = molecule.to_adjacency_list()
                 save_model(dj_structure, library_name=library.name)
             else:
-                try:
-                    assert dj_structure.adjacencyList == molecule.to_adjacency_list()
-                except AssertionError:
-                    logger.error("Assertion Error for the library {}".format(library.name))
-                    logger.error("{}\n is not\n{}\n{}\nwhich had SMILES={!r}".format(dj_structure.adjacencyList,
-                                                                    speciesName, molecule.to_adjacency_list(), smiles))
-                try:
-                    assert dj_isomer == dj_structure.isomer  # might there be more than one? (no?)
-                except AssertionError:
-                    logger.error("Assertion Error for the library {}".format(library.name))
-                    logger.error("{} not equal {}".format(dj_isomer.inchi, dj_structure.isomer.inchi))
-
+                logger.info(f"Found existing Structure for {smiles} {molecule.multiplicity}")
+                
+                assert dj_structure.adjacencyList == molecule.to_adjacency_list(), f"{dj_structure.adjacencyList}\n is not\n{speciesName}\n{molecule.to_adjacency_list()}\nwhich had SMILES={smiles}"
+                assert dj_isomer == dj_structure.isomer, f"{dj_isomer.inchi} not equal {dj_structure.isomer.inchi}"
 
             # Find a Species for the Structure (eg. from Prime) else make one
             trimmed_inchi = inchi.split('InChI=1S')[-1]
