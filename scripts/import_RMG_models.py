@@ -39,7 +39,7 @@ django.setup()
 from django.core.exceptions import MultipleObjectsReturned
 from database.models import Kinetics, KineticsComment, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, Thermo, ThermoComment, Structure, Isomer, \
-    Transport, Pressure, Efficiency
+    Transport, Pressure, Efficiency, Source, Authorship
 
 from database.models import KineticsData as KineticsData_dj
 from database.models import Arrhenius as Arrhenius_dj
@@ -113,7 +113,8 @@ class Importer(object):
         :return: dj_km, the django instance of the KineticModel
         """
         assert self.name
-        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
+        dj_source, source_created = Source.objects.get_or_create(sourceTitle=self.name)
+        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name, source=dj_source)
         if km_created:
             dj_km.modelName = self.name
             dj_km.additionalInfo = "Created while importing RMG-models"
@@ -257,9 +258,8 @@ class ThermoLibraryImporter(Importer):
             chemkinMolecule = library.entries[entry].item
             name = library.entries[entry].label
             species = Species.objects.get(pk=library.entries[entry].dj_species_pk)
-            dj_thermo = Thermo()#.objects.get_or_create(species=species)  # Empty Thermo model instance from Django kineticmodelssite
+            dj_thermo, thermo_created = Thermo.objects.get_or_create(species=species, source=self.dj_km.source)  # Empty Thermo model instance from Django kineticmodelssite
             # TODO -- Is it necessary/possible to do a get_or_create here? If so, what's the identifying info?
-
             """
             We're given a list of NASAPolynomial objects, each of which needs to be unpacked into its coefficients
             In the Thermo model instance we're creating, we name the coefficients "coefficient41":
@@ -270,13 +270,14 @@ class ThermoLibraryImporter(Importer):
             However, enumerate() lets us iterate over a list of tuples, each of which contains the index and the item itself
             We even get to set a +1 offset for the indices when making these tuples to avoid naming errors
             """
+            
             for nasaPolynomial in list(enumerate(thermoEntry.polynomials, start=1)):  # <-- List of tuples (index, Poly)
                 # To refer to a polynomial's index is nasaPolynomial[0], and the polynomial itself is nasaPolynomial[1]
 
                 # Assign lower Temp Bound for Polynomial and log success
                 try:
                     setattr(dj_thermo,
-                            "lowerTempBound{}".format(nasaPolynomial[0]),
+                            "Tmin{}".format(nasaPolynomial[0]),
                             nasaPolynomial[1].Tmin.value)
                     logger.debug("Assigned value {1} to lowerTempBound{0}".format(nasaPolynomial[0],
                                                                                   nasaPolynomial[1].Tmin.value))
@@ -288,7 +289,7 @@ class ThermoLibraryImporter(Importer):
                 # Assign upper Temp Bound for Polynomial and log success
                 try:
                     setattr(dj_thermo,
-                            "upperTempBound{}".format(nasaPolynomial[0]),
+                            "Tmax{}".format(nasaPolynomial[0]),
                             nasaPolynomial[1].Tmax.value)
                     logger.debug("Assigned value {1} to upperTempBound{0}".format(nasaPolynomial[0],
                                                                                   nasaPolynomial[1].Tmax.value))
@@ -302,7 +303,7 @@ class ThermoLibraryImporter(Importer):
                     # Once again, a coefficent's index is coefficient[0], and its value is coefficient[1]
                     try:
                         setattr(dj_thermo,
-                                "coefficient{1}{0}".format(nasaPolynomial[0], coefficient[0]),
+                                "coeff{1}{0}".format(nasaPolynomial[0], coefficient[0]),
                                 coefficient[1])
                         logger.debug("Assigned value {2} for coefficient {1}"
                                      " to Polynomial {0}".format(nasaPolynomial[0],
@@ -319,7 +320,7 @@ class ThermoLibraryImporter(Importer):
 
             # Save before adding M2M links
             
-
+            save_model(dj_thermo, library_name=library.name)
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
             try:
                 dj_thermo.species = Species.objects.get(pk=library.entries[entry].dj_species_pk)
@@ -329,7 +330,14 @@ class ThermoLibraryImporter(Importer):
 
             save_model(dj_thermo, library_name=library.name)
 
-
+            dj_thermo_comment, comment_created = ThermoComment.objects.get_or_create(thermo=dj_thermo, kineticModel=self.dj_km)
+            if comment_created:
+                setattr(
+                    dj_thermo_comment,
+                    "comment",
+                    self.name)
+                    
+            save_model(dj_thermo_comment, library.name)
             # TODO -- We're still missing the Thermo's Source link as well as its ThermoComment link to a KineticModel
 
             #save_model(dj_thermo, library_name=library.name)
@@ -373,7 +381,7 @@ class KineticsLibraryImporter(Importer):
             logger.warning("Will continue without that model")
             return False
 
-        library.convertDuplicatesToMulti()
+        library.convert_duplicates_to_multi()
         self.library = library
 
         logger.info("Exiting the load_library method on KineticsLibraryImporter...")
