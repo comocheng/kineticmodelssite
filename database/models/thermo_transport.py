@@ -34,7 +34,7 @@ class Thermo(models.Model):
     R = 8.314472
 
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
-    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    species = models.ForeignKey(Species, null=True, on_delete=models.CASCADE)
     prime_id = models.CharField(blank=True, max_length=11)
     preferred_key = models.CharField(blank=True,
                                      help_text='i.e. T 11/97, or J 3/65',
