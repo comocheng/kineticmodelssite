@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+
 {% load utils %}
 
-<h1><a href="{% url "source-detail" thermo.source.pk %}">{{ thermo.source.sourceTitle }}</a> | {{ species_name }}
+<h1><a href="{% url "thermo-detail" thermo.pk %}">{{ thermo.source.sourceTitle }}</a> | <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a>
     Thermo Data</h1>
 <ul>
-    {% for name, val in thermo|fields %}
+    {% for name, val in object|fields %}
     <li><b>{{ name }} =</b> {{ val }}</li>
     {% endfor %}
 </ul>

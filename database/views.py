@@ -67,7 +67,7 @@ class SpeciesDetail(DetailView):
         context = super().get_context_data(**kwargs)
         structures = Structure.objects.filter(isomer__species=self.get_object())
         context["names"] = (
-            self.get_object().speciesname_set.all().values_list("name", flat=True)
+            set(self.get_object().speciesname_set.all().values_list("name", flat=True))
         )
         context["adjlists"] = structures.values_list("adjacencyList", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
@@ -88,7 +88,9 @@ class ThermoDetail(DetailView):
         thermo = self.get_object()
         kinetic_model = KineticModel.objects.get(thermo=thermo)
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
-        
+        context["thermo"] = thermo
+        context["species"] = thermo.species 
+        context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         return context
 
 

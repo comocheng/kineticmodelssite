@@ -3,7 +3,7 @@
 <h1>Detail</h1>
 
 {% block content %}
-    {{ species.sPrimeID }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas }}
+    
     <h2>Names</h2>
     <ul>
         {% for name in names %}
@@ -34,7 +34,7 @@
     <h2>Thermo Results</h2>
     <ul>
         {% for thermo in thermo_list %}
-            <li><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.sourceTitle }}</a> - {{ thermo.thpPrimeID  }}</li>
+            <li><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.sourceTitle }}</a></li>
         {% endfor %}
     </ul>
     <h2>Transport Results</h2>
