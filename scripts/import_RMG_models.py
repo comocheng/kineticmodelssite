@@ -54,6 +54,7 @@ from database.models import Troe as Troe_dj
 
 
 import rmgpy
+from rmgpy.molecule import Molecule
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
 import rmgpy.constants as constants
 from rmgpy.kinetics import Arrhenius, ArrheniusEP, ThirdBody, Lindemann, Troe, \
@@ -191,22 +192,22 @@ class ThermoLibraryImporter(Importer):
                 save_model(dj_structure, library_name=library.name)
             else:
                 logger.info(f"Found existing Structure for {smiles} {molecule.multiplicity}")
+                dj_mol = Molecule().from_adjacency_list(dj_structure.adjacencyList)
+                assert dj_mol.is_isomorphic(molecule)
+                #assert dj_structure.adjacencyList == molecule.to_adjacency_list(), f"{dj_structure.adjacencyList}\n is not\n{speciesName}\n{molecule.to_adjacency_list()}\nwhich had SMILES={smiles}"
+                #assert dj_isomer == dj_structure.isomer, f"{dj_isomer.inchi} not equal {dj_structure.isomer.inchi}"
                 
-                assert dj_structure.adjacencyList == molecule.to_adjacency_list(), f"{dj_structure.adjacencyList}\n is not\n{speciesName}\n{molecule.to_adjacency_list()}\nwhich had SMILES={smiles}"
-                assert dj_isomer == dj_structure.isomer, f"{dj_isomer.inchi} not equal {dj_structure.isomer.inchi}"
 
             # Find a Species for the Structure (eg. from Prime) else make one
             trimmed_inchi = inchi.split('InChI=1S')[-1]
             formula = inchi.split('/')[1]
             try:  #TODO -- Write a helper function to encapsulate get_or_create in a try-except block
-                dj_species, species_created = Species.objects.get_or_create(inchi__contains=trimmed_inchi)
+                dj_species, species_created = Species.objects.get_or_create(inchi=trimmed_inchi)
                 if species_created:
                     logger.debug("Found no species for structure {} {}, so making one".format(smiles,
                                                                                               molecule.multiplicity))
                     dj_species.inchi = inchi
                     dj_species.formula = formula
-                    print("Inchi")
-                    print(dj_species.inchi)
                     save_model(dj_species, library_name=library.name)
                     logger.debug("{}".format(dj_species))
                 else:
@@ -215,7 +216,6 @@ class ThermoLibraryImporter(Importer):
                     dj_isomer.species.add(dj_species)
 
             except MultipleObjectsReturned:
-                print("217")
                 possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
                 logger.warning("In Library {}:".format(library.name))
                 logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} with "
@@ -225,9 +225,7 @@ class ThermoLibraryImporter(Importer):
                 dj_species = possible_species[0]  # FIXME -- how would we pick one?
             save_model(dj_species, library_name=library.name)
             # If we got a unique match for the Species, find a Kinetic Model for that Species else make one
-            print(speciesName, dj_species)
             if dj_species:
-                print(229)
 
                 # Create the join between Species and KineticModel through a SpeciesName
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(species=dj_species,
@@ -325,7 +323,6 @@ class ThermoLibraryImporter(Importer):
             try:
                 dj_thermo.species = Species.objects.get(pk=library.entries[entry].dj_species_pk)
             except:
-                print("Oopsie at 329")
                 pass
 
             save_model(dj_thermo, library_name=library.name)
