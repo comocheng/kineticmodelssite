@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+<h1>Species</h1>
+
+{% block content %}
+    <form action="" method="get">
+        {{ filter.form.as_p }}
+        <input type="submit" />
+    </form>
+    {% for source in filter.qs %}
+        <a href="{% url "source-detail" source.pk %}">Source</a>: {{ source.name }}<br/>
+    {% endfor %}
+{% endblock %}

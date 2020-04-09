@@ -59,6 +59,12 @@ class SpeciesFilter(django_filters.FilterSet):
         model = Species
         fields = ["sPrimeID", "formula", "inchi", "cas"]
 
+class SourceFilter(django_filters.FilterSet):
+    sourcename_name = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
+    class Meta:
+        model = Source
+        fields = ["name", "bPrimeID", "publicationYear", "sourceTitle", "doi"]
+
 
 class SpeciesDetail(DetailView):
     model = Species
