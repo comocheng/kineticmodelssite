@@ -1,10 +1,74 @@
 
 {% load utils %}
+<style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 5px;
+      text-align: left;    
+    }
 
-<h1><a href="{% url "thermo-detail" thermo.pk %}">{{ thermo.source.sourceTitle }}</a> | <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a>
+</style>
+
+<h1><a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> | <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a>
     Thermo Data</h1>
+
+<h2>Bibliographic Information</h2>
 <ul>
-    {% for name, val in object|fields %}
-    <li><b>{{ name }} =</b> {{ val }}</li>
-    {% endfor %}
+    <li><b>Species:</b> <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a></li>
+    <li><b>Source:</b> <a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> </li>
+    <li><b>PrIMe ID:</b> {{ thermo.prime_id }}</li>
+</ul>
+
+
+<h2>Thermodynamic Information</h2>
+
+<h3>NASA Polynomials</h3>
+<table>
+    <tr>
+        <td></td>
+        <td>Minimum Temperature (K)</td>
+        <td>Maximum Temperature (K)</td>
+        <td>Coefficient 1</td>
+        <td>Coefficient 2</td>
+        <td>Coefficient 3</td>
+        <td>Coefficient 4</td>
+        <td>Coefficient 5</td>
+        <td>Coefficient 6</td>
+        <td>Coefficient 7</td>
+    </tr>
+    <tr>
+        <td>Polynomial 1</td>
+        <td>{{ thermo.Tmin1 }}</td>
+        <td>{{ thermo.Tmax1 }}</td>
+        <td>{{ thermo.coeff11 }}</td>
+        <td>{{ thermo.coeff12 }}</td>
+        <td>{{ thermo.coeff13 }}</td>
+        <td>{{ thermo.coeff14 }}</td>
+        <td>{{ thermo.coeff15 }}</td>
+        <td>{{ thermo.coeff16 }}</td>
+        <td>{{ thermo.coeff17 }}</td>
+    </tr>
+    <tr>
+        <td>Polynomial 2</td>
+        <td>{{ thermo.Tmin2 }}</td>
+        <td>{{ thermo.Tmax2 }}</td>
+        <td>{{ thermo.coeff21 }}</td>
+        <td>{{ thermo.coeff22 }}</td>
+        <td>{{ thermo.coeff23 }}</td>
+        <td>{{ thermo.coeff24 }}</td>
+        <td>{{ thermo.coeff25 }}</td>
+        <td>{{ thermo.coeff26 }}</td>
+        <td>{{ thermo.coeff27 }}</td>
+    </tr>
+</table>
+
+<h3>Reference State Information</h3>
+
+<ul>
+    <li><b>Reference Temperature:</b> {{ themo.reference_temp }} K</li>
+    <li><b>Reference Pressure:</b> {{ themo.reference_pressure }} Pa</li>
+    <li><b>Heat of Formation</b>: {{ thermo.dHf }} J/mol</li>
 </ul>

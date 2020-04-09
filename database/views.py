@@ -90,6 +90,7 @@ class ThermoDetail(DetailView):
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         context["thermo"] = thermo
         context["species"] = thermo.species 
+        context['source'] = thermo.source
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         return context
 
@@ -107,3 +108,10 @@ class TransportDetail(DetailView):
         
 class SourceDetail(DetailView):
     model = Source
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        source = self.get_object()
+        kinetic_model = KineticModel.objects.get(source=source)
+        context['source'] = source
+        return context
