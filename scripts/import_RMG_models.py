@@ -193,14 +193,12 @@ class SourceImporter(Importer):
 
         # setting the publication title
         sourceTitle = ref.get('title')
-        print(sourceTitle)
         if isinstance(sourceTitle, list):
             sourceTitle = sourceTitle[0]
         setattr(dj_source, "sourceTitle", sourceTitle)
 
         # setting the jounral name
         journalName = ref.get('short-container-title')
-        print(journalName)
         if isinstance(journalName, list):
             journalName = journalName[0]
         setattr(dj_source, "journalName", journalName)
