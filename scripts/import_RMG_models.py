@@ -116,8 +116,7 @@ class Importer(object):
         :return: dj_km, the django instance of the KineticModel
         """
         assert self.name
-        dj_source, source_created = Source.objects.get_or_create(name=self.name)
-        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name, source=dj_source)
+        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
         if km_created:
             dj_km.modelName = self.name
             dj_km.additionalInfo = "Created while importing RMG-models"
@@ -169,12 +168,14 @@ class SourceImporter(Importer):
         Creates a django Source object with appropriate information
         """
         doi = doi or self.doi
+        print(172)
         if doi is None:
             logger.error(f"We were unable to find a doi for {self.name}")
             return None, None
         logger.info(f'Reading in source information for {self.name} with DOI:{doi}')
+        print(self.name)
         dj_source, source_created = Source.objects.get_or_create(name=self.name)
-
+        print('#'*50)
         # setting the doi
         ref = crossref_api.works(ids=doi)["message"]
         setattr(dj_source, "doi", doi)
@@ -213,6 +214,9 @@ class SourceImporter(Importer):
         setattr(dj_source, "pageNumbers", pageNumbers)
         save_model(dj_source, library_name=self.name)
         logger.info(f'The reference looks like this:\n{dj_source.__unicode__()}')
+
+        setattr(self.dj_km, 'source', dj_source)
+        save_model(self.dj_km)
         return dj_source, source_created
 
     def import_authors(self, doi=None):
@@ -797,10 +801,15 @@ def main(args):
     for filepath in source_files:
         logger.info('Importing source file from {}'.format(filepath))
         importer = SourceImporter(filepath)
+        print('A'*50)
         importer.get_doi()
+        print('B'*50)
         importer.import_source()
+        print('C'*50)
         importer.import_authors()
+        print('D'*50)
         importer.import_authorship()
+        print('E'*50)
 
     logger.info('Exited source imports!')
 
