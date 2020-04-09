@@ -17,6 +17,7 @@ django-autocomplete-light = "*"
 django = "*"
 django-filter = "*"
 ipython = "*"
+habanero = "*"
 
 [requires]
 python_version = "3.8"
