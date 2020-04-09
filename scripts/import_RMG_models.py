@@ -24,7 +24,9 @@ import abc
 import datetime
 import pickle
 from collections import defaultdict
+import habanero
 
+crossref_api = habanero.Crossref(mailto='harms.n@northeastern.edu')
 
 """
 RMG-Specific Imports
@@ -39,7 +41,7 @@ django.setup()
 from django.core.exceptions import MultipleObjectsReturned
 from database.models import Kinetics, KineticsComment, Reaction, Stoichiometry, \
     Species, KineticModel, SpeciesName, Thermo, ThermoComment, Structure, Isomer, \
-    Transport, Pressure, Efficiency, Source, Authorship
+    Transport, Pressure, Efficiency, Source, Authorship, Author
 
 from database.models import KineticsData as KineticsData_dj
 from database.models import Arrhenius as Arrhenius_dj
@@ -114,7 +116,7 @@ class Importer(object):
         :return: dj_km, the django instance of the KineticModel
         """
         assert self.name
-        dj_source, source_created = Source.objects.get_or_create(sourceTitle=self.name)
+        dj_source, source_created = Source.objects.get_or_create(name=self.name)
         dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name, source=dj_source)
         if km_created:
             dj_km.modelName = self.name
@@ -122,6 +124,159 @@ class Importer(object):
         # Save that instance
         return save_model(dj_km)
 
+class SourceImporter(Importer):
+    """
+    To obtain sources from RMG-models directory
+    """
+
+    def name_from_path(self, path=None):
+        """
+        Get the library name from the (full) source text file path
+        """
+        name_path_re = re.compile('\.*\/?(.+?)\/source.txt')
+        match = name_path_re.match(path or self.path)
+        if match:
+            return match.group(1).split('RMG-models/')[-1]
+        else:
+            return os.path.split(self.path)[0]
+
+    def get_doi(self, path=None):
+        """
+        Get the doi from the source.txt file
+        """
+        source_file = path or self.path
+        with open(source_file, 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            for l in line.split():
+                if '10.' in l.lower():
+                    break
+            l = l.strip().strip('.')
+            regex = re.compile('10.\d{4,9}/\w.*\w')
+            matched_list = regex.findall(l)
+            break
+        if len(matched_list) > 0:
+            matched_doi = matched_list[0]
+        else:
+            logger.error(f'Could not find a doi in the souce.txt file for {path}')
+            matched_doi = None
+        self.doi = matched_doi
+        logger.info(f"The matched DOI is {self.doi}")
+        return matched_doi
+
+    def import_source(self, doi=None):
+        """
+        Creates a django Source object with appropriate information
+        """
+        doi = doi or self.doi
+        if doi is None:
+            logger.error(f"We were unable to find a doi for {self.name}")
+            return None, None
+        logger.info(f'Reading in source information for {self.name} with DOI:{doi}')
+        dj_source, source_created = Source.objects.get_or_create(name=self.name)
+
+        # setting the doi
+        ref = crossref_api.works(ids=doi)["message"]
+        setattr(dj_source, "doi", doi)
+        
+        # setting the publication year
+        date_info = ref.get('created')
+        if not isinstance(date_info, dict):
+            year, month, day = None, None, None
+        else:
+            date_parts = date_info.get('date-parts')
+            if isinstance(date_parts, list):
+                year, month, day = date_parts[0]
+            else:
+                year, month, day = None, None, None
+        setattr(dj_source, "publicationYear", year)
+
+        # setting the publication title
+        sourceTitle = ref.get('title')
+        print(sourceTitle)
+        if isinstance(sourceTitle, list):
+            sourceTitle = sourceTitle[0]
+        setattr(dj_source, "sourceTitle", sourceTitle)
+
+        # setting the jounral name
+        journalName = ref.get('short-container-title')
+        print(journalName)
+        if isinstance(journalName, list):
+            journalName = journalName[0]
+        setattr(dj_source, "journalName", journalName)
+
+        # setting the jounral volume nuber 
+        journalVolumeNumber = ref.get('volume')
+        logger.info(journalVolumeNumber)
+        setattr(dj_source, "journalVolumeNumber", journalVolumeNumber)
+
+        # settign the page numbers
+        pageNumbers = ref.get('page')
+        setattr(dj_source, "pageNumbers", pageNumbers)
+        save_model(dj_source, library_name=self.name)
+        logger.info(f'The reference looks like this:\n{dj_source.__unicode__()}')
+        return dj_source, source_created
+
+    def import_authors(self, doi=None):
+        """
+        A method to import authors using the doi
+        """
+        doi = doi or self.doi
+        if doi is None:
+            return [(None,None,None)]
+        ref = crossref_api.works(doi)["message"]
+            
+        if not ref.get('author'):
+            logger.error(f'Could not look up the authors for {self.path}')
+            return [(None,None,None)]
+        
+        author_sequence = {
+            'first':1,
+            'second':2,
+            'third':3,
+            'fourth':4,
+            'fifth':5,
+            'sixth':6,
+            'last':-1
+        }
+        authors = []
+        for i, author_dict in enumerate(ref.get('author')):
+            first = author_dict.get('given')
+            last = author_dict.get('family')
+            dj_author, author_created = Author.objects.get_or_create(firstname=first, lastname=last)
+            
+            if i+1 == len(ref.get('author')):
+                order = -1
+            else:
+                try:
+                    order = author_dict['sequence'].lower()
+                    order = author_sequence[order]
+                except:
+                    order = i+1
+            save_model(dj_author, library_name=self.name)
+            authors.append((order, dj_author, author_created))
+            
+        return authors
+
+    def import_authorship(self):
+        """
+        A method to import the authorship, the thing that connects the authors 
+        the the source
+        """
+        
+        self.get_doi()
+        if not self.doi:
+            return False
+        authors = self.import_authors()
+        dj_source, _ = self.import_source()
+        if not dj_source:
+            return False
+        logger.info(dj_source)
+        for order, dj_author, _ in authors:
+            dj_authorship, authorship_created = Authorship.objects.get_or_create(author=dj_author, source=dj_source, order=order) 
+            save_model(dj_authorship, library_name=self.name)
+
+        return True
 
 class ThermoLibraryImporter(Importer):
     """
@@ -317,6 +472,7 @@ class ThermoLibraryImporter(Importer):
                         raise e
 
             # Save before adding M2M links
+            dj_thermo.source = self.dj_km.source
             
             save_model(dj_thermo, library_name=library.name)
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
@@ -596,10 +752,14 @@ def findLibraryFiles(path):
 
     thermoLibs = []
     kineticsLibs = []
+    sourceFiles = []
     for root, dirs, files in os.walk(path):
         for name in files:
             path = os.path.join(root, name)
-            if root.endswith('RMG-Py-thermo-library') and name == 'ThermoLibrary.py':
+            if name == "source.txt":
+                logger.info("Found source file {0}".format(path))
+                sourceFiles.append(path)
+            elif root.endswith('RMG-Py-thermo-library') and name == 'ThermoLibrary.py':
                 logger.info("Found thermo library {0}".format(path))
                 thermoLibs.append(path)
             elif root.endswith('RMG-Py-kinetics-library') and name == 'reactions.py':
@@ -608,7 +768,7 @@ def findLibraryFiles(path):
             else:
                 logger.debug('{0} unread because it is not named like a kinetics or thermo '
                               'library generated by the chemkin importer'.format(path))
-    return thermoLibs, kineticsLibs
+    return thermoLibs, kineticsLibs, sourceFiles
 
 """
 MAIN FUNCTION CALL
@@ -627,13 +787,27 @@ def main(args):
 
     thermo_libraries = []
     kinetics_libraries = []
+    source_files = []
     for path in args.paths:
-        t, k = findLibraryFiles(path)
+        t, k, s = findLibraryFiles(path)
         thermo_libraries.extend(t)
         kinetics_libraries.extend(k)
+        source_files.extend(s)
+
+    logger.debug("Found {} source files: \n - {}".format(len(source_files), '\n - '.join(source_files)))
+    sources = len(source_files)
+    for filepath in source_files:
+        logger.info('Importing source file from {}'.format(filepath))
+        importer = SourceImporter(filepath)
+        importer.get_doi()
+        importer.import_source()
+        importer.import_authors()
+        importer.import_authorship()
+
+    logger.info('Exited source imports!')
 
     logger.debug("Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries)))
-        
+    species = 0
     for filepath in thermo_libraries:
         logger.info("Importing thermo library from {}".format(filepath))
         importer = ThermoLibraryImporter(filepath)
@@ -641,18 +815,22 @@ def main(args):
         importer.import_species()
         importer.import_data()
         
-
-    logger.info('Exited thermo imports!')
+        
 
     logger.debug("Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries),
                                                                 '\n - '.join(kinetics_libraries)))
 
+    reactions = 0
     for filepath in kinetics_libraries:
         continue
         logger.info("Importing kinetics library from {}".format(filepath))
         importer = KineticsLibraryImporter(filepath)
         importer.load_library()
         importer.import_data()
+
+    logger.info("Sources: {}".format(sources))
+    logger.info('Species: {}'.format(species))
+    logger.info('Reactions: {}'.format(reactions))
 
     logger.info('Exited kinetics imports!')
 
