@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+<h1>Reaction</h1>
+
+{% block content %}
+    <form action="" method="get">
+        {{ filter.form.as_p }}
+        <input type="submit" />
+    </form>
+    {% for reaction in filter.qs %}
+        <a href="{% url 'reaction-detail' reaction.pk %}">Reaction</a>: {{ reaction }}<br/>
+    {% endfor %}
+{% endblock %}

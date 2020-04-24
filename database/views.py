@@ -4,7 +4,8 @@ import django_filters
 from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 
-from .models import Species, Structure, SpeciesName, KineticModel, Thermo, Transport, Source
+from .models import Species, Structure, SpeciesName, KineticModel, Thermo,\
+    Transport, Source, Reaction, Stoichiometry, BaseKineticsData
 
 
 class BaseView(TemplateView):
@@ -65,6 +66,12 @@ class SourceFilter(django_filters.FilterSet):
         model = Source
         fields = ["name", "bPrimeID", "publicationYear", "sourceTitle", "doi"]
 
+class ReactionFilter(django_filters.FilterSet):
+    #reaction = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
+    class Meta:
+        model = Reaction
+        fields = ["species", "rPrimeID", "isReversible"]
+
 
 class SpeciesDetail(DetailView):
     model = Species
@@ -120,4 +127,26 @@ class SourceDetail(DetailView):
         source = self.get_object()
         kinetic_model = KineticModel.objects.get(source=source)
         context['source'] = source
+        return context
+
+class ReactionDetail(DetailView):
+    model = Reaction
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        reaction = self.get_object()
+        #kinetic_model = KineticModel.objects.get()
+        context['reaction'] = reaction
+        context['reactants'] = reaction.reactants()
+        context['products'] = reaction.products()
+        return context
+
+class KineticsDetail(DetailView):
+    model = BaseKineticsData
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        kinetics = self.get_object()
+        #kinetic_model = KineticModel.objects.get(source=source)
+        context['kinetics'] = kinetics
         return context

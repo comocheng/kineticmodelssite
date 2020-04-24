@@ -1,0 +1,20 @@
+
+{% load utils %}
+
+<h1> Reaction Detail</h1>
+
+<ul>
+    {% for name, val in reaction|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>
+
+Reactants: 
+{% for reactant in reactants %}
+    <li><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></li>
+{% endfor %}
+
+Products:
+{% for reactant in products %}
+    <li><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></li>
+{% endfor %}

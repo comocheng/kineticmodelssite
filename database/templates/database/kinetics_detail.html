@@ -1,0 +1,11 @@
+
+{% load utils %}
+
+<h1> Kinetics Detail</h1>
+
+<ul>
+    {% for name, val in kinetics|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>
+
