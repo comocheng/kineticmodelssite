@@ -788,10 +788,7 @@ def save_model(mod, library_name=None):
 # Converts a dictionary entry Arrhenius to a Django Model Instance
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
 def make_arrhenius_dj(k, library_name=None):
-    a = Arrhenius_dj()
-    a.AValue = k.A[0]
-    a.NValue = k.n
-    a.EValue = k.Ea[0]
+    a = Arrhenius_dj(AValue=k.A.value, nValue=k.n.value, EValue=k.Ea.value)
     save_model(a, library_name=library_name)
     return a
 
