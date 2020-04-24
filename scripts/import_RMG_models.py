@@ -635,77 +635,76 @@ class KineticsLibraryImporter(Importer):
 
                 save_model(matched_reaction, library_name=library.name)
             continue
-
             # Determine: what kind of KineticsData is this?
-            try:  # This will still cause the program to quit in an Exception, it just logs it first
-                if type(kinetics) == KineticsData:
-                    dj_kinetics_data = KineticsData_dj()  # make the django model instance
-                    dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
-                    dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
+            #try:  # This will still cause the program to quit in an Exception, it just logs it first
+            if isinstance(kinetics, KineticsData):
+                dj_kinetics_data = KineticsData_dj()  # make the django model instance
+                dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
+                dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
 
-                elif type(kinetics) == Arrhenius:
-                    dj_kinetics_data = make_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
+            elif isinstance(kinetics, Arrhenius):
+                dj_kinetics_data = make_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
-                elif type(kinetics) == ArrheniusEP:
-                    raise NotImplementedError
+            elif isinstance(kinetics, ArrheniusEP):
+                raise NotImplementedError
 
-                elif type(kinetics) == MultiArrhenius:
-                    dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
-                    # No atomic data (numbers, strings, etc.,)
-                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
-                    for simple_arr in kinetics.arrhenius:
-                        # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
-                        # simple_arr is one of those Arrhenius objects
-                        dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
+            elif isinstance(kinetics, MultiArrhenius):
+                dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
+                # No atomic data (numbers, strings, etc.,)
+                save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
+                for simple_arr in kinetics.arrhenius:
+                    # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
+                    # simple_arr is one of those Arrhenius objects
+                    dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
 
-                elif type(kinetics) == MultiPDepArrhenius:
-                    dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
-                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
-                    for pdep_arr in kinetics.arrhenius:
-                        # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
-                        dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr, library_name=library.name))
+            elif isinstance(kinetics, MultiPDepArrhenius):
+                dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
+                save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
+                for pdep_arr in kinetics.arrhenius:
+                    # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
+                    dj_kinetics_data.pdep_arrhenius_set.add(make_pdep_arrhenius_dj(pdep_arr, library_name=library.name))
 
-                elif type(kinetics) == PDepArrhenius:
-                    make_pdep_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
+            elif isinstance(kinetics, PDepArrhenius):
+                make_pdep_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
-                elif type(kinetics) == Chebyshev:
-                    dj_kinetics_data = Chebyshev_dj()  # make the django model instance
-                    dj_kinetics_data.coefficient_matrix = pickle.dumps(kinetics.coeffs)
-                    dj_kinetics_data.units = kinetics.kunits
+            elif isinstance(kinetics, Chebyshev):
+                dj_kinetics_data = Chebyshev_dj()  # make the django model instance
+                dj_kinetics_data.coefficient_matrix = pickle.dumps(kinetics.coeffs)
+                dj_kinetics_data.units = kinetics.kunits
 
-                elif type(kinetics) == ThirdBody:
-                    dj_kinetics_data = ThirdBody_dj()  # make the django model instance
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
-                    save_model(dj_kinetics_data, library_name=library.name)
-                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+            elif isinstance(kinetics, ThirdBody):
+                dj_kinetics_data = ThirdBody_dj()  # make the django model instance
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
+                save_model(dj_kinetics_data, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
 
-                elif type(kinetics) == Lindemann:
-                    dj_kinetics_data = Lindemann_dj()  # make the django model instance
-                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
-                    save_model(dj_kinetics_data, library_name=library.name)
-                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+            elif isinstance(kinetics, Lindemann):
+                dj_kinetics_data = Lindemann_dj()  # make the django model instance
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrhenius_high, library_name=library.name)
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
+                save_model(dj_kinetics_data, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
 
-                elif type(kinetics) == Troe:
-                    dj_kinetics_data = Troe_dj()  # make the django model instance
-                    # Add atomic attributes
-                    dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
-                    dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
-                    dj_kinetics_data.alpha = kinetics.alpha
-                    dj_kinetics_data.t1 = kinetics.T1
-                    dj_kinetics_data.t1 = kinetics.T2
-                    dj_kinetics_data.t1 = kinetics.T3
-                    save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
-                    make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
-                else:
-                    logger.error("Library {} Cannot identify this type of Kinetics Data: "
-                                 "{}".format(library.name, kinetics.__str__()))
-                    raise ImportError
-            except Exception as e:
+            elif isinstance(kinetics, Troe):
+                dj_kinetics_data = Troe_dj()  # make the django model instance
+                # Add atomic attributes
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
+                dj_kinetics_data.alpha = kinetics.alpha
+                dj_kinetics_data.t1 = kinetics.T1.value
+                dj_kinetics_data.t1 = kinetics.T2.value
+                dj_kinetics_data.t1 = kinetics.T3.value
+                save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
+                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+            else:
+                logger.error("Library {} Cannot identify this type of Kinetics Data: "
+                                "{}".format(library.name, kinetics.__str__()))
+                raise ImportError
+            """except Exception as e:
                 logger.error("KineticsLibraryImporter.import_data, library {}: Error in initializing "
                              "dj_kinetics_data{}".format(library.name, e))
                 logger.warning("Skipping this kinetics data instance...")
-                continue
+                continue"""
 
             try:  # Assign the temp and pressure bounds
                 dj_kinetics_data.min_temp = kinetics.Tmin.value
