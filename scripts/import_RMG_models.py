@@ -561,7 +561,80 @@ class KineticsLibraryImporter(Importer):
 
         for entry in library.entries:  # refers to an "entry()" line in that file
             kinetics = library.entries[entry].data  # "data" refers to the "kinetics" attribute of an "entry"
-            chemkinReaction = library.entries[entry].item
+            chemkinReaction = library.entries[entry].item # an rmg reaction
+            print(chemkinReaction)
+            try:
+                stoichiometries = defaultdict(float)
+                for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
+                    for species in reagent_list:
+                        print(species)
+                        name = species.label  # FIXME -- What do I put here? Also should the line below be get_or_create?
+                        dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
+                        dj_species = dj_speciesname.species
+                        stoichiometries[dj_species] += direction_coefficient
+                reaction_list = Reaction.objects.filter(species__in=list(stoichiometries.keys()), isReversible__exact=chemkinReaction.reversible)
+                print(f'We found the following reactions {reaction_list}')
+                matched_reaction = None
+                new_reaction = False
+                if len(reaction_list) == 0:
+                    new_reaction = True
+                    matched_reaction = Reaction.objects.create()
+                else:
+                    for reaction in reaction_list:
+                        if len(reaction.species.all()) != len(stoichiometries):
+                            logger.info('Lengths don\'t match, continuing')
+                            continue # Not the same number of species in a reaction
+                        matched = {}
+                        for coeff, species in reaction.stoich_species():
+                            if stoichiometries.get(species, None) is None:
+                                matched[species] = False
+                                logger.info('Species don\'t match, continuing')
+                                break
+                            if chemkinReaction.reversible == reaction.isReversible == True:
+                                # both reactions are reversible 
+                                if float(coeff) == float(stoichiometries.get(species, None)): 
+                                    # forward
+                                    # good to go
+                                    matched[species] = True
+                                elif -1.0 * float(coeff) == float(stoichiometries.get(species, None)):
+                                    # good to go
+                                    matched[species] = True
+                                else:
+                                    matched[species] = False
+                                    break
+                            elif chemkinReaction.reversible == reaction.isReversible == False:
+                                # both reactions are irreversible 
+                                if float(coeff) == float(stoichiometries.get(species, None)): 
+                                    # good to go
+                                    matched[species] = True
+                                else:
+                                    matched[species] = False
+                                    break
+                            else:
+                                # trying to match a reversible and irreversible reaction
+                                matched[species] = False
+                                break
+                        if all(matched.values()):
+                            print(f'Matched {chemkinReaction} to {reaction}')
+                            matched_reaction = reaction
+                            break
+                    if matched_reaction is None:
+                        matched_reaction = Reaction.objects.create()
+                        new_reaction = True 
+            except:
+                logger.error(f'Couldn\'t add {chemkinReaction} to the database')
+                continue
+            if not matched_reaction:
+                continue
+            if new_reaction:
+                for species, coeff in stoichiometries.items():
+                    print(species, coeff)
+                    stoich, created = Stoichiometry.objects.get_or_create(species=species, stoichiometry=coeff, reaction=matched_reaction)
+                    matched_reaction.species.add(species)
+                    save_model(stoich, library_name=library.name)
+
+                save_model(matched_reaction, library_name=library.name)
+            continue
 
             # Determine: what kind of KineticsData is this?
             try:  # This will still cause the program to quit in an Exception, it just logs it first
@@ -677,7 +750,7 @@ class KineticsLibraryImporter(Importer):
             for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
                 stoichiometries = defaultdict(float)
                 for species in reagent_list:
-                    name = species.name  # FIXME -- What do I put here? Also should the line below be get_or_create?
+                    name = species.label  # FIXME -- What do I put here? Also should the line below be get_or_create?
                     dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
                     dj_species = dj_speciesname.species
                     stoichiometries[dj_species] += direction_coefficient
