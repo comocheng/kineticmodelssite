@@ -708,19 +708,19 @@ class KineticsLibraryImporter(Importer):
                 continue
 
             try:  # Assign the temp and pressure bounds
-                dj_kinetics_data.min_temp = kinetics.Tmin
+                dj_kinetics_data.min_temp = kinetics.Tmin.value
             except:  # most kinetics data don't have the Temp/Pressure bounds
                 pass # Hence all the try/excepts here
             try:
-                dj_kinetics_data.max_temp = kinetics.Tmax
+                dj_kinetics_data.max_temp = kinetics.Tmax.value
             except:
                 pass
             try:
-                dj_kinetics_data.min_pressure = kinetics.Pmin
+                dj_kinetics_data.min_pressure = kinetics.Pmin.value
             except:
                 pass
             try:
-                dj_kinetics_data.max_pressure = kinetics.Pmax
+                dj_kinetics_data.max_pressure = kinetics.Pmax.value
             except:
                 pass
 
