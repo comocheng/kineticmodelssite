@@ -359,7 +359,7 @@ class ThermoLibraryImporter(Importer):
             trimmed_inchi = inchi.split('InChI=1S')[-1]
             formula = inchi.split('/')[1]
             try:  #TODO -- Write a helper function to encapsulate get_or_create in a try-except block
-                dj_species, species_created = Species.objects.get_or_create(inchi=trimmed_inchi)
+                dj_species, species_created = Species.objects.get_or_create(inchi=inchi)
                 if species_created:
                     logger.debug("Found no species for structure {} {}, so making one".format(smiles,
                                                                                               molecule.multiplicity))
@@ -371,6 +371,7 @@ class ThermoLibraryImporter(Importer):
                     logger.debug("Found a unique species {} for structure {} {}".format(dj_species, smiles,
                                                                                         molecule.multiplicity))
                     dj_isomer.species.add(dj_species)
+                save_model(dj_isomer, library_name=library.name)
 
             except MultipleObjectsReturned:
                 possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
@@ -474,14 +475,19 @@ class ThermoLibraryImporter(Importer):
                         raise e
 
             # Save before adding M2M links
-            dj_thermo.source = self.dj_km.source
+            
             
             save_model(dj_thermo, library_name=library.name)
+            if self.dj_km.source:
+                print('we have a source for {}'.format(dj_thermo))
+            else:
+                print('we do not have a source')
+            dj_thermo.source = self.dj_km.source
             # Tie the thermo data to a species using the Species primary key saved in the Entry from import_species
-            try:
-                dj_thermo.species = Species.objects.get(pk=library.entries[entry].dj_species_pk)
-            except:
-                pass
+            #try:
+            setattr(dj_thermo, 'species', Species.objects.get(pk=library.entries[entry].dj_species_pk))
+            #except:
+            #    pass
 
             save_model(dj_thermo, library_name=library.name)
 
