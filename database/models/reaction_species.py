@@ -88,7 +88,7 @@ class Reaction(models.Model):
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through='Stoichiometry')
     #: The PrIMe ID, if it is known
-    rPrimeID = models.CharField('PrIMe ID', max_length=10, unique=True)
+    rPrimeID = models.CharField('PrIMe ID', blank=True, null=True, max_length=10)
     isReversible = models.BooleanField(
         default=True,
         help_text='Is this reaction reversible?')
@@ -100,7 +100,7 @@ class Reaction(models.Model):
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        reaction.sort()
+        #reaction.sort()
         return reaction
 
     def products(self):
@@ -164,3 +164,7 @@ class Stoichiometry(models.Model):
     class Meta:
         verbose_name_plural = 'Stoichiometries'
         unique_together = ["species", "reaction", "stoichiometry"]
+
+    def __repr__(self):
+        return (u"{s.id} species {s.species} "
+                "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
