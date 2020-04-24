@@ -835,7 +835,7 @@ def main(args):
 
     reactions = 0
     for filepath in kinetics_libraries:
-        continue
+        
         logger.info("Importing kinetics library from {}".format(filepath))
         importer = KineticsLibraryImporter(filepath)
         importer.load_library()
