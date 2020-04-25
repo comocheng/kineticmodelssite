@@ -32,8 +32,8 @@ class xmlSource():
         root.attrib["primeID"] = bPrimeID
         authordict={}
         for n in range(len(authorlist)): #authorlist should be in order of authorship
-            authordict[["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
-            authordict[["childauthor{0}".format(n)].text=authorlist[n]
+            authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
+            authordict["childauthor{0}".format(n)].text=authorlist[n]
         childyear = etree.SubElement(root, 'year')
         childyear.text = pub_year
         childtitle = etree.SubElement(root, 'title')

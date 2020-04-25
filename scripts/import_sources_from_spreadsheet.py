@@ -48,9 +48,9 @@ def row_to_source(row):  # TODO -- needs tests
         try:
             s.save()
             logging.info("Created the following Source Instance:\n{0}\n".format(s))
-        except Exception, e:
-            logging.error("Error saving the Source: {}".format(e))
-            raise e
+        except:
+            logging.exception(f"Error saving the Source {s!r}")
+            raise
 
         # Then create the Authorships
         if source_info_dict[u"Authors"] != "" and type(source_info_dict[u"Authors"]) in [str, unicode]:
@@ -126,8 +126,9 @@ def make_authorships(authors_str, source):
             a = Authorship(author=author_object, source=source, order=int(index+1))
             a.save()
             logging.info("Authorship created: {}".format(a))
-        except Exception, e:
-            logging.error("Issue creating Authorship: {}".format(e))
+        except:
+            logging.exception(f"Error creating Authorship: {a!r}")
+            raise
 
     return True
 
