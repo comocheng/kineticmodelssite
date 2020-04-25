@@ -68,9 +68,8 @@ class Arrhenius(BaseKineticsData):
     EValue = models.FloatField(default=0.0)
     EValueUncertainty = models.FloatField(blank=True, null=True)
 
-    def __unicode__(self):
-        return u"{s.id} with A={s.AValue:g} n={s.nValue:g} E={s.EValue:g}".format(
-            s=self)
+    def __str__(self):
+        return "{s.id} with A={s.AValue:g} n={s.nValue:g} E={s.EValue:g}".format(s=self)
 
     class Meta:
         verbose_name_plural = "Arrhenius Kinetics"

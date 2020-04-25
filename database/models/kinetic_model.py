@@ -111,8 +111,8 @@ class KineticModel(models.Model):
     class Meta:
         verbose_name_plural = "Kinetic Models"
 
-    def __unicode__(self):
-        return u"{s.id} {s.modelName}".format(s=self)
+    def __str__(self):
+        return "{s.id} {s.modelName}".format(s=self)
 
 
 class SpeciesName(models.Model):
@@ -123,7 +123,7 @@ class SpeciesName(models.Model):
     kineticModel = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(blank=True, max_length=200)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -142,8 +142,8 @@ class KineticsComment(models.Model):
     kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
-    def __unicode__(self):
-        return unicode(self.comment)
+    def __str__(self):
+        return self.comment
 
 
 class ThermoComment(models.Model):
@@ -158,8 +158,8 @@ class ThermoComment(models.Model):
     kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
-    def __unicode__(self):
-        return unicode(self.comment)
+    def __str__(self):
+        return self.comment
 
         # class Element(models.Model):
         #     isotope massnumber
