@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # encoding: utf-8
 """
 Prime.py
@@ -15,7 +15,7 @@ import os
 import unittest
 import re
 import xml, xml.dom.minidom
-import cPickle as pickle # try import pickle if that doesn't work
+import pickle as pickle # try import pickle if that doesn't work
 import numpy
 
 
@@ -30,7 +30,7 @@ class ThingWithCache:
 			for item in self.cacheItems:
 				self.loadItem(item)
 		except:
-			print "couldn't load cache"
+			print("couldn't load cache")
 			return False
 		return True
 	def saveCache(self):
@@ -40,7 +40,7 @@ class ThingWithCache:
 			for item in self.cacheItems:
 				self.saveItem(item)
 		except:
-			print "Couldn't save cache"
+			print("Couldn't save cache")
 			return False
 		return True
 	def saveItem(self,itemName):
@@ -76,7 +76,7 @@ class PrimeSpeciesList(ThingWithCache): # inherit from the parent class ThingWit
 		try: 
 			self.loadCache() # try to load the cache
 		except:
-			print "Couldn't load cache."
+			print("Couldn't load cache.")
 			self.readCAS()
 			self.saveCache()
 		
@@ -97,13 +97,13 @@ class PrimeSpeciesList(ThingWithCache): # inherit from the parent class ThingWit
 			primeid=os.path.splitext(filename)[0]
 			if match:
 				cas=match.group(1)
-				print primeid,cas
+				print(primeid,cas)
 				# each primed has a unique cas so we just store it
 				self.primeid2cas[primeid]=cas
 				# each cas may have more than one primeid so we store as a list and append
-				if self.cas2primeids.has_key(cas):
+				if cas in self.cas2primeids:
 					self.cas2primeids[cas].append(primeid)
-					print "Warning! species %s all have same CAS %s"%(self.cas2primeids[cas], cas)
+					print("Warning! species %s all have same CAS %s"%(self.cas2primeids[cas], cas))
 				else:
 					self.cas2primeids[cas]=[primeid]
 				
@@ -124,9 +124,9 @@ class BurcatThermo:
 
 	def readXML(self,mirror):
 		""" reads in the XML from the file"""
-		print "Reading in %s ..."%mirror
+		print("Reading in %s ..."%mirror)
 		dom=xml.dom.minidom.parse(mirror)
-		print "Done!"
+		print("Done!")
 		return dom
 			
 	def species(self):
@@ -137,7 +137,7 @@ class BurcatThermo:
 class BurcatSpecies:
 	def __init__(self,dom):
 		self.dom=dom
-		if self.dom.attributes.has_key('CAS'):
+		if 'CAS' in self.dom.attributes:
 			self.cas=self.dom.attributes.getNamedItem('CAS').value
 		else: self.cas="No_CAS_in_Burcat"
 	def phases(self):
@@ -200,9 +200,9 @@ class PrimeSpecies:
 			if not int(re.match('thp(\d+).xml',filename).group(1))>0: continue
 			try:
 				dom=xml.dom.minidom.parse(filePath)
-			except xml.parsers.expat.ExpatError, error:
-				print "BAD XML IN FILE %s"%filePath
-				print "Error: ",error
+			except xml.parsers.expat.ExpatError as error:
+				print("BAD XML IN FILE %s"%filePath)
+				print("Error: ",error)
 				continue # try next file
 			yield PrimeThermo(dom)
 			
@@ -215,7 +215,7 @@ class PrimeThermo:
 		self.dom.unlink()
 	def __str__(self):
 		return self.primeID
-	def isFromBurcat(self, BurcatBibliographyID=u'b00014727'):
+	def isFromBurcat(self, BurcatBibliographyID='b00014727'):
 		""" returns True if one of the bibliographyLink items matches that of Burcat A., Ruscic B., 2006. (b00014727)
 			otherwise returns False"""
 		for bibItem in self.dom.getElementsByTagName('bibliographyLink'):
@@ -266,71 +266,71 @@ if __name__ == '__main__':
 	b=BurcatThermo()
 
 	for specie in b.species():
-		print 
-		print "Trying Burcat species with CAS %s"%specie.cas
+		print() 
+		print("Trying Burcat species with CAS %s"%specie.cas)
 		try:
 			primeids=p.cas2primeids[specie.cas]
 		except KeyError:
-			print "Species with CAS %s not found in prime"%specie.cas
+			print("Species with CAS %s not found in prime"%specie.cas)
 			notFoundList.append(specie.cas)
 			continue
 			
 		for phase in specie.phases():
-			print "Looking for Burcat phase %s"%str(phase)
+			print("Looking for Burcat phase %s"%str(phase))
 			
 			burcatCoeffs = phase.coefficients()
 					
 			for primeid in primeids:
-				print "Trying PrIMe species %s"%primeid
+				print("Trying PrIMe species %s"%primeid)
 				primeSpecies=PrimeSpecies(primeid)
 				for primeThermo in primeSpecies.thermos():
 					if not primeThermo.isFromBurcat():
-						print "PrIMe polynomial %s/%s is not from Burcat & Ruscic so skipping comparison"%(primeid,str(primeThermo))
+						print("PrIMe polynomial %s/%s is not from Burcat & Ruscic so skipping comparison"%(primeid,str(primeThermo)))
 						continue
 					else:
-						print "PrIMe polynomial %s/%s claims to be from Burcat & Ruscic"%(primeid,str(primeThermo))
+						print("PrIMe polynomial %s/%s claims to be from Burcat & Ruscic"%(primeid,str(primeThermo)))
 						try:
 							primeCoeffs = primeThermo.coefficients()
-						except AssertionError, error:
-							print "ERROR reading prime coeffs:",error
+						except AssertionError as error:
+							print("ERROR reading prime coeffs:",error)
 							errorList.append("%s/%s"%(primeid,str(primeThermo)))
 							continue
 					
 						differences = burcatCoeffs - primeCoeffs  # perhaps absolute difference is silly - some coefficients are very small, some are large. finding relative difference leads to divide-by-zero NaN though...
 						sumSquareError = numpy.sum(differences*differences )
-						print "sum of squared errors = %g"%sumSquareError
+						print("sum of squared errors = %g"%sumSquareError)
 						
 						if sumSquareError>1E-3: # arbitrary and probably inappropriate
-							print "PrIMe"
-							print primeCoeffs
-							print "Burcat"
-							print burcatCoeffs
-							print "Differences"
-							print differences
+							print("PrIMe")
+							print(primeCoeffs)
+							print("Burcat")
+							print(burcatCoeffs)
+							print("Differences")
+							print(differences)
 							failList.append("%s/%s"%(primeid,str(primeThermo)))
 						else:
-							print "seemed to match pass OK"
+							print("seemed to match pass OK")
 							passList.append("%s/%s"%(primeid,str(primeThermo)))
 							
-	print "\n\n******************\n"	
-	print "PASSED OK %d POLYNOMIALS"%len(passList)
+	print("\n\n******************\n")	
+	print("PASSED OK %d POLYNOMIALS"%len(passList))
 	for s in passList:
-		print s
+		print(s)
 		
-	print "\n\n******************\n"
-	print "FAILED COMPARISON TEST %d polynomials"%len(failList)
+	print("\n\n******************\n")
+	print("FAILED COMPARISON TEST %d polynomials"%len(failList))
 	for s in failList:
-		print s
+		print(s)
 	
-	print "\n\n******************\n"
-	print "ERRORS READING %d PrIMe polynomials"%len(errorList)
+	print("\n\n******************\n")
+	print("ERRORS READING %d PrIMe polynomials"%len(errorList))
 	for s in errorList:
-		print s
+		print(s)
 
-	print "\n\n******************\n"
-	print "SPECIES WITH CAS NOT FOUND IN PrIMe %d "%len(notFoundList)
+	print("\n\n******************\n")
+	print("SPECIES WITH CAS NOT FOUND IN PrIMe %d "%len(notFoundList))
 	for s in notFoundList:
-		print s
+		print(s)
 		
 	#b.dom.unlink() # memory explodes if you don't do this. 
 	#comment it out though if you want to play around with things after running the script
