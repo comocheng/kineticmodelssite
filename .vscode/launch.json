@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: import_RMG_models.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/import_RMG_models.py",
+            "args": ["${workspaceFolder}/../RMG-importer/RMG-models/"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Django",
             "type": "python",
             "request": "launch",
