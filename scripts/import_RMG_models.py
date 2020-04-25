@@ -213,7 +213,7 @@ class SourceImporter(Importer):
         pageNumbers = ref.get('page')
         setattr(dj_source, "pageNumbers", pageNumbers)
         save_model(dj_source, library_name=self.name)
-        logger.info(f'The reference looks like this:\n{dj_source.__unicode__()}')
+        logger.info(f'The reference looks like this:\n{dj_source!r}')
 
         setattr(self.dj_km, 'source', dj_source)
         save_model(self.dj_km)
