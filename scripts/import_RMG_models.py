@@ -774,13 +774,12 @@ HELPER FUNCTIONS
 # Saves any Django model and logs it appropriately
 # Models.model (String) -> Models.model
 def save_model(mod, library_name=None):
-    #try:
-    mod.save()
+    try:
+        mod.save()
+    except:
+        logger.exception(f"Error saving the {mod} model type {type(mod)} from Library {library_name}")
+        raise
     logger.info("Created/updated the following {1} Instance: {0}\n".format(mod, type(mod)))
-    #except Exception as e:
-    #    error_msg = "Error saving the {1} model of type {2} from Library {0}".format(library_name, mod, type(mod))
-    #    logger.error(error_msg)
-    #    logger.exception(e)
     return mod
 
 
