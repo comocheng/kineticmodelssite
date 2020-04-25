@@ -44,7 +44,7 @@ import itertools
 import math
 import numpy
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 from django.core.urlresolvers import reverse
 
@@ -114,7 +114,7 @@ class rmgsiteDatabase(object):
         """
         Walk the directory tree from dirpath, calling reset_timestamp(file) on each file.
         """
-        print "Resetting 'last loaded' timestamps for {0} in process {1}".format(dirpath, os.getpid())
+        print("Resetting 'last loaded' timestamps for {0} in process {1}".format(dirpath, os.getpid()))
         for root, dirs, files in os.walk(dirpath):
             for name in files:
                 self.reset_timestamp(os.path.join(root, name))
@@ -230,13 +230,13 @@ class rmgsiteDatabase(object):
 
                     # Make sure to load the entire thermo database prior to adding training values to the rules
                     self.load('thermo', '')
-                    for family in self.database.kinetics.families.values():
+                    for family in list(self.database.kinetics.families.values()):
                         oldentries = len(family.rules.entries)
                         family.addKineticsRulesFromTrainingSet(thermoDatabase=self.database.thermo)
                         newentries = len(family.rules.entries)
                         if newentries != oldentries:
-                            print '{0} new entries added to {1} family after adding rules from training set.'.format(
-                                newentries - oldentries, family.label)
+                            print('{0} new entries added to {1} family after adding rules from training set.'.format(
+                                newentries - oldentries, family.label))
                         # Filling in rate rules in kinetics families by averaging...
                         family.fillKineticsRulesByAveragingUp()
 
@@ -344,7 +344,7 @@ class rmgsiteDatabase(object):
                         db = family.rules
                     else:
                         label = '{0}/{1}'.format(family.label, subsection[1])
-                        db = (d for d in family.depositories if d.label == label).next()
+                        db = next((d for d in family.depositories if d.label == label))
             else:
                 raise ValueError('Invalid value "%s" for section parameter.' % section)
         except (KeyError, StopIteration):
@@ -493,10 +493,10 @@ def getRMGJavaKineticsFromReaction(reaction):
     reactionList = getRMGJavaKinetics(reactantList, productList)
     #assert len(reactionList) == 1
     if len(reactionList) > 1:
-        print "WARNING - RMG-Java identified {0} reactions that match {1!s} instead of 1".format(len(reactionList),reaction)
+        print("WARNING - RMG-Java identified {0} reactions that match {1!s} instead of 1".format(len(reactionList),reaction))
         reactionList[0].kinetics.comment += "\nWARNING - RMG-Java identified {0} reactions that match this. These kinetics are just from one of them.".format(len(reactionList))
     if len(reactionList) == 0:
-        print "WARNING - RMG-Java could not find the reaction {0!s}".format(reaction)
+        print("WARNING - RMG-Java could not find the reaction {0!s}".format(reaction))
         return None
     return reactionList[0]
     
@@ -643,12 +643,12 @@ def getRMGJavaKinetics(reactantList, productList=None):
     try:
         client_socket.connect(("localhost", 5000))
     except IOError:
-        print >> sys.stderr, 'Unable to query RMG-Java for kinetics. (Is the RMG-Java server running?)'
+        print('Unable to query RMG-Java for kinetics. (Is the RMG-Java server running?)', file=sys.stderr)
         sys.stderr.flush()
         return reactionList
     
     # Send request to server
-    print "SENDING REQUEST FOR RMG-JAVA SEARCH TO SERVER"
+    print("SENDING REQUEST FOR RMG-JAVA SEARCH TO SERVER")
     client_socket.sendall(popreactants)
     partial_response = client_socket.recv(512)
     response = partial_response
@@ -656,15 +656,15 @@ def getRMGJavaKinetics(reactantList, productList=None):
         partial_response = client_socket.recv(512)
         response += partial_response
     client_socket.close()
-    print "FINISHED REQUEST. CLOSED CONNECTION TO SERVER"
+    print("FINISHED REQUEST. CLOSED CONNECTION TO SERVER")
     # Clean response from server
     try:
         species_dict, reactions_list = cleanResponse(response)
     except:
         # Return an empty reaction list if an error occurred on the java server side,
         # instead of having the website crash.
-        print "AN ERROR OCCURRED IN THE JAVA SERVER."
-        print response
+        print("AN ERROR OCCURRED IN THE JAVA SERVER.")
+        print(response)
         return []
 
     # Name the species in reaction
@@ -676,8 +676,8 @@ def getRMGJavaKinetics(reactantList, productList=None):
         productNames.append(identifySpecies(species_dict, product))
         # identifySpecies(species_dict, product) returns "False" if it can't find product
         if not identifySpecies(species_dict, product):
-            print "Could not find this requested product in the species dictionary from RMG-Java:"
-            print str(product)
+            print("Could not find this requested product in the species dictionary from RMG-Java:")
+            print(str(product))
     
     species_dict = dict([(key, Molecule().fromAdjacencyList(value,saturateH=True)) for key, value in species_dict])
     
@@ -689,10 +689,10 @@ def getRMGJavaKinetics(reactantList, productList=None):
         degeneracy = 1
 
         # Search for da Reactions
-        print 'Searching output for desired reaction...\n'
+        print('Searching output for desired reaction...\n')
         for reactionline in reactions_list:
             if reactionline.strip().startswith('DUP'):
-                print "WARNING - DUPLICATE REACTION KINETICS ARE NOT BEING SUMMED"
+                print("WARNING - DUPLICATE REACTION KINETICS ARE NOT BEING SUMMED")
                 # if set, the `reaction` variable should still point to the reaction from the previous reactionline iteration
                 if reaction:
                     reaction.kinetics.comment += "\nWARNING - DUPLICATE REACTION KINETICS IDENTIFIED BUT NOT SUMMED"
@@ -703,8 +703,8 @@ def getRMGJavaKinetics(reactantList, productList=None):
             indicator1 = searchReaction(reactionline, reactantNames, productNames)
             indicator2 = searchReaction(reactionline, productNames, reactantNames)
             if indicator1 == True or indicator2 == True:
-                print 'Found a matching reaction:'
-                print reactionline
+                print('Found a matching reaction:')
+                print(reactionline)
                 reactants, products, kinetics, entry = extractKinetics(reactionline)
                 reaction = DepositoryReaction(
                     reactants = [species_dict[reactant] for reactant in reactants],
@@ -753,7 +753,7 @@ def getAbrahamAB(smiles):
             wb = xlrd.open_workbook(filepath)
             wb.sheet_names()
         
-            data = wb.sheet_by_name(u'PlattsA')
+            data = wb.sheet_by_name('PlattsA')
             col1 = data.col_values(0)
             col2 = data.col_values(1)
             col3 = data.col_values(2)
@@ -772,12 +772,12 @@ def getAbrahamAB(smiles):
                 if success:
                     smarts = pybel.Smarts(x.smarts.__str__())
                 else:
-                    print "Invalid SMARTS pattern", x.smarts.__str__()
+                    print("Invalid SMARTS pattern", x.smarts.__str__())
                     break
                 matched = smarts.findall(mol)
                 x.num = len(matched)
                 if (x.num > 0):
-                    print "Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to A', x.num, 'times'
+                    print("Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to A', x.num, 'times')
                 platts_A += (x.num) * (x.value)
                         
             self.A = platts_A + 0.003
@@ -790,7 +790,7 @@ def getAbrahamAB(smiles):
             wb = xlrd.open_workbook(filepath)
             wb.sheet_names()
         
-            data = wb.sheet_by_name(u'PlattsB')
+            data = wb.sheet_by_name('PlattsB')
             col1 = data.col_values(0)
             col2 = data.col_values(1)
             col3 = data.col_values(2)
@@ -809,12 +809,12 @@ def getAbrahamAB(smiles):
                 if success:
                     smarts = pybel.Smarts(x.smarts.__str__())
                 else:
-                    print "Invalid SMARTS pattern", x.smarts.__str__()
+                    print("Invalid SMARTS pattern", x.smarts.__str__())
                     break
                 matched = smarts.findall(mol)
                 x.num = len(matched)
                 if (x.num > 0):
-                    print "Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to B', x.num, 'times'
+                    print("Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to B', x.num, 'times')
                 platts_B += (x.num) * (x.value)
             
             self.B = platts_B + 0.071 
@@ -863,7 +863,7 @@ def moleculeFromURL(adjlist):
     Convert a given adjacency list `adjlist` from a URL to the corresponding
     :class:`Molecule` object.
     """
-    adjlist = str(urllib.unquote(adjlist))
+    adjlist = str(urllib.parse.unquote(adjlist))
     molecule = Molecule().fromAdjacencyList(adjlist)
     return molecule
 
@@ -896,7 +896,7 @@ def groupFromURL(adjlist):
     Convert a given adjacency list `adjlist` from a URL to the corresponding
     :class:`Group` object.
     """   
-    adjlist = str(urllib.unquote(adjlist))
+    adjlist = str(urllib.parse.unquote(adjlist))
     group = Group().fromAdjacencyList(adjlist)
     return group
 
@@ -952,17 +952,17 @@ def getStructureMarkup(item):
     from rmgpy.molecule.molecule import Molecule
     from rmgpy.molecule.group import Group
     from rmgpy.species import Species
-    import urllib
+    import urllib.request, urllib.parse, urllib.error
     
     if isinstance(item, Molecule):
         # We can draw Molecule objects, so use that instead of an adjacency list
         adjlist = item.toAdjacencyList(removeH=False)
-        url = urllib.quote(adjlist)
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('database.views.drawMolecule', kwargs={'adjlist': url}), adjlist)
     elif isinstance(item, Species) and len(item.molecule) > 0:
         # We can draw Species objects, so use that instead of an adjacency list
         adjlist = item.molecule[0].toAdjacencyList(removeH=False)
-        url = urllib.quote(adjlist)
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('database.views.drawMolecule', kwargs={'adjlist': url}), item.label)
     elif isinstance(item, Species) and len(item.molecule) == 0:
         # We can draw Species objects, so use that instead of an adjacency list
@@ -970,10 +970,10 @@ def getStructureMarkup(item):
     elif isinstance(item, Group):
         # We can draw Group objects, so use that instead of an adjacency list
         adjlist = item.toAdjacencyList()
-        url = urllib.quote(adjlist)
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}" />'.format(reverse('database.views.drawGroup', kwargs={'adjlist': url}), adjlist)
         #structure += '<pre style="font-size:small;" class="adjacancy_list">{0}</pre>'.format(adjlist)
-    elif isinstance(item, str) or isinstance(item, unicode):
+    elif isinstance(item, str) or isinstance(item, str):
         structure = item
     else:
         structure = ''
