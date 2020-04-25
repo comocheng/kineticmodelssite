@@ -39,7 +39,7 @@ import sys
 
 
 class DivErrorList(ErrorList):
-    def __unicode__(self):
+    def __str__(self):
         return self.as_divs()
     def as_divs(self):
         if not self: return ''

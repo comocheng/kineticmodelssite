@@ -931,7 +931,7 @@ class UserProfile(models.Model):
 # class ThermoLibrary(models.Model):
 #     input = models.ForeignKey(Input, related_name = 'thermo_libraries')
 #     thermolib = models.CharField(choices = ThermoLibraries, max_length=200, blank=True)
-#     def __unicode__(self):
+#     def __str__(self):
 #         return self.thermolib
 
 # class ReactionLibrary(models.Model):
@@ -939,7 +939,7 @@ class UserProfile(models.Model):
 #     reactionlib = models.CharField(choices = KineticsLibraries, max_length=200, blank=True)
 #     edge = models.BooleanField()
 #     seedmech = models.BooleanField()
-#     def __unicode__(self):
+#     def __str__(self):
 #         return self.reactionlib
 
 # ################################################################################
@@ -953,7 +953,7 @@ class UserProfile(models.Model):
 #     adjlist = models.TextField()
 #     molefrac = models.FloatField()
 #     inert = models.BooleanField()
-#     def __unicode__(self):
+#     def __str_(self):
 #         return self.name
 
 
