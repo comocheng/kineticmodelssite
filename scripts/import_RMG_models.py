@@ -141,24 +141,40 @@ class SourceImporter(Importer):
 
     def get_doi(self, path=None):
         """
-        Get the doi from the source.txt file
+        Get the DOI from the source.txt file
         """
         source_file = path or self.path
         with open(source_file, 'r') as f:
-            lines = f.readlines()
-        for line in lines:
-            for l in line.split():
-                if '10.' in l.lower():
-                    break
-            l = l.strip().strip('.')
-            regex = re.compile('10.\d{4,9}/\w.*\w')
-            matched_list = regex.findall(l)
-            break
-        if len(matched_list) > 0:
-            matched_doi = matched_list[0]
-        else:
-            logger.error(f'Could not find a doi in the souce.txt file for {path}')
+            source = f.read()
+        regex = re.compile('10.\d{4,9}/\S+')
+
+        matched_list = regex.findall(source)
+        matched_list = [d.rstrip('.') for d in matched_list]
+        # There are sometimes other trailing characters caught up, like ) or ]
+        # We should probably clean up the source.txt files
+        # But let's try cleaning them here.
+        def clean(doi):
+            "Remove a trailing ] or ) from a DOI if it probably shouldn't be there"
+            for opening, closing in ['()','[]']:
+                if doi.endswith(closing):
+                    if doi.count(closing) - doi.count(opening) == 1:
+                        # 1 more closing than opening
+                        # remove the last closing
+                        doi = doi[:-1]
+            return doi
+        matched_list = [clean(d) for d in matched_list]
+
+        matched_set = set(matched_list) # de-duplicate
+
+        if len(matched_set) == 0:
+            logger.error(f'Could not find a DOI in the souce.txt file for {path}')
             matched_doi = None
+        elif len(matched_set) > 1:
+            logger.error(f'Found more than one DOI in the souce.txt file for {path}')
+            matched_doi = None
+        else:
+            matched_doi = matched_list[0]
+
         self.doi = matched_doi
         logger.info(f"The matched DOI is {self.doi}")
         return matched_doi
@@ -170,7 +186,7 @@ class SourceImporter(Importer):
         doi = doi or self.doi
         print(172)
         if doi is None:
-            logger.error(f"We were unable to find a doi for {self.name}")
+            logger.error(f"We don't have a DOI for {self.name}")
             return None, None
         logger.info(f'Reading in source information for {self.name} with DOI:{doi}')
         print(self.name)
