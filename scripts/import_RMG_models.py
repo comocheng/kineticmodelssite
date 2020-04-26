@@ -840,12 +840,24 @@ def make_efficiencies(dj_k, k, library_name=None):
     save_model(dj_k, library_name=library_name)
 
 
-def findLibraryFiles(path):
-
+def findLibraryFiles(path, skip_list=None):
+    """
+    Walk the given `path` looking for libraries and source files.
+    Skips any paths that end with something in the skip_list
+    (eg. skip_list=['PCI2011/193-Mehl'])
+    Returns a 3-tuple:
+        thermo_libraries, kinetics_libraries, source_files
+    """
+    skip_list = skip_list or [] # list of models to skip
     thermoLibs = []
     kineticsLibs = []
     sourceFiles = []
     for root, dirs, files in os.walk(path):
+        
+        if any([ root.strip('/').endswith(skip) for skip in skip_list ]):
+            logger.info(f"Skipping {root} because it is in the skip_list.")
+            continue # skip this one
+
         for name in files:
             path = os.path.join(root, name)
             if name == "source.txt":
@@ -880,8 +892,13 @@ def main(args):
     thermo_libraries = []
     kinetics_libraries = []
     source_files = []
+
+    skip_list = [
+        'PCI2011/193-Mehl', # This folder doesn't contain a model, and claims to be the source of Gasoline_Surrogate, which causes a duplicate Source database error.
+        ] 
+
     for path in args.paths:
-        t, k, s = findLibraryFiles(path)
+        t, k, s = findLibraryFiles(path, skip_list)
         thermo_libraries.extend(t)
         kinetics_libraries.extend(k)
         source_files.extend(s)
