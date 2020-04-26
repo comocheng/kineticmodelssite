@@ -587,6 +587,7 @@ class KineticsLibraryImporter(Importer):
                         dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
                         dj_species = dj_speciesname.species
                         stoichiometries[dj_species] += direction_coefficient
+                        # FIXME: reactions that are A + B = A + C probably end up as B = C
                 reaction_list = Reaction.objects.filter(species__in=list(stoichiometries.keys()), isReversible__exact=chemkinReaction.reversible)
                 print(f'We found the following reactions {reaction_list}')
                 matched_reaction = None
@@ -611,6 +612,10 @@ class KineticsLibraryImporter(Importer):
                                     # forward
                                     # good to go
                                     matched[species] = True
+                                # FIXME: I'm worried that this next bit could match some species in 
+                                #       forward direction and some in reverse. 
+                                #       eg. A + B = C + D  matching A + D = C + B
+                                # FIXME: also, what happens to  A + B = A + C reactions?
                                 elif -1.0 * float(coeff) == float(stoichiometries.get(species, None)):
                                     # good to go
                                     matched[species] = True
