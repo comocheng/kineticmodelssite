@@ -631,8 +631,10 @@ class KineticsLibraryImporter(Importer):
                                 break
                         if all(matched.values()):
                             print(f'Matched {chemkinReaction} to {reaction}')
+                            if matched_reaction is not None:
+                                raise Error(f"Matched {chemkinReaction} to multiple reactions, {matched_reaction} and {reaction}")
                             matched_reaction = reaction
-                            break
+                            
                     if matched_reaction is None:
                         matched_reaction = Reaction.objects.create()
                         new_reaction = True 
