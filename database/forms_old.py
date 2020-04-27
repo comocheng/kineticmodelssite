@@ -59,7 +59,7 @@ class ThermoSearchForm(forms.Form):
         """
         try:
             molecule = Molecule()
-            molecule.fromAdjacencyList(str(self.cleaned_data['species']))
+            molecule.from_adjacency_list(str(self.cleaned_data['species']))
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -97,7 +97,7 @@ class KineticsSearchForm(forms.Form):
         """
         try:
             molecule = Molecule()
-            molecule.fromAdjacencyList(str(self.cleaned_data['reactant1']))
+            molecule.from_adjacency_list(str(self.cleaned_data['reactant1']))
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -113,7 +113,7 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['reactant2'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
+            molecule.from_adjacency_list(adjlist)
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -129,7 +129,7 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['product1'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
+            molecule.from_adjacency_list(adjlist)
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -145,7 +145,7 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['product2'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
+            molecule.from_adjacency_list(adjlist)
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -174,7 +174,7 @@ class MoleculeSearchForm(forms.Form):
                 adjlist = str(self.cleaned_data['species'])
                 if adjlist == '' : return ''
                 molecule = Molecule()
-                molecule.fromAdjacencyList(str(self.cleaned_data['species']))
+                molecule.from_adjacency_list(str(self.cleaned_data['species']))
             except Exception as e:
                 import traceback
                 traceback.print_exc(e)
@@ -204,7 +204,7 @@ class MoleculeSearchForm(forms.Form):
 #             adjlist = str(self.cleaned_data['adjlist'])
 #             if adjlist == '' : return ''
 #             molecule = Molecule()
-#             molecule.fromAdjacencyList(adjlist)
+#             molecule.from_adjacency_list(adjlist)
 #         except Exception, e:
 #             import traceback
 #             traceback.print_exc(e)
@@ -227,7 +227,7 @@ class GroupDrawForm(forms.Form):
                 adjlist = str(self.cleaned_data['group'])
                 if adjlist == '' : return ''
                 group = Group()
-                group.fromAdjacencyList(str(self.cleaned_data['group']))
+                group.from_adjacency_list(str(self.cleaned_data['group']))
             except Exception as e:
                 import traceback
                 traceback.print_exc(e)
@@ -249,7 +249,7 @@ class EniSearchForm(forms.Form):
         Return molecular representation of input detergent structure        """
         try:
             detergent = Molecule()
-            detergent.fromAdjacencyList(str(self.cleaned_data['detergent']))
+            detergent.from_adjacency_list(str(self.cleaned_data['detergent']))
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -262,7 +262,7 @@ class EniSearchForm(forms.Form):
         """
         try:
             deposit = Molecule()
-            deposit.fromAdjacencyList(str(self.cleaned_data['deposit']))
+            deposit.from_adjacency_list(str(self.cleaned_data['deposit']))
         except Exception as e:
             import traceback
             traceback.print_exc(e)
@@ -284,7 +284,7 @@ class ThermoEntryEditForm(forms.Form):
             new_depository = rmgpy.data.thermo.ThermoDepository()
             global_context = {'__builtins__': None} # disable even builtins
             local_context = copy.copy(new_database.local_context)
-            local_context['entry'] = new_depository.loadEntry
+            local_context['entry'] = new_depository.load_entry
             for key,value in rmgpy.data.base.Database.local_context.items():
                 local_context[key]=value
             
@@ -315,7 +315,7 @@ class KineticsEntryEditForm(forms.Form):
             new_depository = rmgpy.data.kinetics.KineticsDepository()
             global_context = {'__builtins__': None} # disable even builtins
             local_context = copy.copy(new_database.local_context)
-            local_context['entry'] = new_depository.loadEntry
+            local_context['entry'] = new_depository.load_entry
             for key,value in rmgpy.data.base.Database.local_context.items():
                 local_context[key]=value
             
