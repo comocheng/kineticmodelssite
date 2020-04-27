@@ -19,8 +19,8 @@ class Species(models.Model):
     inchi = models.CharField('InChI', blank=True, max_length=500)
     cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
 
-    def __unicode__(self):
-        return u"{s.id} {s.formula!s}".format(s=self)
+    def __str__(self):
+        return "{s.id} {s.formula!s}".format(s=self)
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
@@ -48,8 +48,8 @@ class Isomer(models.Model):
     inchi = models.CharField('InChI', blank=True, max_length=500)
     species = models.ManyToManyField(Species)
 
-    def __unicode__(self):
-        return u"{s.inchi}".format(s=self)
+    def __str__(self):
+        return "{s.inchi}".format(s=self)
 
 
 class Structure(models.Model):
@@ -64,8 +64,8 @@ class Structure(models.Model):
     adjacencyList = models.TextField('Adjacency List')
     electronicState = models.IntegerField('Electronic State')
 
-    def __unicode__(self):
-        return u"{s.adjacencyList}".format(s=self)
+    def __str__(self):
+        return "{s.adjacencyList}".format(s=self)
 
 
 class Reaction(models.Model):
@@ -137,8 +137,8 @@ class Reaction(models.Model):
             specs.extend([s] * int(-n))
         return specs
 
-    def __unicode__(self):
-        return u"{s.id}".format(s=self)
+    def __str__(self):
+        return "{s.id}".format(s=self)
 
     class Meta:
         ordering = ('rPrimeID',)
@@ -157,8 +157,8 @@ class Stoichiometry(models.Model):
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     stoichiometry = models.FloatField(default=0.0)
 
-    def __unicode__(self):
-        return (u"{s.id} species {s.species} "
+    def __str__(self):
+        return ("{s.id} species {s.species} "
                 "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
 
     class Meta:
@@ -166,5 +166,5 @@ class Stoichiometry(models.Model):
         unique_together = ["species", "reaction", "stoichiometry"]
 
     def __repr__(self):
-        return (u"{s.id} species {s.species} "
+        return ("{s.id} species {s.species} "
                 "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)

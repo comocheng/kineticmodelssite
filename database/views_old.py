@@ -57,7 +57,7 @@ from rmgpy.data.kinetics import KineticsDepository, KineticsGroups, \
     TemplateReaction, DepositoryReaction, LibraryReaction
 from rmgpy.data.solvation import SoluteData, SolventData
 from rmgpy.data.statmech import GroupFrequencies
-from rmgpy.data.thermo import findCp0andCpInf
+from rmgpy.data.thermo import find_cp0_and_cpinf
 from rmgpy.data.transport import CriticalPointGroupContribution, TransportData
 from rmgpy.data.reference import Article, Book
 from rmgpy.kinetics import KineticsData, Arrhenius, ArrheniusEP, \
@@ -68,7 +68,7 @@ from rmgpy.molecule.adjlist import Saturator
 from rmgpy.reaction import Reaction
 from rmgpy.species import Species
 from rmgpy.thermo import ThermoData, Wilhoit, NASA
-from rmgpy.thermo.thermoengine import processThermoData
+from rmgpy.thermo.thermoengine import process_thermo_data
 from rmgpy.quantity import Quantity
 from rmgpy.exceptions import AtomTypeError
 
@@ -235,8 +235,8 @@ def transport(request, section='', subsection=''):
     else:
         # No subsection was specified, so render an outline of the transport
         # database components and sort them
-        transportLibraries = [(label, database.transport.libraries[label])
-                              for label in database.transport.libraryOrder]
+        transport_libraries = [(label, database.transport.libraries[label])
+                              for label in database.transport.library_order]
         transportLibraries.sort()
         transportGroups = [(label, groups) for label,
                            groups in database.transport.groups.items()]
@@ -303,17 +303,17 @@ def transportData(request, adjlist):
     database.load('transport')
 
     adjlist = str(urllib.parse.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    molecule = Molecule().from_adjacency_list(adjlist)
     species = Species(molecule=[molecule])
     species.generate_resonance_structures()
 
     # Get the transport data for the molecule
     transportDataList = []
-    for data, library, entry in database.transport.getAllTransportProperties(species):
+    for data, library, entry in database.transport.get_all_transport_properties(species):
         if library is None:
             source = 'Group additivity'
             href = ''
-            symmetryNumber = species.getSymmetryNumber()
+            symmetryNumber = species.get_symmetry_number()
             entry = Entry(data=data)
         elif library in list(database.transport.libraries.values()):
             source = library.label
@@ -455,13 +455,13 @@ def solvationData(request, solute_adjlist, solvent=''):
     database.load('solvation')
     db = database.get_solvation_database('', '')
 
-    #molecule = Molecule().fromAdjacencyList(adjlist)
+    #molecule = Molecule().from_adjacency_list(adjlist)
     molecule = moleculeFromURL(solute_adjlist)
     solute = Species(molecule=[molecule])
     solute.generate_resonance_structures()
 
     # obtain solute data.
-    soluteDataList = db.getAllSoluteData(
+    soluteDataList = db.get_all_solute_data(
         solute)    # length either 1 or 2 entries
 
     # obtain solvent data if it's specified.  Then get the interaction solvation properties and store them in solvationDataList
@@ -483,7 +483,7 @@ def solvationData(request, solute_adjlist, solvent=''):
             soluteSource = 'Group Additivity'
         correction = ''
         if solventData:
-            correction = db.getSolvationCorrection(soluteData, solventData)
+            correction = db.get_solvation_correction(soluteData, solventData)
 
         # contains solute and possible interaction data
         solvationDataList.append((soluteSource, soluteData, correction))
@@ -608,18 +608,18 @@ def statmechData(request, adjlist):
     database.load('statmech')
 
     adjlist = str(urllib.parse.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    molecule = Molecule().from_adjacency_list(adjlist)
     species = Species(molecule=[molecule])
     species.generate_resonance_structures()
     # Get the statmech data for the molecule
 
-    symmetryNumber = species.getSymmetryNumber()
+    symmetry_number = species.get_symmetry_number()
     statmechDataList = []
     source = 'Solute Descriptors'
     href = reverse(statmechEntry, kwargs={
                    'section': 'libraries', 'subsection': source, 'index': 1})
     statmechDataList.append(
-        (1, database.statmech.getSolventData(species.label), source, href))
+        (1, database.statmech.get_solvent_data(species.label), source, href))
 
     # Get the structure of the item we are viewing
     structure = getStructureInfo(molecule)
@@ -687,8 +687,8 @@ def thermo(request, section='', subsection=''):
         thermoDepository = [(label, depository) for label,
                             depository in database.thermo.depository.items()]
         thermoDepository.sort()
-        thermoLibraries = [(label, database.thermo.libraries[label])
-                           for label in database.thermo.libraryOrder]
+        thermo_libraries = [(label, database.thermo.libraries[label])
+                           for label in database.thermo.library_order]
         #If they weren't already sorted in our preferred order, we'd call thermoLibraries.sort()
         thermoGroups = [(label, groups)
                         for label, groups in database.thermo.groups.items()]
@@ -700,8 +700,8 @@ def thermoEntry(request, section, subsection, index):
     """
     A view for showing an entry in a thermodynamics database.
     """
-    from rmgpy.chemkin import writeThermoEntry
-    from rmgpy.data.thermo import findCp0andCpInf
+    from rmgpy.chemkin import write_thermo_entry
+    from rmgpy.data.thermo import find_cp0_and_cpinf
 
     # Load the thermo database if necessary
     database.load('thermo', section)
@@ -746,19 +746,19 @@ def thermoEntry(request, section, subsection, index):
     if isinstance(entry.item, Molecule):
         species = Species(molecule=[entry.item])
         species.generate_resonance_structures()
-        findCp0andCpInf(species, thermo)
+        find_cp0_and_cpinf(species, thermo)
         nasa_string = ''
         try:
             if isinstance(thermo, NASA):
                 nasa = thermo
             else:
-                nasa = thermo.toNASA(Tmin=100.0, Tmax=5000.0, Tint=1000.0)
+                nasa = thermo.to_nasa(Tmin=100.0, Tmax=5000.0, Tint=1000.0)
             species.thermo = nasa
-            nasa_string = writeThermoEntry(species)
+            nasa_string = write_thermo_entry(species)
         except:
             pass
 
-    referenceType = ''
+    reference_type = ''
     reference = entry.reference
     return render(request, 'thermoEntry.html', {'section': section, 'subsection': subsection, 'databaseName': db.name, 'entry': entry, 'structure': structure, 'reference': reference, 'referenceType': referenceType, 'thermo': thermo, 'nasa_string': nasa_string})
 
@@ -766,7 +766,7 @@ def thermo_entry(request, adjlist):
     thermo = Thermo.objects.get(species__isomer__structure__adjacencyList=adjlist)
     thermo_rmg = thermo.to_NASA()
     nasa_string = repr(thermo_rmg)
-    # structure = getStructureInfo(Molecule.fromAdjacencyList(adjlist))
+    # structure = getStructureInfo(Molecule.from_adjacency_list(adjlist))
     structure = None
 
     return render(request,
@@ -785,28 +785,28 @@ def thermoData(request, adjlist):
 
     # Load the thermo database if necessary
     database.load('thermo')
-    from rmgpy.chemkin import writeThermoEntry
+    from rmgpy.chemkin import write_thermo_entry
 
     adjlist = str(urllib.parse.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    molecule = Molecule().from_adjacency_list(adjlist)
     species = Species(molecule=[molecule])
     species.generate_resonance_structures()
 
     # Get the thermo data for the molecule
-    symmetryNumber = None
-    thermoDataList = []
-    for data, library, entry in database.thermo.getAllThermoData(species):
+    symmetry_number = None
+    thermo_data_list = []
+    for data, library, entry in database.thermo.get_all_thermo_data(species):
         # Make sure we calculate Cp0 and CpInf
-        findCp0andCpInf(species, data)
+        find_cp0_and_cpinf(species, data)
         # Round trip conversion via Wilhoit for proper fitting
-        nasa = processThermoData(species, data)
+        nasa = process_thermo_data(species, data)
         # Generate Chemkin style NASA polynomial
         species.thermo = nasa
-        nasa_string = writeThermoEntry(species)
+        nasa_string = write_thermo_entry(species)
         if library is None:
             source = 'Group additivity'
             href = ''
-            symmetryNumber = species.getSymmetryNumber()
+            symmetry_number = species.get_symmetry_number()
             entry = Entry(data=data)
         elif library in list(database.thermo.depository.values()):
             source = 'Depository'
@@ -835,7 +835,7 @@ def thermo_data(request, species_id):
     species: models.reaction_species.Species()
     """
 
-    symmetryNumber = None   # Species().getSymmetryNumber()
+    symmetry_number = None   # Species().get_symmetry_number()
     species = Species.objects.get(id=species_id)
 
     # entry -> SpeciesName
@@ -852,7 +852,7 @@ def thermo_data(request, species_id):
     # hrefs = [None] * len(thermo)
     nasa_strings = [repr(t) for t in thermo]
     thermo_data_list = list(zip(species_names, thermo, sources, hrefs, nasa_strings))
-    # structures = [getStructureInfo(Molecule().fromAdjacencyList(str(a))) for a in adjlists]
+    # structures = [getStructureInfo(Molecule().from_adjacency_list(str(a))) for a in adjlists]
     structures = [None] * len(thermo)
 
     return render(request,
@@ -904,7 +904,7 @@ def getKineticsTreeHTML(database, section, subsection, entries):
         if entry.data is not None:
             for T in [300, 400, 500, 600, 800, 1000, 1500, 2000]:
                 html += '<span class="kineticsDatum">{0:.2f}</span> '.format(
-                    math.log10(entry.data.getRateCoefficient(T, P=1e5)))
+                    math.log10(entry.data.get_rate_coefficient(T, P=1e5)))
         html += '</div>\n'
         # Recursively descend children (depth-first)
         if len(entry.children) > 0:
@@ -936,7 +936,7 @@ def getUntrainedReactions(family):
     trainedReactions = []
     for entry in list(training.entries.values()):
         for reaction in trainedReactions:
-            if reaction.isIsomorphic(entry.item):
+            if reaction.is_isomorphic(entry.item):
                 break
         else:
             trainedReactions.append(entry.item)
@@ -947,18 +947,18 @@ def getUntrainedReactions(family):
         if 'training' not in depository.label:
             for entry in list(depository.entries.values()):
                 for reaction in trainedReactions:
-                    if reaction.isIsomorphic(entry.item):
+                    if reaction.is_isomorphic(entry.item):
                         break
                 else:
                     for reaction in untrainedReactions:
-                        if reaction.isIsomorphic(entry.item):
+                        if reaction.is_isomorphic(entry.item):
                             break
                     else:
                         untrainedReactions.append(entry.item)
 
     # Sort reactions by reactant size
     untrainedReactions.sort(key=lambda reaction: sum(
-        [1 for r in reaction.reactants for a in r.molecule[0].atoms if a.isNonHydrogen()]))
+        [1 for r in reaction.reactants for a in r.molecule[0].atoms if a.is_non_hydrogen()]))
 
     # Build entries
     untrained = KineticsDepository(name='{0}/untrained'.format(family.label),
@@ -1010,15 +1010,15 @@ def queryNIST(entry, squib, entries, user):
 
     # Find table on page corresponding to kinetics entries
     try:
-        form = soup.findAll(name='form',
+        form = soup.find_all(name='form',
                             attrs={'name': 'KineticsResults'})[0]
     except:
         return 'No results found for {0}.'.format(squib)
 
     # Find row in table corresponding to squib
-    for tr in form.findAll(name='tr'):
-        tdlist = tr.findAll(name='td')
-        if len(tdlist) == 17 and tr.findAll(name='input', value=squib):
+    for tr in form.find_all(name='tr'):
+        tdlist = tr.find_all(name='td')
+        if len(tdlist) == 17 and tr.find_all(name='input', value=squib):
             break
     else:
         return 'No results found for {0}.'.format(squib)
@@ -1074,7 +1074,7 @@ def queryNIST(entry, squib, entries, user):
 
     # Grab reference
     try:
-        type = soup.findAll('b', text='Reference type:')[0].parent
+        type = soup.find_all('b', text='Reference type:')[0].parent
         type = type.nextSibling[13:].lower()
         if type == 'technical report' or type == 'journal article':
             type = 'journal'
@@ -1090,21 +1090,21 @@ def queryNIST(entry, squib, entries, user):
 
             # Grab journal title
             try:
-                journal = soup.findAll('b', text='Journal:')[0].parent
+                journal = soup.find_all('b', text='Journal:')[0].parent
                 entry.reference.journal = journal.nextSibling[13:]
             except:
                 pass
 
             # Grab volume number
             try:
-                volume = soup.findAll('b', text='Volume:')[0].parent
+                volume = soup.find_all('b', text='Volume:')[0].parent
                 entry.reference.volume = volume.nextSibling[13:]
             except:
                 pass
 
             # Grab pages
             try:
-                pages = soup.findAll('b', text='Page(s):')[0].parent
+                pages = soup.find_all('b', text='Page(s):')[0].parent
                 pages = pages.nextSibling[13:]
                 if not pages:
                     pages = re.match(r'\d+[^\d]+([^:]+)', squib).group(1)
@@ -1117,14 +1117,14 @@ def queryNIST(entry, squib, entries, user):
 
             # Grab publisher
             try:
-                pub = soup.findAll(text='Publisher address:')[0].parent
+                pub = soup.find_all(text='Publisher address:')[0].parent
                 entry.reference.publisher = pub.nextSibling[13:]
             except:
                 pass
 
         # Grab authors
         try:
-            authors = soup.findAll('b', text='Author(s):')[0].parent
+            authors = soup.find_all('b', text='Author(s):')[0].parent
             authors = authors.nextSibling[13:]
             for author in authors.split(';'):
                 entry.reference.authors.append(author.strip())
@@ -1133,7 +1133,7 @@ def queryNIST(entry, squib, entries, user):
 
         # Grab title
         try:
-            title = soup.findAll('b', text='Title:')[0].parent.nextSibling
+            title = soup.find_all('b', text='Title:')[0].parent.nextSibling
             entry.reference.title = title[13:]
             while True:
                 title = title.nextSibling
@@ -1151,7 +1151,7 @@ def queryNIST(entry, squib, entries, user):
 
         # Grab year
         try:
-            year = soup.findAll('b', text='Year:')[0].parent
+            year = soup.find_all('b', text='Year:')[0].parent
             entry.reference.year = year.nextSibling[13:]
         except:
             entry.reference.year = squib[0:4]
@@ -1161,21 +1161,21 @@ def queryNIST(entry, squib, entries, user):
 
     # Grab reference type
     try:
-        reftype = soup.findAll('b', text='Category:')[0].parent
-        entry.referenceType = reftype.nextSibling[7:].lower()
+        reftype = soup.find_all('b', text='Category:')[0].parent
+        entry.reference_type = reftype.nextSibling[7:].lower()
     except:
-        entry.referenceType = ''
+        entry.reference_type = ''
 
     # Grab short description
     try:
-        short = soup.findAll('b', text='Data type:')[0].parent
-        entry.shortDesc = short.nextSibling[13:].replace('  ', ' ')
+        short = soup.find_all('b', text='Data type:')[0].parent
+        entry.short_desc = short.nextSibling[13:].replace('  ', ' ')
     except:
-        entry.shortDesc = ''
+        entry.short_desc = ''
 
     # Grab temperature range
     try:
-        Trange = soup.findAll('b', text='Temperature:')[0]
+        Trange = soup.find_all('b', text='Temperature:')[0]
         Trange = Trange.parent.nextSibling[13:].split()
         entry.data.Tmin = Quantity(int(Trange[0]), 'K')
         if '-' in Trange[1]:
@@ -1186,7 +1186,7 @@ def queryNIST(entry, squib, entries, user):
 
     # Grab pressure range
     try:
-        Prange = soup.findAll('b', text='Pressure:')[0]
+        Prange = soup.find_all('b', text='Pressure:')[0]
         Prange = Prange.parent.nextSibling[12:].split()
         entry.data.Pmin = Quantity(float(Prange[0]), 'Pa')
         if '-' in Prange[1]:
@@ -1196,9 +1196,9 @@ def queryNIST(entry, squib, entries, user):
         entry.data.Pmax = None
 
     # Start long description with reference reaction where applicable
-    longDesc = ''
+    long_desc = ''
     try:
-        ref = soup.findAll('b', text='Reference reaction:')[0].parent
+        ref = soup.find_all('b', text='Reference reaction:')[0].parent
         longDesc += '\nReference Reaction: '
         ref = ref.nextSibling.nextSibling
         while True:
@@ -1217,7 +1217,7 @@ def queryNIST(entry, squib, entries, user):
 
     # Grab rest of long description
     try:
-        rate = soup.findAll('b', text='Rate expression:')[0].parent
+        rate = soup.find_all('b', text='Rate expression:')[0].parent
         long = rate.nextSibling
         while True:
             try:
@@ -1244,7 +1244,7 @@ def queryNIST(entry, squib, entries, user):
             long = int.nextSibling
         for line in longDesc.splitlines():
             if 'Data type:' not in line and 'Category:' not in line:
-                entry.longDesc += line + '\n'
+                entry.long_desc += line + '\n'
         swaps = [('&nbsp;&nbsp;\n', ' '),
                  ('&nbsp;', ' '),
                  ('  ', ' '),
@@ -1252,8 +1252,8 @@ def queryNIST(entry, squib, entries, user):
                  ('\n ', '\n'),
                  ('&middot;', '·')]
         for swap in swaps:
-            entry.longDesc = entry.longDesc.replace(swap[0], swap[1])
-        entry.longDesc = entry.longDesc.strip()
+            entry.long_desc = entry.long_desc.replace(swap[0], swap[1])
+        entry.long_desc = entry.long_desc.strip()
     except:
         pass
 
@@ -1269,7 +1269,7 @@ def queryNIST(entry, squib, entries, user):
                 text = error
         if '&plusmn;' in text:
             text = text.split('&plusmn;')[1].split(' ')[0]
-            entry.data.A.uncertaintyType = '+|-'
+            entry.data.A.uncertainty_type = '+|-'
             if text.isdigit():
                 entry.data.A.uncertainty = float(text)
             elif 'x' in text:
@@ -1279,50 +1279,50 @@ def queryNIST(entry, squib, entries, user):
                 entry.data.A.uncertainty /= 1.0e6
     except:
         pass
-    for line in entry.longDesc.splitlines():
+    for line in entry.long_desc.splitlines():
         if 'Uncertainty:' in line and entry.data.A.uncertainty == 0.0:
             entry.data.A.uncertainty = float(line.split(' ')[1])
-            entry.data.A.uncertaintyType = '*|/'
-    if entry.data.A.uncertaintyType is '+|-':
+            entry.data.A.uncertainty_type = '*|/'
+    if entry.data.A.uncertainty_type is '+|-':
         if abs(entry.data.A.uncertainty) > abs(entry.data.A.value_si):
             u = entry.data.A.uncertainty
-            entry.longDesc += ('\nNote: Invalid A value uncertainty '
+            entry.long_desc += ('\nNote: Invalid A value uncertainty '
                                '({0} {1})'.format(u, entry.data.A.units) +
                                ' found and ignored')
             entry.data.A.uncertainty = 0.0
 
     # Grab uncertainty for temperature exponent
-    for sup in soup.findAll('sup'):
+    for sup in soup.find_all('sup'):
         if '(' in sup.text and ')' in sup.text and '&plusmn;' in sup.text:
             try:
                 error = sup.text.split('&plusmn;')[1].split(')')[0]
                 entry.data.n.uncertainty = float(error)
-                entry.data.n.uncertaintyType = '+|-'
+                entry.data.n.uncertainty_type = '+|-'
             except:
                 pass
             break
-    if entry.data.n.uncertaintyType is '+|-':
+    if entry.data.n.uncertainty_type is '+|-':
         if abs(entry.data.n.uncertainty) > abs(entry.data.n.value_si):
             u = entry.data.n.uncertainty
-            entry.longDesc += ('\nNote: Invalid n value uncertainty '
+            entry.long_desc += ('\nNote: Invalid n value uncertainty '
                                '({0}) found and ignored'.format(u))
             entry.data.n.uncertainty = 0.0
 
     # Grab uncertainty and better value for activation energy
-    for sup in soup.findAll('sup'):
+    for sup in soup.find_all('sup'):
         if 'J/mole]/RT' in sup.text:
             entry.data.Ea.value_si = -float(sup.text.split(' ')[0])
             try:
                 error = sup.text.split('&plusmn;')[1]
                 entry.data.Ea.uncertainty = float(error.split(' ')[0])
-                entry.data.Ea.uncertaintyType = '+|-'
+                entry.data.Ea.uncertainty_type = '+|-'
             except:
                 pass
             break
-    if entry.data.Ea.uncertaintyType is '+|-':
+    if entry.data.Ea.uncertainty_type is '+|-':
         if abs(entry.data.Ea.uncertainty) > abs(entry.data.Ea.value_si):
             u = entry.data.Ea.uncertainty
-            entry.longDesc += ('\nNote: Invalid Ea value uncertainty '
+            entry.long_desc += ('\nNote: Invalid Ea value uncertainty '
                                '({0} J/mol) found and ignored'.format(u))
             entry.data.Ea.uncertainty = 0.0
 
@@ -1435,7 +1435,7 @@ def kinetics(request, section='', subsection=''):
 
             entries.append(entry)
 
-        return render(request, 'kineticsTable.html', {'section': section, 'subsection': subsection, 'databaseName': db.name, 'databaseDesc': db.longDesc, 'entries': entries, 'tree': tree, 'isGroupDatabase': isGroupDatabase})
+        return render(request, 'kineticsTable.html', {'section': section, 'subsection': subsection, 'databaseName': db.name, 'databaseDesc': db.long_desc, 'entries': entries, 'tree': tree, 'isGroupDatabase': isGroupDatabase})
 
     else:
         # No subsection was specified, so render an outline of the kinetics
@@ -1448,7 +1448,7 @@ def kinetics(request, section='', subsection=''):
                 if 'untrained' in family.depositories[i].name:
                     family.depositories.pop(i)
             family.depositories.append(getUntrainedReactions(family))
-        kineticsFamilies = [(label, family) for label,
+        kinetics_families = [(label, family) for label,
                             family in database.kinetics.families.items() if subsection in label]
         kineticsFamilies.sort()
         return render(request, 'kinetics.html', {'section': section, 'subsection': subsection, 'kineticsLibraries': kineticsLibraries, 'kineticsFamilies': kineticsFamilies})
@@ -1541,7 +1541,7 @@ def kineticsEntryNew(request, family, type):
 
             # Confirm entry does not already exist in depository
             for entry in entries:
-                if ((type == 'training' and new_entry.item.isIsomorphic(entry.item)) or
+                if ((type == 'training' and new_entry.item.is_isomorphic(entry.item)) or
                         (type == 'NIST' and new_entry.label == entry.label)):
                         kwargs = {'section': 'families',
                                   'subsection': subsection,
@@ -1591,7 +1591,7 @@ def kineticsEntryNew(request, family, type):
             # Format the new entry as a string
             entry_buffer = io.StringIO.io.StringIO('')
             try:
-                rmgpy.data.kinetics.saveEntry(entry_buffer, new_entry)
+                rmgpy.data.kinetics.save_entry(entry_buffer, new_entry)
             except Exception as e:
                 entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
                 entry_buffer.write(str(e))
@@ -1686,7 +1686,7 @@ def kineticsEntryEdit(request, section, subsection, index):
             # Get the entry as a entry_string
             entry_buffer = io.StringIO.io.StringIO('')
             try:
-                rmgpy.data.kinetics.saveEntry(entry_buffer, new_entry)
+                rmgpy.data.kinetics.save_entry(entry_buffer, new_entry)
             except Exception as e:
                 entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
                 entry_buffer.write(str(e))
@@ -1750,7 +1750,7 @@ def kineticsEntryEdit(request, section, subsection, index):
         # Get the entry as a entry_string
         entry_buffer = io.StringIO.io.StringIO('')
         try:
-            rmgpy.data.kinetics.saveEntry(entry_buffer, entry)
+            rmgpy.data.kinetics.save_entry(entry_buffer, entry)
         except Exception as e:
             entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
             entry_buffer.write(str(e))
@@ -1758,7 +1758,7 @@ def kineticsEntryEdit(request, section, subsection, index):
         entry_string = entry_buffer.getvalue()
         entry_buffer.close()
 
-        #entry_string = entry.item.reactants[0].toAdjacencyList()
+        #entry_string = entry.item.reactants[0].to_adjacency_list()
         # remove leading 'entry('
         entry_string = re.sub('^entry\(\n', '', entry_string)
         # remove the 'index = 23,' line
@@ -1785,7 +1785,7 @@ def thermoEntryNew(request, section, subsection, adjlist):
     database.load('thermo')
 
     adjlist = str(urllib.parse.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    molecule = Molecule().from_adjacency_list(adjlist)
 
     try:
         db = database.get_thermo_database(section, subsection)
@@ -1814,7 +1814,7 @@ def thermoEntryNew(request, section, subsection, adjlist):
             # Format the new entry as a string
             entry_buffer = io.StringIO.io.StringIO('')
             try:
-                rmgpy.data.thermo.saveEntry(entry_buffer, new_entry)
+                rmgpy.data.thermo.save_entry(entry_buffer, new_entry)
             except Exception as e:
                 entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
                 entry_buffer.write(str(e))
@@ -1874,12 +1874,12 @@ thermo = ThermoData(
     H298 = (,'kcal/mol'),
     S298 = (,'cal/(mol*K)'),
 ),\n
-shortDesc = u"\"\" "\"\",
-longDesc =
+short_desc = u"\"\" "\"\",
+long_desc =
     u"\"\"
 
     "\"\",
-        """.format(label=molecule.toSMILES(), adjlist=molecule.toAdjacencyList())
+        """.format(label=molecule.to_smiles(), adjlist=molecule.to_adjacency_list())
 
         form = ThermoEntryEditForm(initial={'entry': entry_string})
 
@@ -1927,7 +1927,7 @@ def thermoEntryEdit(request, section, subsection, index):
             # Get the entry as a entry_string
             entry_buffer = io.StringIO.io.StringIO('')
             try:
-                rmgpy.data.thermo.saveEntry(entry_buffer, new_entry)
+                rmgpy.data.thermo.save_entry(entry_buffer, new_entry)
             except Exception as e:
                 entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
                 entry_buffer.write(str(e))
@@ -1991,7 +1991,7 @@ def thermoEntryEdit(request, section, subsection, index):
         # Get the entry as a entry_string
         entry_buffer = io.StringIO.io.StringIO('')
         try:
-            rmgpy.data.thermo.saveEntry(entry_buffer, entry)
+            rmgpy.data.thermo.save_entry(entry_buffer, entry)
         except Exception as e:
             entry_buffer.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
             entry_buffer.write(str(e))
@@ -1999,7 +1999,7 @@ def thermoEntryEdit(request, section, subsection, index):
         entry_string = entry_buffer.getvalue()
         entry_buffer.close()
 
-        #entry_string = entry.item.reactants[0].toAdjacencyList()
+        #entry_string = entry.item.reactants[0].to_adjacency_list()
         # remove leading 'entry('
         entry_string = re.sub('^entry\(\n', '', entry_string)
         # remove the 'index = 23,' line
@@ -2054,7 +2054,7 @@ def kineticsEntry(request, section, subsection, index):
                                                     }))
 
     reference = entry.reference
-    referenceType = ''
+    reference_type = ''
 
     numReactants = 0
     degeneracy = 1
@@ -2130,13 +2130,13 @@ def kineticsGroupEstimateEntry(request, family, estimator, reactant1, product1, 
         productList.append(moleculeFromURL(product3))
 
     # Search for the corresponding reaction(s)
-    reactionList = generateReactions(
+    reaction_list = generateReactions(
         database, reactantList, productList, only_families=[family], resonance=resonance)
 
     kineticsDataList = []
 
     # Only keep template reactions frm the selected estimation method in the forward direction
-    reactionList = [reaction for reaction in reactionList if (isinstance(reaction, TemplateReaction) and
+    reaction_list = [reaction for reaction in reactionList if (isinstance(reaction, TemplateReaction) and
                                                               reaction.estimator == estimator.replace('_', ' ') and
                                                               reactionHasReactants(reaction, reactantList))]
 
@@ -2161,13 +2161,13 @@ def kineticsGroupEstimateEntry(request, family, estimator, reactant1, product1, 
     entry_list = []
     if len(reactionList) == 1:
         if isinstance(reaction0.kinetics, ArrheniusEP):
-            reaction0.kinetics = reaction0.kinetics.toArrhenius(
-                reaction0.getEnthalpyOfReaction(298))
+            reaction0.kinetics = reaction0.kinetics.to_arrhenius(
+                reaction0.get_enthalpy_of_reaction(298))
 
         entry = Entry(
             data=reaction0.kinetics,
-            shortDesc="Estimated by RMG-Py %s" % (reaction0.estimator),
-            longDesc=reaction0.kinetics.comment,
+            short_desc="Estimated by RMG-Py %s" % (reaction0.estimator),
+            long_desc=reaction0.kinetics.comment,
         )
 
         if estimator == 'group_additivity':
@@ -2180,24 +2180,24 @@ def kineticsGroupEstimateEntry(request, family, estimator, reactant1, product1, 
                 url=request.build_absolute_uri(
                     reverse(kinetics, kwargs={'section': 'families', 'subsection': family + '/rules'})),
             )
-        referenceType = ''
+        reference_type = ''
     else:
         for i, reaction in enumerate(reactionList):
-            assert reaction.isIsomorphic(
-                reaction0, eitherDirection=False), "Multiple group estimates must be isomorphic."
+            assert reaction.is_isomorphic(
+                reaction0, either_direction=False), "Multiple group estimates must be isomorphic."
             # Replace reactants and products with the same object instances as reaction0
             reaction.reactants = reaction0.reactants
             reaction.products = reaction0.products
 
             # If the kinetics are ArrheniusEP, replace them with Arrhenius
             if isinstance(reaction.kinetics, ArrheniusEP):
-                reaction.kinetics = reaction.kinetics.toArrhenius(
-                    reaction.getEnthalpyOfReaction(298))
+                reaction.kinetics = reaction.kinetics.to_arrhenius(
+                    reaction.get_enthalpy_of_reaction(298))
 
             entry0 = Entry(
                 data=reaction.kinetics,
-                shortDesc="Estimated by RMG-Py %s" % (reaction.estimator),
-                longDesc=reaction.kinetics.comment,
+                short_desc="Estimated by RMG-Py %s" % (reaction.estimator),
+                long_desc=reaction.kinetics.comment,
             )
             entry0.result = i + 1
 
@@ -2211,7 +2211,7 @@ def kineticsGroupEstimateEntry(request, family, estimator, reactant1, product1, 
                     url=request.build_absolute_uri(
                         reverse(kinetics, kwargs={'section': 'families', 'subsection': family + '/rules'})),
                 )
-            referenceType = ''
+            reference_type = ''
 
             entry_list.append((entry0, reaction.template, reference))
 
@@ -2244,7 +2244,7 @@ def kineticsJavaEntry(request, entry, reactants_fig, products_fig, kineticsParam
     subsection = ''
     databaseName = 'RMG-Java Database'
     reference = ''
-    referenceType = ''
+    reference_type = ''
     arrow = '&hArr;'
     return render(request, 'kineticsEntry.html', {'section': section, 'subsection': subsection, 'databaseName': databaseName, 'entry': entry, 'reactants': reactants_fig, 'arrow': arrow, 'products': products_fig, 'reference': reference, 'referenceType': referenceType, 'kinetics': entry.data})
 
@@ -2314,7 +2314,7 @@ def kineticsResults(request, reactant1, reactant2='', reactant3='', product1='',
         productList = None
 
     # Search for the corresponding reaction(s)
-    reactionList = generateReactions(
+    reaction_list = generateReactions(
         database, reactantList, productList, resonance=resonance)
 
     # Remove duplicates from the list and count the number of results
@@ -2322,7 +2322,7 @@ def kineticsResults(request, reactant1, reactant2='', reactant3='', product1='',
     uniqueReactionCount = []
     for reaction in reactionList:
         for i, rxn in enumerate(uniqueReactionList):
-            if reaction.isIsomorphic(rxn):
+            if reaction.is_isomorphic(rxn):
                 uniqueReactionCount[i] += 1
                 break
         else:
@@ -2383,7 +2383,7 @@ def kineticsData(request, reactant1, reactant2='', reactant3='', product1='', pr
         productList = None
 
     # Search for the corresponding reaction(s)
-    reactionList = generateReactions(
+    reaction_list = generateReactions(
         database, reactantList, productList, resonance=resonance)
 
     kineticsDataList = []
@@ -2412,8 +2412,8 @@ def kineticsData(request, reactant1, reactant2='', reactant3='', product1='', pr
 
         # If the kinetics are ArrheniusEP, replace them with Arrhenius
         if isinstance(reaction.kinetics, ArrheniusEP):
-            reaction.kinetics = reaction.kinetics.toArrhenius(
-                reaction.getEnthalpyOfReaction(298))
+            reaction.kinetics = reaction.kinetics.to_arrhenius(
+                reaction.get_enthalpy_of_reaction(298))
 
         is_forward = reactionHasReactants(reaction, reactantList)
 
@@ -2465,7 +2465,7 @@ def kineticsData(request, reactant1, reactant2='', reactant3='', product1='', pr
                 [reactants, arrow, products, entry, forwardKinetics, source, href, is_forward])
         else:
             if isinstance(forwardKinetics, Arrhenius) or isinstance(forwardKinetics, KineticsData):
-                reverseKinetics = reaction.generateReverseRateCoefficient()
+                reverseKinetics = reaction.generate_reverse_rate_coefficient()
                 reverseKinetics.Tmin = forwardKinetics.Tmin
                 reverseKinetics.Tmax = forwardKinetics.Tmax
                 reverseKinetics.Pmin = forwardKinetics.Pmin
@@ -2487,10 +2487,10 @@ def kineticsData(request, reactant1, reactant2='', reactant3='', product1='', pr
         new_entry = io.StringIO.io.StringIO('')
         try:
             if reactionHasReactants(reaction, reactantList):
-                rmgpy.data.kinetics.saveEntry(new_entry, Entry(label=str(reaction), item=Reaction(
+                rmgpy.data.kinetics.save_entry(new_entry, Entry(label=str(reaction), item=Reaction(
                     reactants=reaction.reactants, products=reaction.products)))
             else:
-                rmgpy.data.kinetics.saveEntry(new_entry, Entry(label=str(reaction), item=Reaction(
+                rmgpy.data.kinetics.save_entry(new_entry, Entry(label=str(reaction), item=Reaction(
                     reactants=reaction.products, products=reaction.reactants)))
         except Exception as e:
             new_entry.write("ENTRY WAS NOT PARSED CORRECTLY.\n")
@@ -2552,18 +2552,18 @@ def moleculeSearch(request):
         if posted.is_valid():
             adjlist = posted.cleaned_data['species']
             if adjlist != '':
-                molecule.fromAdjacencyList(adjlist)
+                molecule.from_adjacency_list(adjlist)
                 structure_markup = getStructureInfo(molecule)
                 # obtain full adjlist, in case hydrogens were non-explicit
-                adjlist = molecule.toAdjacencyList()
+                adjlist = molecule.to_adjacency_list()
 
         try:
-            smiles = molecule.toSMILES()
+            smiles = molecule.to_smiles()
         except ValueError:
             pass
 
         try:
-            inchi = molecule.toInChI()
+            inchi = molecule.to_inchi()
         except ValueError:
             pass
 
@@ -2582,8 +2582,8 @@ def moleculeSearch(request):
                 molecule = Molecule()
 
             try:
-                oldAdjlist = molecule.toAdjacencyList(
-                    removeH=True, oldStyle=True)
+                oldAdjlist = molecule.to_adjacency_list(
+                    remove_h=True, old_style=True)
                 print(oldAdjlist)
             except Exception:
                 pass
@@ -2625,11 +2625,11 @@ def molecule_search(request):
             nci_species = find_species(nci_adjlist)
             if nci_molecule:
                 try:
-                    nci_inchi = nci_molecule.toInChI()
+                    nci_inchi = nci_molecule.to_inchi()
                 except Exception:
                     pass
                 try:
-                    nci_smiles = nci_molecule.toSMILES()
+                    nci_smiles = nci_molecule.to_smiles()
                 except Exception:
                     pass
 
@@ -2712,7 +2712,7 @@ def nci_resolve(query):
     molecule = None
     try:
         # try using the string as a SMILES directly
-        molecule = Molecule().fromSMILES(str(query))
+        molecule = Molecule().from_smiles(str(query))
     except AtomTypeError:
         pass
     except KeyError:
@@ -2733,8 +2733,8 @@ def nci_resolve(query):
             except Exception:
                 print("SMILES not found")
     try:
-        molecule = Molecule().fromSMILES(smiles)
-        adjlist = molecule.toAdjacencyList(removeH=False)
+        molecule = Molecule().from_smiles(smiles)
+        adjlist = molecule.to_adjacency_list(remove_h=False)
     except Exception:
         print("Failed to find RMG Molecule")
 
@@ -2756,10 +2756,10 @@ def solvationSearch(request):
         if posted.is_valid():
             adjlist = posted.cleaned_data['adjlist']
             if adjlist != '':
-                molecule.fromAdjacencyList(adjlist)
+                molecule.from_adjacency_list(adjlist)
                 structure_markup = getStructureInfo(molecule)
                 # obtain full adjlist, in case hydrogens were non-explicit
-                solute_adjlist = molecule.toAdjacencyList()
+                solute_adjlist = molecule.to_adjacency_list()
                 solvent = posted.cleaned_data['solvent']
                 if solvent == '':
                     solvent = 'None'
@@ -2790,10 +2790,10 @@ def groupDraw(request):
         if posted.is_valid():
                 adjlist = posted.cleaned_data['group']
                 if adjlist != '':
-                    group.fromAdjacencyList(adjlist)
+                    group.from_adjacency_list(adjlist)
                     structure_markup = groupToInfo(group)
                     # obtain full adjlist, in case hydrogens were non-explicit
-                    adjlist = group.toAdjacencyList()
+                    adjlist = group.to_adjacency_list()
 
         form = GroupDrawForm(initial, error_class=DivErrorList)
 
@@ -2818,13 +2818,13 @@ def EniSearch(request):
             deposit_adjlist = form.cleaned_data['deposit']
 
             detergent = Molecule()
-            detergent.fromAdjacencyList(detergent_adjlist)
-            detergent_smiles = detergent.toSMILES()
+            detergent.from_adjacency_list(detergent_adjlist)
+            detergent_smiles = detergent.to_smiles()
             detergent_structure = getStructureInfo(detergent)
 
             deposit = Molecule()
-            deposit.fromAdjacencyList(deposit_adjlist)
-            deposit_smiles = deposit.toSMILES()
+            deposit.from_adjacency_list(deposit_adjlist)
+            deposit_smiles = deposit.to_smiles()
             deposit_structure = getStructureInfo(deposit)
 
             detergentA, detergentB = getAbrahamAB(detergent_smiles)
@@ -2856,11 +2856,11 @@ def moleculeEntry(request, adjlist):
     Basically works as an equivalent of the molecule search function.
     """
     adjlist = str(urllib.parse.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    molecule = Molecule().from_adjacency_list(adjlist)
     structure = getStructureInfo(molecule)
     oldAdjlist = ''
     try:
-        oldAdjlist = molecule.toAdjacencyList(removeH=True, oldStyle=True)
+        oldAdjlist = molecule.to_adjacency_list(remove_h=True, old_style=True)
     except:
         pass
     return render(request, 'moleculeEntry.html', {'structure': structure, 'molecule': molecule, 'oldAdjlist': oldAdjlist})
@@ -2873,7 +2873,7 @@ def groupEntry(request, adjlist):
     Basically works as an equivalent of the group search function.
     """
     adjlist = str(urllib.parse.unquote(adjlist))
-    group = Group().fromAdjacencyList(adjlist)
+    group = Group().from_adjacency_list(adjlist)
     structure = getStructureInfo(group)
 
     return render(request, 'groupEntry.html', {'structure': structure, 'group': group})
@@ -2895,14 +2895,14 @@ def json_to_adjlist(request):
                 atoms.append(Atom(
                     element=str(a['l']) if 'l' in a else 'C',
                     charge=a['c'] if 'c' in a else 0,
-                    radicalElectrons=a['r'] if 'r' in a else 0,
-                    lonePairs=a['p'] if 'p' in a else 0,
+                    radical_electrons=a['r'] if 'r' in a else 0,
+                    lone_pairs=a['p'] if 'p' in a else 0,
                 ))
             # Initialize molecule with atoms
             mol = Molecule(atoms=atoms)
             # Parse bonds in json dictionary
             for b in cd_json['b']:
-                mol.addBond(Bond(
+                mol.add_bond(Bond(
                     atom1=atoms[b['b']],
                     atom2=atoms[b['e']],
                     order=b['o'] if 'o' in b else 1,
@@ -2911,7 +2911,7 @@ def json_to_adjlist(request):
             Saturator.saturate(mol.atoms)
             mol.update()
             # Generate adjacency list
-            adjlist = mol.toAdjacencyList()
+            adjlist = mol.to_adjacency_list()
         except AtomTypeError:
             adjlist = 'Invalid Molecule'
         except:
@@ -2946,7 +2946,7 @@ def getAdjacencyList(request, identifier):
     molecule = Molecule()
     try:
         # try using the string as a SMILES directly
-        molecule.fromSMILES(str(identifier))
+        molecule.from_smiles(str(identifier))
     except AtomTypeError:
         return HttpResponse('Invalid Molecule', status=501)
     except KeyError as e:
@@ -2969,7 +2969,7 @@ def getAdjacencyList(request, identifier):
                 return HttpResponse('NCI resolver timed out, please try again.', status=504)
             smiles = f.read()
         try:
-            molecule.fromSMILES(smiles)
+            molecule.from_smiles(smiles)
         except AtomTypeError:
             return HttpResponse('Invalid Molecule', status=501)
         except KeyError as e:
@@ -2977,7 +2977,7 @@ def getAdjacencyList(request, identifier):
         except ValueError as e:
             return HttpResponse(str(e), status=500)
 
-    adjlist = molecule.toAdjacencyList(removeH=False)
+    adjlist = molecule.to_adjacency_list(remove_h=False)
     return HttpResponse(adjlist, content_type="text/plain")
 
 
@@ -2997,14 +2997,14 @@ def json_to_adjlist(request):
                 atoms.append(Atom(
                     element=str(a['l']) if 'l' in a else 'C',
                     charge=a['c'] if 'c' in a else 0,
-                    radicalElectrons=a['r'] if 'r' in a else 0,
-                    lonePairs=a['p'] if 'p' in a else 0,
+                    radical_electrons=a['r'] if 'r' in a else 0,
+                    lone_pairs=a['p'] if 'p' in a else 0,
                 ))
             # Initialize molecule with atoms
             mol = Molecule(atoms=atoms)
             # Parse bonds in json dictionary
             for b in cd_json['b']:
-                mol.addBond(Bond(
+                mol.add_bond(Bond(
                     atom1=atoms[b['b']],
                     atom2=atoms[b['e']],
                     order=b['o'] if 'o' in b else 1,
@@ -3013,7 +3013,7 @@ def json_to_adjlist(request):
             Saturator.saturate(mol.atoms)
             mol.update()
             # Generate adjacency list
-            adjlist = mol.toAdjacencyList()
+            adjlist = mol.to_adjacency_list()
         except AtomTypeError:
             adjlist = 'Invalid Molecule'
         except:
@@ -3035,7 +3035,7 @@ def drawMolecule(request, adjlist):
     adjlist = str(urllib.parse.unquote(adjlist))
 
     try:
-        molecule = Molecule().fromAdjacencyList(adjlist)
+        molecule = Molecule().from_adjacency_list(adjlist)
     except InvalidAdjacencyListError:
         response = HttpResponseRedirect(static('img/invalid_icon.png'))
     else:
@@ -3250,7 +3250,7 @@ def generateFlux(request):
     to generate a flux diagram video.
     """
 
-    from rmgpy.tools.fluxdiagram import createFluxDiagram
+    from rmgpy.tools.fluxdiagram import create_flux_diagram
 
     flux = FluxDiagram()
     path = ''
@@ -3264,19 +3264,19 @@ def generateFlux(request):
             input = os.path.join(flux.path, 'input.py')
             chemkin = os.path.join(flux.path, 'chem.inp')
             dict = os.path.join(flux.path, 'species_dictionary.txt')
-            chemkinOutput = ''
+            chemkin_output = ''
             if 'ChemkinOutput' in request.FILES:
-                chemkinOutput = os.path.join(flux.path, 'chemkin_output.out')
+                chemkin_output = os.path.join(flux.path, 'chemkin_output.out')
             java = form.cleaned_data['Java']
             settings = {}
-            settings['maximumNodeCount'] = form.cleaned_data['MaxNodes']
-            settings['maximumEdgeCount'] = form.cleaned_data['MaxEdges']
-            settings['timeStep'] = form.cleaned_data['TimeStep']
-            settings['concentrationTolerance'] = form.cleaned_data['ConcentrationTolerance']
-            settings['speciesRateTolerance'] = form.cleaned_data['SpeciesRateTolerance']
+            settings['max_node_count'] = form.cleaned_data['MaxNodes']
+            settings['max_edge_count'] = form.cleaned_data['MaxEdges']
+            settings['time_step'] = form.cleaned_data['TimeStep']
+            settings['concentration_tol'] = form.cleaned_data['ConcentrationTolerance']
+            settings['species_rate_tol'] = form.cleaned_data['SpeciesRateTolerance']
 
-            createFluxDiagram(input, chemkin, dict, savePath=flux.path,
-                              java=java, settings=settings, chemkinOutput=chemkinOutput)
+            create_flux_diagram(input, chemkin, dict, save_path=flux.path,
+                              java=java, settings=settings, chemkin_output=chemkinOutput)
             # Look at number of subdirectories to determine where the flux diagram videos are
             subdirs = [name for name in os.listdir(
                 flux.path) if os.path.isdir(os.path.join(flux.path, name))]
@@ -3295,7 +3295,7 @@ def runPopulateReactions(request):
     """
     populateReactions = PopulateReactions()
     outputPath = ''
-    chemkinPath = ''
+    chemkin_path = ''
     populateReactions.deleteDir()
 
     if request.method == 'POST':
@@ -3305,7 +3305,7 @@ def runPopulateReactions(request):
         if form.is_valid():
             form.save()
             outputPath = 'media/rmg/tools/populateReactions/output.html'
-            chemkinPath = 'media/rmg/tools/populateReactions/chemkin/chem.inp'
+            chemkin_path = 'media/rmg/tools/populateReactions/chemkin/chem.inp'
             # Generate the output HTML file
             populateReactions.createOutput()
             # Go back to the network's main page
@@ -3442,11 +3442,11 @@ def plotKinetics(request):
             pressure = Quantity(rateForm.cleaned_data['pressure'], str(
                 rateForm.cleaned_data['pressure_units'])).value_si
             eval = [temperature, pressure]
-            kineticsDataList = chemkin.getKinetics()
+            kineticsDataList = chemkin.get_kinetics()
 
         if form.is_valid():
             form.save()
-            kineticsDataList = chemkin.getKinetics()
+            kineticsDataList = chemkin.get_kinetics()
 
         return render(request, 'plotKineticsData.html',
                       {'kineticsDataList': kineticsDataList,
@@ -3500,10 +3500,10 @@ def evaluateNASA(request):
     Creates webpage form form entering a chemkin format NASA Polynomial and quickly
     obtaining it's enthalpy and Cp values.
     """
-    from rmgpy.chemkin import readThermoEntry
+    from rmgpy.chemkin import read_thermo_entry
     form = NASAForm()
     thermo = None
-    thermoData = None
+    thermo_data = None
     if request.method == 'POST':
         posted = NASAForm(request.POST, error_class=DivErrorList)
         initial = request.POST.copy()
@@ -3511,9 +3511,9 @@ def evaluateNASA(request):
         if posted.is_valid():
                 NASA = posted.cleaned_data['NASA']
                 if NASA != '':
-                    species, thermo, formula = readThermoEntry(str(NASA))
+                    species, thermo, formula = read_thermo_entry(str(NASA))
                     try:
-                        thermoData = thermo.toThermoData()
+                        thermo_data = thermo.to_thermo_data()
                     except:
                         # if we cannot convert the thermo to thermo data, we will not be able to display the
                         # H298, S298, and Cp values, but that's ok.

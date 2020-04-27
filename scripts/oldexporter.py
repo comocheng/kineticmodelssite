@@ -32,8 +32,8 @@ class xmlSource():
         root.attrib["primeID"] = bPrimeID
         authordict={}
         for n in range(len(authorlist)): #authorlist should be in order of authorship
-            authordict[["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
-            authordict[["childauthor{0}".format(n)].text=authorlist[n]
+            authordict["childauthor{0}".format(n)]=etree.SubElement(root, 'author')
+            authordict["childauthor{0}".format(n)].text=authorlist[n]
         childyear = etree.SubElement(root, 'year')
         childyear.text = pub_year
         childtitle = etree.SubElement(root, 'title')
@@ -149,7 +149,7 @@ class xmlThermo():
         child2.attrib['group']="prime"
         child2.text= preferredKey
         child3 = etree.SubElement(root, 'speciesLink')
-        child3.attrib['preferredKey']=formula of species
+        child3.attrib['preferredKey']='formula of species' # TODO
         child3.attrib['primeID']=sPrimeID
         child4 = etree.SubElement(root, 'referenceState')
         child4_tref = etree.SubElement(child4, 'Tref')
@@ -269,7 +269,7 @@ class xmlTransport():
         child2.attrib['preferredKey'] = sourcePreferredKey
         child2.attrib['primeID'] = bPrimeID
         child3 = etree.SubElement(root, 'speciesLink')
-        child3.attrib['preferredKey'] = formula of sPrimeID
+        child3.attrib['preferredKey'] = 'formula of sPrimeID' # TODO
         child3.attrib['primeID'] = sPrimeID
         child4 = etree.SubElement(root, 'expression')
         child4.attrib['form']="Lennard_Jones"
@@ -343,7 +343,7 @@ class xmlKinetics():
         root.attrib["primeID"] = rkPrimeID
         root.attrib['rateLawType'] = type  # (i.e. "mass action","unimolecular"...)
         child1 = etree.SubElement(root, 'reactionLink')
-        child1.attrib['preferredKey'] = reactionequation of rPrimeID
+        child1.attrib['preferredKey'] = 'reactionequation of rPrimeID' # TODO
         child1.attrib['primeID'] = rPrimeID
         sourcePreferredKey=pub_year+'.'
         for n in range(len(authorlist)):
@@ -395,7 +395,7 @@ class xmlKinetics():
                 child3_exp_Evalue_unc.attrib['kind']="absolute"
                 child3_exp_Evalue_unc.attrib['transformation']="1"
                 child3_exp_Evalue_unc.text = str(E_value_uncertainty)
-        print etree.tostring(root, pretty_print=True)
+        print(etree.tostring(root, pretty_print=True))
             
         
 
@@ -423,22 +423,22 @@ class xmlModel():
         child2.attrib['primeID'] = bPrimeID
         #species associated with model
         child3 = etree.SubElement(root, 'speciesSet')
-        specieslist = #formulas of all species in model
+        specieslist = None # TODO formulas of all species in model
         speciesdict={}
         for n in range(len(specieslist)):
             speciesdict["child3_{0}".format(n)]=etree.SubElement(child3,'speciesLink')
             speciesdict["child3_{0}".format(n)].attrib['preferredKey']=specieslist[n]
             speciesdict["child3_{0}".format(n)].attrib['primeID']=specieslist[n]<_sPrimeID
             speciesdict["child3_{0}_thermo".format(n)]=etree.SubElement(speciesdict["child3_{0}".format(n)],'thermodynamicDataLink')
-            speciesdict["child3_{0}_thermo".format(n)].attrib['preferredKey']=#thermo preferred key (i.e. "L 7/88") for corresponding thermo
+            speciesdict["child3_{0}_thermo".format(n)].attrib['preferredKey']= None #TODO thermo preferred key (i.e. "L 7/88") for corresponding thermo
             speciesdict["child3_{0}_thermo".format(n)].attrib['primeID']=thpPrimeID
-            if transport of specieslist[n] is not None:
+            if False: #TODO if transport of specieslist[n] is not None:
                 speciesdict["child3_{0}_trans".format(n)]=etree.SubElement(speciesdict["child3_{0}".format(n)],'transportDataLink')
                 speciesdict["child3_{0}_trans".format(n)].attrib['preferredKey'] = model_name
                 speciesdict["child3_{0}_trans".format(n)].attrib['primeID']=trPrimeID
         #reactions associated with model
         child4 = etree.SubElement(root, 'reactionSet')
-        reactionlist = #equations of all reactions in model
+        reactionlist = None # TODO equations of all reactions in model
         reactiondict={}
         for n in range(len(specieslist)):
             reactiondict["child4_{0}".format(n)]=etree.SubElement(child4,'reactionLink')
@@ -455,7 +455,7 @@ class xmlModel():
         child5 = etree.SubElement(root, 'additionalDataItem')
         child5.attrib['itemType'] = "URI"
         child5.text=additional_info
-        print etree.tostring(root, pretty_print=True)
+        print(etree.tostring(root, pretty_print=True))
 
 def main(top_root):
     """
@@ -463,7 +463,7 @@ def main(top_root):
     """
     with open('exporterrors.txt', "w") as errors:
         errors.write("Restarting import at "+time.strftime("%D %T"))
-    print "Starting at", top_root
+    print("Starting at" + top_root)
 #     for root, dirs, files in os.walk(top_root):
 #         if root.endswith('depository/bibliography'):
 #             print "We have found the Bibliography which we can import!"
@@ -492,7 +492,7 @@ def main(top_root):
 #                 dirs.remove(skipdir)
     for primeID in objects:
         with open(primeID+'.xml', "w+") as file:
-            file.write(print etree.tostring(root, pretty_print=True))
+            file.write(etree.tostring(root, pretty_print=True))
             #send this file into PrIMe database
 
 

@@ -39,11 +39,11 @@ import sys
 
 
 class DivErrorList(ErrorList):
-    def __unicode__(self):
+    def __str__(self):
         return self.as_divs()
     def as_divs(self):
-        if not self: return u''
-        return mark_safe(u'<div>%s</div>' % (''.join([u'<div class="error">%s</div>' % e for e in self])))
+        if not self: return ''
+        return mark_safe('<div>%s</div>' % (''.join(['<div class="error">%s</div>' % e for e in self])))
 
 class ThermoSearchForm(forms.Form):
     """
@@ -59,8 +59,8 @@ class ThermoSearchForm(forms.Form):
         """
         try:
             molecule = Molecule()
-            molecule.fromAdjacencyList(str(self.cleaned_data['species']))
-        except Exception, e:
+            molecule.from_adjacency_list(str(self.cleaned_data['species']))
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid adjacency list.')
@@ -69,10 +69,10 @@ class ThermoSearchForm(forms.Form):
     def as_table(self):
         "Returns this form rendered as HTML <tr>s -- excluding the <table></table>."
         return self._html_output(
-            normal_row = u'<tr%(html_class_attr)s><th>%(label)s</th><td>%(errors)s%(field)s%(help_text)s</td></tr>',
-            error_row = u'<tr><td colspan="2">%s</td></tr>',
-            row_ender = u'</td></tr>',
-            help_text_html = u'<br />%s',
+            normal_row = '<tr%(html_class_attr)s><th>%(label)s</th><td>%(errors)s%(field)s%(help_text)s</td></tr>',
+            error_row = '<tr><td colspan="2">%s</td></tr>',
+            row_ender = '</td></tr>',
+            help_text_html = '<br />%s',
             errors_on_separate_row = False)
 
 class KineticsSearchForm(forms.Form):
@@ -97,8 +97,8 @@ class KineticsSearchForm(forms.Form):
         """
         try:
             molecule = Molecule()
-            molecule.fromAdjacencyList(str(self.cleaned_data['reactant1']))
-        except Exception, e:
+            molecule.from_adjacency_list(str(self.cleaned_data['reactant1']))
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid adjacency list.')
@@ -113,8 +113,8 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['reactant2'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
-        except Exception, e:
+            molecule.from_adjacency_list(adjlist)
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid adjacency list.')
@@ -129,8 +129,8 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['product1'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
-        except Exception, e:
+            molecule.from_adjacency_list(adjlist)
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid adjacency list.')
@@ -145,8 +145,8 @@ class KineticsSearchForm(forms.Form):
             adjlist = str(self.cleaned_data['product2'])
             if adjlist.strip() == '': return ''
             molecule = Molecule()
-            molecule.fromAdjacencyList(adjlist)
-        except Exception, e:
+            molecule.from_adjacency_list(adjlist)
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid adjacency list.')
@@ -174,8 +174,8 @@ class MoleculeSearchForm(forms.Form):
                 adjlist = str(self.cleaned_data['species'])
                 if adjlist == '' : return ''
                 molecule = Molecule()
-                molecule.fromAdjacencyList(str(self.cleaned_data['species']))
-            except Exception, e:
+                molecule.from_adjacency_list(str(self.cleaned_data['species']))
+            except Exception as e:
                 import traceback
                 traceback.print_exc(e)
                 raise forms.ValidationError('Invalid adjacency list.')
@@ -204,7 +204,7 @@ class MoleculeSearchForm(forms.Form):
 #             adjlist = str(self.cleaned_data['adjlist'])
 #             if adjlist == '' : return ''
 #             molecule = Molecule()
-#             molecule.fromAdjacencyList(adjlist)
+#             molecule.from_adjacency_list(adjlist)
 #         except Exception, e:
 #             import traceback
 #             traceback.print_exc(e)
@@ -227,8 +227,8 @@ class GroupDrawForm(forms.Form):
                 adjlist = str(self.cleaned_data['group'])
                 if adjlist == '' : return ''
                 group = Group()
-                group.fromAdjacencyList(str(self.cleaned_data['group']))
-            except Exception, e:
+                group.from_adjacency_list(str(self.cleaned_data['group']))
+            except Exception as e:
                 import traceback
                 traceback.print_exc(e)
                 raise forms.ValidationError('Invalid adjacency list.')
@@ -249,8 +249,8 @@ class EniSearchForm(forms.Form):
         Return molecular representation of input detergent structure        """
         try:
             detergent = Molecule()
-            detergent.fromAdjacencyList(str(self.cleaned_data['detergent']))
-        except Exception, e:
+            detergent.from_adjacency_list(str(self.cleaned_data['detergent']))
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid SMILES entry.')
@@ -262,8 +262,8 @@ class EniSearchForm(forms.Form):
         """
         try:
             deposit = Molecule()
-            deposit.fromAdjacencyList(str(self.cleaned_data['deposit']))
-        except Exception, e:
+            deposit.from_adjacency_list(str(self.cleaned_data['deposit']))
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             raise forms.ValidationError('Invalid SMILES entry.')
@@ -284,16 +284,16 @@ class ThermoEntryEditForm(forms.Form):
             new_depository = rmgpy.data.thermo.ThermoDepository()
             global_context = {'__builtins__': None} # disable even builtins
             local_context = copy.copy(new_database.local_context)
-            local_context['entry'] = new_depository.loadEntry
-            for key,value in rmgpy.data.base.Database.local_context.iteritems():
+            local_context['entry'] = new_depository.load_entry
+            for key,value in rmgpy.data.base.Database.local_context.items():
                 local_context[key]=value
             
             entry_string = str(self.cleaned_data['entry'])
             try:
                 entry = eval("entry( index=-1, {0})".format(entry_string), global_context, local_context)
-            except Exception, e:
-                print "Invalid entry from ThermoEntryEditForm."
-                print repr(entry_string)
+            except Exception as e:
+                print("Invalid entry from ThermoEntryEditForm.")
+                print(repr(entry_string))
                 import traceback
                 traceback.print_exc(e)
                 raise forms.ValidationError('Invalid entry.'+ str(sys.exc_info()[1]))
@@ -315,16 +315,16 @@ class KineticsEntryEditForm(forms.Form):
             new_depository = rmgpy.data.kinetics.KineticsDepository()
             global_context = {'__builtins__': None} # disable even builtins
             local_context = copy.copy(new_database.local_context)
-            local_context['entry'] = new_depository.loadEntry
-            for key,value in rmgpy.data.base.Database.local_context.iteritems():
+            local_context['entry'] = new_depository.load_entry
+            for key,value in rmgpy.data.base.Database.local_context.items():
                 local_context[key]=value
             
             entry_string = str(self.cleaned_data['entry'])
             try:
                 entry = eval("entry( index=-1, {0})".format(entry_string), global_context, local_context)
-            except Exception, e:
-                print "Invalid entry from KineticsEntryEditForm."
-                print repr(entry_string)
+            except Exception as e:
+                print("Invalid entry from KineticsEntryEditForm.")
+                print(repr(entry_string))
                 import traceback
                 traceback.print_exc(e)
                 raise forms.ValidationError('Invalid entry.'+ str(sys.exc_info()[1]))

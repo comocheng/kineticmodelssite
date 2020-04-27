@@ -44,7 +44,7 @@ import itertools
 import math
 import numpy
 import re
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 from django.core.urlresolvers import reverse
 
@@ -75,7 +75,7 @@ class rmgsiteDatabase(object):
         self.database.transport = TransportDatabase()
         self.database.statmech = StatmechDatabase()
         self.database.solvation = SolvationDatabase()
-        self.database.loadForbiddenStructures(os.path.join(rmgsite.settings.DATABASE_PATH, 'forbiddenStructures.py'))
+        self.database.load_forbidden_structures(os.path.join(rmgsite.settings.DATABASE_PATH, 'forbiddenStructures.py'))
         self.timestamps = {}
 
     @property
@@ -114,7 +114,7 @@ class rmgsiteDatabase(object):
         """
         Walk the directory tree from dirpath, calling reset_timestamp(file) on each file.
         """
-        print "Resetting 'last loaded' timestamps for {0} in process {1}".format(dirpath, os.getpid())
+        print("Resetting 'last loaded' timestamps for {0} in process {1}".format(dirpath, os.getpid()))
         for root, dirs, files in os.walk(dirpath):
             for name in files:
                 self.reset_timestamp(os.path.join(root, name))
@@ -171,12 +171,12 @@ class rmgsiteDatabase(object):
             if section in ['depository', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'thermo', 'depository')
                 if self.is_dir_modified(dirpath):
-                    self.database.thermo.loadDepository(dirpath)
+                    self.database.thermo.load_depository(dirpath)
                     self.reset_dir_timestamps(dirpath)
             if section in ['libraries', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'thermo', 'libraries')
                 if self.is_dir_modified(dirpath):
-                    self.database.thermo.loadLibraries(dirpath)
+                    self.database.thermo.load_libraries(dirpath)
                     # put them in our preferred order, so that when we look up thermo in order to estimate kinetics,
                     # we use our favorite values first.
                     preferred_order = [
@@ -186,28 +186,28 @@ class rmgsiteDatabase(object):
                         'CBS_QB3_1dHR',
                         'KlippensteinH2O2',
                     ]
-                    new_order = [i for i in preferred_order if i in self.database.thermo.libraryOrder]
-                    for i in self.database.thermo.libraryOrder:
+                    new_order = [i for i in preferred_order if i in self.database.thermo.library_order]
+                    for i in self.database.thermo.library_order:
                         if i not in new_order:
                             new_order.append(i)
-                    self.database.thermo.libraryOrder = new_order
+                    self.database.thermo.library_order = new_order
                     self.reset_dir_timestamps(dirpath)
             if section in ['groups', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'thermo', 'groups')
                 if self.is_dir_modified(dirpath):
-                    self.database.thermo.loadGroups(dirpath)
+                    self.database.thermo.load_groups(dirpath)
                     self.reset_dir_timestamps(dirpath)
 
         if component in ['transport', '']:
             if section in ['libraries', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'transport', 'libraries')
                 if self.is_dir_modified(dirpath):
-                    self.database.transport.loadLibraries(dirpath)
+                    self.database.transport.load_libraries(dirpath)
                     self.reset_dir_timestamps(dirpath)
             if section in ['groups', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'transport', 'groups')
                 if self.is_dir_modified(dirpath):
-                    self.database.transport.loadGroups(dirpath)
+                    self.database.transport.load_groups(dirpath)
                     self.reset_dir_timestamps(dirpath)
 
         if component in ['solvation', '']:
@@ -220,25 +220,25 @@ class rmgsiteDatabase(object):
             if section in ['libraries', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'kinetics', 'libraries')
                 if self.is_dir_modified(dirpath):
-                    self.database.kinetics.loadLibraries(dirpath)
+                    self.database.kinetics.load_libraries(dirpath)
                     self.reset_dir_timestamps(dirpath)
             if section in ['families', '']:
                 dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'kinetics', 'families')
                 if self.is_dir_modified(dirpath):
-                    self.database.kinetics.loadFamilies(dirpath, families='all', depositories='all')
+                    self.database.kinetics.load_families(dirpath, families='all', depositories='all')
                     self.reset_dir_timestamps(dirpath)
 
                     # Make sure to load the entire thermo database prior to adding training values to the rules
                     self.load('thermo', '')
-                    for family in self.database.kinetics.families.values():
+                    for family in list(self.database.kinetics.families.values()):
                         oldentries = len(family.rules.entries)
-                        family.addKineticsRulesFromTrainingSet(thermoDatabase=self.database.thermo)
+                        family.add_rules_from_training(thermo_database=self.database.thermo)
                         newentries = len(family.rules.entries)
                         if newentries != oldentries:
-                            print '{0} new entries added to {1} family after adding rules from training set.'.format(
-                                newentries - oldentries, family.label)
+                            print('{0} new entries added to {1} family after adding rules from training set.'.format(
+                                newentries - oldentries, family.label))
                         # Filling in rate rules in kinetics families by averaging...
-                        family.fillKineticsRulesByAveragingUp()
+                        family.fill_rules_by_averaging_up()
 
         if component in ['statmech', '']:
             dirpath = os.path.join(rmgsite.settings.DATABASE_PATH, 'statmech')
@@ -344,7 +344,7 @@ class rmgsiteDatabase(object):
                         db = family.rules
                     else:
                         label = '{0}/{1}'.format(family.label, subsection[1])
-                        db = (d for d in family.depositories if d.label == label).next()
+                        db = next((d for d in family.depositories if d.label == label))
             else:
                 raise ValueError('Invalid value "%s" for section parameter.' % section)
         except (KeyError, StopIteration):
@@ -359,7 +359,7 @@ def generateSpeciesThermo(species, database):
     `species` using the provided `database`.
     """
     species.generate_resonance_structures()
-    species.thermo = database.thermo.getThermoData(species)
+    species.thermo = database.thermo.get_thermo_data(species)
         
 ################################################################################
 
@@ -374,7 +374,7 @@ def generateReactions(database, reactants, products=None, only_families=None, re
     If `only_families` is a list of strings, only those labeled families are 
     used: no libraries and no RMG-Java kinetics are returned.
     """
-    from rmgpy.rmg.model import getFamilyLibraryObject
+    from rmgpy.rmg.model import get_family_library_object
     # get RMG-py reactions
     reaction_list = database.kinetics.generate_reactions(reactants, products, only_families=only_families, resonance=resonance)
     if len(reactants) == 1:
@@ -399,7 +399,7 @@ def generateReactions(database, reactants, products=None, only_families=None, re
             # Determine if we've already processed an isomorphic reaction with a different template
             duplicate = False
             for t_rxn in template_reactions:
-                if reaction.isIsomorphic(t_rxn):
+                if reaction.is_isomorphic(t_rxn):
                     assert set(reaction.template) != set(t_rxn.template), 'There should not be duplicate reactions with identical templates.'
                     duplicate = True
                     break
@@ -408,10 +408,10 @@ def generateReactions(database, reactants, products=None, only_families=None, re
                 template_reactions.append(reaction)
 
             # Get all of the kinetics for the reaction
-            family = getFamilyLibraryObject(reaction.family)
-            kineticsList = family.getKinetics(reaction, templateLabels=reaction.template, degeneracy=reaction.degeneracy, returnAllKinetics=True)
-            if family.ownReverse and hasattr(reaction,'reverse'):
-                kineticsListReverse = family.getKinetics(reaction.reverse, templateLabels=reaction.reverse.template, degeneracy=reaction.reverse.degeneracy, returnAllKinetics=True)
+            family = get_family_library_object(reaction.family)
+            kinetics_list = family.get_kinetics(reaction, template_labels=reaction.template, degeneracy=reaction.degeneracy, return_all_kinetics=True)
+            if family.own_reverse and hasattr(reaction,'reverse'):
+                kineticsListReverse = family.get_kinetics(reaction.reverse, template_labels=reaction.reverse.template, degeneracy=reaction.reverse.degeneracy, return_all_kinetics=True)
                 for kinetics, source, entry, isForward in kineticsListReverse:
                     for kinetics0, source0, entry0, isForward0 in kineticsList:
                         if source0 is not None and source is not None and entry0 is entry and isForward != isForward0:
@@ -470,15 +470,15 @@ def reactionHasReactants(reaction, reactants):
     `reactants` (and no others), or ``False if not.
     """
     if len(reactants) == len(reaction.reactants) == 1:
-        if reaction.reactants[0].isIsomorphic(reactants[0]):
+        if reaction.reactants[0].is_isomorphic(reactants[0]):
             return True
     elif len(reactants) == len(reaction.reactants) == 2:
-        if reaction.reactants[0].isIsomorphic(reactants[0]) and reaction.reactants[1].isIsomorphic(reactants[1]):
+        if reaction.reactants[0].is_isomorphic(reactants[0]) and reaction.reactants[1].is_isomorphic(reactants[1]):
             return True
-        elif reaction.reactants[0].isIsomorphic(reactants[1]) and reaction.reactants[1].isIsomorphic(reactants[0]):
+        elif reaction.reactants[0].is_isomorphic(reactants[1]) and reaction.reactants[1].is_isomorphic(reactants[0]):
             return True
     elif len(reactants) == 1 and len(reaction.reactants) == 2:
-        if reaction.reactants[0].isIsomorphic(reactants[0]) and reaction.reactants[1].isIsomorphic(reactants[0]):
+        if reaction.reactants[0].is_isomorphic(reactants[0]) and reaction.reactants[1].is_isomorphic(reactants[0]):
             return True
     return False
 
@@ -493,10 +493,10 @@ def getRMGJavaKineticsFromReaction(reaction):
     reactionList = getRMGJavaKinetics(reactantList, productList)
     #assert len(reactionList) == 1
     if len(reactionList) > 1:
-        print "WARNING - RMG-Java identified {0} reactions that match {1!s} instead of 1".format(len(reactionList),reaction)
+        print("WARNING - RMG-Java identified {0} reactions that match {1!s} instead of 1".format(len(reactionList),reaction))
         reactionList[0].kinetics.comment += "\nWARNING - RMG-Java identified {0} reactions that match this. These kinetics are just from one of them.".format(len(reactionList))
     if len(reactionList) == 0:
-        print "WARNING - RMG-Java could not find the reaction {0!s}".format(reaction)
+        print("WARNING - RMG-Java could not find the reaction {0!s}".format(reaction))
         return None
     return reactionList[0]
     
@@ -602,7 +602,7 @@ def getRMGJavaKinetics(reactantList, productList=None):
     
         comments = "\t".join(lines[4:])
         kinetics.comment = "Estimated by RMG-Java:\n"+comments
-        entry = Entry(longDesc=comments)
+        entry = Entry(long_desc=comments)
     
         return reactants, products, kinetics, entry
     
@@ -613,9 +613,9 @@ def getRMGJavaKinetics(reactantList, productList=None):
         """
         resonance_isomers = molecule.generate_resonance_structures()
         for name, adjlist in species_dict:
-            listmolecule = Molecule().fromAdjacencyList(adjlist, saturateH=True)
+            listmolecule = Molecule().from_adjacency_list(adjlist, saturate_h=True)
             for isomer in resonance_isomers:
-                if isomer.isIsomorphic(listmolecule):
+                if isomer.is_isomorphic(listmolecule):
                     return name
         return False
 
@@ -627,13 +627,13 @@ def getRMGJavaKinetics(reactantList, productList=None):
     added_reactants = set()
     for index, reactant in enumerate(reactantList):
         assert isinstance(reactant, Molecule)
-        reactant.clearLabeledAtoms()
+        reactant.clear_labeled_atoms()
         for r in added_reactants:
-            if r.isIsomorphic(reactant):
+            if r.is_isomorphic(reactant):
                 break # already added this reactant
         else: # exhausted the added_reactants list without finding duplicate and breaking
             added_reactants.add(reactant)
-            popreactants += 'reactant{0:d} (molecule/cm3) 1\n{1}\n\n'.format(index+1, reactant.toAdjacencyList(removeLonePairs=True))
+            popreactants += 'reactant{0:d} (molecule/cm3) 1\n{1}\n\n'.format(index+1, reactant.to_adjacency_list(remove_lone_pairs=True))
     popreactants += 'END\n'
     
     
@@ -643,12 +643,12 @@ def getRMGJavaKinetics(reactantList, productList=None):
     try:
         client_socket.connect(("localhost", 5000))
     except IOError:
-        print >> sys.stderr, 'Unable to query RMG-Java for kinetics. (Is the RMG-Java server running?)'
+        print('Unable to query RMG-Java for kinetics. (Is the RMG-Java server running?)', file=sys.stderr)
         sys.stderr.flush()
         return reactionList
     
     # Send request to server
-    print "SENDING REQUEST FOR RMG-JAVA SEARCH TO SERVER"
+    print("SENDING REQUEST FOR RMG-JAVA SEARCH TO SERVER")
     client_socket.sendall(popreactants)
     partial_response = client_socket.recv(512)
     response = partial_response
@@ -656,15 +656,15 @@ def getRMGJavaKinetics(reactantList, productList=None):
         partial_response = client_socket.recv(512)
         response += partial_response
     client_socket.close()
-    print "FINISHED REQUEST. CLOSED CONNECTION TO SERVER"
+    print("FINISHED REQUEST. CLOSED CONNECTION TO SERVER")
     # Clean response from server
     try:
         species_dict, reactions_list = cleanResponse(response)
     except:
         # Return an empty reaction list if an error occurred on the java server side,
         # instead of having the website crash.
-        print "AN ERROR OCCURRED IN THE JAVA SERVER."
-        print response
+        print("AN ERROR OCCURRED IN THE JAVA SERVER.")
+        print(response)
         return []
 
     # Name the species in reaction
@@ -676,10 +676,10 @@ def getRMGJavaKinetics(reactantList, productList=None):
         productNames.append(identifySpecies(species_dict, product))
         # identifySpecies(species_dict, product) returns "False" if it can't find product
         if not identifySpecies(species_dict, product):
-            print "Could not find this requested product in the species dictionary from RMG-Java:"
-            print str(product)
+            print("Could not find this requested product in the species dictionary from RMG-Java:")
+            print(str(product))
     
-    species_dict = dict([(key, Molecule().fromAdjacencyList(value,saturateH=True)) for key, value in species_dict])
+    species_dict = dict([(key, Molecule().from_adjacency_list(value,saturate_h=True)) for key, value in species_dict])
     
     # Both products were actually found in species dictionary or were blank
     reaction = None
@@ -689,10 +689,10 @@ def getRMGJavaKinetics(reactantList, productList=None):
         degeneracy = 1
 
         # Search for da Reactions
-        print 'Searching output for desired reaction...\n'
+        print('Searching output for desired reaction...\n')
         for reactionline in reactions_list:
             if reactionline.strip().startswith('DUP'):
-                print "WARNING - DUPLICATE REACTION KINETICS ARE NOT BEING SUMMED"
+                print("WARNING - DUPLICATE REACTION KINETICS ARE NOT BEING SUMMED")
                 # if set, the `reaction` variable should still point to the reaction from the previous reactionline iteration
                 if reaction:
                     reaction.kinetics.comment += "\nWARNING - DUPLICATE REACTION KINETICS IDENTIFIED BUT NOT SUMMED"
@@ -703,8 +703,8 @@ def getRMGJavaKinetics(reactantList, productList=None):
             indicator1 = searchReaction(reactionline, reactantNames, productNames)
             indicator2 = searchReaction(reactionline, productNames, reactantNames)
             if indicator1 == True or indicator2 == True:
-                print 'Found a matching reaction:'
-                print reactionline
+                print('Found a matching reaction:')
+                print(reactionline)
                 reactants, products, kinetics, entry = extractKinetics(reactionline)
                 reaction = DepositoryReaction(
                     reactants = [species_dict[reactant] for reactant in reactants],
@@ -753,7 +753,7 @@ def getAbrahamAB(smiles):
             wb = xlrd.open_workbook(filepath)
             wb.sheet_names()
         
-            data = wb.sheet_by_name(u'PlattsA')
+            data = wb.sheet_by_name('PlattsA')
             col1 = data.col_values(0)
             col2 = data.col_values(1)
             col3 = data.col_values(2)
@@ -772,12 +772,12 @@ def getAbrahamAB(smiles):
                 if success:
                     smarts = pybel.Smarts(x.smarts.__str__())
                 else:
-                    print "Invalid SMARTS pattern", x.smarts.__str__()
+                    print("Invalid SMARTS pattern", x.smarts.__str__())
                     break
                 matched = smarts.findall(mol)
                 x.num = len(matched)
                 if (x.num > 0):
-                    print "Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to A', x.num, 'times'
+                    print("Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to A', x.num, 'times')
                 platts_A += (x.num) * (x.value)
                         
             self.A = platts_A + 0.003
@@ -790,7 +790,7 @@ def getAbrahamAB(smiles):
             wb = xlrd.open_workbook(filepath)
             wb.sheet_names()
         
-            data = wb.sheet_by_name(u'PlattsB')
+            data = wb.sheet_by_name('PlattsB')
             col1 = data.col_values(0)
             col2 = data.col_values(1)
             col3 = data.col_values(2)
@@ -809,12 +809,12 @@ def getAbrahamAB(smiles):
                 if success:
                     smarts = pybel.Smarts(x.smarts.__str__())
                 else:
-                    print "Invalid SMARTS pattern", x.smarts.__str__()
+                    print("Invalid SMARTS pattern", x.smarts.__str__())
                     break
                 matched = smarts.findall(mol)
                 x.num = len(matched)
                 if (x.num > 0):
-                    print "Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to B', x.num, 'times'
+                    print("Found group", x.smarts.__str__(), 'named', x.name, 'with contribution', x.value, 'to B', x.num, 'times')
                 platts_B += (x.num) * (x.value)
             
             self.B = platts_B + 0.071 
@@ -842,8 +842,8 @@ def moleculeToAdjlist(molecule):
     representation of its structure suitable for a URL.
     """
     mol = molecule.copy(deep=True)
-    mol.clearLabeledAtoms()
-    adjlist = mol.toAdjacencyList(removeH=False)
+    mol.clear_labeled_atoms()
+    adjlist = mol.to_adjacency_list(remove_h=False)
     return adjlist
 
 def moleculeToInfo(molecule):
@@ -853,7 +853,7 @@ def moleculeToInfo(molecule):
     """
 
     from .views import moleculeEntry
-    href = reverse(moleculeEntry, kwargs={'adjlist': molecule.toAdjacencyList()})
+    href = reverse(moleculeEntry, kwargs={'adjlist': molecule.to_adjacency_list()})
     structureMarkup = getStructureMarkup(molecule)
     markup = '<a href="'+ href + '">' + structureMarkup + '</a>'
     return markup
@@ -863,8 +863,8 @@ def moleculeFromURL(adjlist):
     Convert a given adjacency list `adjlist` from a URL to the corresponding
     :class:`Molecule` object.
     """
-    adjlist = str(urllib.unquote(adjlist))
-    molecule = Molecule().fromAdjacencyList(adjlist)
+    adjlist = str(urllib.parse.unquote(adjlist))
+    molecule = Molecule().from_adjacency_list(adjlist)
     return molecule
 
 ################################################################################
@@ -875,8 +875,8 @@ def groupToURL(group):
     representation of its structure suitable for a URL.
     """
     gro = group.copy(deep=True)
-    gro.clearLabeledAtoms()
-    adjlist = gro.toAdjacencyList(removeH=False)
+    gro.clear_labeled_atoms()
+    adjlist = gro.to_adjacency_list(remove_h=False)
     return adjlist
 
 def groupToInfo(group):
@@ -886,7 +886,7 @@ def groupToInfo(group):
     """
 
     from .views import groupEntry
-    href = reverse(groupEntry, kwargs={'adjlist': group.toAdjacencyList()})
+    href = reverse(groupEntry, kwargs={'adjlist': group.to_adjacency_list()})
     structureMarkup = getStructureMarkup(group)
     markup = '<a href="'+ href + '">' + structureMarkup + '</a>'
     return markup
@@ -896,8 +896,8 @@ def groupFromURL(adjlist):
     Convert a given adjacency list `adjlist` from a URL to the corresponding
     :class:`Group` object.
     """   
-    adjlist = str(urllib.unquote(adjlist))
-    group = Group().fromAdjacencyList(adjlist)
+    adjlist = str(urllib.parse.unquote(adjlist))
+    group = Group().from_adjacency_list(adjlist)
     return group
 
 ################################################################################
@@ -952,28 +952,28 @@ def getStructureMarkup(item):
     from rmgpy.molecule.molecule import Molecule
     from rmgpy.molecule.group import Group
     from rmgpy.species import Species
-    import urllib
+    import urllib.request, urllib.parse, urllib.error
     
     if isinstance(item, Molecule):
         # We can draw Molecule objects, so use that instead of an adjacency list
-        adjlist = item.toAdjacencyList(removeH=False)
-        url = urllib.quote(adjlist)
+        adjlist = item.to_adjacency_list(remove_h=False)
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('database.views.drawMolecule', kwargs={'adjlist': url}), adjlist)
     elif isinstance(item, Species) and len(item.molecule) > 0:
         # We can draw Species objects, so use that instead of an adjacency list
-        adjlist = item.molecule[0].toAdjacencyList(removeH=False)
-        url = urllib.quote(adjlist)
+        adjlist = item.molecule[0].to_adjacency_list(remove_h=False)
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}"/>'.format(reverse('database.views.drawMolecule', kwargs={'adjlist': url}), item.label)
     elif isinstance(item, Species) and len(item.molecule) == 0:
         # We can draw Species objects, so use that instead of an adjacency list
         structure = item.label
     elif isinstance(item, Group):
         # We can draw Group objects, so use that instead of an adjacency list
-        adjlist = item.toAdjacencyList()
-        url = urllib.quote(adjlist)
+        adjlist = item.to_adjacency_list()
+        url = urllib.parse.quote(adjlist)
         structure = '<img src="{0}" alt="{1}" title="{1}" />'.format(reverse('database.views.drawGroup', kwargs={'adjlist': url}), adjlist)
         #structure += '<pre style="font-size:small;" class="adjacancy_list">{0}</pre>'.format(adjlist)
-    elif isinstance(item, str) or isinstance(item, unicode):
+    elif isinstance(item, str) or isinstance(item, str):
         structure = item
     else:
         structure = ''

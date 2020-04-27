@@ -144,8 +144,8 @@ class Thermo(models.Model):
     def poly2(self):
         return PolynomialData(heat_capacities=self.heat_capacities(2), enthalpies=self.enthalpies(2), entropies=self.entropies(2), free_energies=self.free_energies(2))
 
-    def __unicode__(self):
-        return unicode(self.id)
+    def __str__(self):
+        return str(self.id)
 
 
 class Transport(models.Model):
@@ -174,5 +174,5 @@ class Transport(models.Model):
                                               blank=True,
                                               default=0.0)
 
-    def __unicode__(self):
-        return u"{s.id} {s.species}".format(s=self)
+    def __str__(self):
+        return f"{self.id} {self.species}"

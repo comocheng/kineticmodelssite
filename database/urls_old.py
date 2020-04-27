@@ -27,7 +27,7 @@ urlpatterns = [
     # Transport database
     url(r'^transport/$', views.transport),
     url(r'^transport/search/$', views.molecule_search),
-    url(r'^transport/molecule/(?P<adjlist>[\S\s]+)$', views.transportData),
+    url(r'^transport/molecule/(?P<adjlist>[\S\s]+)$', views.transport_data),
     url(r'^transport/(?P<section>\w+)/(?P<subsection>.+)/(?P<index>-?\d+)/$', views.transportEntry),
     url(r'^transport/(?P<section>\w+)/(?P<subsection>.+)/$', views.transport),
     url(r'^transport/(?P<section>\w+)/$', views.transport),

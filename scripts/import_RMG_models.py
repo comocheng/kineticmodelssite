@@ -141,24 +141,40 @@ class SourceImporter(Importer):
 
     def get_doi(self, path=None):
         """
-        Get the doi from the source.txt file
+        Get the DOI from the source.txt file
         """
         source_file = path or self.path
         with open(source_file, 'r') as f:
-            lines = f.readlines()
-        for line in lines:
-            for l in line.split():
-                if '10.' in l.lower():
-                    break
-            l = l.strip().strip('.')
-            regex = re.compile('10.\d{4,9}/\w.*\w')
-            matched_list = regex.findall(l)
-            break
-        if len(matched_list) > 0:
-            matched_doi = matched_list[0]
-        else:
-            logger.error(f'Could not find a doi in the souce.txt file for {path}')
+            source = f.read()
+        regex = re.compile('10.\d{4,9}/\S+')
+
+        matched_list = regex.findall(source)
+        matched_list = [d.rstrip('.') for d in matched_list]
+        # There are sometimes other trailing characters caught up, like ) or ]
+        # We should probably clean up the source.txt files
+        # But let's try cleaning them here.
+        def clean(doi):
+            "Remove a trailing ] or ) from a DOI if it probably shouldn't be there"
+            for opening, closing in ['()','[]']:
+                if doi.endswith(closing):
+                    if doi.count(closing) - doi.count(opening) == 1:
+                        # 1 more closing than opening
+                        # remove the last closing
+                        doi = doi[:-1]
+            return doi
+        matched_list = [clean(d) for d in matched_list]
+
+        matched_set = set(matched_list) # de-duplicate
+
+        if len(matched_set) == 0:
+            logger.error(f'Could not find a DOI in the souce.txt file for {path}')
             matched_doi = None
+        elif len(matched_set) > 1:
+            logger.error(f'Found more than one DOI in the souce.txt file for {path}')
+            matched_doi = None
+        else:
+            matched_doi = matched_list[0]
+
         self.doi = matched_doi
         logger.info(f"The matched DOI is {self.doi}")
         return matched_doi
@@ -170,7 +186,7 @@ class SourceImporter(Importer):
         doi = doi or self.doi
         print(172)
         if doi is None:
-            logger.error(f"We were unable to find a doi for {self.name}")
+            logger.error(f"We don't have a DOI for {self.name}")
             return None, None
         logger.info(f'Reading in source information for {self.name} with DOI:{doi}')
         print(self.name)
@@ -213,7 +229,7 @@ class SourceImporter(Importer):
         pageNumbers = ref.get('page')
         setattr(dj_source, "pageNumbers", pageNumbers)
         save_model(dj_source, library_name=self.name)
-        logger.info(f'The reference looks like this:\n{dj_source.__unicode__()}')
+        logger.info(f'The reference looks like this:\n{dj_source!r}')
 
         setattr(self.dj_km, 'source', dj_source)
         save_model(self.dj_km)
@@ -375,10 +391,9 @@ class ThermoLibraryImporter(Importer):
 
             except MultipleObjectsReturned:
                 possible_species = Species.objects.filter(inchi__contains=trimmed_inchi)
-                logger.warning("In Library {}:".format(library.name))
-                logger.warning("ThermoLibraryImporter.import_species: Found {} species for structure {} with "
-                               "multiplicity {}".format(
-                                len(possible_species), smiles, molecule.multiplicity))
+                logger.warning(f"In Library {library.name}:")
+                logger.warning(f"ThermoLibraryImporter.import_species: Found {len(possible_species)} species for structure {smiles} "
+                               f"with multiplicity {molecule.multiplicity}")
                 logger.warning(possible_species)
                 dj_species = possible_species[0]  # FIXME -- how would we pick one?
             save_model(dj_species, library_name=library.name)
@@ -572,6 +587,7 @@ class KineticsLibraryImporter(Importer):
                         dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
                         dj_species = dj_speciesname.species
                         stoichiometries[dj_species] += direction_coefficient
+                        # FIXME: reactions that are A + B = A + C probably end up as B = C
                 reaction_list = Reaction.objects.filter(species__in=list(stoichiometries.keys()), isReversible__exact=chemkinReaction.reversible)
                 print(f'We found the following reactions {reaction_list}')
                 matched_reaction = None
@@ -596,6 +612,10 @@ class KineticsLibraryImporter(Importer):
                                     # forward
                                     # good to go
                                     matched[species] = True
+                                # FIXME: I'm worried that this next bit could match some species in 
+                                #       forward direction and some in reverse. 
+                                #       eg. A + B = C + D  matching A + D = C + B
+                                # FIXME: also, what happens to  A + B = A + C reactions?
                                 elif -1.0 * float(coeff) == float(stoichiometries.get(species, None)):
                                     # good to go
                                     matched[species] = True
@@ -616,8 +636,10 @@ class KineticsLibraryImporter(Importer):
                                 break
                         if all(matched.values()):
                             print(f'Matched {chemkinReaction} to {reaction}')
+                            if matched_reaction is not None:
+                                raise Error(f"Matched {chemkinReaction} to multiple reactions, {matched_reaction} and {reaction}")
                             matched_reaction = reaction
-                            break
+                            
                     if matched_reaction is None:
                         matched_reaction = Reaction.objects.create()
                         new_reaction = True 
@@ -774,13 +796,12 @@ HELPER FUNCTIONS
 # Saves any Django model and logs it appropriately
 # Models.model (String) -> Models.model
 def save_model(mod, library_name=None):
-    #try:
-    mod.save()
-    logger.info("Created/updated the following {1} Instance: {0}\n".format(mod, type(mod)))
-    #except Exception as e:
-    #    error_msg = "Error saving the {1} model of type {2} from Library {0}".format(library_name, mod, type(mod))
-    #    logger.error(error_msg)
-    #    logger.exception(e)
+    try:
+        mod.save()
+    except:
+        logger.exception(f"Error saving the {mod} model type {type(mod)} from Library {library_name}")
+        raise
+    logger.info(f"Created/updated the following {type(mod)} instance: {mod}")
     return mod
 
 
@@ -825,27 +846,39 @@ def make_efficiencies(dj_k, k, library_name=None):
     save_model(dj_k, library_name=library_name)
 
 
-def findLibraryFiles(path):
-
-    thermoLibs = []
-    kineticsLibs = []
-    sourceFiles = []
+def find_library_files(path, skip_list=None):
+    """
+    Walk the given `path` looking for libraries and source files.
+    Skips any paths that end with something in the skip_list
+    (eg. skip_list=['PCI2011/193-Mehl'])
+    Returns a 3-tuple:
+        thermo_libraries, kinetics_libraries, source_files
+    """
+    skip_list = skip_list or [] # list of models to skip
+    thermo_libraries = []
+    kinetics_libraries = []
+    source_files = []
     for root, dirs, files in os.walk(path):
+        
+        if any([ root.strip('/').endswith(skip) for skip in skip_list ]):
+            logger.info(f"Skipping {root} because it is in the skip_list.")
+            continue # skip this one
+
         for name in files:
             path = os.path.join(root, name)
             if name == "source.txt":
-                logger.info("Found source file {0}".format(path))
-                sourceFiles.append(path)
+                logger.info(f"Found source file {path}")
+                source_files.append(path)
             elif root.endswith('RMG-Py-thermo-library') and name == 'ThermoLibrary.py':
-                logger.info("Found thermo library {0}".format(path))
-                thermoLibs.append(path)
+                logger.info(f"Found thermo library {path}")
+                thermo_libraries.append(path)
             elif root.endswith('RMG-Py-kinetics-library') and name == 'reactions.py':
-                logger.info("Found kinetics file {0}".format(path))
-                kineticsLibs.append(path)
+                logger.info(f"Found kinetics file {path}")
+                kinetics_libraries.append(path)
             else:
-                logger.debug('{0} unread because it is not named like a kinetics or thermo '
-                              'library generated by the chemkin importer'.format(path))
-    return thermoLibs, kineticsLibs, sourceFiles
+                logger.debug(f'{path} unread because it is not named like a kinetics or thermo '
+                              'library generated by the chemkin importer')
+    return thermo_libraries, kinetics_libraries, source_files
 
 """
 MAIN FUNCTION CALL
@@ -865,13 +898,19 @@ def main(args):
     thermo_libraries = []
     kinetics_libraries = []
     source_files = []
+
+    skip_list = [
+        'PCI2011/193-Mehl', # This folder doesn't contain a model, and claims to be the source of Gasoline_Surrogate, which causes a duplicate Source database error.
+        ] 
+
     for path in args.paths:
-        t, k, s = findLibraryFiles(path)
+        t, k, s = find_library_files(path, skip_list)
         thermo_libraries.extend(t)
         kinetics_libraries.extend(k)
         source_files.extend(s)
 
-    logger.debug("Found {} source files: \n - {}".format(len(source_files), '\n - '.join(source_files)))
+    source_file_list = '\n - '.join(source_files)
+    logger.debug(f"Found {len(source_files)} source files:\n - {source_file_list}")
     sources = len(source_files)
     for filepath in source_files:
         logger.info('Importing source file from {}'.format(filepath))
@@ -887,8 +926,8 @@ def main(args):
         print('E'*50)
 
     logger.info('Exited source imports!')
-
-    logger.debug("Found {} thermo libraries: \n - {}".format(len(thermo_libraries), '\n - '.join(thermo_libraries)))
+    thermo_library_list = '\n - '.join(thermo_libraries)
+    logger.debug(f"Found {len(thermo_libraries)} thermo libraries:\n - {thermo_library_list}")
     species = 0
     for filepath in thermo_libraries:
         logger.info("Importing thermo library from {}".format(filepath))
@@ -897,10 +936,8 @@ def main(args):
         importer.import_species()
         importer.import_data()
         
-        
-
-    logger.debug("Found {} kinetics libraries: \n - {}".format(len(kinetics_libraries),
-                                                                '\n - '.join(kinetics_libraries)))
+    kinetics_library_list = '\n - '.join(kinetics_libraries)
+    logger.debug(f"Found {len(kinetics_libraries)} kinetics libraries:\n - {kinetics_library_list}")
 
     reactions = 0
     for filepath in kinetics_libraries:

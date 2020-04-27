@@ -12,8 +12,8 @@ class Author(models.Model):
 
     name = f"{lastname}, {firstname}"
 
-    def __unicode__(self):
-        return unicode(self.name)
+    def __str__(self):
+        return self.name
 
 
 class Source(models.Model):
@@ -50,14 +50,14 @@ class Source(models.Model):
     authors = models.ManyToManyField(Author, blank=True, through='Authorship')
     doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
-    def __unicode__(self):
-        self_string = u""
-        self_string += u"{s.sourceTitle}:\n".format(s=self).upper()
-        self_string += u"Published in {s.publicationYear}:\n".format(s=self)
-        self_string += u"\t {s.journalName},\n\t " \
-                       u"Vol. {s.journalVolumeNumber}\n\t " \
-                       u"Pgs. {s.pageNumbers}\n".format(s=self)
-        self_string += u"Authors: {s.authors}".format(s=self)
+    def __str__(self):
+        self_string = ""
+        self_string += "{s.sourceTitle}:\n".format(s=self).upper()
+        self_string += "Published in {s.publicationYear}:\n".format(s=self)
+        self_string += "\t {s.journalName},\n\t " \
+                       "Vol. {s.journalVolumeNumber}\n\t " \
+                       "Pgs. {s.pageNumbers}\n".format(s=self)
+        self_string += "Authors: {s.authors}".format(s=self)
 
         return self_string
 
@@ -77,6 +77,6 @@ class Authorship(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     order = models.IntegerField('Order of authorship')
 
-    def __unicode__(self):
-        return (u"{s.id} author {s.author} "
+    def __str__(self):
+        return ("{s.id} author {s.author} "
                 "was # {s.order} in {s.source}").format(s=self)

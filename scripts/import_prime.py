@@ -52,7 +52,7 @@ class Importer(object):
         """
         data_path = os.path.join(self.directory_path, 'data')
         assert os.path.isdir(data_path), "{} isn't a directory!".format(data_path)
-        print "Importing from directories within {}".format(data_path)
+        print("Importing from directories within {}".format(data_path))
         directories = [d for d in os.listdir(data_path)
                        if os.path.isdir(os.path.join(data_path, d))]
         for skipdir in ['_attic']:
@@ -73,7 +73,7 @@ class Importer(object):
         """
         catalog_path = os.path.join(self.directory_path, 'catalog')
         assert os.path.isdir(catalog_path), "{} isn't a directory!".format(catalog_path)
-        print "Importing xml files from directory {}".format(catalog_path)
+        print("Importing xml files from directory {}".format(catalog_path))
         for file in sorted([f for f in os.listdir(catalog_path)
                             if f.endswith('.xml')]):
             full_path = os.path.join(catalog_path, file)
@@ -88,7 +88,7 @@ class Importer(object):
             with open('errors.txt', "a") as errors:
                 errors.write("{0}\t{1}\n".format(file_path, message))
 
-        print "Parsing file {}".format(file_path)
+        print("Parsing file {}".format(file_path))
         try:
             tree = ElementTree.parse(file_path)
         except ExpatError as e:
@@ -160,7 +160,7 @@ class BibliographyImporter(Importer):
         for index, author in enumerate(bib_item.findall('prime:author',
                                                         namespaces=ns)):
             number = index + 1
-            print u"author {} is {}".format(number, author.text)
+            print("author {} is {}".format(number, author.text))
             dj_author, created = Author.objects.get_or_create(name=author.text)
             Authorship.objects.get_or_create(source=dj_item,
                                              author=dj_author,
@@ -191,7 +191,7 @@ class SpeciesImporter(Importer):
             else:
                 # it's just a random name
                 if not name.text:
-                    print "Warning! Blank species name in species {}".format(primeID)
+                    print("Warning! Blank species name in species {}".format(primeID))
                     continue
                 SpeciesName.objects.get_or_create(species=dj_item, name=name.text)
         dj_item.save()
@@ -264,7 +264,7 @@ class ThermoImporter(Importer):
                             'upper_temp_bound_{0}'.format(polynomial_number),
                             float(bound.text))
         if i == 0:
-            print("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID))
+            print(("There was only one polynomial in {}/{}.xml!".format(sPrimeID, thpPrimeID)))
             print("Probably the temperature range was too small."
                   "We will make up a second one with no T range.")
             dj_thermo.lower_temp_bound_2 = dj_thermo.upper_temp_bound_1
@@ -348,8 +348,8 @@ class ReactionImporter(Importer):
             dj_species, created = Species.objects.get_or_create(
                 sPrimeID=species_primeID)
             stoichiometry = float(reactant.text)
-            print "Stoichiometry of {} is {}".format(species_primeID,
-                                                     stoichiometry)
+            print("Stoichiometry of {} is {}".format(species_primeID,
+                                                     stoichiometry))
             dj_stoich, created = Stoichiometry.objects.get_or_create(
                 species=dj_species,
                 reaction=dj_reaction,
@@ -505,35 +505,35 @@ def main(top_root):
     """
     with open('errors.txt', "w") as errors:
         errors.write("Restarting import at " + time.strftime("%x"))
-    print "Starting at", top_root
+    print("Starting at", top_root)
     for root, dirs, files in os.walk(top_root):
         # if root.endswith('depository\\bibliography'):
         if root.endswith(os.path.join(os.sep, 'depository', 'bibliography')):
-            print "We have found the Bibliography which we can import!"
+            print("We have found the Bibliography which we can import!")
             # print "skipping for now, to test the next importer..."; continue
             BibliographyImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'species')):
-            print "We have found the Species which we can import!"
-            print "skipping for now, to test the next importer..."; continue
+            print("We have found the Species which we can import!")
+            print("skipping for now, to test the next importer..."); continue
             TransportImporter(root).import_data()
             ThermoImporter(root).import_data()
             SpeciesImporter(root).import_catalog()
         elif root.endswith(os.path.join(os.sep, 'depository', 'reactions')):
-            print "We have found the Reactions which we can import!"
+            print("We have found the Reactions which we can import!")
             # print "skipping for now, to test the next importer..."; continue
             ReactionImporter(root).import_catalog()
             KineticsImporter(root).import_data()
         elif root.endswith(os.path.join(os.sep, 'depository', 'models')):
-            print "We have found the Kinetic Models which we can import!"
-            print "skipping for now, to test the next importer..."; continue
+            print("We have found the Kinetic Models which we can import!")
+            print("skipping for now, to test the next importer..."); continue
             ModelImporter(root).import_catalog()
         else:
             # so far nothing else is implemented
-            print "Skipping {}".format(root)
+            print("Skipping {}".format(root))
         # Remove these before iterating further into them
         for skipdir in ['.git', 'data', '_attic', 'catalog']:
             if skipdir in dirs:
-                print "skipping {}".format(os.path.join(root, skipdir))
+                print("skipping {}".format(os.path.join(root, skipdir)))
                 dirs.remove(skipdir)
 
 
