@@ -588,13 +588,20 @@ class KineticsLibraryImporter(Importer):
                         dj_species = dj_speciesname.species
                         stoichiometries[dj_species] += direction_coefficient
                         # FIXME: reactions that are A + B = A + C probably end up as B = C
-                reaction_list = Reaction.objects.filter(species__in=list(stoichiometries.keys()), isReversible__exact=chemkinReaction.reversible)
+
+                reaction_list = Reaction.objects.filter(isReversible__exact=chemkinReaction.reversible)
+                for species in stoichiometries.keys():
+                    reaction_list = reaction_list.filter(species=species)
                 print(f'We found the following reactions {reaction_list}')
                 matched_reaction = None
                 new_reaction = False
                 if len(reaction_list) == 0:
                     new_reaction = True
                     matched_reaction = Reaction.objects.create()
+                elif len(reaction_list) == 1:
+                    print('We identified only one reaction')
+                    new_reaction = False
+                    matched_reaction = reaction_list.first()
                 else:
                     for reaction in reaction_list:
                         if len(reaction.species.all()) != len(stoichiometries):
