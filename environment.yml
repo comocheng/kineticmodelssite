@@ -21,4 +21,5 @@ dependencies:
   - pandas
   - django
   - django-filter
+  - django-extensions
   - django-model-utils 
