@@ -16,6 +16,7 @@ pandas = "*"
 django-autocomplete-light = "*"
 django = "*"
 django-filter = "*"
+django-extensions = "*"
 ipython = "*"
 habanero = "*"
 
