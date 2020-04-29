@@ -29,7 +29,7 @@ class Kinetics(models.Model):
 
 class BaseKineticsData(models.Model):
 
-    kinetics = models.OneToOneField(Kinetics, on_delete=models.CASCADE)
+    kinetics = models.OneToOneField(Kinetics, null=True, blank=True, on_delete=models.CASCADE)
     collider_efficiencies = models.ManyToManyField(Species, through="Efficiency",
                                                    blank=True)
 
