@@ -663,16 +663,21 @@ class KineticsLibraryImporter(Importer):
                     save_model(stoich, library_name=library.name)
 
                 save_model(matched_reaction, library_name=library.name)
-            continue
             # Determine: what kind of KineticsData is this?
             #try:  # This will still cause the program to quit in an Exception, it just logs it first
             if isinstance(kinetics, KineticsData):
-                dj_kinetics_data = KineticsData_dj()  # make the django model instance
-                dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
-                dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
+                dj_kinetics_data = KineticsData_dj.objects.get_or_create(
+                    temp_array=kinetics.Tdata.__str__(), 
+                    rate_coefficients=kinetics.Kdata.__str__()
+
+                    )  # make the django model instance
 
             elif isinstance(kinetics, Arrhenius):
-                dj_kinetics_data = make_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
+                dj_kinetics_data = make_arrhenius_dj(
+                    kinetics, 
+                    library_name=library.name, 
+                    reaction=matched_reaction, 
+                    source=self.dj_km.source)  # use function to make model instance
 
             elif isinstance(kinetics, ArrheniusEP):
                 raise NotImplementedError
@@ -687,7 +692,7 @@ class KineticsLibraryImporter(Importer):
                     dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
 
             elif isinstance(kinetics, MultiPDepArrhenius):
-                dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
+                dj_kinetics_data = MultiPDepArrhenius_dj.create()  # make the django model instance
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                 for pdep_arr in kinetics.arrhenius:
                     # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
@@ -757,7 +762,10 @@ class KineticsLibraryImporter(Importer):
 
 
             # Make Kinetics object to link the Kinetics Data to the Kinetic Model
-            dj_kinetics_object = Kinetics()
+            dj_kinetics_object, object_created = Kinetics.objects.get_or_create(
+                reaction=matched_reaction, 
+                source=self.dj_km.source,
+                )
             save_model(dj_kinetics_object, library_name=library.name)
 
             # Establish one-to-one link between kinetics and kinetics data
@@ -765,31 +773,11 @@ class KineticsLibraryImporter(Importer):
             save_model(dj_kinetics_data, library_name=library.name)
 
             # Link the kinetics object to self.dj_km through kinetics comment
-            dj_kinetics_comment = KineticsComment()
+            dj_kinetics_comment, comment_created = KineticsComment.objects.get_or_create(
+                kinetics=dj_kinetics_object,
+                kineticModel=self.dj_km
+            )
             save_model(dj_kinetics_comment, library_name=library.name)
-            dj_kinetics_comment.kinetics = dj_kinetics_object
-            dj_kinetics_comment.kineticModel = self.dj_km
-            save_model(dj_kinetics_comment, library_name=library.name)
-
-            # Then, make a reaction object and tie it to a Kinetics Object
-            dj_reaction = Reaction()
-            dj_kinetics_object.reaction = dj_reaction
-
-            for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
-                stoichiometries = defaultdict(float)
-                for species in reagent_list:
-                    name = species.label  # FIXME -- What do I put here? Also should the line below be get_or_create?
-                    dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
-                    dj_species = dj_speciesname.species
-                    stoichiometries[dj_species] += direction_coefficient
-
-                for species, coeff in stoichiometries:
-                    stoich = Stoichiometry()
-                    save_model(stoich, library_name=library.name)
-                    stoich.reaction = dj_reaction
-                    stoich.species = species
-                    stoich.coefficient = coeff
-                    save_model(stoich, library_name=library.name)
 
         save_model(self.dj_km, library_name=library.name)
 
@@ -814,9 +802,22 @@ def save_model(mod, library_name=None):
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
-def make_arrhenius_dj(k, library_name=None):
-    a = Arrhenius_dj(AValue=k.A.value, nValue=k.n.value, EValue=k.Ea.value)
-    save_model(a, library_name=library_name)
+def make_arrhenius_dj(k, reaction, source, library_name=None):
+    min_temp = max_temp = min_pressure = max_pressure = None
+    if k.Tmin is not None: min_temp = k.Tmin.value_si
+    if k.Tmax is not None: max_temp = k.Tmax.value_si
+    if k.Pmin is not None: min_pressure = k.Pmin.value_si
+    if k.Pmin is not None: max_pressure = k.Pmax.value_si
+    a, a_created = Arrhenius_dj.objects.get_or_create(
+        AValue=k.A.value_si, 
+        nValue=k.n.value_si, 
+        EValue=k.Ea.value_si,
+        min_temp=min_temp,
+        max_temp=max_temp,
+        min_pressure=min_pressure,
+        max_pressure=max_pressure
+        )
+    #save_model(a, library_name=library_name)
     return a
 
 
