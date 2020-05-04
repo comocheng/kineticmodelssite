@@ -18,3 +18,8 @@ Products:
 {% for reactant in products %}
     <li><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></li>
 {% endfor %}
+
+Kinetics
+{% for kin in kinetics %}
+    <li><a href="{% url 'kinetics-detail' kin.pk %}">{{kin.source.name}}</a></li>
+{% endfor %}

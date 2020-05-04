@@ -9,3 +9,9 @@
     {% endfor %}
 </ul>
 
+<h1> Kinetics Data: {{kin_type}}</h1>
+<ul>
+    {% for name, val in kineticdata|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>

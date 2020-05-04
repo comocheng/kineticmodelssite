@@ -3,9 +3,10 @@ from functools import lru_cache
 import django_filters
 from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
+from django.db.models.fields import related
 
 from .models import Species, Structure, SpeciesName, KineticModel, Thermo,\
-    Transport, Source, Reaction, Stoichiometry, BaseKineticsData
+    Transport, Source, Reaction, Stoichiometry, BaseKineticsData, Kinetics
 
 
 class BaseView(TemplateView):
@@ -139,14 +140,31 @@ class ReactionDetail(DetailView):
         context['reaction'] = reaction
         context['reactants'] = reaction.reactants()
         context['products'] = reaction.products()
+        try:
+            context['kinetics'] = reaction.kinetics_set.all()
+        except:
+            context['kinetics'] = None
         return context
 
 class KineticsDetail(DetailView):
-    model = BaseKineticsData
+    model = Kinetics
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        #kinetic_model = KineticModel.objects.get(source=source)
-        context['kinetics'] = kinetics
+        kineticdata = None
+        for kin_type in ['arrhenius', 'arrheniusep', 'chebyshev', 'lindemann', 'multiarrhenius', 'multipdeparrhenius', 'pdeparrhenius', 'thirdbody', 'troe']:
+            try:
+                kineticdata = eval(f'kinetics.basekineticsdata.{kin_type}')
+                break
+            except:
+                continue
+        try:
+            context['kinetics'] = kinetics
+            context['kin_type'] = kin_type
+            context['kineticdata'] = kineticdata
+        except: 
+            context['kinetics'] = None
+            context['kin_type'] = None
+            context['kineticdata'] = None
         return context
