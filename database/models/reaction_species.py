@@ -100,7 +100,20 @@ class Reaction(models.Model):
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        #reaction.sort()
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
+        return reaction
+
+    def reverse_stoich_species(self):
+        """
+        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        """
+        if not self.isReversible:
+            # maybe define reaction exception so it's more specific?
+            raise Exception('This reaction is not reversible')
+        reaction = []
+        for stoich in self.stoichiometry_set.all():
+            reaction.append((-1.0 * stoich.stoichiometry, stoich.species))
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
         return reaction
 
     def products(self):
