@@ -705,17 +705,28 @@ class KineticsLibraryImporter(Importer):
                 dj_kinetics_data.units = kinetics.kunits
 
             elif isinstance(kinetics, ThirdBody):
+                efficiencies = {}
+                for mol, eff in kinetics.efficiencies.items():
+                    for species in chemkinReaction.reactants + chemkinReaction.products:
+                        if species.is_isomorphic(mol):
+                            efficiencies[species.label] = eff
+
                 dj_kinetics_data = ThirdBody_dj()  # make the django model instance
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
                 save_model(dj_kinetics_data, library_name=library.name)
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
 
             elif isinstance(kinetics, Lindemann):
+                efficiencies = {}
+                for mol, eff in kinetics.efficiencies.items():
+                    for species in chemkinReaction.reactants + chemkinReaction.products:
+                        if species.is_isomorphic(mol):
+                            efficiencies[species.label] = eff
                 dj_kinetics_data = Lindemann_dj()  # make the django model instance
-                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrhenius_high, library_name=library.name)
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
                 save_model(dj_kinetics_data, library_name=library.name)
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
 
             elif isinstance(kinetics, Troe):
                 dj_kinetics_data = Troe_dj()  # make the django model instance
@@ -837,16 +848,17 @@ def make_pdep_arrhenius_dj(k, library_name=None):
 
 # Converts the efficiency dictionary into a through relationship for the model
 # BaseKineticsData (Django), Kinetics (RMG) ->
-def make_efficiencies(dj_k, k, library_name=None):
-    for species_string, efficiency_number in k.efficiencies:
+def make_efficiencies(dj_k, efficiencies, kinetic_model, library_name=None):
+    for species_string, efficiency_number in efficiencies.items():
+        print(species_string)
         # make the django model instance for efficiency
         dj_efficiency = Efficiency()
         # Add foreign key to Kinetics Data
         dj_efficiency.kinetics_data = dj_k
         # Search for Species by "species" string
-        dj_species = Structure.objects.get_or_create(some_attribute=species_string)  # TODO -- use KineticModel based search
+        dj_speciesname = SpeciesName.objects.get(name__exact=species_string, kineticModel=kinetic_model)  # TODO -- use KineticModel based search
         # Add foreign key to the species
-        dj_efficiency.species = dj_species
+        dj_efficiency.species = dj_speciesname.species
         dj_efficiency.efficiency = efficiency_number
         save_model(dj_efficiency, library_name=library_name)
     save_model(dj_k, library_name=library_name)
