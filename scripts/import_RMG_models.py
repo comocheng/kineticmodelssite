@@ -681,16 +681,16 @@ class KineticsLibraryImporter(Importer):
                 raise NotImplementedError
 
             elif isinstance(kinetics, MultiArrhenius):
-                dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
+                dj_kinetics_data = MultiArrhenius_dj.objects.create()  # make the django model instance
                 # No atomic data (numbers, strings, etc.,)
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                 for simple_arr in kinetics.arrhenius:
                     # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
                     # simple_arr is one of those Arrhenius objects
-                    dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
+                    dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source))
 
             elif isinstance(kinetics, MultiPDepArrhenius):
-                dj_kinetics_data = MultiPDepArrhenius_dj.create()  # make the django model instance
+                dj_kinetics_data = MultiPDepArrhenius_dj.objects.create()  # make the django model instance
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                 for pdep_arr in kinetics.arrhenius:
                     # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
