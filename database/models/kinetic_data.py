@@ -16,7 +16,7 @@ class Kinetics(models.Model):
     in PrIMe, which contain:
     """
     rkPrimeID = models.CharField(blank=True, max_length=10)
-    reaction = models.OneToOneField(Reaction, on_delete=models.CASCADE)
+    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     relativeUncertainty = models.FloatField(blank=True, null=True)
     isReverse = models.BooleanField(
