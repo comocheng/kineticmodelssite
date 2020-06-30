@@ -670,9 +670,7 @@ class KineticsLibraryImporter(Importer):
             elif isinstance(kinetics, Arrhenius):
                 dj_kinetics_data = make_arrhenius_dj(
                     kinetics, 
-                    library_name=library.name, 
-                    reaction=matched_reaction, 
-                    source=self.dj_km.source)  # use function to make model instance
+                    library_name=library.name)  # use function to make model instance
 
             elif isinstance(kinetics, ArrheniusEP):
                 raise NotImplementedError
@@ -684,7 +682,7 @@ class KineticsLibraryImporter(Importer):
                 for simple_arr in kinetics.arrhenius:
                     # kinetics.arrhenius is the list of Arrhenius objects owned by MultiArrhenius object in entry
                     # simple_arr is one of those Arrhenius objects
-                    dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source))
+                    dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
 
             elif isinstance(kinetics, MultiPDepArrhenius):
                 dj_kinetics_data = MultiPDepArrhenius_dj.objects.create()  # make the django model instance
@@ -697,19 +695,20 @@ class KineticsLibraryImporter(Importer):
                 make_pdep_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
             elif isinstance(kinetics, Chebyshev):
-                dj_kinetics_data = Chebyshev_dj()  # make the django model instance
+                dj_kinetics_data = Chebyshev_dj.objects.create()  # make the django model instance
                 dj_kinetics_data.coefficient_matrix = pickle.dumps(kinetics.coeffs)
                 dj_kinetics_data.units = kinetics.kunits
 
             elif isinstance(kinetics, ThirdBody):
+                continue
                 efficiencies = {}
                 for mol, eff in kinetics.efficiencies.items():
                     for species in chemkinReaction.reactants + chemkinReaction.products:
                         if species.is_isomorphic(mol):
                             efficiencies[species.label] = eff
 
-                dj_kinetics_data = ThirdBody_dj()  # make the django model instance
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
+                dj_kinetics_data = ThirdBody_dj.objects.create()  # make the django model instance
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
                 save_model(dj_kinetics_data, library_name=library.name)
                 make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
 
@@ -719,23 +718,27 @@ class KineticsLibraryImporter(Importer):
                     for species in chemkinReaction.reactants + chemkinReaction.products:
                         if species.is_isomorphic(mol):
                             efficiencies[species.label] = eff
-                dj_kinetics_data = Lindemann_dj()  # make the django model instance
-                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, reaction=matched_reaction, source=self.dj_km.source)
+                dj_kinetics_data = Lindemann_dj.objects.create()  # make the django model instance
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
                 save_model(dj_kinetics_data, library_name=library.name)
                 make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
 
             elif isinstance(kinetics, Troe):
+                continue
                 dj_kinetics_data = Troe_dj()  # make the django model instance
                 # Add atomic attributes
-                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name, )
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, )
                 dj_kinetics_data.alpha = kinetics.alpha
-                dj_kinetics_data.t1 = kinetics.T1.value
-                dj_kinetics_data.t1 = kinetics.T2.value
-                dj_kinetics_data.t1 = kinetics.T3.value
+                if kinetics.T1:
+                    dj_kinetics_data.t1 = kinetics.T1.value_si 
+                if kinetics.T2:
+                    dj_kinetics_data.t2 = kinetics.T2.value_si 
+                if kinetics.T3:
+                    dj_kinetics_data.t3 = kinetics.T3.value_si 
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, kinetics, self.dj_km, library_name=library.name)
             else:
                 logger.error("Library {} Cannot identify this type of Kinetics Data: "
                                 "{}".format(library.name, kinetics.__str__()))
@@ -762,9 +765,12 @@ class KineticsLibraryImporter(Importer):
                 dj_kinetics_data.max_pressure = kinetics.Pmax.value
             except:
                 pass
-
-            # Save the Kinetics Data once its internal attributes are complete
-            save_model(dj_kinetics_data, library_name=library.name)
+            try:
+                # Save the Kinetics Data once its internal attributes are complete
+                save_model(dj_kinetics_data, library_name=library.name)
+            except:
+                logger.error(f'Could not save kinetic data for {chemkinReaction}')
+                continue
 
 
             # Make Kinetics object to link the Kinetics Data to the Kinetic Model
@@ -808,7 +814,7 @@ def save_model(mod, library_name=None):
 
 # Converts a dictionary entry Arrhenius to a Django Model Instance
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
-def make_arrhenius_dj(k, reaction, source, library_name=None):
+def make_arrhenius_dj(k, library_name=None):
     min_temp = max_temp = min_pressure = max_pressure = None
     if k.Tmin is not None: min_temp = k.Tmin.value_si
     if k.Tmax is not None: max_temp = k.Tmax.value_si
@@ -833,12 +839,12 @@ def make_pdep_arrhenius_dj(k, library_name=None):
     dj_k = PDepArrhenius_dj()  # make the django model instance
     # No atomic data (numbers, strings, etc.,)
     save_model(dj_k, library_name=library_name)
-    for index in range(len(k.pressures)):
+    for index, pressure in enumerate(k.pressures.value):
         # We use the index because the two lists for Pressure and Arrhenius are ordered together
         dj_pressure = Pressure()
         dj_pressure.pdep_arrhenius = dj_k
-        dj_pressure.pressure = k.pressures[index]
-        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index], library_name=library.name)
+        dj_pressure.pressure = pressure
+        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index], library_name=library_name)
         save_model(dj_pressure, library_name=library_name)
     return save_model(dj_k, library_name=library_name)
 
