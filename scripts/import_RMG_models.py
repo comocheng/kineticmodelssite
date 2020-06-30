@@ -616,17 +616,17 @@ class KineticsLibraryImporter(Importer):
                 if len(reaction_list) == 0:
                     new_reaction = True
                     matched_reaction = Reaction.objects.create()
-                else:
-                    found_match = False
+                else: 
                     for reaction in reaction_list:
-                        if len(stoichiometry_list) != len(reaction.stoich_species()):
-                            logger.info('Lengths don\'t match, continuing')
-                            continue # Not the same number of species in a reaction
-
-                        if stoichiometry_list == reaction.stoich_species():
+                        found_match = False
+                        rmg_reaction = reaction.to_rmg()
+                        if rmg_reaction.is_isomorphic(chemkinReaction, either_direction=chemkinReaction.reversible):
+                            print('Matching Reactions')
+                            print(rmg_reaction.__repr__())
+                            print()
+                            print(chemkinReaction.__repr__())
                             found_match = True
-                        elif chemkinReaction.reversible and (stoichiometry_list == reaction.reverse_stoich_species()):
-                            found_match = True
+                            logger.info(f'Matched {chemkinReaction} to {rmg_reaction}')
 
                         if found_match:
                             print(f'Matched {chemkinReaction} to {reaction}')
@@ -637,14 +637,11 @@ class KineticsLibraryImporter(Importer):
                         logger.info('Could not match reaction to existing reactions in our database, creating a new entry')
                         new_reaction = True
                         matched_reaction = Reaction.objects.create()
-                #except:
-                #    logger.error(f'Couldn\'t add {chemkinReaction} to the database')
-                #    continue
                 if not matched_reaction:
                     logger.warning(f'A matched reaction was not found or created for {chemkinReaction}, skipping for now...')
                     continue
             except Exception as e:
-                print(e.message)
+                print(e)
                 continue 
 
             if new_reaction:
