@@ -43,6 +43,7 @@ class BaseKineticsData(models.Model):
                                      help_text='units: Pa', null=True, blank=True)
 
 
+
 class KineticsData(BaseKineticsData):
     temp_array = models.TextField()  # JSON might be appropriate here
     rate_coefficients = models.TextField()  # JSON also appropriate here
@@ -100,12 +101,12 @@ class Chebyshev(BaseKineticsData):
 
 
 class ThirdBody(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, on_delete=models.CASCADE)  # Cannot be ArrheniusEP according to Dr. West
+    low_arrhenius = models.ForeignKey(Arrhenius,null=True, blank=True, on_delete=models.CASCADE)  # Cannot be ArrheniusEP according to Dr. West
 
 
 class Lindemann(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
-    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
+    low_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
+    high_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
     # Cannot be ArrheniusEP according to Dr. West
 
     #alpha = models.FloatField() # these are not appearing in an rmg arrhenius object 
@@ -116,8 +117,8 @@ class Lindemann(BaseKineticsData):
 
 
 class Troe(BaseKineticsData):
-    low_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
-    high_arrhenius = models.ForeignKey(Arrhenius, related_name="+", on_delete=models.CASCADE)
+    low_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
+    high_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
     alpha = models.FloatField()
     t1 = models.FloatField()
     t2 = models.FloatField()
@@ -125,7 +126,7 @@ class Troe(BaseKineticsData):
 
 
 class Pressure(models.Model):
-    arrhenius = models.ForeignKey(Arrhenius, on_delete=models.CASCADE)
+    arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, on_delete=models.CASCADE)
     pdep_arrhenius = models.ForeignKey(PDepArrhenius, on_delete=models.CASCADE)
     pressure = models.FloatField()
 
