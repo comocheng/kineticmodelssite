@@ -170,8 +170,8 @@ class SourceImporter(Importer):
             logger.error(f'Could not find a DOI in the souce.txt file for {path}')
             matched_doi = None
         elif len(matched_set) > 1:
-            logger.error(f'Found more than one DOI in the souce.txt file for {path}')
-            matched_doi = None
+            logger.warning(f'Found more than one DOI in the souce.txt file for {path}, choosing the first')
+            matched_doi = matched_list[0]
         else:
             matched_doi = matched_list[0]
 
