@@ -1,4 +1,7 @@
 from django.db import models
+import rmgpy.molecule 
+import rmgpy.species
+import rmgpy.reaction
 
 
 class Species(models.Model):
@@ -24,10 +27,13 @@ class Species(models.Model):
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
-    def toRMG(self):
-        # This code will output a species in a format acceptable by RMG
-        # *** Output will be rmg_object ***
-        pass
+    def to_rmg(self):
+        if self.inchi:
+            species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
+            species.generate_resonance_structures()
+            return species
+        else:
+            return None
 
     class Meta:
         ordering = ('sPrimeID',)
@@ -66,6 +72,12 @@ class Structure(models.Model):
 
     def __str__(self):
         return "{s.adjacencyList}".format(s=self)
+
+    def to_rmg(self):
+        if self.smiles:
+            return rmgpy.molecule.Molecule(smiles=self.smiles)
+        else:
+            return None
 
 
 class Reaction(models.Model):
@@ -149,6 +161,17 @@ class Reaction(models.Model):
                 raise NotImplementedError
             specs.extend([s] * int(-n))
         return specs
+
+    def to_rmg(self):
+        rmg_reactants = []
+        rmg_products = []
+
+        for reactant in self.reactants():
+            rmg_reactants.append(reactant.to_rmg())
+        for product in self.products():
+            rmg_products.append(product.to_rmg())
+
+        return rmgpy.reaction.Reaction(reactants=rmg_reactants, products=rmg_products, reversible=self.isReversible)
 
     def __str__(self):
         return "{s.id}".format(s=self)
