@@ -35,53 +35,68 @@ import rmgsite
 
 context = None
 
+
 def getGitCommit(modulePath):
     """
     Get git commit hash for given repository path.
     """
-    commit =''
-    date = ''
-    subject = ''
-    body = ''
-    
-    if os.path.exists(os.path.join(modulePath,'..','.git')):
+    commit = ""
+    date = ""
+    subject = ""
+    body = ""
+
+    if os.path.exists(os.path.join(modulePath, "..", ".git")):
         try:
-            lines = subprocess.check_output(['git', 'log',
-                                            '--format=%H%n%cD%n%s%n%b', '-1'],
-                                            cwd=modulePath).splitlines()
+            lines = subprocess.check_output(
+                ["git", "log", "--format=%H%n%cD%n%s%n%b", "-1"], cwd=modulePath
+            ).splitlines()
             commit = lines[0]
             date = lines[1]
             subject = lines[2]
-            body = '\n'.join(lines[3:])
+            body = "\n".join(lines[3:])
         except:
             pass
-        
+
     return commit, date, subject, body
+
 
 def getCommits(request):
     """
     Context processor to return git commits for RMG-Py, 
     RMG-database, and RMG-website.
     """
-    
+
     global context
-    
+
     if not context:
         pyPath = os.path.dirname(rmgpy.__file__)
-        dataPath = rmgpy.settings['database.directory']
+        dataPath = rmgpy.settings["database.directory"]
         webPath = os.path.dirname(rmgsite.__file__)
-        
+
         pyCommit, pyDate, pySubject, pyBody = getGitCommit(pyPath)
         dataCommit, dataDate, dataSubject, dataBody = getGitCommit(dataPath)
         webCommit, webDate, webSubject, webBody = getGitCommit(webPath)
-        
-        pyDateShort = ' '.join(pyDate.split()[1:4])
-        dataDateShort = ' '.join(dataDate.split()[1:4])
-        webDateShort = ' '.join(webDate.split()[1:4])
-        
-        context = {'pc':pyCommit, 'pd':pyDate, 'pds':pyDateShort, 'ps':pySubject, 'pb':pyBody,
-                   'dc':dataCommit, 'dd':dataDate, 'dds':dataDateShort, 'ds':dataSubject, 'db':dataBody,
-                   'wc':webCommit, 'wd':webDate, 'wds':webDateShort, 'ws':webSubject, 'wb':webBody}
-        
-    return context
 
+        pyDateShort = " ".join(pyDate.split()[1:4])
+        dataDateShort = " ".join(dataDate.split()[1:4])
+        webDateShort = " ".join(webDate.split()[1:4])
+
+        context = {
+            "pc": pyCommit,
+            "pd": pyDate,
+            "pds": pyDateShort,
+            "ps": pySubject,
+            "pb": pyBody,
+            "dc": dataCommit,
+            "dd": dataDate,
+            "dds": dataDateShort,
+            "ds": dataSubject,
+            "db": dataBody,
+            "wc": webCommit,
+            "wd": webDate,
+            "wds": webDateShort,
+            "ws": webSubject,
+            "wb": webBody,
+        }
+
+    return context

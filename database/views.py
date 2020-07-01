@@ -5,8 +5,19 @@ from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
 from django.db.models.fields import related
 
-from .models import Species, Structure, SpeciesName, KineticModel, Thermo,\
-    Transport, Source, Reaction, Stoichiometry, BaseKineticsData, Kinetics
+from .models import (
+    Species,
+    Structure,
+    SpeciesName,
+    KineticModel,
+    Thermo,
+    Transport,
+    Source,
+    Reaction,
+    Stoichiometry,
+    BaseKineticsData,
+    Kinetics,
+)
 
 
 class BaseView(TemplateView):
@@ -51,24 +62,43 @@ class ResourcesView(TemplateView):
 
 
 class SpeciesFilter(django_filters.FilterSet):
-    speciesname__name = django_filters.CharFilter(field_name="speciesname", lookup_expr="name", label="Species Name")
-    isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi", label="Isomer InChI")
-    isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES")
-    isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList", label="Structure Adjacency List")
-    isomer__structure__electronicState = django_filters.NumberFilter(field_name="isomer", lookup_expr="structure__electronicState", label="Structure Electronic State")
+    speciesname__name = django_filters.CharFilter(
+        field_name="speciesname", lookup_expr="name", label="Species Name"
+    )
+    isomer__inchi = django_filters.CharFilter(
+        field_name="isomer", lookup_expr="inchi", label="Isomer InChI"
+    )
+    isomer__structure__smiles = django_filters.CharFilter(
+        field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES"
+    )
+    isomer__structure__adjacencyList = django_filters.CharFilter(
+        field_name="isomer",
+        lookup_expr="structure__adjacencyList",
+        label="Structure Adjacency List",
+    )
+    isomer__structure__electronicState = django_filters.NumberFilter(
+        field_name="isomer",
+        lookup_expr="structure__electronicState",
+        label="Structure Electronic State",
+    )
 
     class Meta:
         model = Species
         fields = ["sPrimeID", "formula", "inchi", "cas"]
 
+
 class SourceFilter(django_filters.FilterSet):
-    sourcename_name = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
+    sourcename_name = django_filters.CharFilter(
+        field_name="sourcename", lookup_expr="name", label="Source Name"
+    )
+
     class Meta:
         model = Source
         fields = ["name", "bPrimeID", "publicationYear", "sourceTitle", "doi"]
 
+
 class ReactionFilter(django_filters.FilterSet):
-    #reaction = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
+    # reaction = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
     class Meta:
         model = Reaction
         fields = ["species", "rPrimeID", "isReversible"]
@@ -80,14 +110,12 @@ class SpeciesDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         structures = Structure.objects.filter(isomer__species=self.get_object())
-        context["names"] = (
-            set(self.get_object().speciesname_set.all().values_list("name", flat=True))
+        context["names"] = set(
+            self.get_object().speciesname_set.all().values_list("name", flat=True)
         )
         context["adjlists"] = structures.values_list("adjacencyList", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
-        context["isomer_inchis"] = self.get_object().isomer_set.values_list(
-            "inchi", flat=True
-        )
+        context["isomer_inchis"] = self.get_object().isomer_set.values_list("inchi", flat=True)
         context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
         context["transport_list"] = Transport.objects.filter(species=self.get_object())
 
@@ -104,7 +132,7 @@ class ThermoDetail(DetailView):
         kinetic_model = KineticModel.objects.get(thermo=thermo)
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         context["species"] = thermo.species
-        context['source'] = thermo.source
+        context["source"] = thermo.source
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         return context
 
@@ -120,6 +148,7 @@ class TransportDetail(DetailView):
 
         return context
 
+
 class SourceDetail(DetailView):
     model = Source
 
@@ -127,8 +156,9 @@ class SourceDetail(DetailView):
         context = super().get_context_data(**kwargs)
         source = self.get_object()
         kinetic_model = KineticModel.objects.get(source=source)
-        context['source'] = source
+        context["source"] = source
         return context
+
 
 class ReactionDetail(DetailView):
     model = Reaction
@@ -137,14 +167,15 @@ class ReactionDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
-        #kinetic_model = KineticModel.objects.get()
-        context['reactants'] = reaction.reactants()
-        context['products'] = reaction.products()
+        # kinetic_model = KineticModel.objects.get()
+        context["reactants"] = reaction.reactants()
+        context["products"] = reaction.products()
         try:
-            context['kinetics'] = reaction.kinetics_set.all()
+            context["kinetics"] = reaction.kinetics_set.all()
         except:
-            context['kinetics'] = None
+            context["kinetics"] = None
         return context
+
 
 class KineticsDetail(DetailView):
     model = Kinetics
@@ -156,7 +187,17 @@ class KineticsDetail(DetailView):
         kineticdata = None
         kin_type = None
 
-        for kt in ['arrhenius', 'arrheniusep', 'chebyshev', 'lindemann', 'multiarrhenius', 'multipdeparrhenius', 'pdeparrhenius', 'thirdbody', 'troe']:
+        for kt in [
+            "arrhenius",
+            "arrheniusep",
+            "chebyshev",
+            "lindemann",
+            "multiarrhenius",
+            "multipdeparrhenius",
+            "pdeparrhenius",
+            "thirdbody",
+            "troe",
+        ]:
             try:
                 kineticdata = getattr(kinetics.basekineticsdata, kt)
                 kin_type = kt
@@ -164,7 +205,7 @@ class KineticsDetail(DetailView):
             except AttributeError:
                 continue
 
-        context['kin_type'] = kin_type
-        context['kineticdata'] = kineticdata
+        context["kin_type"] = kin_type
+        context["kineticdata"] = kineticdata
 
         return context
