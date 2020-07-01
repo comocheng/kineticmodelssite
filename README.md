@@ -26,3 +26,17 @@ https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-th
 ## Importing:
 To import RMG models from the importer project
 - python scripts/import_RMG_models.py path/to/your/RMG-models/
+
+## Contributing:
+To start contributing, clone the project and setup a conda environment.
+Then activate the environment and `pip` install the dev requirements:
+
+```pip install -r requirements-dev.txt```
+
+We use [black](https://github.com/psf/black) to format our codebase.
+To format the codebase, `cd` to the project root and run:
+
+```black .```
+
+If you add a `.py` file that you don't want formatted,
+add it to the `tool.black` section of the `pyproject.toml`.
