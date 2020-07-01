@@ -1,21 +1,14 @@
-from functools import lru_cache
-
 import django_filters
-from django.views.generic import TemplateView, DetailView, FormView, ListView
-from django.urls import reverse
-from django.db.models.fields import related
+from django.views.generic import TemplateView, DetailView
 
 from .models import (
     Species,
     Structure,
-    SpeciesName,
     KineticModel,
     Thermo,
     Transport,
     Source,
     Reaction,
-    Stoichiometry,
-    BaseKineticsData,
     Kinetics,
 )
 
@@ -26,39 +19,6 @@ class BaseView(TemplateView):
 
 class IndexView(TemplateView):
     template_name = "index.html"
-
-
-class ResourcesView(TemplateView):
-    template_name = "resources.html"
-
-    @staticmethod
-    def parse_file_name(file_name):
-        name = os.path.splitext(file_name)[0]
-        parts = name.split("_")
-        date = parts[0]
-        date = date[0:4] + "-" + date[4:6] + "-" + date[6:]
-        title = " ".join(parts[1:])
-        title = title.replace("+", " and ")
-
-        return (title, date, file_name)
-
-    @property
-    @lru_cache()
-    def presentations(self):
-        pres_list = []
-        folder = os.path.join(settings.STATIC_ROOT, "presentations")
-        if os.path.isdir(folder):
-            for root, dirs, files in os.walk(folder):
-                for file in files:
-                    parsed = self.parse_file_name(file_name)
-                    pres_list.append(parsed)
-
-        return pres_list
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["presentations"] = self.presentations
-        return context
 
 
 class SpeciesFilter(django_filters.FilterSet):
@@ -98,7 +58,6 @@ class SourceFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
-    # reaction = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
     class Meta:
         model = Reaction
         fields = ["species", "rPrimeID", "isReversible"]
@@ -155,8 +114,9 @@ class SourceDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         source = self.get_object()
-        kinetic_model = KineticModel.objects.get(source=source)
+        kinetic_models = source.kineticmodel_set.all()
         context["source"] = source
+        context["kinetic_models"] = kinetic_models
         return context
 
 
@@ -167,13 +127,10 @@ class ReactionDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
-        # kinetic_model = KineticModel.objects.get()
         context["reactants"] = reaction.reactants()
         context["products"] = reaction.products()
-        try:
-            context["kinetics"] = reaction.kinetics_set.all()
-        except:
-            context["kinetics"] = None
+        context["kinetics"] = reaction.kinetics_set.all()
+
         return context
 
 
