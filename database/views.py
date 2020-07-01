@@ -14,7 +14,7 @@ from .models import (
 
 
 class BaseView(TemplateView):
-    template_name = "base.html"
+    template_name = "database/base.html"
 
 
 class IndexView(TemplateView):

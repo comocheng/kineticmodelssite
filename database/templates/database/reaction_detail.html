@@ -1,6 +1,8 @@
+{% extends "database/base.html" %}
 
 {% load utils %}
 
+{% block content %}
 <h1> Reaction Detail</h1>
 
 <ul>
@@ -8,18 +10,18 @@
     <li><b>{{ name }}: </b> {{ val }}</li>
     {% endfor %}
 </ul>
-
-Reactants: 
-{% for reactant in reactants %}
-    <li><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></li>
-{% endfor %}
-
-Products:
-{% for reactant in products %}
-    <li><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></li>
-{% endfor %}
-
-Kinetics
-{% for kin in kinetics %}
-    <li><a href="{% url 'kinetics-detail' kin.pk %}">{{kin.source.name}}</a></li>
-{% endfor %}
+<dl>
+    <dt>Reactants</dt>
+    {% for reactant in reactants %}
+        <dd><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></dd>
+    {% endfor %}
+    <dt>Products</dt>
+    {% for reactant in products %}
+        <dd><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></dd>
+    {% endfor %}
+    <dt>Kinetics</dt>
+    {% for kin in kinetics %}
+        <dd><a href="{% url 'kinetics-detail' kin.pk %}">{{kin.source.name}}</a></dd>
+    {% endfor %}
+</dl>
+{% endblock %}

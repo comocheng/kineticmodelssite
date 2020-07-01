@@ -1,5 +1,7 @@
+{% extends "database/base.html" %}
 
 {% load utils %}
+
 <style>
     table, th, td {
       border: 1px solid black;
@@ -7,28 +9,29 @@
     }
     th, td {
       padding: 5px;
-      text-align: left;    
+      text-align: left;
     }
 
 </style>
 
+{% block content %}
 <h1><a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> | <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a>
     Thermo Data</h1>
 
-<h2>Bibliographic Information</h2>
-<ul>
-    <li><b>Species:</b> <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a></li>
-    <li><b>Source:</b> <a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> </li>
-    <li><b>PrIMe ID:</b> {{ thermo.prime_id }}</li>
-</ul>
+    <h2>Bibliographic Information</h2>
+    <ul>
+        <li><b>Species:</b> <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a></li>
+        <li><b>Source:</b> <a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> </li>
+        <li><b>PrIMe ID:</b> {{ thermo.prime_id }}</li>
+    </ul>
 
 
-<h2>Thermodynamic Information</h2>
+    <h2>Thermodynamic Information</h2>
 
-<h3>NASA Polynomials</h3>
-<table>
-    <tr>
-        <td></td>
+    <h3>NASA Polynomials</h3>
+    <table>
+        <tr>
+            <td></td>
         <td>Minimum Temperature (K)</td>
         <td>Maximum Temperature (K)</td>
         <td>Coefficient 1</td>
@@ -72,3 +75,4 @@
     <li><b>Reference Pressure:</b> {{ themo.reference_pressure }} Pa</li>
     <li><b>Heat of Formation</b>: {{ thermo.dHf }} J/mol</li>
 </ul>
+{% endblock %}

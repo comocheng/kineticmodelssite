@@ -1,6 +1,8 @@
+{% extends "database/base.html" %}
 
 {% load utils %}
 
+{% block content %}
 <h1>{{ source.sourceTitle }}</h1>
 
 <ul>
@@ -8,3 +10,9 @@
     <li><b>{{ name }}: </b> {{ val }}</li>
     {% endfor %}
 </ul>
+<h2>Kinetic Models</h2>
+{% for kinetic_model in kinetic_models %}
+    <li><a href="{% url 'kinetics-detail' kinetic_model.pk %}">{{kinetic_model.modelName}}</a></li>
+{% endfor %}
+
+{% endblock %}
