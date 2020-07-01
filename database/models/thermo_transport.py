@@ -1,5 +1,4 @@
 from typing import NamedTuple, List
-from functools import lru_cache
 from math import log
 
 from django.db import models
@@ -111,7 +110,7 @@ class Thermo(models.Model):
 
     def entropy(self, T, poly):
         T2 = T * T
-        T4 = T2 * t2
+        T4 = T2 * T2
 
         if poly == 1:
             return (
@@ -161,7 +160,7 @@ class Thermo(models.Model):
 
     @property
     def poly1(self):
-        return PolynomialData(
+        return self.PolynomialData(
             heat_capacities=self.heat_capacities(1),
             enthalpies=self.enthalpies(1),
             entropies=self.entropies(1),
@@ -170,7 +169,7 @@ class Thermo(models.Model):
 
     @property
     def poly2(self):
-        return PolynomialData(
+        return self.PolynomialData(
             heat_capacities=self.heat_capacities(2),
             enthalpies=self.enthalpies(2),
             entropies=self.entropies(2),
