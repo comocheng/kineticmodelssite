@@ -21,7 +21,7 @@
     {% endfor %}
     <dt>Kinetics</dt>
     {% for kin in kinetics %}
-        <dd><a href="{% url 'kinetics-detail' kin.pk %}">{{kin.source.name}}</a></dd>
+        <dd><a href="{% url 'source-detail' kin.source.pk %}">{{kin.source.name}}</a></dd>
     {% endfor %}
 </dl>
 {% endblock %}
