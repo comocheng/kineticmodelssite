@@ -4,10 +4,6 @@ A django site for kinetic models
 
 ## Setup
 Install Dependencies:
-- Install pipenv: https://pipenv-es.readthedocs.io/es/stable/#install-pipenv-today
-- ```pipenv install --three```
-
-To use Anaconda instead:
 - Start with the standard RMG environment, then add these packages:
 - ```conda install django django-model-utils django-filter```
 
