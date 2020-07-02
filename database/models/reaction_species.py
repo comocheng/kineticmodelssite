@@ -18,10 +18,10 @@ class Species(models.Model):
     names (very optional)
     """
 
-    sPrimeID = models.CharField("PrIMe ID", max_length=9)
+    prime_id = models.CharField("PrIMe ID", max_length=9)
     formula = models.CharField(blank=True, max_length=50)
     inchi = models.CharField("InChI", blank=True, max_length=500)
-    cas = models.CharField("CAS Registry Number", blank=True, max_length=400)
+    cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
     def __str__(self):
         return "{s.id} {s.formula!s}".format(s=self)
@@ -37,7 +37,7 @@ class Species(models.Model):
             return None
 
     class Meta:
-        ordering = ("sPrimeID",)
+        ordering = ("prime_id",)
         verbose_name_plural = "Species"
 
 
@@ -68,11 +68,11 @@ class Structure(models.Model):
 
     isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
     smiles = models.CharField("SMILES", blank=True, max_length=500)
-    adjacencyList = models.TextField("Adjacency List")
-    electronicState = models.IntegerField("Electronic State")
+    adjacency_list = models.TextField("Adjacency List")
+    electronic_state = models.IntegerField("Electronic State")
 
     def __str__(self):
-        return "{s.adjacencyList}".format(s=self)
+        return "{s.adjacency_list}".format(s=self)
 
     def to_rmg(self):
         if self.adjacencyList:
@@ -102,8 +102,8 @@ class Reaction(models.Model):
     #: The reaction has many species, linked through Stoichiometry table
     species = models.ManyToManyField(Species, through="Stoichiometry")
     #: The PrIMe ID, if it is known
-    rPrimeID = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
-    isReversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
+    prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
+    reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
 
     def stoich_species(self):
         """
@@ -119,7 +119,7 @@ class Reaction(models.Model):
         """
         Returns a list of tuples like [(-1, reactant), (+1, product)]
         """
-        if not self.isReversible:
+        if not self.reversible:
             # maybe define reaction exception so it's more specific?
             raise Exception("This reaction is not reversible")
         reaction = []
@@ -172,14 +172,14 @@ class Reaction(models.Model):
             rmg_products.append(product.to_rmg())
 
         return rmgpy.reaction.Reaction(
-            reactants=rmg_reactants, products=rmg_products, reversible=self.isReversible
+            reactants=rmg_reactants, products=rmg_products, reversible=self.reversible
         )
 
     def __str__(self):
         return "{s.id}".format(s=self)
 
     class Meta:
-        ordering = ("rPrimeID",)
+        ordering = ("prime_id",)
 
 
 class Stoichiometry(models.Model):

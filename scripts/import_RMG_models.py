@@ -6,7 +6,7 @@ Import the contents of the RMG-models repository.
 
 Run this like so:
  $  python import_RMG_models.py /path/to/local/RMG-models/
- 
+
 It should dig through all the models and import them into
 the Django database.
 """
@@ -142,10 +142,10 @@ class Importer(object):
         :return: dj_km, the django instance of the KineticModel
         """
         assert self.name
-        dj_km, km_created = KineticModel.objects.get_or_create(rmgImportPath=self.name)
+        dj_km, km_created = KineticModel.objects.get_or_create(rmg_import_path=self.name)
         if km_created:
-            dj_km.modelName = self.name
-            dj_km.additionalInfo = "Created while importing RMG-models"
+            dj_km.model_name = self.name
+            dj_km.info = "Created while importing RMG-models"
         # Save that instance
         return save_model(dj_km)
 
@@ -236,28 +236,28 @@ class SourceImporter(Importer):
                 year, month, day = date_parts[0]
             else:
                 year, month, day = None, None, None
-        setattr(dj_source, "publicationYear", year)
+        setattr(dj_source, "publication_year", year)
 
         # setting the publication title
-        sourceTitle = ref.get("title")
-        if isinstance(sourceTitle, list):
-            sourceTitle = sourceTitle[0]
-        setattr(dj_source, "sourceTitle", sourceTitle)
+        source_title = ref.get("title")
+        if isinstance(source_title, list):
+            source_title = source_title[0]
+        setattr(dj_source, "source_title", source_title)
 
         # setting the jounral name
-        journalName = ref.get("short-container-title")
-        if isinstance(journalName, list):
-            journalName = journalName[0]
-        setattr(dj_source, "journalName", journalName)
+        journal_name = ref.get("short-container-title")
+        if isinstance(journal_name, list):
+            journal_name = journal_name[0]
+        setattr(dj_source, "journal_name", journal_name)
 
         # setting the jounral volume nuber
-        journalVolumeNumber = ref.get("volume")
-        logger.info(journalVolumeNumber)
-        setattr(dj_source, "journalVolumeNumber", journalVolumeNumber)
+        journal_volume_number = ref.get("volume")
+        logger.info(journal_volume_number)
+        setattr(dj_source, "journal_volume_number", journal_volume_number)
 
         # settign the page numbers
-        pageNumbers = ref.get("page")
-        setattr(dj_source, "pageNumbers", pageNumbers)
+        page_numbers = ref.get("page")
+        setattr(dj_source, "page_numbers", page_numbers)
         save_model(dj_source, library_name=self.name)
         logger.info(f"The reference looks like this:\n{dj_source!r}")
 
@@ -308,7 +308,7 @@ class SourceImporter(Importer):
 
     def import_authorship(self):
         """
-        A method to import the authorship, the thing that connects the authors 
+        A method to import the authorship, the thing that connects the authors
         the the source
         """
 
@@ -392,18 +392,18 @@ class ThermoLibraryImporter(Importer):
 
             # Search for (resonance) Structure matching the SMILES
             dj_structure, structure_created = Structure.objects.get_or_create(
-                smiles=smiles, electronicState=molecule.multiplicity, isomer=dj_isomer
+                smiles=smiles, electronic_state=molecule.multiplicity, isomer=dj_isomer
             )
 
             if structure_created:
                 logger.info(f"Made new Structure for {smiles} {molecule.multiplicity}")
-                dj_structure.adjacencyList = molecule.to_adjacency_list()
+                dj_structure.adjacency_list = molecule.to_adjacency_list()
                 save_model(dj_structure, library_name=library.name)
             else:
                 logger.info(f"Found existing Structure for {smiles} {molecule.multiplicity}")
-                dj_mol = Molecule().from_adjacency_list(dj_structure.adjacencyList)
+                dj_mol = Molecule().from_adjacency_list(dj_structure.adjacency_list)
                 assert dj_mol.is_isomorphic(molecule)
-                # assert dj_structure.adjacencyList == molecule.to_adjacency_list(), f"{dj_structure.adjacencyList}\n is not\n{speciesName}\n{molecule.to_adjacency_list()}\nwhich had SMILES={smiles}"
+                # assert dj_structure.adjacency_list == molecule.to_adjacency_list(), f"{dj_structure.adjacency_list}\n is not\n{speciesName}\n{molecule.to_adjacency_list()}\nwhich had SMILES={smiles}"
                 # assert dj_isomer == dj_structure.isomer, f"{dj_isomer.inchi} not equal {dj_structure.isomer.inchi}"
 
             # Find a Species for the Structure (eg. from Prime) else make one
@@ -445,7 +445,7 @@ class ThermoLibraryImporter(Importer):
 
                 # Create the join between Species and KineticModel through a SpeciesName
                 dj_speciesName, species_name_created = SpeciesName.objects.get_or_create(
-                    species=dj_species, kineticModel=self.dj_km
+                    species=dj_species, kinetic_model=self.dj_km
                 )
                 dj_speciesName.name = speciesName
                 save_model(dj_speciesName, library_name=library.name)
@@ -575,7 +575,7 @@ class ThermoLibraryImporter(Importer):
             save_model(dj_thermo, library_name=library.name)
 
             dj_thermo_comment, comment_created = ThermoComment.objects.get_or_create(
-                thermo=dj_thermo, kineticModel=self.dj_km
+                thermo=dj_thermo, kinetic_model=self.dj_km
             )
             if comment_created:
                 setattr(dj_thermo_comment, "comment", self.name)
@@ -660,7 +660,7 @@ class KineticsLibraryImporter(Importer):
                 for species in chemkinReaction.reactants:
                     name = species.label
                     dj_speciesname = SpeciesName.objects.get(
-                        kineticModel=self.dj_km, name__exact=name
+                        kinetic_model=self.dj_km, name__exact=name
                     )
                     dj_species = dj_speciesname.species
                     stoichiometries["forward"][dj_species] -= 1
@@ -668,7 +668,7 @@ class KineticsLibraryImporter(Importer):
                 for species in chemkinReaction.products:
                     name = species.label
                     dj_speciesname = SpeciesName.objects.get(
-                        kineticModel=self.dj_km, name__exact=name
+                        kinetic_model=self.dj_km, name__exact=name
                     )
                     dj_species = dj_speciesname.species
                     stoichiometries["reverse"][dj_species] += 1
@@ -684,7 +684,7 @@ class KineticsLibraryImporter(Importer):
                 stoichiometry_list, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0])
             )
 
-            reaction_list = Reaction.objects.filter(isReversible__exact=chemkinReaction.reversible)
+            reaction_list = Reaction.objects.filter(reversible__exact=chemkinReaction.reversible)
             for _, species in stoichiometry_list:
                 reaction_list = reaction_list.filter(species=species)
 
@@ -908,7 +908,7 @@ class KineticsLibraryImporter(Importer):
 
             # Link the kinetics object to self.dj_km through kinetics comment
             dj_kinetics_comment, comment_created = KineticsComment.objects.get_or_create(
-                kinetics=dj_kinetics_object, kineticModel=self.dj_km
+                kinetics=dj_kinetics_object, kinetic_model=self.dj_km
             )
             save_model(dj_kinetics_comment, library_name=library.name)
 
@@ -949,9 +949,9 @@ def make_arrhenius_dj(k, library_name=None):
     if k.Pmin is not None:
         max_pressure = k.Pmax.value_si
     a, a_created = Arrhenius_dj.objects.get_or_create(
-        AValue=k.A.value_si,
-        nValue=k.n.value_si,
-        EValue=k.Ea.value_si,
+        a_value=k.A.value_si,
+        n_value=k.n.value_si,
+        e_value=k.Ea.value_si,
         min_temp=min_temp,
         max_temp=max_temp,
         min_pressure=min_pressure,
@@ -988,7 +988,7 @@ def make_efficiencies(dj_k, efficiencies, kinetic_model, library_name=None):
         dj_efficiency.kinetics_data = dj_k
         # Search for Species by "species" string
         dj_speciesname = SpeciesName.objects.get(
-            name__exact=species_string, kineticModel=kinetic_model
+            name__exact=species_string, kinetic_model=kinetic_model
         )  # TODO -- use KineticModel based search
         # Add foreign key to the species
         dj_efficiency.species = dj_speciesname.species

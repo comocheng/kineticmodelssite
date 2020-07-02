@@ -187,17 +187,17 @@ class Transport(models.Model):
 
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    trPrimeID = models.CharField(blank=True, max_length=10)
+    prime_id = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
-    potentialWellDepth = models.FloatField(
+    potential_well_depth = models.FloatField(
         "Potential Well Depth", blank=True, help_text="units: K", default=0.0
     )
-    collisionDiameter = models.FloatField(
+    collision_diameter = models.FloatField(
         "Collision Diameter", blank=True, help_text="units: Angstroms", default=0.0
     )
-    dipoleMoment = models.FloatField(blank=True, help_text="units: Debye", default=0.0)
+    dipole_moment = models.FloatField(blank=True, help_text="units: Debye", default=0.0)
     polarizability = models.FloatField(blank=True, help_text="units: cubic Angstroms", default=0.0)
-    rotationalRelaxation = models.FloatField("Rotational Relaxation", blank=True, default=0.0)
+    rotational_relaxation = models.FloatField("Rotational Relaxation", blank=True, default=0.0)
 
     def __str__(self):
         return f"{self.id} {self.species}"

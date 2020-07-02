@@ -16,11 +16,11 @@ class Kinetics(models.Model):
     in PrIMe, which contain:
     """
 
-    rkPrimeID = models.CharField(blank=True, max_length=10)
+    prime_id = models.CharField(blank=True, max_length=10)
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
-    relativeUncertainty = models.FloatField(blank=True, null=True)
-    isReverse = models.BooleanField(
+    relative_uncertainty = models.FloatField(blank=True, null=True)
+    reverse = models.BooleanField(
         default=False, help_text="Is this the rate for the reverse reaction?"
     )
 
@@ -62,14 +62,14 @@ class Arrhenius(BaseKineticsData):
     bibliography
     """
 
-    AValue = models.FloatField(default=0.0)
-    AValueUncertainty = models.FloatField(blank=True, null=True)
-    nValue = models.FloatField(default=0.0)
-    EValue = models.FloatField(default=0.0)
-    EValueUncertainty = models.FloatField(blank=True, null=True)
+    a_value = models.FloatField(default=0.0)
+    a_value_uncertainty = models.FloatField(blank=True, null=True)
+    n_value = models.FloatField(default=0.0)
+    e_value = models.FloatField(default=0.0)
+    e_value_uncertainty = models.FloatField(blank=True, null=True)
 
     def __str__(self):
-        return "{s.id} with A={s.AValue:g} n={s.nValue:g} E={s.EValue:g}".format(s=self)
+        return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
 
     class Meta:
         verbose_name_plural = "Arrhenius Kinetics"

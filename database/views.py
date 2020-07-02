@@ -31,20 +31,20 @@ class SpeciesFilter(django_filters.FilterSet):
     isomer__structure__smiles = django_filters.CharFilter(
         field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES"
     )
-    isomer__structure__adjacencyList = django_filters.CharFilter(
+    isomer__structure__adjacency_list = django_filters.CharFilter(
         field_name="isomer",
-        lookup_expr="structure__adjacencyList",
+        lookup_expr="structure__adjacency_list",
         label="Structure Adjacency List",
     )
-    isomer__structure__electronicState = django_filters.NumberFilter(
+    isomer__structure__electronic_state = django_filters.NumberFilter(
         field_name="isomer",
-        lookup_expr="structure__electronicState",
+        lookup_expr="structure__electronic_state",
         label="Structure Electronic State",
     )
 
     class Meta:
         model = Species
-        fields = ["sPrimeID", "formula", "inchi", "cas"]
+        fields = ["prime_id", "formula", "inchi", "cas_number"]
 
 
 class SourceFilter(django_filters.FilterSet):
@@ -54,13 +54,13 @@ class SourceFilter(django_filters.FilterSet):
 
     class Meta:
         model = Source
-        fields = ["name", "bPrimeID", "publicationYear", "sourceTitle", "doi"]
+        fields = ["name", "prime_id", "publication_year", "source_title", "doi"]
 
 
 class ReactionFilter(django_filters.FilterSet):
     class Meta:
         model = Reaction
-        fields = ["species", "rPrimeID", "isReversible"]
+        fields = ["species", "prime_id", "reversible"]
 
 
 class SpeciesDetail(DetailView):
@@ -72,7 +72,7 @@ class SpeciesDetail(DetailView):
         context["names"] = set(
             self.get_object().speciesname_set.all().values_list("name", flat=True)
         )
-        context["adjlists"] = structures.values_list("adjacencyList", flat=True)
+        context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = self.get_object().isomer_set.values_list("inchi", flat=True)
         context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
