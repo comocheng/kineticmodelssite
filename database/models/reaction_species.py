@@ -1,4 +1,7 @@
 from django.db import models
+import rmgpy.molecule 
+import rmgpy.species
+import rmgpy.reaction
 
 
 class Species(models.Model):
@@ -24,10 +27,13 @@ class Species(models.Model):
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
-    def toRMG(self):
-        # This code will output a species in a format acceptable by RMG
-        # *** Output will be rmg_object ***
-        pass
+    def to_rmg(self):
+        if self.inchi:
+            species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
+            species.generate_resonance_structures()
+            return species
+        else:
+            return None
 
     class Meta:
         ordering = ('sPrimeID',)
@@ -67,6 +73,12 @@ class Structure(models.Model):
     def __str__(self):
         return "{s.adjacencyList}".format(s=self)
 
+    def to_rmg(self):
+        if self.adjacencyList:
+            return rmgpy.molecule.Molecule().from_adjacency_list(self.adjacencyList)
+        else:
+            return None
+
 
 class Reaction(models.Model):
     """
@@ -100,7 +112,20 @@ class Reaction(models.Model):
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        #reaction.sort()
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
+        return reaction
+
+    def reverse_stoich_species(self):
+        """
+        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        """
+        if not self.isReversible:
+            # maybe define reaction exception so it's more specific?
+            raise Exception('This reaction is not reversible')
+        reaction = []
+        for stoich in self.stoichiometry_set.all():
+            reaction.append((-1.0 * stoich.stoichiometry, stoich.species))
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
         return reaction
 
     def products(self):
@@ -136,6 +161,17 @@ class Reaction(models.Model):
                 raise NotImplementedError
             specs.extend([s] * int(-n))
         return specs
+
+    def to_rmg(self):
+        rmg_reactants = []
+        rmg_products = []
+
+        for reactant in self.reactants():
+            rmg_reactants.append(reactant.to_rmg())
+        for product in self.products():
+            rmg_products.append(product.to_rmg())
+
+        return rmgpy.reaction.Reaction(reactants=rmg_reactants, products=rmg_products, reversible=self.isReversible)
 
     def __str__(self):
         return "{s.id}".format(s=self)

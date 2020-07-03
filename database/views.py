@@ -3,15 +3,16 @@ from functools import lru_cache
 import django_filters
 from django.views.generic import TemplateView, DetailView, FormView, ListView
 from django.urls import reverse
+from django.db.models.fields import related
 
 from .models import Species, Structure, SpeciesName, KineticModel, Thermo,\
-    Transport, Source, Reaction, Stoichiometry, BaseKineticsData
+    Transport, Source, Reaction, Stoichiometry, BaseKineticsData, Kinetics
 
 
 class BaseView(TemplateView):
     template_name = "base.html"
 
-    
+
 class IndexView(TemplateView):
     template_name = "index.html"
 
@@ -55,7 +56,7 @@ class SpeciesFilter(django_filters.FilterSet):
     isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES")
     isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList", label="Structure Adjacency List")
     isomer__structure__electronicState = django_filters.NumberFilter(field_name="isomer", lookup_expr="structure__electronicState", label="Structure Electronic State")
-    
+
     class Meta:
         model = Species
         fields = ["sPrimeID", "formula", "inchi", "cas"]
@@ -95,14 +96,14 @@ class SpeciesDetail(DetailView):
 
 class ThermoDetail(DetailView):
     model = Thermo
+    context_object_name = "thermo"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         thermo = self.get_object()
         kinetic_model = KineticModel.objects.get(thermo=thermo)
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
-        context["thermo"] = thermo
-        context["species"] = thermo.species 
+        context["species"] = thermo.species
         context['source'] = thermo.source
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         return context
@@ -118,7 +119,7 @@ class TransportDetail(DetailView):
         context["species_name"] = kinetic_model.speciesname_set.get(species=transport.species).name
 
         return context
-        
+
 class SourceDetail(DetailView):
     model = Source
 
@@ -131,22 +132,39 @@ class SourceDetail(DetailView):
 
 class ReactionDetail(DetailView):
     model = Reaction
+    context_object_name = "reaction"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
         #kinetic_model = KineticModel.objects.get()
-        context['reaction'] = reaction
         context['reactants'] = reaction.reactants()
         context['products'] = reaction.products()
+        try:
+            context['kinetics'] = reaction.kinetics_set.all()
+        except:
+            context['kinetics'] = None
         return context
 
 class KineticsDetail(DetailView):
-    model = BaseKineticsData
+    model = Kinetics
+    context_object_name = "kinetics"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        #kinetic_model = KineticModel.objects.get(source=source)
-        context['kinetics'] = kinetics
+        kineticdata = None
+        kin_type = None
+
+        for kt in ['arrhenius', 'arrheniusep', 'chebyshev', 'lindemann', 'multiarrhenius', 'multipdeparrhenius', 'pdeparrhenius', 'thirdbody', 'troe']:
+            try:
+                kineticdata = getattr(kinetics.basekineticsdata, kt)
+                kin_type = kt
+                break
+            except AttributeError:
+                continue
+
+        context['kin_type'] = kin_type
+        context['kineticdata'] = kineticdata
+
         return context

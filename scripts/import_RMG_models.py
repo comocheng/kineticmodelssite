@@ -170,8 +170,8 @@ class SourceImporter(Importer):
             logger.error(f'Could not find a DOI in the souce.txt file for {path}')
             matched_doi = None
         elif len(matched_set) > 1:
-            logger.error(f'Found more than one DOI in the souce.txt file for {path}')
-            matched_doi = None
+            logger.warning(f'Found more than one DOI in the souce.txt file for {path}, choosing the first')
+            matched_doi = matched_list[0]
         else:
             matched_doi = matched_list[0]
 
@@ -578,100 +578,105 @@ class KineticsLibraryImporter(Importer):
             kinetics = library.entries[entry].data  # "data" refers to the "kinetics" attribute of an "entry"
             chemkinReaction = library.entries[entry].item # an rmg reaction
             print(chemkinReaction)
+            #try:
+            stoichiometries = {
+                'forward':defaultdict(float),
+                'reverse':defaultdict(float)
+            }
             try:
-                stoichiometries = defaultdict(float)
-                for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
-                    for species in reagent_list:
-                        print(species)
-                        name = species.label  # FIXME -- What do I put here? Also should the line below be get_or_create?
-                        dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
-                        dj_species = dj_speciesname.species
-                        stoichiometries[dj_species] += direction_coefficient
-                        # FIXME: reactions that are A + B = A + C probably end up as B = C
-                reaction_list = Reaction.objects.filter(species__in=list(stoichiometries.keys()), isReversible__exact=chemkinReaction.reversible)
-                print(f'We found the following reactions {reaction_list}')
-                matched_reaction = None
-                new_reaction = False
+                for species in chemkinReaction.reactants:
+                    name = species.label
+                    dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
+                    dj_species = dj_speciesname.species
+                    stoichiometries['forward'][dj_species] -= 1
+                
+                for species in chemkinReaction.products:
+                    name = species.label 
+                    dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
+                    dj_species = dj_speciesname.species
+                    stoichiometries['reverse'][dj_species] += 1
+            except:
+                logger.error('Couldn\'t find a species in our database... skipping for now...')
+                continue
+            
+            stoichiometry_list = []
+            for direction, stoich_dict in stoichiometries.items():
+                for species, stoich in stoich_dict.items():
+                    stoichiometry_list.append((stoich, species))
+            stoichiometry_list = sorted(stoichiometry_list, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
+
+            reaction_list = Reaction.objects.filter(isReversible__exact=chemkinReaction.reversible)
+            for _, species in stoichiometry_list:
+                reaction_list = reaction_list.filter(species=species)
+
+            logger.info(f'We found the following reactions {reaction_list} in the database that `match` {chemkinReaction}')
+            matched_reaction = None
+            new_reaction = False
+            try:
                 if len(reaction_list) == 0:
                     new_reaction = True
                     matched_reaction = Reaction.objects.create()
-                else:
+                else: 
                     for reaction in reaction_list:
-                        if len(reaction.species.all()) != len(stoichiometries):
-                            logger.info('Lengths don\'t match, continuing')
-                            continue # Not the same number of species in a reaction
-                        matched = {}
-                        for coeff, species in reaction.stoich_species():
-                            if stoichiometries.get(species, None) is None:
-                                matched[species] = False
-                                logger.info('Species don\'t match, continuing')
-                                break
-                            if chemkinReaction.reversible == reaction.isReversible == True:
-                                # both reactions are reversible 
-                                if float(coeff) == float(stoichiometries.get(species, None)): 
-                                    # forward
-                                    # good to go
-                                    matched[species] = True
-                                # FIXME: I'm worried that this next bit could match some species in 
-                                #       forward direction and some in reverse. 
-                                #       eg. A + B = C + D  matching A + D = C + B
-                                # FIXME: also, what happens to  A + B = A + C reactions?
-                                elif -1.0 * float(coeff) == float(stoichiometries.get(species, None)):
-                                    # good to go
-                                    matched[species] = True
-                                else:
-                                    matched[species] = False
-                                    break
-                            elif chemkinReaction.reversible == reaction.isReversible == False:
-                                # both reactions are irreversible 
-                                if float(coeff) == float(stoichiometries.get(species, None)): 
-                                    # good to go
-                                    matched[species] = True
-                                else:
-                                    matched[species] = False
-                                    break
-                            else:
-                                # trying to match a reversible and irreversible reaction
-                                matched[species] = False
-                                break
-                        if all(matched.values()):
-                            print(f'Matched {chemkinReaction} to {reaction}')
-                            if matched_reaction is not None:
-                                raise Error(f"Matched {chemkinReaction} to multiple reactions, {matched_reaction} and {reaction}")
-                            matched_reaction = reaction
-                            
-                    if matched_reaction is None:
-                        matched_reaction = Reaction.objects.create()
-                        new_reaction = True 
-            except:
-                logger.error(f'Couldn\'t add {chemkinReaction} to the database')
-                continue
-            if not matched_reaction:
-                continue
-            if new_reaction:
-                for species, coeff in stoichiometries.items():
-                    print(species, coeff)
-                    stoich, created = Stoichiometry.objects.get_or_create(species=species, stoichiometry=coeff, reaction=matched_reaction)
-                    matched_reaction.species.add(species)
-                    save_model(stoich, library_name=library.name)
+                        found_match = False
+                        rmg_reaction = reaction.to_rmg()
+                        if rmg_reaction.is_isomorphic(chemkinReaction, either_direction=chemkinReaction.reversible):
+                            print('Matching Reactions')
+                            print(rmg_reaction.__repr__())
+                            print()
+                            print(chemkinReaction.__repr__())
+                            found_match = True
+                            logger.info(f'Matched {chemkinReaction} to {rmg_reaction}')
 
-                save_model(matched_reaction, library_name=library.name)
-            continue
+                        if found_match:
+                            print(f'Matched {chemkinReaction} to {reaction}')
+                            if matched_reaction is not None: # Checking that we matched only one reaction
+                                raise Exception(f"Matched {chemkinReaction} to multiple reactions, {matched_reaction} and {reaction}")
+                            matched_reaction = reaction
+                    if not matched_reaction:
+                        logger.info('Could not match reaction to existing reactions in our database, creating a new entry')
+                        new_reaction = True
+                        matched_reaction = Reaction.objects.create()
+                if not matched_reaction:
+                    logger.warning(f'A matched reaction was not found or created for {chemkinReaction}, skipping for now...')
+                    continue
+            except Exception as e:
+                print(e)
+                continue 
+
+            if new_reaction:
+                try:
+                    for coeff, species in stoichiometry_list:
+                        stoich, created = Stoichiometry.objects.get_or_create(species=species, stoichiometry=coeff, reaction=matched_reaction)
+                        matched_reaction.species.add(species)
+                        save_model(stoich, library_name=library.name)
+
+                    save_model(matched_reaction, library_name=library.name)
+                except:
+                    logger.error(f'It appears that {chemkinReaction} isn\'t fully imported... skipping for now...')
+                    matched_reaction.delete()
+                    continue
+
+            
             # Determine: what kind of KineticsData is this?
             #try:  # This will still cause the program to quit in an Exception, it just logs it first
             if isinstance(kinetics, KineticsData):
-                dj_kinetics_data = KineticsData_dj()  # make the django model instance
-                dj_kinetics_data.temp_array = kinetics.Tdata.__str__()
-                dj_kinetics_data.rate_coefficients = kinetics.Kdata.__str__()
+                dj_kinetics_data = KineticsData_dj.objects.get_or_create(
+                    temp_array=kinetics.Tdata.__str__(), 
+                    rate_coefficients=kinetics.Kdata.__str__()
+
+                    )  # make the django model instance
 
             elif isinstance(kinetics, Arrhenius):
-                dj_kinetics_data = make_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
+                dj_kinetics_data = make_arrhenius_dj(
+                    kinetics, 
+                    library_name=library.name)  # use function to make model instance
 
             elif isinstance(kinetics, ArrheniusEP):
                 raise NotImplementedError
 
             elif isinstance(kinetics, MultiArrhenius):
-                dj_kinetics_data = MultiArrhenius_dj()  # make the django model instance
+                dj_kinetics_data = MultiArrhenius_dj.objects.create()  # make the django model instance
                 # No atomic data (numbers, strings, etc.,)
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                 for simple_arr in kinetics.arrhenius:
@@ -680,7 +685,7 @@ class KineticsLibraryImporter(Importer):
                     dj_kinetics_data.arrhenius_set.add(make_arrhenius_dj(simple_arr, library_name=library.name))
 
             elif isinstance(kinetics, MultiPDepArrhenius):
-                dj_kinetics_data = MultiPDepArrhenius_dj()  # make the django model instance
+                dj_kinetics_data = MultiPDepArrhenius_dj.objects.create()  # make the django model instance
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
                 for pdep_arr in kinetics.arrhenius:
                     # Oddly enough, kinetics.arrhenius is a list of PDepArrhenius objects
@@ -690,34 +695,50 @@ class KineticsLibraryImporter(Importer):
                 make_pdep_arrhenius_dj(kinetics, library_name=library.name)  # use function to make model instance
 
             elif isinstance(kinetics, Chebyshev):
-                dj_kinetics_data = Chebyshev_dj()  # make the django model instance
+                dj_kinetics_data = Chebyshev_dj.objects.create()  # make the django model instance
                 dj_kinetics_data.coefficient_matrix = pickle.dumps(kinetics.coeffs)
                 dj_kinetics_data.units = kinetics.kunits
 
             elif isinstance(kinetics, ThirdBody):
-                dj_kinetics_data = ThirdBody_dj()  # make the django model instance
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
+                continue
+                efficiencies = {}
+                for mol, eff in kinetics.efficiencies.items():
+                    for species in chemkinReaction.reactants + chemkinReaction.products:
+                        if species.is_isomorphic(mol):
+                            efficiencies[species.label] = eff
+
+                dj_kinetics_data = ThirdBody_dj.objects.create()  # make the django model instance
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
                 save_model(dj_kinetics_data, library_name=library.name)
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
 
             elif isinstance(kinetics, Lindemann):
-                dj_kinetics_data = Lindemann_dj()  # make the django model instance
-                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrhenius_high, library_name=library.name)
-                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrhenius_low, library_name=library.name)
-                save_model(dj_kinetics_data, library_name=library.name)
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
-
-            elif isinstance(kinetics, Troe):
-                dj_kinetics_data = Troe_dj()  # make the django model instance
-                # Add atomic attributes
+                efficiencies = {}
+                for mol, eff in kinetics.efficiencies.items():
+                    for species in chemkinReaction.reactants + chemkinReaction.products:
+                        if species.is_isomorphic(mol):
+                            efficiencies[species.label] = eff
+                dj_kinetics_data = Lindemann_dj.objects.create()  # make the django model instance
                 dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name)
                 dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name)
+                save_model(dj_kinetics_data, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, efficiencies, self.dj_km, library_name=library.name)
+
+            elif isinstance(kinetics, Troe):
+                continue
+                dj_kinetics_data = Troe_dj()  # make the django model instance
+                # Add atomic attributes
+                dj_kinetics_data.high_arrhenius = make_arrhenius_dj(kinetics.arrheniusHigh, library_name=library.name, )
+                dj_kinetics_data.low_arrhenius = make_arrhenius_dj(kinetics.arrheniusLow, library_name=library.name, )
                 dj_kinetics_data.alpha = kinetics.alpha
-                dj_kinetics_data.t1 = kinetics.T1.value
-                dj_kinetics_data.t1 = kinetics.T2.value
-                dj_kinetics_data.t1 = kinetics.T3.value
+                if kinetics.T1:
+                    dj_kinetics_data.t1 = kinetics.T1.value_si 
+                if kinetics.T2:
+                    dj_kinetics_data.t2 = kinetics.T2.value_si 
+                if kinetics.T3:
+                    dj_kinetics_data.t3 = kinetics.T3.value_si 
                 save_model(dj_kinetics_data, library_name=library.name)  # Have to save the model before you can ".add()" onto a ManyToMany
-                make_efficiencies(dj_kinetics_data, kinetics, library_name=library.name)
+                make_efficiencies(dj_kinetics_data, kinetics, self.dj_km, library_name=library.name)
             else:
                 logger.error("Library {} Cannot identify this type of Kinetics Data: "
                                 "{}".format(library.name, kinetics.__str__()))
@@ -744,13 +765,19 @@ class KineticsLibraryImporter(Importer):
                 dj_kinetics_data.max_pressure = kinetics.Pmax.value
             except:
                 pass
-
-            # Save the Kinetics Data once its internal attributes are complete
-            save_model(dj_kinetics_data, library_name=library.name)
+            try:
+                # Save the Kinetics Data once its internal attributes are complete
+                save_model(dj_kinetics_data, library_name=library.name)
+            except:
+                logger.error(f'Could not save kinetic data for {chemkinReaction}')
+                continue
 
 
             # Make Kinetics object to link the Kinetics Data to the Kinetic Model
-            dj_kinetics_object = Kinetics()
+            dj_kinetics_object, object_created = Kinetics.objects.get_or_create(
+                reaction=matched_reaction, 
+                source=self.dj_km.source,
+                )
             save_model(dj_kinetics_object, library_name=library.name)
 
             # Establish one-to-one link between kinetics and kinetics data
@@ -758,31 +785,11 @@ class KineticsLibraryImporter(Importer):
             save_model(dj_kinetics_data, library_name=library.name)
 
             # Link the kinetics object to self.dj_km through kinetics comment
-            dj_kinetics_comment = KineticsComment()
+            dj_kinetics_comment, comment_created = KineticsComment.objects.get_or_create(
+                kinetics=dj_kinetics_object,
+                kineticModel=self.dj_km
+            )
             save_model(dj_kinetics_comment, library_name=library.name)
-            dj_kinetics_comment.kinetics = dj_kinetics_object
-            dj_kinetics_comment.kineticModel = self.dj_km
-            save_model(dj_kinetics_comment, library_name=library.name)
-
-            # Then, make a reaction object and tie it to a Kinetics Object
-            dj_reaction = Reaction()
-            dj_kinetics_object.reaction = dj_reaction
-
-            for reagent_list, direction_coefficient in [(chemkinReaction.reactants, -1), (chemkinReaction.products, +1)]:
-                stoichiometries = defaultdict(float)
-                for species in reagent_list:
-                    name = species.label  # FIXME -- What do I put here? Also should the line below be get_or_create?
-                    dj_speciesname = SpeciesName.objects.get(kineticModel=self.dj_km, name__exact=name)
-                    dj_species = dj_speciesname.species
-                    stoichiometries[dj_species] += direction_coefficient
-
-                for species, coeff in stoichiometries:
-                    stoich = Stoichiometry()
-                    save_model(stoich, library_name=library.name)
-                    stoich.reaction = dj_reaction
-                    stoich.species = species
-                    stoich.coefficient = coeff
-                    save_model(stoich, library_name=library.name)
 
         save_model(self.dj_km, library_name=library.name)
 
@@ -808,8 +815,21 @@ def save_model(mod, library_name=None):
 # Converts a dictionary entry Arrhenius to a Django Model Instance
 # Arrhenius (RMG) -> Arrhenius_dj (Django)
 def make_arrhenius_dj(k, library_name=None):
-    a = Arrhenius_dj(AValue=k.A.value, nValue=k.n.value, EValue=k.Ea.value)
-    save_model(a, library_name=library_name)
+    min_temp = max_temp = min_pressure = max_pressure = None
+    if k.Tmin is not None: min_temp = k.Tmin.value_si
+    if k.Tmax is not None: max_temp = k.Tmax.value_si
+    if k.Pmin is not None: min_pressure = k.Pmin.value_si
+    if k.Pmin is not None: max_pressure = k.Pmax.value_si
+    a, a_created = Arrhenius_dj.objects.get_or_create(
+        AValue=k.A.value_si, 
+        nValue=k.n.value_si, 
+        EValue=k.Ea.value_si,
+        min_temp=min_temp,
+        max_temp=max_temp,
+        min_pressure=min_pressure,
+        max_pressure=max_pressure
+        )
+    #save_model(a, library_name=library_name)
     return a
 
 
@@ -819,28 +839,29 @@ def make_pdep_arrhenius_dj(k, library_name=None):
     dj_k = PDepArrhenius_dj()  # make the django model instance
     # No atomic data (numbers, strings, etc.,)
     save_model(dj_k, library_name=library_name)
-    for index in range(len(k.pressures)):
+    for index, pressure in enumerate(k.pressures.value):
         # We use the index because the two lists for Pressure and Arrhenius are ordered together
         dj_pressure = Pressure()
         dj_pressure.pdep_arrhenius = dj_k
-        dj_pressure.pressure = k.pressures[index]
-        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index], library_name=library.name)
+        dj_pressure.pressure = pressure
+        dj_pressure.arrhenius = make_arrhenius_dj(k.arrhenius[index], library_name=library_name)
         save_model(dj_pressure, library_name=library_name)
     return save_model(dj_k, library_name=library_name)
 
 
 # Converts the efficiency dictionary into a through relationship for the model
 # BaseKineticsData (Django), Kinetics (RMG) ->
-def make_efficiencies(dj_k, k, library_name=None):
-    for species_string, efficiency_number in k.efficiencies:
+def make_efficiencies(dj_k, efficiencies, kinetic_model, library_name=None):
+    for species_string, efficiency_number in efficiencies.items():
+        print(species_string)
         # make the django model instance for efficiency
         dj_efficiency = Efficiency()
         # Add foreign key to Kinetics Data
         dj_efficiency.kinetics_data = dj_k
         # Search for Species by "species" string
-        dj_species = Structure.objects.get_or_create(some_attribute=species_string)  # TODO -- use KineticModel based search
+        dj_speciesname = SpeciesName.objects.get(name__exact=species_string, kineticModel=kinetic_model)  # TODO -- use KineticModel based search
         # Add foreign key to the species
-        dj_efficiency.species = dj_species
+        dj_efficiency.species = dj_speciesname.species
         dj_efficiency.efficiency = efficiency_number
         save_model(dj_efficiency, library_name=library_name)
     save_model(dj_k, library_name=library_name)
