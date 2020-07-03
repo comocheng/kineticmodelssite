@@ -24,6 +24,8 @@ To import RMG models from the importer project
 - python scripts/import_RMG_models.py path/to/your/RMG-models/
 
 ## Contributing:
+
+### Dev Environment
 To start contributing, clone the project and setup a conda environment.
 Then activate the environment and `pip` install the dev requirements:
 
@@ -36,3 +38,8 @@ To format the codebase, `cd` to the project root and run:
 
 If you add a `.py` file that you don't want formatted,
 add it to the `tool.black` section of the `pyproject.toml`.
+
+### Version Control Strategy
+1. Create a feature branch from `master`
+2. When finished, rebase the feature branch to the tip of `master`
+3. Open a PR and perform a Squash & Merge once approved
