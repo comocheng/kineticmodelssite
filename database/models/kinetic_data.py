@@ -107,13 +107,6 @@ class ThirdBody(BaseKineticsData):
 class Lindemann(BaseKineticsData):
     low_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
     high_arrhenius = models.ForeignKey(Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE)
-    # Cannot be ArrheniusEP according to Dr. West
-
-    #alpha = models.FloatField() # these are not appearing in an rmg arrhenius object 
-    #so I'm confused if they should be included...?
-    #t1 = models.FloatField()
-    #t2 = models.FloatField()
-    #t3 = models.FloatField()
 
 
 class Troe(BaseKineticsData):
