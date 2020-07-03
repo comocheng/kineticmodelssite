@@ -1,66 +1,14 @@
-################################################################################
-#
-#   Files for git to ignore
-#
-################################################################################
-
-# Adding an `ignore` directory 
-
-ignore/*
-
 # Python bytecode files
 *.py[cod]
 
 # SQLite database files
 *.sqlite3
 
-# The secret settings module
-rmgweb/secretsettings.py
-
-# Static files for deployment
-# static/*
-
-# jQuery
-#rmgweb/static/js/jquery.js
-
-# jsMath
-#rmgweb/static/js/jsMath/*
-
-# Highcharts
-#rmgweb/static/js/highcharts.js
-
-# Uploaded MEASURE files
-rmgweb/media/pdep/networks/*
-
-# Uploaded RMG files
-rmgweb/media/rmg/tools/*
-
-/rmgweb/nbproject/private/private.xml
-/rmgweb/nbproject/project.properties
-/rmgweb/nbproject/project.xml
-
+# IDE settings
+.vscode/
 .pydevproject
 .settings/*
 
-# VSCode user settings etc.
-.vscode/settings.json
-
-# WSGI
-apache/django.wsgi
-# IDE settings
-.vscode/
-.idea/dictionaries/
-.idea/kineticmodelssite.iml
-.idea/misc.xml
-.idea/modules.xml
-.idea/vcs.xml
-.idea/workspace.xml
-
-alpha_testing.log
-
-kineticmodels/ioscripts/errors.txt
-kineticmodels/ioscripts/imported_kinetic_modeling_metadata.xlsx
-kineticmodels/ioscripts/rmg_models_importer_log.txt
-rmg_models_importer_errors.txt
-
+# Misc
+ignore/*
 errors.txt

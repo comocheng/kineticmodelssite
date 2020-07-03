@@ -1,77 +1,66 @@
-from functools import lru_cache
-
 import django_filters
-from django.views.generic import TemplateView, DetailView, FormView, ListView
-from django.urls import reverse
-from django.db.models.fields import related
+from django.views.generic import TemplateView, DetailView
 
-from .models import Species, Structure, SpeciesName, KineticModel, Thermo,\
-    Transport, Source, Reaction, Stoichiometry, BaseKineticsData, Kinetics
+from .models import (
+    Species,
+    Structure,
+    KineticModel,
+    Thermo,
+    Transport,
+    Source,
+    Reaction,
+    Kinetics,
+)
 
 
 class BaseView(TemplateView):
-    template_name = "base.html"
+    template_name = "database/base.html"
 
 
 class IndexView(TemplateView):
     template_name = "index.html"
 
 
-class ResourcesView(TemplateView):
-    template_name = "resources.html"
-
-    @staticmethod
-    def parse_file_name(file_name):
-        name = os.path.splitext(file_name)[0]
-        parts = name.split("_")
-        date = parts[0]
-        date = date[0:4] + "-" + date[4:6] + "-" + date[6:]
-        title = " ".join(parts[1:])
-        title = title.replace("+", " and ")
-
-        return (title, date, file_name)
-
-    @property
-    @lru_cache()
-    def presentations(self):
-        pres_list = []
-        folder = os.path.join(settings.STATIC_ROOT, "presentations")
-        if os.path.isdir(folder):
-            for root, dirs, files in os.walk(folder):
-                for file in files:
-                    parsed = self.parse_file_name(file_name)
-                    pres_list.append(parsed)
-
-        return pres_list
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["presentations"] = self.presentations
-        return context
-
-
 class SpeciesFilter(django_filters.FilterSet):
-    speciesname__name = django_filters.CharFilter(field_name="speciesname", lookup_expr="name", label="Species Name")
-    isomer__inchi = django_filters.CharFilter(field_name="isomer", lookup_expr="inchi", label="Isomer InChI")
-    isomer__structure__smiles = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES")
-    isomer__structure__adjacencyList = django_filters.CharFilter(field_name="isomer", lookup_expr="structure__adjacencyList", label="Structure Adjacency List")
-    isomer__structure__electronicState = django_filters.NumberFilter(field_name="isomer", lookup_expr="structure__electronicState", label="Structure Electronic State")
+    speciesname__name = django_filters.CharFilter(
+        field_name="speciesname", lookup_expr="name", label="Species Name"
+    )
+    isomer__inchi = django_filters.CharFilter(
+        field_name="isomer", lookup_expr="inchi", label="Isomer InChI"
+    )
+    isomer__structure__smiles = django_filters.CharFilter(
+        field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES"
+    )
+    isomer__structure__adjacency_list = django_filters.CharFilter(
+        field_name="isomer",
+        lookup_expr="structure__adjacency_list",
+        label="Structure Adjacency List",
+    )
+    isomer__structure__electronic_state = django_filters.NumberFilter(
+        field_name="isomer",
+        lookup_expr="structure__electronic_state",
+        label="Structure Electronic State",
+    )
 
     class Meta:
         model = Species
-        fields = ["sPrimeID", "formula", "inchi", "cas"]
+        fields = ["prime_id", "formula", "inchi", "cas_number"]
+
 
 class SourceFilter(django_filters.FilterSet):
-    sourcename_name = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
+    sourcename_name = django_filters.CharFilter(
+        field_name="sourcename", lookup_expr="name", label="Source Name"
+    )
+
     class Meta:
         model = Source
-        fields = ["name", "bPrimeID", "publicationYear", "sourceTitle", "doi"]
+        fields = ["name", "prime_id", "publication_year", "source_title", "doi"]
+
 
 class ReactionFilter(django_filters.FilterSet):
-    #reaction = django_filters.CharFilter(field_name="sourcename", lookup_expr="name", label="Source Name")
     class Meta:
         model = Reaction
-        fields = ["species", "rPrimeID", "isReversible"]
+        fields = ["species", "prime_id", "reversible"]
 
 
 class SpeciesDetail(DetailView):
@@ -80,14 +69,12 @@ class SpeciesDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         structures = Structure.objects.filter(isomer__species=self.get_object())
-        context["names"] = (
-            set(self.get_object().speciesname_set.all().values_list("name", flat=True))
+        context["names"] = set(
+            self.get_object().speciesname_set.all().values_list("name", flat=True)
         )
-        context["adjlists"] = structures.values_list("adjacencyList", flat=True)
+        context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
-        context["isomer_inchis"] = self.get_object().isomer_set.values_list(
-            "inchi", flat=True
-        )
+        context["isomer_inchis"] = self.get_object().isomer_set.values_list("inchi", flat=True)
         context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
         context["transport_list"] = Transport.objects.filter(species=self.get_object())
 
@@ -104,7 +91,7 @@ class ThermoDetail(DetailView):
         kinetic_model = KineticModel.objects.get(thermo=thermo)
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         context["species"] = thermo.species
-        context['source'] = thermo.source
+        context["source"] = thermo.source
         context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
         return context
 
@@ -120,15 +107,18 @@ class TransportDetail(DetailView):
 
         return context
 
+
 class SourceDetail(DetailView):
     model = Source
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         source = self.get_object()
-        kinetic_model = KineticModel.objects.get(source=source)
-        context['source'] = source
+        kinetic_models = source.kineticmodel_set.all()
+        context["source"] = source
+        context["kinetic_models"] = kinetic_models
         return context
+
 
 class ReactionDetail(DetailView):
     model = Reaction
@@ -137,14 +127,12 @@ class ReactionDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
-        #kinetic_model = KineticModel.objects.get()
-        context['reactants'] = reaction.reactants()
-        context['products'] = reaction.products()
-        try:
-            context['kinetics'] = reaction.kinetics_set.all()
-        except:
-            context['kinetics'] = None
+        context["reactants"] = reaction.reactants()
+        context["products"] = reaction.products()
+        context["kinetics"] = reaction.kinetics_set.all()
+
         return context
+
 
 class KineticsDetail(DetailView):
     model = Kinetics
@@ -156,7 +144,17 @@ class KineticsDetail(DetailView):
         kineticdata = None
         kin_type = None
 
-        for kt in ['arrhenius', 'arrheniusep', 'chebyshev', 'lindemann', 'multiarrhenius', 'multipdeparrhenius', 'pdeparrhenius', 'thirdbody', 'troe']:
+        for kt in [
+            "arrhenius",
+            "arrheniusep",
+            "chebyshev",
+            "lindemann",
+            "multiarrhenius",
+            "multipdeparrhenius",
+            "pdeparrhenius",
+            "thirdbody",
+            "troe",
+        ]:
             try:
                 kineticdata = getattr(kinetics.basekineticsdata, kt)
                 kin_type = kt
@@ -164,7 +162,7 @@ class KineticsDetail(DetailView):
             except AttributeError:
                 continue
 
-        context['kin_type'] = kin_type
-        context['kineticdata'] = kineticdata
+        context["kin_type"] = kin_type
+        context["kineticdata"] = kineticdata
 
         return context

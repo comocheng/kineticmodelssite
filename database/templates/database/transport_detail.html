@@ -1,9 +1,12 @@
-{% extends "base.html" %}
+{% extends "database/base.html" %}
+
 {% load utils %}
 
-<h1><a href="{% url "source-detail" transport.source.pk %}">{{ transport.source.sourceTitle }}</a> | {{ species_name }} Transport Data</h1>
+{% block content %}
+<h1><a href="{% url "source-detail" transport.source.pk %}">{{ transport.source.source_title }}</a> | {{ species_name }} Transport Data</h1>
 <ul>
     {% for name, val in transport|fields %}
     <li><b>{{ name }} =</b> {{ val }}</li>
     {% endfor %}
 </ul>
+{% endblock %}

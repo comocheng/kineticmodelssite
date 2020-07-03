@@ -5,6 +5,7 @@ import pandas
 import logging
 import os
 import django
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rmgweb.settings")
 django.setup()
 from kineticmodels.models import Source, Author, Authorship
@@ -17,7 +18,7 @@ def clean_my_db(row):
     """
 
     source_info_dict = row_to_dict(row)
-    sources = Source.objects.all().filter(sourceTitle=source_info_dict[u"Title"])
+    sources = Source.objects.all().filter(sourceTitle=source_info_dict["Title"])
     for source in sources:
         logging.info("Deleting source: {}".format(source))
         source.delete()
@@ -33,16 +34,16 @@ def row_to_source(row):  # TODO -- needs tests
     source_info_dict = row_to_dict(row)
 
     # Make a new kinetic Model
-    s, created = Source.objects.get_or_create(sourceTitle=source_info_dict[u"Title"])
+    s, created = Source.objects.get_or_create(sourceTitle=source_info_dict["Title"])
 
     if created:  # If it's a new
         # Store the dictionary values in the Kinetic Model
-        s.publicationYear = source_info_dict[u"Year"][:4]
-        s.sourceTitle = source_info_dict[u"Title"]
-        s.journalName = source_info_dict[u"Publication"]
-        s.journalVolumeNumber = source_info_dict[u"Volume"]
-        s.pageNumbers = source_info_dict[u"Pages "]
-        s.doi = source_info_dict[u"DOI"]
+        s.publicationYear = source_info_dict["Year"][:4]
+        s.sourceTitle = source_info_dict["Title"]
+        s.journalName = source_info_dict["Publication"]
+        s.journalVolumeNumber = source_info_dict["Volume"]
+        s.pageNumbers = source_info_dict["Pages "]
+        s.doi = source_info_dict["DOI"]
 
         # Save that instance
         try:
@@ -53,8 +54,11 @@ def row_to_source(row):  # TODO -- needs tests
             raise
 
         # Then create the Authorships
-        if source_info_dict[u"Authors"] != "" and type(source_info_dict[u"Authors"]) in [str, unicode]:
-            make_authorships(source_info_dict[u"Authors"], s)
+        if source_info_dict["Authors"] != "" and type(source_info_dict["Authors"]) in [
+            str,
+            unicode,
+        ]:
+            make_authorships(source_info_dict["Authors"], s)
 
     return s
 
@@ -87,24 +91,36 @@ def make_authorships(authors_str, source):
             then reduces from a [List of Singleton-Lists] to a [Listof Strings]
             [Listof Strings] -> [Listof Strings]
             """
-            return reduce(lambda base, val: base+val,
-                          map(lambda item: item.split(split_str, max_split) if max_split
-                              else item.split(split_str),
-                              input_l),
-                          [])
+            return reduce(
+                lambda base, val: base + val,
+                map(
+                    lambda item: item.split(split_str, max_split)
+                    if max_split
+                    else item.split(split_str),
+                    input_l,
+                ),
+                [],
+            )
 
         # Makes the list by splitting the string the first time
         logging.debug(local_auth_str)
-        local_auth_list = local_auth_str.split(", ")  # Include the space first to avoid spaces at beginning of names
+        local_auth_list = local_auth_str.split(
+            ", "
+        )  # Include the space first to avoid spaces at beginning of names
         logging.debug("All good!")
         # Then splits every item in the list with the additional patterns
         local_auth_list = map_split_then_reduce(local_auth_list, ",")
         local_auth_list = map_split_then_reduce(local_auth_list, " and ")
-        local_auth_list = map_split_then_reduce(local_auth_list, " ", max_split=1)  # Splits the first and last names...
+        local_auth_list = map_split_then_reduce(
+            local_auth_list, " ", max_split=1
+        )  # Splits the first and last names...
 
         # ... and then puts the names back together
         # TODO -- This is kind of magical, see if there isn't some way to better document it or put it in a function
-        local_auth_list = [local_auth_list[2*x+1]+", "+local_auth_list[2*x] for x in range(len(local_auth_list)/2)]
+        local_auth_list = [
+            local_auth_list[2 * x + 1] + ", " + local_auth_list[2 * x]
+            for x in range(len(local_auth_list) / 2)
+        ]
 
         return local_auth_list
 
@@ -123,7 +139,7 @@ def make_authorships(authors_str, source):
 
         # Create an Authorship instance between the new Source and its Author
         try:
-            a = Authorship(author=author_object, source=source, order=int(index+1))
+            a = Authorship(author=author_object, source=source, order=int(index + 1))
             a.save()
             logging.info("Authorship created: {}".format(a))
         except:
@@ -146,11 +162,11 @@ def row_to_dict(row):
         Allows us to avoid errors with str() that typically come up with NumPy Floats and Unicode Strings
         by turning the type into Unicode and then re-encoding it in ASCII
         """
-        return unicode(text).encode('ascii', 'ignore')
+        return unicode(text).encode("ascii", "ignore")
 
     # Test cases for make_string_via_unicode
-    assert (make_string_via_unicode(u"2013.0") == "2013.0")
-    assert (make_string_via_unicode(2013.0) == "2013.0")
+    assert make_string_via_unicode("2013.0") == "2013.0"
+    assert make_string_via_unicode(2013.0) == "2013.0"
 
     # Main function code
     global sheet
@@ -159,7 +175,7 @@ def row_to_dict(row):
     row_to_convert = sheet.iloc[row]
     for key in first_row:
         if key == "Port (next free=8174)":  # Change to REGEX or .startswith
-            dictionary[u"Port"] = make_string_via_unicode(row_to_convert[key])
+            dictionary["Port"] = make_string_via_unicode(row_to_convert[key])
         elif key == "Authors":
             dictionary[key] = row_to_convert[key]
         else:
@@ -176,9 +192,9 @@ def row_to_dict(row):
 
 if __name__ == "__main__":
     # Configure logging for debugging
-    logging.basicConfig(filename="alpha_testing.log",
-                        format="%(levelname)s: %(message)s",
-                        level=logging.DEBUG)
+    logging.basicConfig(
+        filename="alpha_testing.log", format="%(levelname)s: %(message)s", level=logging.DEBUG
+    )
 
     # Pull in the Excel Sheet with all the data we want -- See the CoMoChEng's Google Sheets spreadsheet
     sheet = pandas.read_excel("kineticmodels/ioscripts/imported_kinetic_modeling_metadata.xlsx")
@@ -187,4 +203,3 @@ if __name__ == "__main__":
         # clean_my_db(line)
         # This is here in case we need to do testing on this script again
         row_to_source(line)
-

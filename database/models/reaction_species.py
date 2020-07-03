@@ -1,5 +1,5 @@
 from django.db import models
-import rmgpy.molecule 
+import rmgpy.molecule
 import rmgpy.species
 import rmgpy.reaction
 
@@ -17,10 +17,11 @@ class Species(models.Model):
     Fuel ID (N/A for now)
     names (very optional)
     """
-    sPrimeID = models.CharField('PrIMe ID', max_length=9)
+
+    prime_id = models.CharField("PrIMe ID", max_length=9)
     formula = models.CharField(blank=True, max_length=50)
-    inchi = models.CharField('InChI', blank=True, max_length=500)
-    cas = models.CharField('CAS Registry Number', blank=True, max_length=400)
+    inchi = models.CharField("InChI", blank=True, max_length=500)
+    cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
     def __str__(self):
         return "{s.id} {s.formula!s}".format(s=self)
@@ -36,7 +37,7 @@ class Species(models.Model):
             return None
 
     class Meta:
-        ordering = ('sPrimeID',)
+        ordering = ("prime_id",)
         verbose_name_plural = "Species"
 
 
@@ -51,7 +52,7 @@ class Isomer(models.Model):
     an isomer may point to multiple structures
     """
 
-    inchi = models.CharField('InChI', blank=True, max_length=500)
+    inchi = models.CharField("InChI", blank=True, max_length=500)
     species = models.ManyToManyField(Species)
 
     def __str__(self):
@@ -66,12 +67,12 @@ class Structure(models.Model):
     """
 
     isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
-    smiles = models.CharField('SMILES', blank=True, max_length=500)
-    adjacencyList = models.TextField('Adjacency List')
-    electronicState = models.IntegerField('Electronic State')
+    smiles = models.CharField("SMILES", blank=True, max_length=500)
+    adjacency_list = models.TextField("Adjacency List")
+    electronic_state = models.IntegerField("Electronic State")
 
     def __str__(self):
-        return "{s.adjacencyList}".format(s=self)
+        return "{s.adjacency_list}".format(s=self)
 
     def to_rmg(self):
         if self.adjacencyList:
@@ -97,13 +98,12 @@ class Reaction(models.Model):
     *****in catalog******
     species involved w/stoichiometries
     """
+
     #: The reaction has many species, linked through Stoichiometry table
-    species = models.ManyToManyField(Species, through='Stoichiometry')
+    species = models.ManyToManyField(Species, through="Stoichiometry")
     #: The PrIMe ID, if it is known
-    rPrimeID = models.CharField('PrIMe ID', blank=True, null=True, max_length=10)
-    isReversible = models.BooleanField(
-        default=True,
-        help_text='Is this reaction reversible?')
+    prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
+    reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
 
     def stoich_species(self):
         """
@@ -112,20 +112,20 @@ class Reaction(models.Model):
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
         return reaction
 
     def reverse_stoich_species(self):
         """
         Returns a list of tuples like [(-1, reactant), (+1, product)]
         """
-        if not self.isReversible:
+        if not self.reversible:
             # maybe define reaction exception so it's more specific?
-            raise Exception('This reaction is not reversible')
+            raise Exception("This reaction is not reversible")
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((-1.0 * stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0]/ abs(sp[0]))
+        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
         return reaction
 
     def products(self):
@@ -171,13 +171,15 @@ class Reaction(models.Model):
         for product in self.products():
             rmg_products.append(product.to_rmg())
 
-        return rmgpy.reaction.Reaction(reactants=rmg_reactants, products=rmg_products, reversible=self.isReversible)
+        return rmgpy.reaction.Reaction(
+            reactants=rmg_reactants, products=rmg_products, reversible=self.reversible
+        )
 
     def __str__(self):
         return "{s.id}".format(s=self)
 
     class Meta:
-        ordering = ('rPrimeID',)
+        ordering = ("prime_id",)
 
 
 class Stoichiometry(models.Model):
@@ -189,18 +191,21 @@ class Stoichiometry(models.Model):
     In elementary reactions these are always integers, but chemkin allows
     floats, so we do too.
     """
+
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     stoichiometry = models.FloatField(default=0.0)
 
     def __str__(self):
-        return ("{s.id} species {s.species} "
-                "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
+        return (
+            "{s.id} species {s.species} " "in reaction {s.reaction} is {s.stoichiometry}"
+        ).format(s=self)
 
     class Meta:
-        verbose_name_plural = 'Stoichiometries'
+        verbose_name_plural = "Stoichiometries"
         unique_together = ["species", "reaction", "stoichiometry"]
 
     def __repr__(self):
-        return ("{s.id} species {s.species} "
-                "in reaction {s.reaction} is {s.stoichiometry}").format(s=self)
+        return (
+            "{s.id} species {s.species} " "in reaction {s.reaction} is {s.stoichiometry}"
+        ).format(s=self)

@@ -10,15 +10,15 @@ from django.conf import settings
 
 def upload_chemkin_to(instance, filename):
     print("SAVING CHEMKIN FILE")
-    return os.path.join(instance.getPath(), 'chemkin', 'chemkin.txt')
+    return os.path.join(instance.getPath(), "chemkin", "chemkin.txt")
 
 
 def upload_thermo_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'thermo.txt')
+    return os.path.join(instance.getPath(), "chemkin", "thermo.txt")
 
 
 def upload_transport_to(instance, filename):
-    return os.path.join(instance.getPath(), 'chemkin', 'transport.txt')
+    return os.path.join(instance.getPath(), "chemkin", "transport.txt")
 
 
 class KineticModel(models.Model):
@@ -46,34 +46,20 @@ class KineticModel(models.Model):
     additional info
     """
 
-    mPrimeID = models.CharField('PrIMe ID', max_length=9, blank=True)
-    modelName = models.CharField(default=uuid.uuid4,
-                                 max_length=200,
-                                 unique=True)
+    prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
+    model_name = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
 
-    species = models.ManyToManyField(Species,
-                                     through='SpeciesName',
-                                     blank=True)
-    kinetics = models.ManyToManyField(Kinetics,
-                                      through='KineticsComment',
-                                      blank=True)
-    thermo = models.ManyToManyField(Thermo,
-                                    through='ThermoComment',
-                                    blank=True)
-    transport = models.ManyToManyField(Transport,
-                                       through='TransportComment',
-                                       blank=True)
+    species = models.ManyToManyField(Species, through="SpeciesName", blank=True)
+    kinetics = models.ManyToManyField(Kinetics, through="KineticsComment", blank=True)
+    thermo = models.ManyToManyField(Thermo, through="ThermoComment", blank=True)
+    transport = models.ManyToManyField(Transport, through="TransportComment", blank=True)
     source = models.ForeignKey(Source, null=True, blank=True, on_delete=models.CASCADE)
 
-    additionalInfo = models.CharField(max_length=1000,
-                                      blank=True)
-    #     reaction=kinetics something
-    #     species=reaction something
-    chemkinReactionsFile = models.FileField(upload_to=upload_chemkin_to,)
-    chemkinThermoFile = models.FileField(upload_to=upload_thermo_to,)
-    chemkinTransportFile = models.FileField(blank=True,
-                                            upload_to=upload_transport_to,)
-    rmgImportPath = models.CharField(blank=True, max_length=300)
+    info = models.CharField(max_length=1000, blank=True)
+    chemkin_reactions_file = models.FileField(upload_to=upload_chemkin_to,)
+    chemkin_thermo_file = models.FileField(upload_to=upload_thermo_to,)
+    chemkin_transport_file = models.FileField(blank=True, upload_to=upload_transport_to,)
+    rmg_import_path = models.CharField(blank=True, max_length=300)
 
     def getPath(self, absolute=False):
         """
@@ -82,10 +68,7 @@ class KineticModel(models.Model):
         If `absolute=True` then it's absolute, otherwise it's relative
         to settings.MEDIA_ROOT
         """
-        return os.path.join(settings.MEDIA_ROOT if absolute else '',
-                            'kinetic_models',
-                            str(self.id)
-                            )
+        return os.path.join(settings.MEDIA_ROOT if absolute else "", "kinetic_models", str(self.id))
 
     def createDir(self):
         """
@@ -93,7 +76,7 @@ class KineticModel(models.Model):
         the Network uses for storing files.
         """
         try:
-            os.makedirs(os.path.join(self.getPath(absolute=True), 'chemkin'))
+            os.makedirs(os.path.join(self.getPath(absolute=True), "chemkin"))
         except OSError:
             # Fail silently on any OS errors
             pass
@@ -103,6 +86,7 @@ class KineticModel(models.Model):
         Clean up everything by deleting the directory
         """
         import shutil
+
         try:
             shutil.rmtree(self.getPath(absolute=True))
         except OSError:
@@ -112,15 +96,16 @@ class KineticModel(models.Model):
         verbose_name_plural = "Kinetic Models"
 
     def __str__(self):
-        return "{s.id} {s.modelName}".format(s=self)
+        return "{s.id} {s.model_name}".format(s=self)
 
 
 class SpeciesName(models.Model):
     """
     A Species Name specific to a given Kinetic Model
     """
+
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    kineticModel = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(blank=True, max_length=200)
 
     def __str__(self):
@@ -138,8 +123,9 @@ class KineticsComment(models.Model):
     but an entry in this table or the existence of this object
     links that kinetics entry with that kinetic model.
     """
+
     kinetics = models.ForeignKey(Kinetics, on_delete=models.CASCADE)
-    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
@@ -154,8 +140,9 @@ class ThermoComment(models.Model):
     but an entry in this table or the existence of this object
     links that thermo entry with that kinetic model.
     """
+
     thermo = models.ForeignKey(Thermo, on_delete=models.CASCADE)
-    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
@@ -169,5 +156,5 @@ class ThermoComment(models.Model):
 
 class TransportComment(models.Model):
     transport = models.ForeignKey(Transport, on_delete=models.CASCADE)
-    kineticModel = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)

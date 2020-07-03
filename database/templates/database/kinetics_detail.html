@@ -1,6 +1,8 @@
+{% extends "database/base.html" %}
 
 {% load utils %}
 
+{% block content %}
 <h1> Kinetics Detail</h1>
 
 <ul>
@@ -15,3 +17,4 @@
     <li><b>{{ name }}: </b> {{ val }}</li>
     {% endfor %}
 </ul>
+{% endblock %}

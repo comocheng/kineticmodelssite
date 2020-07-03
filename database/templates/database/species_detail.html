@@ -1,9 +1,8 @@
-{% extends "base.html" %}
-
-<h1>Detail</h1>
+{% extends "database/base.html" %}
 
 {% block content %}
-    
+<h1>Detail</h1>
+
     <h2>Names</h2>
     <ul>
         {% for name in names %}
@@ -40,7 +39,7 @@
     <h2>Transport Results</h2>
     <ul>
         {% for transport in transport_list %}
-            <li><a href="{% url 'transport-detail' transport.pk %}">{{ transport.source.sourceTitle }}</a> - {{ transport.trPrimeID  }}</li>
+            <li><a href="{% url 'transport-detail' transport.pk %}">{{ transport.source.source_title }}</a> - {{ transport.prime_id  }}</li>
         {% endfor %}
     </ul>
 {% endblock %}
