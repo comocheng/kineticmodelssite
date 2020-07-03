@@ -74,8 +74,8 @@ class Structure(models.Model):
         return "{s.adjacencyList}".format(s=self)
 
     def to_rmg(self):
-        if self.smiles:
-            return rmgpy.molecule.Molecule(smiles=self.smiles)
+        if self.adjacencyList:
+            return rmgpy.molecule.Molecule().from_adjacency_list(self.adjacencyList)
         else:
             return None
 
