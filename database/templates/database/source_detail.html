@@ -12,7 +12,7 @@
 </ul>
 <h2>Kinetic Models</h2>
 {% for kinetic_model in kinetic_models %}
-    <li><a href="{% url 'kinetics-detail' kinetic_model.pk %}">{{kinetic_model.model_name}}</a></li>
+    <li><a href="{% url 'kinetic-model-detail' kinetic_model.pk %}">{{kinetic_model.model_name}}</a></li>
 {% endfor %}
 
 {% endblock %}
