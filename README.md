@@ -43,3 +43,8 @@ add it to the `tool.black` section of the `pyproject.toml`.
 1. Create a feature branch from `master`
 2. When finished, rebase the feature branch to the tip of `master`
 3. Open a PR and perform a Squash & Merge once approved
+
+### Debugging
+To test the site with fake data, run the following:
+```python manage.py seed database --number=n```
+where `n` is the number of each model you want generated.
