@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_filters",
     "django_extensions",
+    "django_seed",
     "database.apps.DatabaseConfig",
 ]
 
