@@ -58,9 +58,13 @@ class SourceFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
+    species__name = django_filters.CharFilter(
+        field_name="species", lookup_expr="speciesname__name", label="Species Name"
+    )
+
     class Meta:
         model = Reaction
-        fields = ["species", "prime_id", "reversible"]
+        fields = ["prime_id", "reversible"]
 
 
 class SpeciesDetail(DetailView):
