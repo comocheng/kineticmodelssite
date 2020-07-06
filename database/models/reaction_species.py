@@ -128,24 +128,19 @@ class Reaction(models.Model):
         reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
         return reaction
 
+    def reactants(self):
+        """
+        Returns a list of the reactants in the reaction
+        """
+        return [species for stoich, species in self.stoich_species() if stoich < 0]
+
     def products(self):
         """
-        returns a list of products, for elementary reaction,
-        with each product repeated the number of times it appears,
-        eg. [B, B] if the reaction is A <=> 2B.
-
-        Raises error for fractional stoichiometry.
+        Returns a list of the products in the reaction
         """
-        specs = []
-        for n, s in self.stoich_species():
-            if n < 0:
-                continue
-            if n != int(n):
-                raise NotImplementedError
-            specs.extend([s] * int(n))
-        return specs
+        return [species for stoich, species in self.stoich_species() if stoich > 0]
 
-    def reactants(self):
+    def stoich_reactants(self):
         """
         returns a list of reactants, for elementary reaction,
         with each product repeated the number of times it appears,
@@ -160,6 +155,23 @@ class Reaction(models.Model):
             if n != int(n):
                 raise NotImplementedError
             specs.extend([s] * int(-n))
+        return specs
+
+    def stoich_products(self):
+        """
+        returns a list of products, for elementary reaction,
+        with each product repeated the number of times it appears,
+        eg. [B, B] if the reaction is A <=> 2B.
+
+        Raises error for fractional stoichiometry.
+        """
+        specs = []
+        for n, s in self.stoich_species():
+            if n < 0:
+                continue
+            if n != int(n):
+                raise NotImplementedError
+            specs.extend([s] * int(n))
         return specs
 
     def to_rmg(self):

@@ -127,8 +127,16 @@ class ReactionDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
-        context["reactants"] = reaction.reactants()
-        context["products"] = reaction.products()
+
+        try:
+            reactants = reaction.stoich_reactants()
+            products = reaction.stoich_products()
+        except NotImplementedError:
+            reactants = reaction.reactants()
+            products = reaction.products()
+
+        context["reactants"] = reactants
+        context["products"] = products
         context["kinetics"] = reaction.kinetics_set.all()
 
         return context
