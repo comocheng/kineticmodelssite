@@ -16,8 +16,8 @@
         <dd><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></dd>
     {% endfor %}
     <dt>Products</dt>
-    {% for reactant in products %}
-        <dd><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></dd>
+    {% for product in products %}
+        <dd><a href="{% url 'species-detail' product.pk %}">{{product.formula}}</a></dd>
     {% endfor %}
     <dt>Kinetics</dt>
     {% for kin in kinetics %}
