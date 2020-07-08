@@ -1,4 +1,4 @@
-name: Update epics
+name: Update Epics
 on:
   issues:
     types: [opened, created, closed, reopened, deleted]
@@ -11,4 +11,4 @@ jobs:
         uses: cloudaper/epics-action@v1
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          epic-label-name: feature
+          epic-label-name: epic
