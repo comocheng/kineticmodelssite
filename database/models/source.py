@@ -9,7 +9,9 @@ class Author(models.Model):
     firstname = models.CharField(default="", max_length=80)
     lastname = models.CharField(default="", max_length=80)
 
-    name = f"{lastname}, {firstname}"
+    @property
+    def name(self):
+        return f"{self.lastname}, {self.firstname}"
 
     def __str__(self):
         return self.name
