@@ -19,6 +19,4 @@ jobs:
       - shell: bash -l {0}
         run: |
           conda activate kms_env
-      - name: Run Tests
-        run: |
           python manage.py test
