@@ -6,6 +6,20 @@
 <h1>{{kinetic_model.model_name}}</h1>
 
 <dl>
+    {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file %}
+    <dt>Downloads</dt>
+        {% if kinetic_model.chemkin_reactions_file %}
+        <dd><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download>Chemkin Reactions File</a></dd>
+        {% endif %}
+        {% if kinetic_model.chemkin_transport_file %}
+        <dd><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download>Chemkin Thermo File</a></dd>
+        {% endif %}
+        {% if kinetic_model.chemkin_thermo_file %}
+        <dd><a href="{{ kinetic_model.chemkin_transport_file.url }}" download>Chemkin Transport File</a></dd>
+        {% endif %}
+    {% endif %}
+    <dt>Source</dt>
+        <dd><a href="{% url 'source-detail' source.pk %}">{{source.name}}</a></dd>
     <dt>Species</dt>
     {% for thermo, transport in thermo_transport %}
     <dd>
@@ -66,7 +80,5 @@
             {% endif %}
         </span>
     </div>
-    <dt>Source</dt>
-        <dd><a href="{% url 'source-detail' source.pk %}">{{source.name}}</a></dd>
 </dl>
 {% endblock %}
