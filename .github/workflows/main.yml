@@ -1,0 +1,24 @@
+name: Run Tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  build:
+    name: Ex3 Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          activate-environment: anaconda-client-env
+          environment-file: environment.yml
+          python-version: 3.7
+          auto-activate-base: false
+      - shell: bash -l {0}
+        run: |
+          conda activate kms_env
+      - name: Run Tests
+        run: |
+          python manage.py test
