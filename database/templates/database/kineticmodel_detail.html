@@ -3,53 +3,66 @@
 {% load utils %}
 
 {% block content %}
-<h1>Kinetic Model Detail</h1>
+<h1>{{kinetic_model.model_name}}</h1>
 
-<ul>
-    {% for name, val in kinetic_model|fields %}
-    <li><b>{{ name }}: </b> {{ val }}</li>
-    {% endfor %}
-</ul>
 <dl>
     <dt>Species</dt>
-    {% for s in species %}
-        <dd><a href="{% url 'species-detail' s.pk %}">{{s.formula}}</a></dd>
+    {% for thermo, transport in thermo_transport %}
+    <dd>
+        {% if thermo %}
+        <a href="{% url 'species-detail' thermo.species.pk %}">{{thermo.species.formula}}</a>
+        {% else %}
+        <a href="{% url 'species-detail' transport.species.pk %}">{{transport.species.formula}}</a>
+        {% endif %}
+        <br>
+        {% if thermo %}
+        <small><a href="{% url 'thermo-detail' thermo.pk %}">Thermo</a></small>
+        {% endif %}
+        {% if transport and thermo %} | {% endif %}
+        {% if transport %}
+        <small><a href="{% url 'transport-detail' transport.pk %}">Transport</a></small>
+        {% endif %}
+    </dd>
     {% endfor %}
-    <div class="species-pagination">
+    <div class="thermo_transport-pagination">
         <span class="step-links">
-            {% if species.has_previous %}
-                <a href="?species_page=1&reactions_page={{ reactions_page }}">&laquo; first</a>
-                <a href="?species_page={{ species.previous_page_number }}&reactions_page={{ reactions_page }}">previous</a>
+            {% if thermo_transport.has_previous %}
+                <a href="?page1=1&page2={{ page2 }}">&laquo; first</a>
+                <a href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}">previous</a>
             {% endif %}
 
             <span class="current">
-                Page {{ species.number }} of {{ species.paginator.num_pages }}.
+                Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}.
             </span>
 
-            {% if species.has_next %}
-                <a href="?species_page={{ species.next_page_number }}&reactions_page={{ reactions_page }}">next</a>
-                <a href="?species_page={{ species.paginator.num_pages }}&reactions_page={{ reactions_page }}">last &raquo;</a>
+            {% if thermo_transport.has_next %}
+                <a href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}">next</a>
+                <a href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}">last &raquo;</a>
             {% endif %}
         </span>
     </div>
     <dt>Reactions</dt>
-    {% for reaction in reactions %}
-        <dd><a href="{% url 'reaction-detail' reaction.pk %}">{{reaction}}</a></dd>
+    {% for k in kinetics %}
+        <dd>
+            <a href="{% url 'reaction-detail' k.reaction.pk %}">{{k.reaction}}</a>
+            <br>
+            <small><a href="{% url 'kinetics-detail' k.pk %}">Kinetics Data ({{k.source.name}})</a></small>
+        </dd>
     {% endfor %}
-    <div class="reaction-pagination">
+    <div class="kinetic-pagination">
         <span class="step-links">
-            {% if reactions.has_previous %}
-                <a href="?reactions_page=1&species_page={{ species_page }}">&laquo; first</a>
-                <a href="?reactions_page={{ reactions.previous_page_number }}&species_page={{ species_page }}">previous</a>
+            {% if kinetics.has_previous %}
+                <a href="?page2=1&page1={{ page1 }}">&laquo; first</a>
+                <a href="?page2={{ kinetics.previous_page_number }}&page1={{ page1 }}">previous</a>
             {% endif %}
 
             <span class="current">
-                Page {{ reactions.number }} of {{ reactions.paginator.num_pages }}.
+                Page {{ kinetics.number }} of {{ kinetics.paginator.num_pages }}.
             </span>
 
-            {% if reactions.has_next %}
-                <a href="?reactions_page={{ reactions.next_page_number }}&species_page={{ species_page }}">next</a>
-                <a href="?reactions_page={{ reactions.paginator.num_pages }}&species_page={{ species_page }}">last &raquo;</a>
+            {% if kinetics.has_next %}
+                <a href="?page2={{ kinetics.next_page_number }}&page1={{ page1 }}">next</a>
+                <a href="?page2={{ kinetics.paginator.num_pages }}&page1={{ page1 }}">last &raquo;</a>
             {% endif %}
         </span>
     </div>

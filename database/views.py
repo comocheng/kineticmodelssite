@@ -1,3 +1,5 @@
+from itertools import zip_longest
+
 import django_filters
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.generic import TemplateView, DetailView
@@ -150,35 +152,38 @@ class ReactionDetail(DetailView):
 class KineticModelDetail(DetailView):
     model = KineticModel
     context_object_name = "kinetic_model"
+    paginate_per_page = 25
 
     def get_context_data(self, **kwargs):
         kinetic_model = self.get_object()
         context = super().get_context_data(**kwargs)
-        species = kinetic_model.species.all()
-        reactions = Reaction.objects.filter(kinetics__kineticmodel=kinetic_model)
+        thermo = kinetic_model.thermo.order_by("species")
+        transport = kinetic_model.transport.order_by("species")
+        thermo_transport = list(zip_longest(thermo, transport))
+        kinetics = kinetic_model.kinetics.order_by("reaction")
 
-        species_paginator = Paginator(species, 25)
-        species_page = self.request.GET.get("species_page", 1)
+        paginator1 = Paginator(thermo_transport, self.paginate_per_page)
+        page1 = self.request.GET.get("page1", 1)
         try:
-            paginated_species = species_paginator.page(species_page)
+            paginated_thermo_transport = paginator1.page(page1)
         except PageNotAnInteger:
-            paginated_species = species_paginator.page(1)
+            paginated_thermo_transport = paginator1.page(1)
         except EmptyPage:
-            paginated_species = species_paginator.page(species_paginator.num_pages)
+            paginated_thermo_transport = paginator1.page(paginator1.num_pages)
 
-        reactions_paginator = Paginator(reactions, 25)
-        reactions_page = self.request.GET.get("reactions_page", 1)
+        paginator2 = Paginator(kinetics, self.paginate_per_page)
+        page2 = self.request.GET.get("page2", 1)
         try:
-            paginated_reactions = reactions_paginator.page(reactions_page)
+            paginated_kinetics = paginator2.page(page2)
         except PageNotAnInteger:
-            paginated_reactions = reactions_paginator.page(1)
+            paginated_kinetics = paginator2.page(1)
         except EmptyPage:
-            paginated_reactions = reactions_paginator.page(reactions_paginator.num_pages)
+            paginated_kinetics = paginator2.page(paginator2.num_pages)
 
-        context["species"] = paginated_species
-        context["reactions"] = paginated_reactions
-        context["species_page"] = species_page
-        context["reactions_page"] = reactions_page
+        context["thermo_transport"] = paginated_thermo_transport
+        context["kinetics"] = paginated_kinetics
+        context["page1"] = page1
+        context["page2"] = page2
         context["source"] = kinetic_model.source
 
         return context
