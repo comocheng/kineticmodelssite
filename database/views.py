@@ -1,4 +1,5 @@
 import django_filters
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.generic import TemplateView, DetailView
 
 from .models import (
@@ -142,6 +143,43 @@ class ReactionDetail(DetailView):
         context["reactants"] = reactants
         context["products"] = products
         context["kinetics"] = reaction.kinetics_set.all()
+
+        return context
+
+
+class KineticModelDetail(DetailView):
+    model = KineticModel
+    context_object_name = "kinetic_model"
+
+    def get_context_data(self, **kwargs):
+        kinetic_model = self.get_object()
+        context = super().get_context_data(**kwargs)
+        species = kinetic_model.species.all()
+        reactions = Reaction.objects.filter(kinetics__kineticmodel=kinetic_model)
+
+        species_paginator = Paginator(species, 25)
+        species_page = self.request.GET.get("species_page", 1)
+        try:
+            paginated_species = species_paginator.page(species_page)
+        except PageNotAnInteger:
+            paginated_species = species_paginator.page(1)
+        except EmptyPage:
+            paginated_species = species_paginator.page(species_paginator.num_pages)
+
+        reactions_paginator = Paginator(reactions, 25)
+        reactions_page = self.request.GET.get("reactions_page", 1)
+        try:
+            paginated_reactions = reactions_paginator.page(reactions_page)
+        except PageNotAnInteger:
+            paginated_reactions = reactions_paginator.page(1)
+        except EmptyPage:
+            paginated_reactions = reactions_paginator.page(reactions_paginator.num_pages)
+
+        context["species"] = paginated_species
+        context["reactions"] = paginated_reactions
+        context["species_page"] = species_page
+        context["reactions_page"] = reactions_page
+        context["source"] = kinetic_model.source
 
         return context
 

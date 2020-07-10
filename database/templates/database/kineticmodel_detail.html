@@ -1,0 +1,59 @@
+{% extends "database/base.html" %}
+
+{% load utils %}
+
+{% block content %}
+<h1>Kinetic Model Detail</h1>
+
+<ul>
+    {% for name, val in kinetic_model|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>
+<dl>
+    <dt>Species</dt>
+    {% for s in species %}
+        <dd><a href="{% url 'species-detail' s.pk %}">{{s.formula}}</a></dd>
+    {% endfor %}
+    <div class="species-pagination">
+        <span class="step-links">
+            {% if species.has_previous %}
+                <a href="?species_page=1&reactions_page={{ reactions_page }}">&laquo; first</a>
+                <a href="?species_page={{ species.previous_page_number }}&reactions_page={{ reactions_page }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ species.number }} of {{ species.paginator.num_pages }}.
+            </span>
+
+            {% if species.has_next %}
+                <a href="?species_page={{ species.next_page_number }}&reactions_page={{ reactions_page }}">next</a>
+                <a href="?species_page={{ species.paginator.num_pages }}&reactions_page={{ reactions_page }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    <dt>Reactions</dt>
+    {% for reaction in reactions %}
+        <dd><a href="{% url 'reaction-detail' reaction.pk %}">{{reaction}}</a></dd>
+    {% endfor %}
+    <div class="reaction-pagination">
+        <span class="step-links">
+            {% if reactions.has_previous %}
+                <a href="?reactions_page=1&species_page={{ species_page }}">&laquo; first</a>
+                <a href="?reactions_page={{ reactions.previous_page_number }}&species_page={{ species_page }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ reactions.number }} of {{ reactions.paginator.num_pages }}.
+            </span>
+
+            {% if reactions.has_next %}
+                <a href="?reactions_page={{ reactions.next_page_number }}&species_page={{ species_page }}">next</a>
+                <a href="?reactions_page={{ reactions.paginator.num_pages }}&species_page={{ species_page }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    <dt>Source</dt>
+        <dd><a href="{% url 'source-detail' source.pk %}">{{source.name}}</a></dd>
+</dl>
+{% endblock %}

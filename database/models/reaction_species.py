@@ -188,7 +188,23 @@ class Reaction(models.Model):
         )
 
     def __str__(self):
-        return "{s.id}".format(s=self)
+        stoich_reactants = []
+        stoich_products = []
+        for stoich, species in self.stoich_species():
+            if stoich < 0:
+                stoich_reactants.append((stoich, species))
+            else:
+                stoich_products.append((stoich, species))
+        left_side = " + ".join(
+            f"{int(abs(stoich)) if abs(stoich) != 1 else ''}{species.formula}"
+            for stoich, species in stoich_reactants
+        )
+        right_side = " + ".join(
+            f"{int(stoich) if stoich != 1 else ''}{species.formula}"
+            for stoich, species in stoich_products
+        )
+
+        return f"{left_side} -> {right_side}"
 
     class Meta:
         ordering = ("prime_id",)
