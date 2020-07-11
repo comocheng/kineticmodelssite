@@ -1,0 +1,31 @@
+name: tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    types: [ opened, synchronize, ready_for_review ]
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          activate-environment: kms_env
+          environment-file: environment.yml
+          use-only-tar-bz2: true
+          python-version: 3.7
+          auto-activate-base: false
+      - shell: bash -l {0}
+        run: |
+          python manage.py test

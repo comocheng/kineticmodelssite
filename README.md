@@ -1,6 +1,8 @@
 # kineticmodelssite
 A django site for kinetic models
 
+![build](https://github.com/comocheng/kineticmodelssite/workflows/Run%20Tests/badge.svg)
+
 
 ## Setup
 Install Dependencies:
