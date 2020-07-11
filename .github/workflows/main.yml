@@ -10,10 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v1
+        env:
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: kms_env
           environment-file: environment.yml
+          use-only-tar-bz2: true
           python-version: 3.7
           auto-activate-base: false
       - shell: bash -l {0}
