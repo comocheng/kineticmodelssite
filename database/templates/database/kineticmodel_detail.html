@@ -11,10 +11,10 @@
         {% if kinetic_model.chemkin_reactions_file %}
         <dd><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download>Chemkin Reactions File</a></dd>
         {% endif %}
-        {% if kinetic_model.chemkin_transport_file %}
+        {% if kinetic_model.chemkin_thermo_file %}
         <dd><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download>Chemkin Thermo File</a></dd>
         {% endif %}
-        {% if kinetic_model.chemkin_thermo_file %}
+        {% if kinetic_model.chemkin_transport_file %}
         <dd><a href="{{ kinetic_model.chemkin_transport_file.url }}" download>Chemkin Transport File</a></dd>
         {% endif %}
     {% endif %}
