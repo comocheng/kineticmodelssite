@@ -1,13 +1,11 @@
 from django.urls import path
-from django_filters.views import FilterView
-
-from . import views
+from database import views
 
 urlpatterns = [
     path(r"", views.BaseView.as_view(), name="home"),
     path(
         r"species_search/",
-        FilterView.as_view(filterset_class=views.SpeciesFilter),
+        views.SpeciesFilterView.as_view(),
         name="species-search",
     ),
     path(r"species/<int:pk>", views.SpeciesDetail.as_view(), name="species-detail"),
@@ -16,12 +14,12 @@ urlpatterns = [
     path(r"source/<int:pk>", views.SourceDetail.as_view(), name="source-detail"),
     path(
         r"source_search/",
-        FilterView.as_view(filterset_class=views.SourceFilter),
+        views.SourceFilterView.as_view(),
         name="source-search",
     ),
     path(
         r"reaction_search/",
-        FilterView.as_view(filterset_class=views.ReactionFilter),
+        views.ReactionFilterView.as_view(),
         name="reaction-search",
     ),
     path(r"reaction/<int:pk>", views.ReactionDetail.as_view(), name="reaction-detail"),

@@ -1,5 +1,6 @@
 import django_filters
 from django.views.generic import TemplateView, DetailView
+from django_filters.views import FilterView
 
 from .models import (
     Species,
@@ -47,6 +48,11 @@ class SpeciesFilter(django_filters.FilterSet):
         fields = ["prime_id", "formula", "inchi", "cas_number"]
 
 
+class SpeciesFilterView(FilterView):
+    filterset_class = SpeciesFilter
+    paginate_by = 25
+
+
 class SourceFilter(django_filters.FilterSet):
     sourcename_name = django_filters.CharFilter(
         field_name="sourcename", lookup_expr="name", label="Source Name"
@@ -57,6 +63,11 @@ class SourceFilter(django_filters.FilterSet):
         fields = ["name", "prime_id", "publication_year", "source_title", "doi"]
 
 
+class SourceFilterView(FilterView):
+    filterset_class = SourceFilter
+    paginate_by = 25
+
+
 class ReactionFilter(django_filters.FilterSet):
     species__name = django_filters.CharFilter(
         field_name="species", lookup_expr="speciesname__name", label="Species Name"
@@ -65,6 +76,11 @@ class ReactionFilter(django_filters.FilterSet):
     class Meta:
         model = Reaction
         fields = ["prime_id", "reversible"]
+
+
+class ReactionFilterView(FilterView):
+    filterset_class = ReactionFilter
+    paginate_by = 25
 
 
 class SpeciesDetail(DetailView):
