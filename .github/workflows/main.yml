@@ -6,7 +6,7 @@ on:
     branches: [ master ]
 jobs:
   build:
-    name: Ex3 Linux
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -18,5 +18,4 @@ jobs:
           auto-activate-base: false
       - shell: bash -l {0}
         run: |
-          conda activate kms_env
           python manage.py test
