@@ -203,8 +203,9 @@ class Reaction(models.Model):
             f"{int(stoich) if stoich != 1 else ''}{species.formula}"
             for stoich, species in stoich_products
         )
+        arrow = "<=>" if self.reversible else "->"
 
-        return f"{left_side} -> {right_side}"
+        return f"{left_side} {arrow} {right_side}"
 
     class Meta:
         ordering = ("prime_id",)
