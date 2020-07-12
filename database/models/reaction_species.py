@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 import rmgpy.molecule
 import rmgpy.species
@@ -17,7 +19,7 @@ class Species(models.Model):
     Fuel ID (N/A for now)
     names (very optional)
     """
-
+    search_id = models.UUIDField(default=uuid.uuid4, editable=False)
     prime_id = models.CharField("PrIMe ID", max_length=9)
     formula = models.CharField(blank=True, max_length=50)
     inchi = models.CharField("InChI", blank=True, max_length=500)
@@ -99,9 +101,8 @@ class Reaction(models.Model):
     species involved w/stoichiometries
     """
 
-    #: The reaction has many species, linked through Stoichiometry table
+    search_id = models.UUIDField(default=uuid.uuid4, editable=False)
     species = models.ManyToManyField(Species, through="Stoichiometry")
-    #: The PrIMe ID, if it is known
     prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
     reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
 

@@ -48,7 +48,7 @@ class SpeciesFilter(django_filters.FilterSet):
 
     class Meta:
         model = Species
-        fields = ["prime_id", "formula", "inchi", "cas_number"]
+        fields = ["search_id", "prime_id", "formula", "inchi", "cas_number"]
 
 
 class SpeciesFilterView(FilterView):
@@ -78,7 +78,7 @@ class ReactionFilter(django_filters.FilterSet):
 
     class Meta:
         model = Reaction
-        fields = ["prime_id", "reversible"]
+        fields = ["search_id", "prime_id", "reversible"]
 
 
 class ReactionFilterView(FilterView):
