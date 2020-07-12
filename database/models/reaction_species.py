@@ -1,7 +1,7 @@
 from django.db import models
-import rmgpy.molecule
 import rmgpy.species
 import rmgpy.reaction
+from rmgpy.molecule import Molecule
 
 
 class Species(models.Model):
@@ -74,10 +74,7 @@ class Structure(models.Model):
         return "{s.adjacency_list}".format(s=self)
 
     def to_rmg(self):
-        if self.adjacencyList:
-            return rmgpy.molecule.Molecule().from_adjacency_list(self.adjacencyList)
-        else:
-            return None
+        return Molecule().from_adjacency_list(self.adjacency_list)
 
 
 class Reaction(models.Model):
