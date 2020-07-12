@@ -5,6 +5,8 @@
 {% block content %}
 <h1> Reaction Detail</h1>
 
+<h2>{{reaction}}</h2>
+
 <ul>
     {% for name, val in reaction|fields %}
     <li><b>{{ name }}: </b> {{ val }}</li>

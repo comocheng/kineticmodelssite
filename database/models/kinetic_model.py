@@ -5,20 +5,22 @@ from .reaction_species import Species
 from .source import Source
 from .thermo_transport import Thermo, Transport
 from .kinetic_data import Kinetics
-from django.conf import settings
+
+
+def upload_to(instance, filename):
+    return os.path.join("kineticmodels", str(instance.id), f"{instance.model_name}_{filename}")
 
 
 def upload_chemkin_to(instance, filename):
-    print("SAVING CHEMKIN FILE")
-    return os.path.join(instance.getPath(), "chemkin", "chemkin.txt")
+    return upload_to(instance, "chemkin_reaction.txt")
 
 
 def upload_thermo_to(instance, filename):
-    return os.path.join(instance.getPath(), "chemkin", "thermo.txt")
+    return upload_to(instance, "chemkin_thermo.txt")
 
 
 def upload_transport_to(instance, filename):
-    return os.path.join(instance.getPath(), "chemkin", "transport.txt")
+    return upload_to(instance, "chemkin_transport.txt")
 
 
 class KineticModel(models.Model):
@@ -56,41 +58,10 @@ class KineticModel(models.Model):
     source = models.ForeignKey(Source, null=True, blank=True, on_delete=models.CASCADE)
 
     info = models.CharField(max_length=1000, blank=True)
-    chemkin_reactions_file = models.FileField(upload_to=upload_chemkin_to,)
-    chemkin_thermo_file = models.FileField(upload_to=upload_thermo_to,)
-    chemkin_transport_file = models.FileField(blank=True, upload_to=upload_transport_to,)
+    chemkin_reactions_file = models.FileField(upload_to=upload_chemkin_to)
+    chemkin_thermo_file = models.FileField(upload_to=upload_thermo_to)
+    chemkin_transport_file = models.FileField(blank=True, upload_to=upload_transport_to)
     rmg_import_path = models.CharField(blank=True, max_length=300)
-
-    def getPath(self, absolute=False):
-        """
-        Return the path of the directory that the object uses
-        to store files.
-        If `absolute=True` then it's absolute, otherwise it's relative
-        to settings.MEDIA_ROOT
-        """
-        return os.path.join(settings.MEDIA_ROOT if absolute else "", "kinetic_models", str(self.id))
-
-    def createDir(self):
-        """
-        Create the directory (and any other needed parent directories) that
-        the Network uses for storing files.
-        """
-        try:
-            os.makedirs(os.path.join(self.getPath(absolute=True), "chemkin"))
-        except OSError:
-            # Fail silently on any OS errors
-            pass
-
-    def deleteDir(self):
-        """
-        Clean up everything by deleting the directory
-        """
-        import shutil
-
-        try:
-            shutil.rmtree(self.getPath(absolute=True))
-        except OSError:
-            pass
 
     class Meta:
         verbose_name_plural = "Kinetic Models"

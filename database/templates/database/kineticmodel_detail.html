@@ -1,0 +1,84 @@
+{% extends "database/base.html" %}
+
+{% load utils %}
+
+{% block content %}
+<h1>{{kinetic_model.model_name}}</h1>
+
+<dl>
+    {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file %}
+    <dt>Downloads</dt>
+        {% if kinetic_model.chemkin_reactions_file %}
+        <dd><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download>Chemkin Reactions File</a></dd>
+        {% endif %}
+        {% if kinetic_model.chemkin_thermo_file %}
+        <dd><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download>Chemkin Thermo File</a></dd>
+        {% endif %}
+        {% if kinetic_model.chemkin_transport_file %}
+        <dd><a href="{{ kinetic_model.chemkin_transport_file.url }}" download>Chemkin Transport File</a></dd>
+        {% endif %}
+    {% endif %}
+    <dt>Source</dt>
+        <dd><a href="{% url 'source-detail' source.pk %}">{{source.name}}</a></dd>
+    <dt>Species</dt>
+    {% for thermo, transport in thermo_transport %}
+    <dd>
+        {% if thermo %}
+        <a href="{% url 'species-detail' thermo.species.pk %}">{{thermo.species.formula}}</a>
+        {% else %}
+        <a href="{% url 'species-detail' transport.species.pk %}">{{transport.species.formula}}</a>
+        {% endif %}
+        <br>
+        {% if thermo %}
+        <small><a href="{% url 'thermo-detail' thermo.pk %}">Thermo</a></small>
+        {% endif %}
+        {% if transport and thermo %} | {% endif %}
+        {% if transport %}
+        <small><a href="{% url 'transport-detail' transport.pk %}">Transport</a></small>
+        {% endif %}
+    </dd>
+    {% endfor %}
+    <div class="thermo_transport-pagination">
+        <span class="step-links">
+            {% if thermo_transport.has_previous %}
+                <a href="?page1=1&page2={{ page2 }}">&laquo; first</a>
+                <a href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}.
+            </span>
+
+            {% if thermo_transport.has_next %}
+                <a href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}">next</a>
+                <a href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    <dt>Reactions</dt>
+    {% for k in kinetics %}
+        <dd>
+            <a href="{% url 'reaction-detail' k.reaction.pk %}">{{k.reaction}}</a>
+            <br>
+            <small><a href="{% url 'kinetics-detail' k.pk %}">Kinetics Data ({{k.source.name}})</a></small>
+        </dd>
+    {% endfor %}
+    <div class="kinetic-pagination">
+        <span class="step-links">
+            {% if kinetics.has_previous %}
+                <a href="?page2=1&page1={{ page1 }}">&laquo; first</a>
+                <a href="?page2={{ kinetics.previous_page_number }}&page1={{ page1 }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ kinetics.number }} of {{ kinetics.paginator.num_pages }}.
+            </span>
+
+            {% if kinetics.has_next %}
+                <a href="?page2={{ kinetics.next_page_number }}&page1={{ page1 }}">next</a>
+                <a href="?page2={{ kinetics.paginator.num_pages }}&page1={{ page1 }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</dl>
+{% endblock %}

@@ -1,4 +1,7 @@
+from itertools import zip_longest
+
 import django_filters
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.generic import TemplateView, DetailView
 from django_filters.views import FilterView
 
@@ -158,6 +161,46 @@ class ReactionDetail(DetailView):
         context["reactants"] = reactants
         context["products"] = products
         context["kinetics"] = reaction.kinetics_set.all()
+
+        return context
+
+
+class KineticModelDetail(DetailView):
+    model = KineticModel
+    context_object_name = "kinetic_model"
+    paginate_per_page = 25
+
+    def get_context_data(self, **kwargs):
+        kinetic_model = self.get_object()
+        context = super().get_context_data(**kwargs)
+        thermo = kinetic_model.thermo.order_by("species")
+        transport = kinetic_model.transport.order_by("species")
+        thermo_transport = list(zip_longest(thermo, transport))
+        kinetics = kinetic_model.kinetics.order_by("reaction")
+
+        paginator1 = Paginator(thermo_transport, self.paginate_per_page)
+        page1 = self.request.GET.get("page1", 1)
+        try:
+            paginated_thermo_transport = paginator1.page(page1)
+        except PageNotAnInteger:
+            paginated_thermo_transport = paginator1.page(1)
+        except EmptyPage:
+            paginated_thermo_transport = paginator1.page(paginator1.num_pages)
+
+        paginator2 = Paginator(kinetics, self.paginate_per_page)
+        page2 = self.request.GET.get("page2", 1)
+        try:
+            paginated_kinetics = paginator2.page(page2)
+        except PageNotAnInteger:
+            paginated_kinetics = paginator2.page(1)
+        except EmptyPage:
+            paginated_kinetics = paginator2.page(paginator2.num_pages)
+
+        context["thermo_transport"] = paginated_thermo_transport
+        context["kinetics"] = paginated_kinetics
+        context["page1"] = page1
+        context["page2"] = page2
+        context["source"] = kinetic_model.source
 
         return context
 

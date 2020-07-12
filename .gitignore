@@ -4,6 +4,9 @@
 # SQLite database files
 *.sqlite3
 
+# Django media root
+media/
+
 # IDE settings
 .vscode/
 .pydevproject
