@@ -25,4 +25,5 @@ urlpatterns = [
     path(r"reaction/<int:pk>", views.ReactionDetail.as_view(), name="reaction-detail"),
     path(r"kinetics/<int:pk>", views.KineticsDetail.as_view(), name="kinetics-detail"),
     path(r"kineticmodel/<int:pk>", views.KineticModelDetail.as_view(), name="kinetic-model-detail"),
+    path(r"drawstructure/<int:pk>", views.DrawStructure.as_view(), name="draw-structure"),
 ]

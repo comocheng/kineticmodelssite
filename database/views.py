@@ -4,8 +4,11 @@ import django_filters
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.views import View
 from django.views.generic import TemplateView, DetailView
 from django_filters.views import FilterView
+from django.http import HttpResponse
+from rmgpy.molecule.draw import MoleculeDrawer
 
 from .models import (
     Species,
@@ -112,7 +115,6 @@ class ReactionFilterView(FilterView):
             return super_response
 
 
-
 class SpeciesDetail(DetailView):
     model = Species
 
@@ -128,6 +130,7 @@ class SpeciesDetail(DetailView):
         context["isomer_inchis"] = species.isomer_set.values_list("inchi", flat=True)
         context["thermo_list"] = Thermo.objects.filter(species=species)
         context["transport_list"] = Transport.objects.filter(species=species)
+        context["structures"] = structures
 
         return context
 
@@ -265,3 +268,13 @@ class KineticsDetail(DetailView):
         context["kineticdata"] = kineticdata
 
         return context
+
+
+class DrawStructure(View):
+    def get(self, request, pk):
+        structure = Structure.objects.get(pk=pk)
+        molecule = structure.to_rmg()
+        surface, _, _, = MoleculeDrawer().draw(molecule, file_format="png")
+        response = HttpResponse(surface.write_to_png(), content_type="image/png")
+
+        return response
