@@ -3,6 +3,11 @@
 <h1>Species</h1>
 
 {% block content %}
+    <h3>Search by ID</h3>
+    <form action="" method="get">
+        <input type="text" name="pk"/>
+        <input type="submit"/>
+    </form>
     <form action="" method="get">
         {{ filter.form.as_p }}
         <input type="submit" />

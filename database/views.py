@@ -1,6 +1,8 @@
 from itertools import zip_longest
 
 import django_filters
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.generic import TemplateView, DetailView
 from django_filters.views import FilterView
@@ -48,12 +50,20 @@ class SpeciesFilter(django_filters.FilterSet):
 
     class Meta:
         model = Species
-        fields = ["search_id", "prime_id", "formula", "inchi", "cas_number"]
+        fields = ["prime_id", "formula", "inchi", "cas_number"]
 
 
 class SpeciesFilterView(FilterView):
     filterset_class = SpeciesFilter
     paginate_by = 25
+
+    def get(self, request, *args, **kwargs):
+        super_response = super().get(request, *args, **kwargs)
+        pk = request.GET.get("pk")
+        if pk is not None:
+            return HttpResponseRedirect(reverse("species-detail", args=[pk]))
+        else:
+            return super_response
 
 
 class SourceFilter(django_filters.FilterSet):
@@ -70,6 +80,14 @@ class SourceFilterView(FilterView):
     filterset_class = SourceFilter
     paginate_by = 25
 
+    def get(self, request, *args, **kwargs):
+        super_response = super().get(request, *args, **kwargs)
+        pk = request.GET.get("pk")
+        if pk is not None:
+            return HttpResponseRedirect(reverse("source-detail", args=[pk]))
+        else:
+            return super_response
+
 
 class ReactionFilter(django_filters.FilterSet):
     species__name = django_filters.CharFilter(
@@ -78,12 +96,21 @@ class ReactionFilter(django_filters.FilterSet):
 
     class Meta:
         model = Reaction
-        fields = ["search_id", "prime_id", "reversible"]
+        fields = ["prime_id", "reversible"]
 
 
 class ReactionFilterView(FilterView):
     filterset_class = ReactionFilter
     paginate_by = 25
+
+    def get(self, request, *args, **kwargs):
+        super_response = super().get(request, *args, **kwargs)
+        pk = request.GET.get("pk")
+        if pk is not None:
+            return HttpResponseRedirect(reverse("reaction-detail", args=[pk]))
+        else:
+            return super_response
+
 
 
 class SpeciesDetail(DetailView):
@@ -91,15 +118,16 @@ class SpeciesDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        structures = Structure.objects.filter(isomer__species=self.get_object())
+        species = self.get_object()
+        structures = Structure.objects.filter(isomer__species=species)
         context["names"] = set(
-            self.get_object().speciesname_set.all().values_list("name", flat=True)
+            species.speciesname_set.all().values_list("name", flat=True)
         )
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
-        context["isomer_inchis"] = self.get_object().isomer_set.values_list("inchi", flat=True)
-        context["thermo_list"] = Thermo.objects.filter(species=self.get_object())
-        context["transport_list"] = Transport.objects.filter(species=self.get_object())
+        context["isomer_inchis"] = species.isomer_set.values_list("inchi", flat=True)
+        context["thermo_list"] = Thermo.objects.filter(species=species)
+        context["transport_list"] = Transport.objects.filter(species=species)
 
         return context
 
