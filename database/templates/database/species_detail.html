@@ -9,33 +9,30 @@
             <li class="list-group-item">{{ name }}</li>
         {% endfor %}
     </ul>
-    <hr>
-    <h2>Adjacency Lists</h2>
-    <ul class="list-group">
-        {% for adjlist in adjlists %}
-            <li class="list-group-item">{{ adjlist }}</li>
+    <br/>
+    <h2>Structure Info</h2>
+    <table class="table table-bordered table-hover">
+        <thead>
+            <th scope="col">Drawing</th>
+            <th scope="col">Adjacency List</th>
+            <th scope="col">SMILEs</th>
+        </thead>
+        <tbody>
+            {% for structure in structures %}
+            <tr>
+                <td><img src="{% url 'draw-structure' structure.pk %}"/></td>
+                <td>{{ structure.adjacency_list }}</td>
+                <td>{{ structure.smiles }}</td>
+            </tr>
         {% endfor %}
-    </ul>
-    <hr>
-    <h2>SMILEs</h2>
-    <ul class="list-group">
-        {% for smile in smiles %}
-            <li class="list-group-item">{{ smile }}</li>
-        {% endfor %}
-    </ul>
-    <hr>
+        </tbody>
+    </table>
+    <br/>
     <h2>Isomer Inchis</h2>
     <ul class="list-group">
         {% for isomer_inchi in isomer_inchis %}
             <li class="list-group-item">{{ isomer_inchi }}</li>
         {% endfor %}
-    </ul>
-    <h2>Structures</h2>
-    <ul class="list-group">
-        {% for structure in structures %}
-        <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}"/></li>
-        {% endfor %}
-    </ul>
     <h2>Thermo Results</h2>
     <ul class="list-group">
         {% for thermo in thermo_list %}
