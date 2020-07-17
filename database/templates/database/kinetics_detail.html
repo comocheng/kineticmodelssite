@@ -3,18 +3,27 @@
 {% load utils %}
 
 {% block content %}
-<h1> Kinetics Detail</h1>
+<h1>
+    <a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction }} </a> |
+    <a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.name }}</a>
+</h1>
+<br>
+{% if kinetics.prime_id%}
+<h2>PrIMe ID: {{ kinetics.prime_id }}</h2>
+<br>
+{% endif %}
 
-<ul>
-    {% for name, val in kinetics|fields %}
-    <li><b>{{ name }}: </b> {{ val }}</li>
-    {% endfor %}
-</ul>
+<table class="table table-bordered">
+    <thead>
+        {% for head in heads %}
+        <th scope="col">{{ head }}</th>
+        {% endfor %}
+    </thead>
+    <tbody>
+        {% for body in bodies %}
+        <td>{{ body }}</td>
+        {% endfor %}
+    </tbody>
 
-<h1> Kinetics Data: {{kin_type}}</h1>
-<ul>
-    {% for name, val in kineticdata|fields %}
-    <li><b>{{ name }}: </b> {{ val }}</li>
-    {% endfor %}
-</ul>
+</table>
 {% endblock %}

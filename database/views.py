@@ -1,3 +1,4 @@
+from database.models.kinetic_data import BaseKineticsData
 from itertools import zip_longest
 
 import django_filters
@@ -243,29 +244,9 @@ class KineticsDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        kineticdata = None
-        kin_type = None
-
-        for kt in [
-            "arrhenius",
-            "arrheniusep",
-            "chebyshev",
-            "lindemann",
-            "multiarrhenius",
-            "multipdeparrhenius",
-            "pdeparrhenius",
-            "thirdbody",
-            "troe",
-        ]:
-            try:
-                kineticdata = getattr(kinetics.basekineticsdata, kt)
-                kin_type = kt
-                break
-            except AttributeError:
-                continue
-
-        context["kin_type"] = kin_type
-        context["kineticdata"] = kineticdata
+        table_data = BaseKineticsData.objects.get_subclass(kinetics=kinetics).table_data()
+        context["heads"] = table_data.keys()
+        context["bodies"] = table_data.values()
 
         return context
 

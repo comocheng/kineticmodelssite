@@ -1,38 +1,13 @@
 from django.db import models
-
+from model_utils.managers import InheritanceManager
 from .source import Source
 from .reaction_species import Reaction, Species
 
 
-class Kinetics(models.Model):
-    """
-    A reaction rate expression.
-
-    Must belong to a single reaction.
-    May occur in several models, linked via a comment.
-    May not have a unique source.
-
-    This is the equivalent of the 'rk' data within 'Reactions/data'
-    in PrIMe, which contain:
-    """
-
-    prime_id = models.CharField(blank=True, max_length=10)
-    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
-    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
-    relative_uncertainty = models.FloatField(blank=True, null=True)
-    reverse = models.BooleanField(
-        default=False, help_text="Is this the rate for the reverse reaction?"
-    )
-
-    class Meta:
-        verbose_name_plural = "Kinetics"
-
-
 class BaseKineticsData(models.Model):
+    objects = InheritanceManager()
 
-    kinetics = models.OneToOneField(Kinetics, null=True, blank=True, on_delete=models.CASCADE)
     collider_efficiencies = models.ManyToManyField(Species, through="Efficiency", blank=True)
-
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
     min_pressure = models.FloatField(
@@ -41,6 +16,9 @@ class BaseKineticsData(models.Model):
     max_pressure = models.FloatField(
         "Upper Pressure Bound", help_text="units: Pa", null=True, blank=True
     )
+
+    def table_data(self):
+        raise NotImplementedError
 
 
 class KineticsData(BaseKineticsData):
@@ -68,11 +46,20 @@ class Arrhenius(BaseKineticsData):
     e_value = models.FloatField(default=0.0)
     e_value_uncertainty = models.FloatField(blank=True, null=True)
 
+    class Meta:
+        verbose_name_plural = "Arrhenius Kinetics"
+
     def __str__(self):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
 
-    class Meta:
-        verbose_name_plural = "Arrhenius Kinetics"
+    def table_data(self):
+        return {
+            "A": self.a_value,
+            r"$$\delta A$$": self.a_value_uncertainty,
+            "n": self.n_value,
+            "E": self.e_value,
+            r"$$\delta E$$": self.e_value_uncertainty,
+        }
 
 
 class ArrheniusEP(BaseKineticsData):
@@ -80,6 +67,9 @@ class ArrheniusEP(BaseKineticsData):
     n = models.FloatField()
     ep_alpha = models.FloatField()
     e0 = models.FloatField()
+
+    def table_data(self):
+        return {"A": self.a, "n": self.n, r"$$Ep_{\alpha}$$": self.ep_alpha, "$$E_0$$": self.e0}
 
 
 class PDepArrhenius(BaseKineticsData):
@@ -144,3 +134,28 @@ class Efficiency(models.Model):
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     kinetics_data = models.ForeignKey(BaseKineticsData, on_delete=models.CASCADE)
     efficiency = models.FloatField()
+
+
+class Kinetics(models.Model):
+    """
+    A reaction rate expression.
+
+    Must belong to a single reaction.
+    May occur in several models, linked via a comment.
+    May not have a unique source.
+
+    This is the equivalent of the 'rk' data within 'Reactions/data'
+    in PrIMe, which contain:
+    """
+
+    prime_id = models.CharField(blank=True, max_length=10)
+    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
+    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
+    relative_uncertainty = models.FloatField(blank=True, null=True)
+    reverse = models.BooleanField(
+        default=False, help_text="Is this the rate for the reverse reaction?"
+    )
+    data = models.OneToOneField(BaseKineticsData, null=True, blank=True, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name_plural = "Kinetics"
