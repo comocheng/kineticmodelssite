@@ -2,7 +2,7 @@ name: kms_env
 channels:
   - defaults
   - pr-omethe-us
-  - rmg 
+  - rmg
   - rdkit
   - cantera
   - pytorch
@@ -22,4 +22,4 @@ dependencies:
   - django
   - django-filter
   - django-extensions
-  - django-model-utils 
+  - django-model-utils
