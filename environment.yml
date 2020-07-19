@@ -23,3 +23,6 @@ dependencies:
   - django-filter
   - django-extensions
   - django-model-utils
+  - pip:
+    - black
+    - flake8
