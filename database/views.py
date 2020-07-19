@@ -244,9 +244,8 @@ class KineticsDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        table_data = BaseKineticsData.objects.get_subclass(kinetics=kinetics).table_data()
-        context["heads"] = table_data.keys()
-        context["bodies"] = table_data.values()
+        context["table_data"] = BaseKineticsData.objects.get_subclass(kinetics=kinetics).table_data()
+        context["efficiencies"] = kinetics.data.efficiency_set.all()
 
         return context
 
