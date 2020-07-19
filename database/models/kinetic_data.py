@@ -46,8 +46,7 @@ class Arrhenius(BaseKineticsData):
     e_value = models.FloatField(default=0.0)
     e_value_uncertainty = models.FloatField(blank=True, null=True)
 
-    class Meta:
-        verbose_name_plural = "Arrhenius Kinetics"
+    kinetics_type = "Arrhenius Kinetics"
 
     def __str__(self):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
@@ -56,7 +55,7 @@ class Arrhenius(BaseKineticsData):
         return [
             (
                 "",
-                ["A", r"$$\delta A$$", "n", "E", r"$$\delta E$$",],
+                ["$A$", r"$\delta A$", "$n$", "$E$", r"$\delta E$",],
                 [
                     (
                         "",
@@ -72,6 +71,9 @@ class Arrhenius(BaseKineticsData):
             )
         ]
 
+    def list_data(self):
+        return [f"A: {self.a_value} n: {self.n_value} E: {self.e_value}"]
+
 
 class ArrheniusEP(BaseKineticsData):
     a = models.FloatField()
@@ -79,18 +81,25 @@ class ArrheniusEP(BaseKineticsData):
     ep_alpha = models.FloatField()
     e0 = models.FloatField()
 
+    kinetics_type = "Arrhenius EP Kinetics"
+
     def table_data(self):
         return [
             (
                 "",
-                ["A", "n", r"$$Ep_{\alpha}$$", "$$E_0$$"],
+                ["$A$", "$n$", r"$Ep_{\alpha}$", "$E_0$"],
                 [("", [self.a, self.n, self.ep_alpha, self.e0])],
             )
         ]
 
+    def list_data(self):
+        return [f"A: {self.a} n: {self.n} $Ep_{{\\alpha}}$: {self.ep_alpha}, $E_0$: {self.e0}"]
+
 
 class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
+
+    kinetics_type = "Pressure Dependent Arrhenius Kinetics"
 
     def table_data(self):
         table_heads = ["P (Pa)", *self.pressure_set.first().arrhenius.table_data()[0][1]]
@@ -101,9 +110,20 @@ class PDepArrhenius(BaseKineticsData):
 
         return [("", table_heads, table_bodies)]
 
+    def list_data(self):
+        pressure_relationship = self.pressure_set.latest("pressure")
+        arrhenius = pressure_relationship.arrhenius
+        pressure = pressure_relationship.pressure
+
+        return [
+            f"P: {pressure} A: {arrhenius.a_value} n: {arrhenius.n_value} E: {arrhenius.e_value}"
+        ]
+
 
 class MultiArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
+
+    kinetics_type = "Multi Arrhenius Kinetics"
 
     def table_data(self):
         table_heads = self.arrhenius_set.first().table_data()[0][1]
@@ -114,10 +134,14 @@ class MultiArrhenius(BaseKineticsData):
 
         return [("", table_heads, table_bodies)]
 
+    def list_data(self):
+        return [datum for data in self.arrhenius_set.all() for datum in data.list_data()]
 
 
 class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
+
+    kinetics_type = "Multi Pressure Dependent Arrhenius Kinetics"
 
     def table_data(self):
         table_data = []
@@ -128,10 +152,15 @@ class MultiPDepArrhenius(BaseKineticsData):
 
         return table_data
 
+    def list_data(self):
+        return [datum for data in self.pdep_arrhenius_set.all() for datum in data.list_data()]
+
 
 class Chebyshev(BaseKineticsData):
     coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
     units = models.CharField(max_length=25)
+
+    kinetics_type = "Chebyshev Kinetics"
 
 
 class ThirdBody(BaseKineticsData):
@@ -139,8 +168,13 @@ class ThirdBody(BaseKineticsData):
         Arrhenius, null=True, blank=True, on_delete=models.CASCADE
     )  # Cannot be ArrheniusEP according to Dr. West
 
+    kinetics_type = "Third Body Kinetics"
+
     def table_data(self):
         return self.low_arrhenius.table_data()
+
+    def list_data(self):
+        return self.low_arrhenius.list_data()
 
 
 class Lindemann(BaseKineticsData):
@@ -151,18 +185,15 @@ class Lindemann(BaseKineticsData):
         Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE
     )
 
+    kinetics_type = "Lindemann Kinetics"
+
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
         _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
         return [("Low Pressure", low_heads, low_bodies), ("High Pressure", high_heads, high_bodies)]
 
-    # Cannot be ArrheniusEP according to Dr. West
-
-    # alpha = models.FloatField() # these are not appearing in an rmg arrhenius object
-    # so I'm confused if they should be included...?
-    # t1 = models.FloatField()
-    # t2 = models.FloatField()
-    # t3 = models.FloatField()
+    def list_data(self):
+        return [*self.low_arrhenius.list_data(), *self.high_arrhenius.list_data()]
 
 
 class Troe(BaseKineticsData):
@@ -177,6 +208,8 @@ class Troe(BaseKineticsData):
     t2 = models.FloatField()
     t3 = models.FloatField()
 
+    kinetics_type = "Troe Kinetics"
+
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
         _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
@@ -184,11 +217,18 @@ class Troe(BaseKineticsData):
         return [
             (
                 "",
-                [r"$$\alpha$$", r"$$t_1$$", r"$$t_2$$", r"$$t_3$$"],
+                [r"$\alpha$", r"$t_1$", r"$t_2$", r"$t_3$"],
                 [self.alpha, self.t1, self.t2, self.t3],
             ),
             ("Low Pressure", low_heads, low_bodies),
             ("High Pressure", high_heads, high_bodies),
+        ]
+
+    def list_data(self):
+        return [
+            f"$\\alpha$: {self.alpha} $t_1$: {self.t1} $t_2$: {self.t2} $t_3$: {self.t3}"
+            *self.low_arrhenius.list_data()
+            *self.high_arrhenius.list_data()
         ]
 
 
@@ -227,3 +267,11 @@ class Kinetics(models.Model):
 
     class Meta:
         verbose_name_plural = "Kinetics"
+
+    @property
+    def kinetics_type(self):
+        return BaseKineticsData.objects.get_subclass(kinetics=self).kinetics_type
+
+    @property
+    def list_data(self):
+        return BaseKineticsData.objects.get_subclass(kinetics=self).list_data()
