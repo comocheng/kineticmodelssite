@@ -53,13 +53,24 @@ class Arrhenius(BaseKineticsData):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
 
     def table_data(self):
-        return {
-            "A": self.a_value,
-            r"$$\delta A$$": self.a_value_uncertainty,
-            "n": self.n_value,
-            "E": self.e_value,
-            r"$$\delta E$$": self.e_value_uncertainty,
-        }
+        return [
+            (
+                "",
+                ["A", r"$$\delta A$$", "n", "E", r"$$\delta E$$",],
+                [
+                    (
+                        "",
+                        [
+                            self.a_value,
+                            self.a_value_uncertainty,
+                            self.n_value,
+                            self.e_value,
+                            self.e_value_uncertainty,
+                        ],
+                    )
+                ],
+            )
+        ]
 
 
 class ArrheniusEP(BaseKineticsData):
@@ -69,19 +80,53 @@ class ArrheniusEP(BaseKineticsData):
     e0 = models.FloatField()
 
     def table_data(self):
-        return {"A": self.a, "n": self.n, r"$$Ep_{\alpha}$$": self.ep_alpha, "$$E_0$$": self.e0}
+        return [
+            (
+                "",
+                ["A", "n", r"$$Ep_{\alpha}$$", "$$E_0$$"],
+                [("", [self.a, self.n, self.ep_alpha, self.e0])],
+            )
+        ]
 
 
 class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
 
+    def table_data(self):
+        table_heads = ["P (Pa)", *self.pressure_set.first().arrhenius.table_data()[0][1]]
+        table_bodies = []
+        for pressure in self.pressure_set.all():
+            _, _, bodies = pressure.arrhenius.table_data()[0]
+            table_bodies.append((pressure.pressure, bodies[0][1]))
+
+        return [("", table_heads, table_bodies)]
+
 
 class MultiArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
 
+    def table_data(self):
+        table_heads = self.arrhenius_set.first().table_data()[0][1]
+        table_bodies = []
+        for i, arrhenius in enumerate(self.arrhenius_set.all()):
+            _, _, bodies = arrhenius.table_data()[0]
+            table_bodies.append(bodies[0])
+
+        return [("", table_heads, table_bodies)]
+
+
 
 class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
+
+    def table_data(self):
+        table_data = []
+        for i, arrhenius in enumerate(self.pdep_arrhenius_set.all()):
+            _, heads, bodies = arrhenius.table_data()[0]
+            table = ("", heads, bodies)
+            table_data.append(table)
+
+        return table_data
 
 
 class Chebyshev(BaseKineticsData):
@@ -94,6 +139,9 @@ class ThirdBody(BaseKineticsData):
         Arrhenius, null=True, blank=True, on_delete=models.CASCADE
     )  # Cannot be ArrheniusEP according to Dr. West
 
+    def table_data(self):
+        return self.low_arrhenius.table_data()
+
 
 class Lindemann(BaseKineticsData):
     low_arrhenius = models.ForeignKey(
@@ -102,6 +150,12 @@ class Lindemann(BaseKineticsData):
     high_arrhenius = models.ForeignKey(
         Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE
     )
+
+    def table_data(self):
+        _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
+        _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
+        return [("Low Pressure", low_heads, low_bodies), ("High Pressure", high_heads, high_bodies)]
+
     # Cannot be ArrheniusEP according to Dr. West
 
     # alpha = models.FloatField() # these are not appearing in an rmg arrhenius object
@@ -122,6 +176,20 @@ class Troe(BaseKineticsData):
     t1 = models.FloatField()
     t2 = models.FloatField()
     t3 = models.FloatField()
+
+    def table_data(self):
+        _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
+        _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
+
+        return [
+            (
+                "",
+                [r"$$\alpha$$", r"$$t_1$$", r"$$t_2$$", r"$$t_3$$"],
+                [self.alpha, self.t1, self.t2, self.t3],
+            ),
+            ("Low Pressure", low_heads, low_bodies),
+            ("High Pressure", high_heads, high_bodies),
+        ]
 
 
 class Pressure(models.Model):
