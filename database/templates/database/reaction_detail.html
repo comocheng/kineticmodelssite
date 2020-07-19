@@ -3,22 +3,55 @@
 {% load utils %}
 
 {% block content %}
-<h1> Reaction Detail</h1>
-
 <h2>{{reaction}}</h2>
-<h3>ID: {{ reaction.pk }}</h2>
-<dl>
-    <dt>Reactants</dt>
+<h2>ID: {{ reaction.pk }}</h2>
+<br>
+<h3>Reactants</h3>
+<div class="list-group">
     {% for reactant in reactants %}
-        <dd><a href="{% url 'species-detail' reactant.pk %}">{{reactant.formula}}</a></dd>
+    <a href="{% url 'species-detail' reactant.pk %}" class="list-group-item list-group-item-action"><strong>{{ reactant.formula }}</strong></a>
     {% endfor %}
-    <dt>Products</dt>
-    {% for product in products %}
-        <dd><a href="{% url 'species-detail' product.pk %}">{{product.formula}}</a></dd>
-    {% endfor %}
-    <dt>Kinetics</dt>
-    {% for k in kinetics %}
-        <dd><a href="{% url 'kinetics-detail' k.pk %}">{{k.source.name}}</a></dd>
-    {% endfor %}
-</dl>
+</div>
+<br>
+<h3>Products</h3>
+<div class="list-group">
+{% for product in products %}
+    <a href="{% url 'species-detail' product.pk %}" class="list-group-item list-group-item-action"><strong>{{ product.formula }}</strong></a>
+{% endfor %}
+</div>
+</br>
+<h3>Kinetics</h3>
+{% for k, data in kinetics_data %}
+    <div class="card">
+        <a href="{% url 'kinetics-detail' k.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+            <div class="d-flex w-100 justify-content-between">
+              <h5 class="mb-1">{{ k.source.name }}</h5>
+              <small>ID: {{ k.pk }}</small>
+            </div>
+            <small>{{ data.kinetics_type }}</small>
+        </a>
+            {% with data.table_data|last as table%}
+            <table class="table table-condensed">
+                <thead>
+                    {% for head in table.1 %}
+                    <th scope="col">{{ head }}</th>
+                    {% endfor %}
+                </thead>
+                {% for row_header, cells in table.2 %}
+                <tbody>
+                    <tr>
+                        {% if row_header %}
+                        <th scope="row">{{ row_header }}</th>
+                        {% endif %}
+                        {% for cell in cells %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+                {% endfor %}
+            </table>
+            {% endwith %}
+    </div>
+    <br>
+{% endfor %}
 {% endblock %}
