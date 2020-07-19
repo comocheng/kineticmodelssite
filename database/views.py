@@ -2,7 +2,7 @@ from database.models.kinetic_data import BaseKineticsData
 from itertools import zip_longest
 
 import django_filters
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views import View
@@ -64,9 +64,10 @@ class SpeciesFilterView(FilterView):
     def get(self, request, *args, **kwargs):
         super_response = super().get(request, *args, **kwargs)
         pk = request.GET.get("pk")
-        if pk is not None:
+        try:
+            Species.objects.get(pk=pk)
             return HttpResponseRedirect(reverse("species-detail", args=[pk]))
-        else:
+        except Species.DoesNotExist as e:
             return super_response
 
 
