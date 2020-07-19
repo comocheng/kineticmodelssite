@@ -2,18 +2,6 @@
 
 {% load utils %}
 
-<style>
-    table, th, td {
-      border: 1px solid black;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 5px;
-      text-align: left;
-    }
-
-</style>
-
 {% block content %}
 <h1><a href="{% url "source-detail" source.pk %}">{{ thermo.source.name }}</a> | <a href="{% url 'species-detail' species.pk %}">{{ species_name }}</a>
     Thermo Data</h1>
@@ -29,50 +17,61 @@
     <h2>Thermodynamic Information</h2>
 
     <h3>NASA Polynomials</h3>
-    <table>
-        <tr>
-            <td></td>
-        <td>Minimum Temperature (K)</td>
-        <td>Maximum Temperature (K)</td>
-        <td>Coefficient 1</td>
-        <td>Coefficient 2</td>
-        <td>Coefficient 3</td>
-        <td>Coefficient 4</td>
-        <td>Coefficient 5</td>
-        <td>Coefficient 6</td>
-        <td>Coefficient 7</td>
-    </tr>
-    <tr>
-        <td>Polynomial 1</td>
-        <td>{{ thermo.Tmin1 }}</td>
-        <td>{{ thermo.Tmax1 }}</td>
-        <td>{{ thermo.coeff11 }}</td>
-        <td>{{ thermo.coeff12 }}</td>
-        <td>{{ thermo.coeff13 }}</td>
-        <td>{{ thermo.coeff14 }}</td>
-        <td>{{ thermo.coeff15 }}</td>
-        <td>{{ thermo.coeff16 }}</td>
-        <td>{{ thermo.coeff17 }}</td>
-    </tr>
-    <tr>
-        <td>Polynomial 2</td>
-        <td>{{ thermo.Tmin2 }}</td>
-        <td>{{ thermo.Tmax2 }}</td>
-        <td>{{ thermo.coeff21 }}</td>
-        <td>{{ thermo.coeff22 }}</td>
-        <td>{{ thermo.coeff23 }}</td>
-        <td>{{ thermo.coeff24 }}</td>
-        <td>{{ thermo.coeff25 }}</td>
-        <td>{{ thermo.coeff26 }}</td>
-        <td>{{ thermo.coeff27 }}</td>
-    </tr>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col">Polynomial #</th>
+                <th scope="col">$$T_{min}$$ (K)</th>
+                <th scope="col">$$T_{max}$$ (K)</th>
+                <th scope="col">$$a_0$$</th>
+                <th scope="col">$$a_1$$</th>
+                <th scope="col">$$a_2$$</th>
+                <th scope="col">$$a_3$$</th>
+                <th scope="col">$$a_4$$</th>
+                <th scope="col">$$a_5$$</th>
+                <th scope="col">$$a_6$$</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th scope="row">1</th>
+                <td>{{ thermo.Tmin1 }}</td>
+                <td>{{ thermo.Tmax1 }}</td>
+                <td>{{ thermo.coeff11 }}</td>
+                <td>{{ thermo.coeff12 }}</td>
+                <td>{{ thermo.coeff13 }}</td>
+                <td>{{ thermo.coeff14 }}</td>
+                <td>{{ thermo.coeff15 }}</td>
+                <td>{{ thermo.coeff16 }}</td>
+                <td>{{ thermo.coeff17 }}</td>
+            </tr>
+            <tr>
+                <th scope="row">2</th>
+                <td>{{ thermo.Tmin2 }}</td>
+                <td>{{ thermo.Tmax2 }}</td>
+                <td>{{ thermo.coeff21 }}</td>
+                <td>{{ thermo.coeff22 }}</td>
+                <td>{{ thermo.coeff23 }}</td>
+                <td>{{ thermo.coeff24 }}</td>
+                <td>{{ thermo.coeff25 }}</td>
+                <td>{{ thermo.coeff26 }}</td>
+                <td>{{ thermo.coeff27 }}</td>
+            </tr>
+        </tbody>
 </table>
-
-<h3>Reference State Information</h3>
+<h4>Polynomial 1</h4>
+$$\frac{C_p^\circ \left(T\right)}{R} = {% if thermo.coeff11 != 0 %}{{thermo.coeff11}}{% endif %} {% if thermo.coeff12 != 0 %} + {{thermo.coeff12}}T{% endif %} {% if thermo.coeff13 != 0 %} + {{thermo.coeff13}}T^2{% endif %} {% if thermo.coeff14 != 0 %}+ {{thermo.coeff14}}T^3{% endif %} {% if thermo.coeff15 != 0 %} + {{thermo.coeff15}}T^4{% endif %}$$
+$$\frac{H^\circ \left(T\right)}{RT} = {% if thermo.coeff11 != 0 %}{{thermo.coeff11}}{% endif %} {% if thermo.coeff12 != 0 %} + \frac{1}{2}\cdot{{thermo.coeff12}}T{% endif %} {% if thermo.coeff13 != 0 %} + \frac{1}{3}\cdot{{thermo.coeff13}}T^2{% endif %} {% if thermo.coeff14 != 0 %} + \frac{1}{4}\cdot{{thermo.coeff14}}T^3{% endif %} {% if thermo.coeff15 != 0 %} + \frac{1}{5}\cdot{{thermo.coeff15}}T^4{% endif %} {% if thermo.coeff16 != 0 %} + \frac{ {{thermo.coeff16}} }{T}{% endif %}$$
+$$\frac{S^\circ \left(T\right)}{RT} = {% if thermo.coeff11 != 0 %}{{thermo.coeff11}}{% endif %} {% if thermo.coeff12 != 0 %} + \frac{1}{2}\cdot{{thermo.coeff12}}T{% endif %} {% if thermo.coeff13 != 0 %} + \frac{1}{3}\cdot{{thermo.coeff13}}T^2{% endif %} {% if thermo.coeff14 != 0 %} + \frac{1}{4}\cdot{{thermo.coeff14}}T^3{% endif %} {% if thermo.coeff15 != 0 %} + \frac{1}{5}\cdot{{thermo.coeff15}}T^4{% endif %} {% if thermo.coeff16 != 0 %} + \frac{ {{thermo.coeff16}} }{T}{% endif %}$$
+<h4>Polynomial 2</h4>
+$$\frac{C_p^\circ \left(T\right)}{R} = {% if thermo.coeff21 != 0 %}{{thermo.coeff21}}{% endif %} {% if thermo.coeff22 != 0 %} + {{thermo.coeff22}}T{% endif %} {% if thermo.coeff23 != 0 %}+ {{thermo.coeff23}}T^2{% endif %} {% if thermo.coeff23 != 0 %} + {{thermo.coeff24}}T^3{% endif %} {% if thermo.coeff25 != 0 %} + {{thermo.coeff25}}T^4{% endif %}$$
+$$\frac{H^\circ \left(T\right)}{RT} = {% if thermo.coeff21 != 0 %}{{thermo.coeff21}}{% endif %} {% if thermo.coeff22 != 0 %} + \frac{1}{2}\cdot{{thermo.coeff22}}T{% endif %} {% if thermo.coeff23 != 0 %} + \frac{1}{3}\cdot{{thermo.coeff23}}T^2{% endif %} {% if thermo.coeff24 != 0 %} + \frac{1}{4}\cdot{{thermo.coeff24}}T^3{% endif %} {% if thermo.coeff25 != 0 %} + \frac{1}{5}\cdot{{thermo.coeff25}}T^4{% endif %} {% if thermo.coeff26 != 0 %} + \frac{ {{thermo.coeff26}} }{T}{% endif %}$$
+$$\frac{S^\circ \left(T\right)}{RT} = {% if thermo.coeff21 != 0 %}{{thermo.coeff21}}{% endif %} {% if thermo.coeff22 != 0 %} + \frac{1}{2}\cdot{{thermo.coeff22}}T{% endif %} {% if thermo.coeff23 != 0 %} + \frac{1}{3}\cdot{{thermo.coeff23}}T^2{% endif %} {% if thermo.coeff24 != 0 %} + \frac{1}{4}\cdot{{thermo.coeff24}}T^3{% endif %} {% if thermo.coeff25 != 0 %} + \frac{1}{5}\cdot{{thermo.coeff25}}T^4{% endif %} {% if thermo.coeff26 != 0 %} + \frac{ {{thermo.coeff26}} }{T}{% endif %}$$
+<h4>Reference State Information</h4>
 
 <ul>
-    <li><b>Reference Temperature:</b> {{ themo.reference_temp }} K</li>
-    <li><b>Reference Pressure:</b> {{ themo.reference_pressure }} Pa</li>
+    <li><b>Reference Temperature:</b> {{ thermo.reference_temp }} K</li>
+    <li><b>Reference Pressure:</b> {{ thermo.reference_pressure }} Pa</li>
     <li><b>Heat of Formation</b>: {{ thermo.dHf }} J/mol</li>
 </ul>
 {% endblock %}

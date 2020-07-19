@@ -1,4 +1,3 @@
-from typing import NamedTuple, List
 from math import log
 
 from django.db import models
@@ -45,8 +44,6 @@ class Thermo(models.Model):
     dHf = models.FloatField(
         "Enthalpy of Formation", blank=True, help_text="units: J/mol", default=0.0
     )
-    # <editor-fold desc="Coefficients">
-    # polynomial 1
     Tmin1 = models.FloatField("Polynomial 1 Lower Temp Bound", help_text="units: K", default=0.0)
     Tmax1 = models.FloatField("Polynomial 1 Upper Temp Bound", help_text="units: K", default=0.0)
     coeff11 = models.FloatField("Polynomial 1 Coefficient 1", default=0.0)
@@ -56,7 +53,6 @@ class Thermo(models.Model):
     coeff15 = models.FloatField("Polynomial 1 Coefficient 5", default=0.0)
     coeff16 = models.FloatField("Polynomial 1 Coefficient 6", default=0.0)
     coeff17 = models.FloatField("Polynomial 1 Coefficient 7", default=0.0)
-    # polynomial 2_1
     Tmin2 = models.FloatField("Polynomial 2 Lower Temp Bound", help_text="units: K", default=0.0)
     Tmax2 = models.FloatField("Polynomial 2 Upper Temp Bound", help_text="units: K", default=0.0)
     coeff21 = models.FloatField("Polynomial 2 Coefficient 1", default=0.0)
@@ -131,7 +127,7 @@ class Thermo(models.Model):
         ) * self.R
 
     def free_energy(self, T, poly):
-        return self.enthalpy(T) - T * self.entropy(T)
+        return self.enthalpy(T, poly) - T * self.entropy(T, poly)
 
     def T_range(self, poly, dT=10):
         return (
@@ -151,30 +147,6 @@ class Thermo(models.Model):
 
     def free_energies(self, poly):
         return [self.free_energy(T, poly) for T in self.T_range(poly)]
-
-    class PolynomialData(NamedTuple):
-        heat_capacities: List[float]
-        enthalpies: List[float]
-        entropies: List[float]
-        free_energies: List[float]
-
-    @property
-    def poly1(self):
-        return self.PolynomialData(
-            heat_capacities=self.heat_capacities(1),
-            enthalpies=self.enthalpies(1),
-            entropies=self.entropies(1),
-            free_energies=self.free_energies(1),
-        )
-
-    @property
-    def poly2(self):
-        return self.PolynomialData(
-            heat_capacities=self.heat_capacities(2),
-            enthalpies=self.enthalpies(2),
-            entropies=self.entropies(2),
-            free_energies=self.free_energies(2),
-        )
 
     def __str__(self):
         return str(self.id)
