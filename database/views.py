@@ -73,7 +73,6 @@ class SidebarLookup:
             species_invalid = "Species with that ID wasn't found"
             reaction_invalid = "Reaction with that ID wasn't found"
             source_invalid = "Source with that ID wasn't found"
-            print(f"species pk: {species_pk}")
             if species_pk:
                 try:
                     Species.objects.get(pk=species_pk)
