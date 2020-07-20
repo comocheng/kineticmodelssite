@@ -18,8 +18,8 @@ class TestKineticModelDetail(TestCase):
         """
 
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
-        paginate_per_page = views.KineticModelDetail.paginate_per_page
-        for i in range(1, views.KineticModelDetail.paginate_per_page):
+        paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
+        for i in range(1, paginate_per_page):
             species = models.Species.objects.create()
             transport = models.Transport.objects.create(species=species)
             kinetic_model.species.add(species)
@@ -36,7 +36,7 @@ class TestKineticModelDetail(TestCase):
         If not all species have thermo data, all the species will still be displayed
         """
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
-        paginate_per_page = views.KineticModelDetail.paginate_per_page
+        paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
         for i in range(1, paginate_per_page):
             species = models.Species.objects.create()
             thermo = models.Thermo.objects.create(species=species)
