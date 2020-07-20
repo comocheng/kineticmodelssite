@@ -88,9 +88,6 @@ class Arrhenius(BaseKineticsData):
             )
         ]
 
-    def list_data(self):
-        return [f"A: {self.a_value} n: {self.n_value} E: {self.e_value}"]
-
 
 class ArrheniusEP(BaseKineticsData):
     a = models.FloatField()
@@ -111,9 +108,6 @@ class ArrheniusEP(BaseKineticsData):
                 [("", [self.a, self.n, self.ep_alpha, self.e0])],
             )
         ]
-
-    def list_data(self):
-        return [f"A: {self.a} n: {self.n} $Ep_{{\\alpha}}$: {self.ep_alpha}, $E_0$: {self.e0}"]
 
 
 class PDepArrhenius(BaseKineticsData):
@@ -140,15 +134,6 @@ class PDepArrhenius(BaseKineticsData):
 
         return [("", table_heads, table_bodies)]
 
-    def list_data(self):
-        pressure_relationship = self.pressure_set.latest("pressure")
-        arrhenius = pressure_relationship.arrhenius
-        pressure = pressure_relationship.pressure
-
-        return [
-            f"P: {pressure} A: {arrhenius.a_value} n: {arrhenius.n_value} E: {arrhenius.e_value}"
-        ]
-
 
 class MultiArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
@@ -173,8 +158,6 @@ class MultiArrhenius(BaseKineticsData):
 
         return [("", table_heads, table_bodies)]
 
-    def list_data(self):
-        return [datum for data in self.arrhenius_set.all() for datum in data.list_data()]
 
 class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
@@ -198,9 +181,6 @@ class MultiPDepArrhenius(BaseKineticsData):
             table_data.append(table)
 
         return table_data
-
-    def list_data(self):
-        return [datum for data in self.pdep_arrhenius_set.all() for datum in data.list_data()]
 
 
 class Chebyshev(BaseKineticsData):
@@ -239,9 +219,6 @@ class ThirdBody(BaseKineticsData):
     def table_data(self):
         return self.low_arrhenius.table_data()
 
-    def list_data(self):
-        return self.low_arrhenius.list_data()
-
 
 class Lindemann(BaseKineticsData):
     low_arrhenius = models.ForeignKey(
@@ -274,9 +251,6 @@ class Lindemann(BaseKineticsData):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
         _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
         return [("Low Pressure", low_heads, low_bodies), ("High Pressure", high_heads, high_bodies)]
-
-    def list_data(self):
-        return [*self.low_arrhenius.list_data(), *self.high_arrhenius.list_data()]
 
 
 class Troe(BaseKineticsData):
@@ -321,13 +295,6 @@ class Troe(BaseKineticsData):
             ),
             ("Low Pressure", low_heads, low_bodies),
             ("High Pressure", high_heads, high_bodies),
-        ]
-
-    def list_data(self):
-        return [
-            f"$\\alpha$: {self.alpha} $t_1$: {self.t1} $t_2$: {self.t2} $t_3$: {self.t3}"
-            *self.low_arrhenius.list_data()
-            *self.high_arrhenius.list_data()
         ]
 
 
@@ -388,7 +355,3 @@ class Kinetics(models.Model):
     @property
     def kinetics_type(self):
         return BaseKineticsData.objects.get_subclass(kinetics=self).kinetics_type
-
-    @property
-    def list_data(self):
-        return BaseKineticsData.objects.get_subclass(kinetics=self).list_data()
