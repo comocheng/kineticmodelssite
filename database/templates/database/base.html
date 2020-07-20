@@ -73,28 +73,28 @@
             <h5>Species Lookup</h5>
             <form action="" method="get">
               <div class="form-group">
-                <input type="number" name="species_pk" placeholder="Enter ID">
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <input type="number" name="species_pk" placeholder="Enter ID" class="form-control">
                 {% if species_invalid %}<small class="form-text text-muted">{{species_invalid}}</small>{% endif %}
               </div>
+              <button type="submit" class="btn btn-primary">Submit</button>
             </form>
             <br>
             <h5>Reaction Lookup</h5>
             <form action="" method="get">
               <div class="form-group">
-                <input type="number" name="reaction_pk" placeholder="Enter ID">
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <input type="number" name="reaction_pk" placeholder="Enter ID" class="form-control">
                 {% if reaction_invalid %}<small class="form-text text-muted">{{reaction_invalid}}</small>{% endif %}
               </div>
+              <button type="submit" class="btn btn-primary">Submit</button>
             </form>
             <br>
             <h5>Source Lookup</h5>
             <form action="" method="get">
               <div class="form-group">
-                <input type="number" name="source_pk" placeholder="Enter ID">
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <input type="number" name="source_pk" id="source_pk" placeholder="Enter ID" class="form-control">
                 {% if source_invalid %}<small class="form-text text-muted">{{source_invalid}}</small>{% endif %}
               </div>
+              <button type="submit" class="btn btn-primary">Submit</button>
             </form>
           </div>
         </div>
