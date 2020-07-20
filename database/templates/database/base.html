@@ -1,4 +1,6 @@
 {% load static %}
+{% load crispy_forms_tags %}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -65,15 +67,35 @@
         </div>
         <div class="col-md-4">
           <div class="content-section">
-            <h3>Our Sidebar</h3>
-            <p class='text-muted'>You can put any information here you'd like.
-              <ul class="list-group">
-                <li class="list-group-item list-group-item-light">Latest Posts</li>
-                <li class="list-group-item list-group-item-light">Announcements</li>
-                <li class="list-group-item list-group-item-light">Calendars</li>
-                <li class="list-group-item list-group-item-light">etc</li>
-              </ul>
+            <h3>Go To</h3>
+            <p class='text-muted'>Direct Species, Kinetics, and Source Lookups
             </p>
+            <h5>Species Lookup</h5>
+            <form action="" method="get">
+              <div class="form-group">
+                <input type="number" name="species_pk" placeholder="Enter ID">
+                <button type="submit" class="btn btn-primary">Submit</button>
+                {% if species_invalid %}<small class="form-text text-muted">{{species_invalid}}</small>{% endif %}
+              </div>
+            </form>
+            <br>
+            <h5>Reaction Lookup</h5>
+            <form action="" method="get">
+              <div class="form-group">
+                <input type="number" name="reaction_pk" placeholder="Enter ID">
+                <button type="submit" class="btn btn-primary">Submit</button>
+                {% if reaction_invalid %}<small class="form-text text-muted">{{reaction_invalid}}</small>{% endif %}
+              </div>
+            </form>
+            <br>
+            <h5>Source Lookup</h5>
+            <form action="" method="get">
+              <div class="form-group">
+                <input type="number" name="source_pk" placeholder="Enter ID">
+                <button type="submit" class="btn btn-primary">Submit</button>
+                {% if source_invalid %}<small class="form-text text-muted">{{source_invalid}}</small>{% endif %}
+              </div>
+            </form>
           </div>
         </div>
       </div>

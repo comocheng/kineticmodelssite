@@ -1,17 +1,15 @@
 {% extends "database/base.html" %}
 
+{% load crispy_forms_tags %}
+
 <h1>Species</h1>
 
 {% block content %}
-    <h3>Search by ID</h3>
     <form action="" method="get">
-        <input type="text" name="pk"/>
-        <input type="submit"/>
+        {{ filter.form|crispy }}
+        <button type="submit" class="btn btn-primary">Submit</button>
     </form>
-    <form action="" method="get">
-        {{ filter.form.as_p }}
-        <input type="submit" />
-    </form>
+    <br>
     {% for source in filter.qs %}
         <a href="{% url "source-detail" source.pk %}">Source</a>: {{ source.name }}<br/>
     {% endfor %}
