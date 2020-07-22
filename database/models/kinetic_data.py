@@ -7,6 +7,7 @@ from .reaction_species import Reaction, Species
 class BaseKineticsData(models.Model):
     objects = InheritanceManager()
 
+    order = models.FloatField(help_text="Overall reaction order", null=True, blank=True)
     collider_efficiencies = models.ManyToManyField(Species, through="Efficiency", blank=True)
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
