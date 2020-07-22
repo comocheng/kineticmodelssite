@@ -1,5 +1,8 @@
 from django.db import models
 from model_utils.managers import InheritanceManager
+import rmgpy.kinetics as kinetics
+from rmgpy.quantity import ScalarQuantity, ArrayQuantity
+
 from .source import Source
 from .reaction_species import Reaction, Species
 
@@ -21,6 +24,8 @@ class BaseKineticsData(models.Model):
     def table_data(self):
         raise NotImplementedError
 
+    def rate_constant_units(self):
+        return f"(mol/m^3)^({1-self.order})/s"
 
 class KineticsData(BaseKineticsData):
     temp_array = models.TextField()  # JSON might be appropriate here
@@ -53,6 +58,17 @@ class Arrhenius(BaseKineticsData):
     def __str__(self):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
 
+    def to_rmg(self):
+        return kinetics.Arrhenius(
+            A=ScalarQuantity(self.a_value, self.rate_constant_units()),
+            n=self.n_value,
+            Ea=ScalarQuantity(self.e_value, "J/mol"),
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
+
     def table_data(self):
         return [
             (
@@ -80,6 +96,9 @@ class ArrheniusEP(BaseKineticsData):
     ep_alpha = models.FloatField()
     e0 = models.FloatField()
 
+    def to_rmg(self):
+        return kinetics.ArrheniusEP(A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0)
+
     def table_data(self):
         return [
             (
@@ -92,6 +111,16 @@ class ArrheniusEP(BaseKineticsData):
 
 class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
+
+    def to_rmg(self):
+        return kinetics.PDepArrhenius(
+            pressures=ArrayQuantity([p.pressure for p in self.pressure_set.all()], "Pa"),
+            arrhenius=[arrhenius.to_rmg() for arrhenius in self.arrhenius_set.all()],
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
 
     def table_data(self):
         table_heads = ["P (Pa)", *self.pressure_set.first().arrhenius.table_data()[0][1]]
@@ -106,6 +135,15 @@ class PDepArrhenius(BaseKineticsData):
 class MultiArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
 
+    def to_rmg(self):
+        return kinetics.MultiArrhenius(
+            arrhenius=[arrhenius.to_rmg() for arrhenius in self.arrhenius_set.all()],
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
+
     def table_data(self):
         table_heads = self.arrhenius_set.first().table_data()[0][1]
         table_bodies = []
@@ -116,9 +154,17 @@ class MultiArrhenius(BaseKineticsData):
         return [("", table_heads, table_bodies)]
 
 
-
 class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
+
+    def to_rmg(self):
+        return kinetics.MultiArrhenius(
+            arrhenius=[arrhenius.to_rmg() for arrhenius in self.pdep_arrhenius_set.all()],
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
 
     def table_data(self):
         table_data = []
@@ -134,11 +180,30 @@ class Chebyshev(BaseKineticsData):
     coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
     units = models.CharField(max_length=25)
 
+    def to_rmg(self):
+        return kinetics.Chebyshev(
+            coeffs=self.coefficient_matrix,
+            kunits=self.units,
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
+
 
 class ThirdBody(BaseKineticsData):
     low_arrhenius = models.ForeignKey(
         Arrhenius, null=True, blank=True, on_delete=models.CASCADE
     )  # Cannot be ArrheniusEP according to Dr. West
+
+    def to_rmg(self):
+        return kinetics.ThirdBody(
+            arrheniusLow=self.low_arrhenius.to_rmg(),
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+        )
 
     def table_data(self):
         return self.low_arrhenius.table_data()
@@ -151,6 +216,23 @@ class Lindemann(BaseKineticsData):
     high_arrhenius = models.ForeignKey(
         Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE
     )
+
+    def to_rmg(self):
+        # efficiencies = {
+        #     e.species.to_rmg(): e.efficiency
+        #     for e in self.efficiency_set.all()
+        #     if e.species.to_rmg() is not None
+        # } or None
+        efficiencies = None
+        return kinetics.Lindemann(
+            arrheniusHigh=self.high_arrhenius.to_rmg(),
+            arrheniusLow=self.low_arrhenius.to_rmg(),
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+            efficiencies=efficiencies,
+        )
 
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
@@ -177,6 +259,23 @@ class Troe(BaseKineticsData):
     t1 = models.FloatField()
     t2 = models.FloatField()
     t3 = models.FloatField()
+
+    def to_rmg(self):
+        # efficiencies = {e.species.to_rmg(): e.efficiency for e in self.efficiency_set.all()} or None
+        efficiencies = None
+        return kinetics.Lindemann(
+            arrheniusHigh=self.high_arrhenius.to_rmg(),
+            arrheniusLow=self.low_arrhenius.to_rmg(),
+            alpha=self.alpha,
+            T1=self.t1,
+            T2=self.t2,
+            T3=self.t3,
+            Tmin=ScalarQuantity(self.min_temp, "K"),
+            Tmax=ScalarQuantity(self.max_temp, "K"),
+            Pmin=ScalarQuantity(self.min_pressure, "Pa"),
+            Pmax=ScalarQuantity(self.max_pressure, "Pa"),
+            efficiencies=efficiencies,
+        )
 
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
@@ -228,3 +327,22 @@ class Kinetics(models.Model):
 
     class Meta:
         verbose_name_plural = "Kinetics"
+
+    def to_rmg(self):
+        """
+        Creates an rmgpy.reaction.Reaction object with kinetics
+        """
+
+        kinetic_data = BaseKineticsData.objects.get_subclass(kinetics=self)
+        rmg_kinetic_data = kinetic_data.to_rmg()
+        rmg_reaction = self.reaction.to_rmg()
+        rmg_reaction.kinetics = rmg_kinetic_data
+
+        return rmg_reaction
+
+    def to_chemkin(self):
+        """
+        Creates a chemkin-formatted string
+        """
+
+        return self.to_rmg().to_chemkin()
