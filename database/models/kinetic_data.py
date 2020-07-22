@@ -1,6 +1,7 @@
-from django.db import models
-from model_utils.managers import InheritanceManager
 import rmgpy.kinetics as kinetics
+from django.db import models
+from django.contrib.postgres.fields import ArrayField
+from model_utils.managers import InheritanceManager
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 
 from .source import Source
@@ -200,7 +201,7 @@ class MultiPDepArrhenius(BaseKineticsData):
 
 
 class Chebyshev(BaseKineticsData):
-    coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
+    coefficient_matrix = ArrayField(ArrayField(models.FloatField()), null=True, blank=True)
     units = models.CharField(max_length=25)
 
     kinetics_type = "Chebyshev Kinetics"
