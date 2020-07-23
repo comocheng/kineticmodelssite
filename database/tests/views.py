@@ -61,10 +61,12 @@ class TestKineticModelDetail(TestCase):
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
         download_content = "".join(
             """
-            <dt>Downloads</dt>
-                <dd><a href='{}' download>Chemkin Reactions File</a></dd>
-                <dd><a href='{}' download>Chemkin Thermo File</a></dd>
-                <dd><a href='{}' download>Chemkin Transport File</a></dd>
+            <h2>Downloads</h2>
+                <ul class='list-group'>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Reactions File</a></li>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Thermo File</a></li>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Transport File</a></li>
+                </ul>
             """.format(
                 kinetic_model.chemkin_reactions_file.url,
                 kinetic_model.chemkin_thermo_file.url,
@@ -78,6 +80,6 @@ class TestKineticModelDetail(TestCase):
     def test_download_links_missing(self):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
-        download_content = "<dt>Downloads</dt>"
+        download_content = "<h2>Downloads</h2>"
         response_content = "".join(response.content.decode("utf-8").split()).replace('"', "'")
         self.assertFalse(download_content in response_content)
