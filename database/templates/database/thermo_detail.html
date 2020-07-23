@@ -17,48 +17,8 @@
     <h2>Thermodynamic Information</h2>
 
     <h3>NASA Polynomials</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th scope="col">Polynomial #</th>
-                <th scope="col">$$T_{min}$$ (K)</th>
-                <th scope="col">$$T_{max}$$ (K)</th>
-                <th scope="col">$$a_0$$</th>
-                <th scope="col">$$a_1$$</th>
-                <th scope="col">$$a_2$$</th>
-                <th scope="col">$$a_3$$</th>
-                <th scope="col">$$a_4$$</th>
-                <th scope="col">$$a_5$$</th>
-                <th scope="col">$$a_6$$</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <th scope="row">1</th>
-                <td>{{ thermo.Tmin1 }}</td>
-                <td>{{ thermo.Tmax1 }}</td>
-                <td>{{ thermo.coeff11 }}</td>
-                <td>{{ thermo.coeff12 }}</td>
-                <td>{{ thermo.coeff13 }}</td>
-                <td>{{ thermo.coeff14 }}</td>
-                <td>{{ thermo.coeff15 }}</td>
-                <td>{{ thermo.coeff16 }}</td>
-                <td>{{ thermo.coeff17 }}</td>
-            </tr>
-            <tr>
-                <th scope="row">2</th>
-                <td>{{ thermo.Tmin2 }}</td>
-                <td>{{ thermo.Tmax2 }}</td>
-                <td>{{ thermo.coeff21 }}</td>
-                <td>{{ thermo.coeff22 }}</td>
-                <td>{{ thermo.coeff23 }}</td>
-                <td>{{ thermo.coeff24 }}</td>
-                <td>{{ thermo.coeff25 }}</td>
-                <td>{{ thermo.coeff26 }}</td>
-                <td>{{ thermo.coeff27 }}</td>
-            </tr>
-        </tbody>
-</table>
+    {{ thermo|render_thermo_table }}
+
 <h4>Polynomial 1</h4>
 $$\frac{C_p^\circ \left(T\right)}{R} = {% if thermo.coeff11 != 0 %}{{thermo.coeff11}}{% endif %} {% if thermo.coeff12 != 0 %} + {{thermo.coeff12}}T{% endif %} {% if thermo.coeff13 != 0 %} + {{thermo.coeff13}}T^2{% endif %} {% if thermo.coeff14 != 0 %}+ {{thermo.coeff14}}T^3{% endif %} {% if thermo.coeff15 != 0 %} + {{thermo.coeff15}}T^4{% endif %}$$
 $$\frac{H^\circ \left(T\right)}{RT} = {% if thermo.coeff11 != 0 %}{{thermo.coeff11}}{% endif %} {% if thermo.coeff12 != 0 %} + \frac{1}{2}\cdot{{thermo.coeff12}}T{% endif %} {% if thermo.coeff13 != 0 %} + \frac{1}{3}\cdot{{thermo.coeff13}}T^2{% endif %} {% if thermo.coeff14 != 0 %} + \frac{1}{4}\cdot{{thermo.coeff14}}T^3{% endif %} {% if thermo.coeff15 != 0 %} + \frac{1}{5}\cdot{{thermo.coeff15}}T^4{% endif %} {% if thermo.coeff16 != 0 %} + \frac{ {{thermo.coeff16}} }{T}{% endif %}$$
