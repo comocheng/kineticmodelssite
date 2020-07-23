@@ -113,7 +113,7 @@ class MultiArrhenius(BaseKineticsData):
     def table_data(self):
         table_heads = self.arrhenius_set.first().table_data()[0][1]
         table_bodies = []
-        for i, arrhenius in enumerate(self.arrhenius_set.all()):
+        for arrhenius in self.arrhenius_set.all():
             _, _, bodies = arrhenius.table_data()[0]
             table_bodies.append(bodies[0])
 
