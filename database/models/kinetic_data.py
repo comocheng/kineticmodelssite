@@ -96,7 +96,7 @@ class PDepArrhenius(BaseKineticsData):
     kinetics_type = "Pressure Dependent Arrhenius Kinetics"
 
     def table_data(self):
-        table_heads = ["P (Pa)", *self.pressure_set.first().arrhenius.table_data()[0][1]]
+        table_heads = [r"$P$ $(\textit{Pa})$", *self.pressure_set.first().arrhenius.table_data()[0][1]]
         table_bodies = []
         for pressure in self.pressure_set.all():
             _, _, bodies = pressure.arrhenius.table_data()[0]
