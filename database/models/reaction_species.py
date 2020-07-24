@@ -23,7 +23,7 @@ class Species(models.Model):
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
     def __str__(self):
-        return "{s.id} {s.formula!s}".format(s=self)
+        return self.formula
 
     # This method should output an object in RMG format
     # Will be used in RMG section to access the PRIME DB
