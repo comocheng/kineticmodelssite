@@ -73,17 +73,18 @@
     </nav>
     <br>
     <h2>Reactions</h2>
-    {% for k, data in kinetics_data %}
+    {% for k in kinetics_data %}
+    {% with kinetics=k.kinetics %}
     <div class="card">
-        <a href="{% url 'kinetics-detail' k.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+        <a href="{% url 'reaction-detail' kinetics.reaction.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
             <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">{{ k.kinetics.reaction }}</h5>
-              <small>ID: {{ k.kinetics.reaction.pk }}</small>
+              <h5 class="mb-1">{{ kinetics.reaction }}</h5>
+              <small>ID: {{ kinetics.reaction.pk }}</small>
             </div>
-            {% if k.kinetics.reaction.prime_id %}<p>PrIMe ID: {{k.kinetics.reaction.prime_id}}</p>{% endif %}
+            {% if kinetics.reaction.prime_id %}<p>PrIMe ID: {{kinetics.reaction.prime_id}}</p>{% endif %}
             {% if k.comment %}<p>{{ k.comment }}</p>{% endif %}
-            <small>{{ data.kinetics_type }}</small>
-            {% with data.table_data|last as table%}
+            <small>{{ kinetics.data.kinetics_type }}</small>
+            {% with kinetics.data.table_data|last as table%}
             <table class="table table-condensed">
                 <thead>
                     {% for head in table.1 %}
@@ -106,6 +107,7 @@
             {% endwith %}
         </a>
     </div>
+    {% endwith %}
     {% endfor %}
     <br>
     <nav aria-label="Kinetics Pagination">

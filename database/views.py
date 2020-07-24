@@ -220,15 +220,7 @@ class KineticModelDetail(DetailView):
         thermo = kinetic_model.thermocomment_set.order_by("thermo__species__id")
         transport = kinetic_model.transportcomment_set.order_by("transport__species__id")
         thermo_transport = list(zip_longest(thermo, transport))
-        kinetics = kinetic_model.kineticscomment_set.order_by("kinetics__reaction")
-        kinetics_data = []
-        for k in kinetics:
-            try:
-                data = BaseKineticsData.objects.get_subclass(kinetics=k.kinetics)
-            except Exception:
-                data = None
-
-            kinetics_data.append((k, data))
+        kinetics_data = kinetic_model.kineticscomment_set.order_by("kinetics__reaction__id")
 
         paginator1 = Paginator(thermo_transport, self.paginate_per_page)
         page1 = self.request.GET.get("page1", 1)
