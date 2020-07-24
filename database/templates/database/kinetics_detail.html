@@ -3,55 +3,18 @@
 {% load utils %}
 
 {% block content %}
-<h1>
-    <a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction }} </a> |
-    <a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.name }}</a>
-</h1>
-<br>
-{% if kinetics.prime_id%}
-<h2>PrIMe ID: {{ kinetics.prime_id }}</h2>
-<br>
-{% endif %}
-<ul class="list-group">
-    <li class="list-group-item"><strong>Temperature Range (K):</strong> {{ kinetics.data.min_temp }} - {{ kinetics.data.max_temp }}</li>
-    <li class="list-group-item"><strong>Pressure Range (Pa):</strong> {{ kinetics.data.min_pressure }} - {{ kinetics.data.max_pressure }}</li>
-</ul>
-<br>
-{% for header, heads, bodies in table_data %}
-<h2>{{ header }}</h2>
-<table class="table table-bordered">
-    <thead>
-        {% for head in heads %}
-        <th scope="col">{{ head }}</th>
-        {% endfor %}
-    </thead>
-    {% for row_header, cells in bodies %}
-    <tbody>
-        <tr>
-            {% if row_header %}
-            <th scope="row">{{ row_header }}</th>
-            {% endif %}
-            {% for cell in cells %}
-            <td>{{ cell }}</td>
-            {% endfor %}
-        </tr>
-    </tbody>
-    {% endfor %}
-</table>
-{% endfor %}
-<br>
-{% if efficiencies %}
-<h2>Collider Efficiencies</h2>
-<div class="list-group">
-    {% for efficiency in efficiencies %}
-    <a href="{% url 'species-detail' efficiency.species.pk %}"class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ efficiency.species }}</h5>
-         </div>
-        <p class="mb-1">Efficiency: {{ efficiency.efficiency }}</p>
-    </a>
-    {% endfor %}
-</div>
-{% endif %}
+<h1> Kinetics Detail</h1>
 
+<ul>
+    {% for name, val in kinetics|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>
+
+<h1> Kinetics Data: {{kin_type}}</h1>
+<ul>
+    {% for name, val in kineticdata|fields %}
+    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% endfor %}
+</ul>
 {% endblock %}

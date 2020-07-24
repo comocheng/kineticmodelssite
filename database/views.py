@@ -1,4 +1,3 @@
-from database.models.kinetic_data import BaseKineticsData
 from itertools import zip_longest
 
 import django_filters
@@ -123,7 +122,9 @@ class SpeciesDetail(DetailView):
         context = super().get_context_data(**kwargs)
         species = self.get_object()
         structures = Structure.objects.filter(isomer__species=species)
-        context["names"] = set(species.speciesname_set.all().values_list("name", flat=True))
+        context["names"] = set(
+            species.speciesname_set.all().values_list("name", flat=True)
+        )
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomer_set.values_list("inchi", flat=True)
@@ -190,10 +191,7 @@ class ReactionDetail(DetailView):
 
         context["reactants"] = reactants
         context["products"] = products
-        context["kinetics_data"] = [
-            (k, BaseKineticsData.objects.get_subclass(kinetics=k))
-            for k in reaction.kinetics_set.all()
-        ]
+        context["kinetics"] = reaction.kinetics_set.all()
 
         return context
 
@@ -245,10 +243,29 @@ class KineticsDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        context["table_data"] = BaseKineticsData.objects.get_subclass(
-            kinetics=kinetics
-        ).table_data()
-        context["efficiencies"] = kinetics.data.efficiency_set.all()
+        kineticdata = None
+        kin_type = None
+
+        for kt in [
+            "arrhenius",
+            "arrheniusep",
+            "chebyshev",
+            "lindemann",
+            "multiarrhenius",
+            "multipdeparrhenius",
+            "pdeparrhenius",
+            "thirdbody",
+            "troe",
+        ]:
+            try:
+                kineticdata = getattr(kinetics.basekineticsdata, kt)
+                kin_type = kt
+                break
+            except AttributeError:
+                continue
+
+        context["kin_type"] = kin_type
+        context["kineticdata"] = kineticdata
 
         return context
 
