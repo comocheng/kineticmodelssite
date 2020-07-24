@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 import rmgpy.species
 import rmgpy.reaction

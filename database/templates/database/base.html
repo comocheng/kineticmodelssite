@@ -14,8 +14,19 @@
     <link rel="stylesheet" type="text/css" href="{% static 'database/main.css' %}">
 
     <!--MathJax-->
-    <script type="text/javascript" async
-      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"/>
+    <script>
+    window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+        },
+        svg: {
+          fontCache: 'global'
+        },
+        displayAlign: "left",
+      };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+     src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     {% if title %}
         <title>Kinetic Models Site - {{ title }}</title>

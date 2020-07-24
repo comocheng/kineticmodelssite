@@ -52,8 +52,7 @@ class Arrhenius(BaseKineticsData):
     e_value = models.FloatField(default=0.0)
     e_value_uncertainty = models.FloatField(blank=True, null=True)
 
-    class Meta:
-        verbose_name_plural = "Arrhenius Kinetics"
+    kinetics_type = "Arrhenius Kinetics"
 
     def __str__(self):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
@@ -73,7 +72,7 @@ class Arrhenius(BaseKineticsData):
         return [
             (
                 "",
-                ["A", r"$$\delta A$$", "n", "E", r"$$\delta E$$",],
+                ["$A$", r"$\delta A$", "$n$", "$E$", r"$\delta E$",],
                 [
                     (
                         "",
@@ -96,6 +95,8 @@ class ArrheniusEP(BaseKineticsData):
     ep_alpha = models.FloatField()
     e0 = models.FloatField()
 
+    kinetics_type = "Arrhenius EP Kinetics"
+
     def to_rmg(self):
         return kinetics.ArrheniusEP(A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0)
 
@@ -103,7 +104,7 @@ class ArrheniusEP(BaseKineticsData):
         return [
             (
                 "",
-                ["A", "n", r"$$Ep_{\alpha}$$", "$$E_0$$"],
+                ["$A$", "$n$", r"$Ep_{\alpha}$", "$E_0$"],
                 [("", [self.a, self.n, self.ep_alpha, self.e0])],
             )
         ]
@@ -111,6 +112,8 @@ class ArrheniusEP(BaseKineticsData):
 
 class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
+
+    kinetics_type = "Pressure Dependent Arrhenius Kinetics"
 
     def to_rmg(self):
         return kinetics.PDepArrhenius(
@@ -123,7 +126,7 @@ class PDepArrhenius(BaseKineticsData):
         )
 
     def table_data(self):
-        table_heads = ["P (Pa)", *self.pressure_set.first().arrhenius.table_data()[0][1]]
+        table_heads = [r"$P$ $(\textit{Pa})$", *self.pressure_set.first().arrhenius.table_data()[0][1]]
         table_bodies = []
         for pressure in self.pressure_set.all():
             _, _, bodies = pressure.arrhenius.table_data()[0]
@@ -134,6 +137,8 @@ class PDepArrhenius(BaseKineticsData):
 
 class MultiArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius)  # Cannot be ArrheniusEP according to Dr. West
+
+    kinetics_type = "Multi Arrhenius Kinetics"
 
     def to_rmg(self):
         return kinetics.MultiArrhenius(
@@ -147,7 +152,7 @@ class MultiArrhenius(BaseKineticsData):
     def table_data(self):
         table_heads = self.arrhenius_set.first().table_data()[0][1]
         table_bodies = []
-        for i, arrhenius in enumerate(self.arrhenius_set.all()):
+        for arrhenius in self.arrhenius_set.all():
             _, _, bodies = arrhenius.table_data()[0]
             table_bodies.append(bodies[0])
 
@@ -156,6 +161,8 @@ class MultiArrhenius(BaseKineticsData):
 
 class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
+
+    kinetics_type = "Multi Pressure Dependent Arrhenius Kinetics"
 
     def to_rmg(self):
         return kinetics.MultiArrhenius(
@@ -180,6 +187,8 @@ class Chebyshev(BaseKineticsData):
     coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
     units = models.CharField(max_length=25)
 
+    kinetics_type = "Chebyshev Kinetics"
+
     def to_rmg(self):
         return kinetics.Chebyshev(
             coeffs=self.coefficient_matrix,
@@ -195,6 +204,8 @@ class ThirdBody(BaseKineticsData):
     low_arrhenius = models.ForeignKey(
         Arrhenius, null=True, blank=True, on_delete=models.CASCADE
     )  # Cannot be ArrheniusEP according to Dr. West
+
+    kinetics_type = "Third Body Kinetics"
 
     def to_rmg(self):
         return kinetics.ThirdBody(
@@ -217,6 +228,8 @@ class Lindemann(BaseKineticsData):
         Arrhenius, null=True, blank=True, related_name="+", on_delete=models.CASCADE
     )
 
+    kinetics_type = "Lindemann Kinetics"
+
     def to_rmg(self):
         # efficiencies = {
         #     e.species.to_rmg(): e.efficiency
@@ -238,14 +251,6 @@ class Lindemann(BaseKineticsData):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
         _, high_heads, high_bodies = self.high_arrhenius.table_data()[0]
         return [("Low Pressure", low_heads, low_bodies), ("High Pressure", high_heads, high_bodies)]
-
-    # Cannot be ArrheniusEP according to Dr. West
-
-    # alpha = models.FloatField() # these are not appearing in an rmg arrhenius object
-    # so I'm confused if they should be included...?
-    # t1 = models.FloatField()
-    # t2 = models.FloatField()
-    # t3 = models.FloatField()
 
 
 class Troe(BaseKineticsData):
@@ -276,6 +281,7 @@ class Troe(BaseKineticsData):
             Pmax=ScalarQuantity(self.max_pressure, "Pa"),
             efficiencies=efficiencies,
         )
+    kinetics_type = "Troe Kinetics"
 
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
@@ -284,7 +290,7 @@ class Troe(BaseKineticsData):
         return [
             (
                 "",
-                [r"$$\alpha$$", r"$$t_1$$", r"$$t_2$$", r"$$t_3$$"],
+                [r"$\alpha$", r"$t_1$", r"$t_2$", r"$t_3$"],
                 [self.alpha, self.t1, self.t2, self.t3],
             ),
             ("Low Pressure", low_heads, low_bodies),
@@ -346,3 +352,6 @@ class Kinetics(models.Model):
         """
 
         return self.to_rmg().to_chemkin()
+    @property
+    def kinetics_type(self):
+        return BaseKineticsData.objects.get_subclass(kinetics=self).kinetics_type
