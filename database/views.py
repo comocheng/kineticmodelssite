@@ -1,7 +1,6 @@
-from database.models.kinetic_data import BaseKineticsData
+import functools
 from itertools import zip_longest
 
-import django_filters
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -12,6 +11,7 @@ from django.http import HttpResponse
 from rmgpy.molecule.draw import MoleculeDrawer
 
 from .models import (
+    BaseKineticsData,
     Species,
     Structure,
     KineticModel,
@@ -21,101 +21,107 @@ from .models import (
     Reaction,
     Kinetics,
 )
+from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 
 
+class SidebarLookup:
+    def __init__(self, cls, *args, **kwargs):
+        cls.get = self.lookup_get(cls.get)
+        cls.get_context_data = self.lookup_get_context_data(cls.get_context_data)
+        self.cls = cls
+
+    def as_view(self, *args, **kwargs):
+        return self.cls.as_view(*args, **kwargs)
+
+    def lookup_get(self, func):
+        @functools.wraps(func)
+        def inner(self, request, *args, **kwargs):
+            species_pk = request.GET.get("species_pk")
+            reaction_pk = request.GET.get("reaction_pk")
+            source_pk = request.GET.get("source_pk")
+            if species_pk:
+                try:
+                    Species.objects.get(pk=species_pk)
+                    return HttpResponseRedirect(reverse("species-detail", args=[species_pk]))
+                except Species.DoesNotExist:
+                    response = func(self, request, *args, **kwargs)
+                    return response
+            elif reaction_pk:
+                try:
+                    Reaction.objects.get(pk=reaction_pk)
+                    return HttpResponseRedirect(reverse("reaction-detail", args=[reaction_pk]))
+                except Reaction.DoesNotExist:
+                    return func(self, request, *args, **kwargs)
+            elif source_pk:
+                try:
+                    Source.objects.get(pk=source_pk)
+                    return HttpResponseRedirect(reverse("source-detail", args=[source_pk]))
+                except Source.DoesNotExist:
+                    return func(self, request, *args, **kwargs)
+            else:
+                return func(self, request, *args, **kwargs)
+
+        return inner
+
+    def lookup_get_context_data(self, func):
+        @functools.wraps(func)
+        def inner(self, *args, **kwargs):
+            context = func(self, *args, **kwargs)
+            species_pk = self.request.GET.get("species_pk")
+            reaction_pk = self.request.GET.get("reaction_pk")
+            source_pk = self.request.GET.get("source_pk")
+            species_invalid = "Species with that ID wasn't found"
+            reaction_invalid = "Reaction with that ID wasn't found"
+            source_invalid = "Source with that ID wasn't found"
+            if species_pk:
+                try:
+                    Species.objects.get(pk=species_pk)
+                except Species.DoesNotExist:
+                    context["species_invalid"] = species_invalid
+                    return context
+            if reaction_pk:
+                try:
+                    Reaction.objects.get(pk=reaction_pk)
+                    return context
+                except Reaction.DoesNotExist:
+                    context["reaction_invalid"] = reaction_invalid
+                    return context
+            if source_pk:
+                try:
+                    Source.objects.get(pk=source_pk)
+                    return context
+                except Source.DoesNotExist:
+                    context["source_invalid"] = source_invalid
+                    return context
+            else:
+                return context
+
+        return inner
+
+@SidebarLookup
 class BaseView(TemplateView):
     template_name = "database/base.html"
 
 
-class IndexView(TemplateView):
-    template_name = "index.html"
-
-
-class SpeciesFilter(django_filters.FilterSet):
-    speciesname__name = django_filters.CharFilter(
-        field_name="speciesname", lookup_expr="name", label="Species Name"
-    )
-    isomer__inchi = django_filters.CharFilter(
-        field_name="isomer", lookup_expr="inchi", label="Isomer InChI"
-    )
-    isomer__structure__smiles = django_filters.CharFilter(
-        field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES"
-    )
-    isomer__structure__adjacency_list = django_filters.CharFilter(
-        field_name="isomer",
-        lookup_expr="structure__adjacency_list",
-        label="Structure Adjacency List",
-    )
-    isomer__structure__electronic_state = django_filters.NumberFilter(
-        field_name="isomer",
-        lookup_expr="structure__electronic_state",
-        label="Structure Electronic State",
-    )
-
-    class Meta:
-        model = Species
-        fields = ["prime_id", "formula", "inchi", "cas_number"]
-
-
+@SidebarLookup
 class SpeciesFilterView(FilterView):
     filterset_class = SpeciesFilter
     paginate_by = 25
 
-    def get(self, request, *args, **kwargs):
-        super_response = super().get(request, *args, **kwargs)
-        pk = request.GET.get("pk")
-        if pk is not None:
-            return HttpResponseRedirect(reverse("species-detail", args=[pk]))
-        else:
-            return super_response
 
-
-class SourceFilter(django_filters.FilterSet):
-    sourcename_name = django_filters.CharFilter(
-        field_name="sourcename", lookup_expr="name", label="Source Name"
-    )
-
-    class Meta:
-        model = Source
-        fields = ["name", "prime_id", "publication_year", "source_title", "doi"]
-
-
+@SidebarLookup
 class SourceFilterView(FilterView):
     filterset_class = SourceFilter
     paginate_by = 25
 
-    def get(self, request, *args, **kwargs):
-        super_response = super().get(request, *args, **kwargs)
-        pk = request.GET.get("pk")
-        if pk is not None:
-            return HttpResponseRedirect(reverse("source-detail", args=[pk]))
-        else:
-            return super_response
 
-
-class ReactionFilter(django_filters.FilterSet):
-    species__name = django_filters.CharFilter(
-        field_name="species", lookup_expr="speciesname__name", label="Species Name"
-    )
-
-    class Meta:
-        model = Reaction
-        fields = ["prime_id", "reversible"]
-
-
+@SidebarLookup
 class ReactionFilterView(FilterView):
     filterset_class = ReactionFilter
     paginate_by = 25
 
-    def get(self, request, *args, **kwargs):
-        super_response = super().get(request, *args, **kwargs)
-        pk = request.GET.get("pk")
-        if pk is not None:
-            return HttpResponseRedirect(reverse("reaction-detail", args=[pk]))
-        else:
-            return super_response
 
-
+@SidebarLookup
 class SpeciesDetail(DetailView):
     model = Species
 
@@ -134,6 +140,7 @@ class SpeciesDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class ThermoDetail(DetailView):
     model = Thermo
     context_object_name = "thermo"
@@ -149,6 +156,7 @@ class ThermoDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class TransportDetail(DetailView):
     model = Transport
 
@@ -161,6 +169,7 @@ class TransportDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class SourceDetail(DetailView):
     model = Source
 
@@ -173,6 +182,7 @@ class SourceDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class ReactionDetail(DetailView):
     model = Reaction
     context_object_name = "reaction"
@@ -198,6 +208,7 @@ class ReactionDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class KineticModelDetail(DetailView):
     model = KineticModel
     context_object_name = "kinetic_model"
@@ -238,6 +249,7 @@ class KineticModelDetail(DetailView):
         return context
 
 
+@SidebarLookup
 class KineticsDetail(DetailView):
     model = Kinetics
     context_object_name = "kinetics"

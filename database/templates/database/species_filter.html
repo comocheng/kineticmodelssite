@@ -1,16 +1,14 @@
 {% extends "database/base.html" %}
 
+{% load crispy_forms_tags %}
+
 {% block content %}
 <h1>Species Search</h1>
-    <h3>Search by ID</h3>
     <form action="" method="get">
-        <input type="text" name="pk"/>
-        <input type="submit"/>
+        {{ filter.form|crispy }}
+        <button type="submit" class="btn btn-primary">Submit</button>
     </form>
-    <form action="" method="get">
-        {{ filter.form.as_p }}
-        <input type="submit" />
-    </form>
+    <br>
     {% for species in object_list %}
         <a href="{% url 'species-detail' species.pk %}">Species</a>: {{ species.prime_id }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas_number }}<br/>
     {% endfor %}
