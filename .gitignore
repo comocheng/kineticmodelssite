@@ -15,3 +15,4 @@ media/
 # Misc
 ignore/*
 errors.txt
+import_log.txt
