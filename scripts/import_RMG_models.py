@@ -220,6 +220,22 @@ class SourceImporter(Importer):
             return None, None
         logger.info(f"Reading in source information for {self.name} with DOI:{doi}")
         print(self.name)
+
+        # See if the DOI has already been imported
+        try:
+            dj_source = Source.objects.get(doi=doi)
+        except Source.DoesNotExist:
+            pass
+        else:
+            # if it has, trust it's ok, but update its name
+            dj_source.name = f"{dj_source.name} & {self.name}" # append
+            dj_source.name = " & ".join(set(dj_source.name.split(" & "))) # deduplicate
+            save_model(dj_source, library_name=self.name)
+            setattr(self.dj_km, "source", dj_source)
+            save_model(self.dj_km)
+            self.dj_source = dj_source
+            return dj_source, False
+
         dj_source, source_created = Source.objects.get_or_create(name=self.name)
         print("#" * 50)
         # setting the doi
