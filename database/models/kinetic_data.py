@@ -59,10 +59,22 @@ class Arrhenius(BaseKineticsData):
         return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
 
     def to_rmg(self):
+        """
+        Return an rmgpy.kinetics.Arrhenius object for this rate expression.
+        """
+        if self.a_value_uncertainty:
+            A = ScalarQuantity(self.a_value, self.rate_constant_units(), self.a_value_uncertainty)
+        else:
+            A = ScalarQuantity(self.a_value, self.rate_constant_units())
+        if self.e_value_uncertainty:
+            Ea = ScalarQuantity(self.e_value, "J/mol", self.e_value_uncertainty)
+        else:
+            Ea = ScalarQuantity(self.e_value, "J/mol")
+
         return kinetics.Arrhenius(
-            A=ScalarQuantity(self.a_value, self.rate_constant_units()),
+            A=A,
             n=self.n_value,
-            Ea=ScalarQuantity(self.e_value, "J/mol"),
+            Ea=Ea,
             Tmin=ScalarQuantity(self.min_temp, "K"),
             Tmax=ScalarQuantity(self.max_temp, "K"),
             Pmin=ScalarQuantity(self.min_pressure, "Pa"),
@@ -357,7 +369,6 @@ class Kinetics(models.Model):
         """
         Creates a chemkin-formatted string
         """
-
         return self.to_rmg().to_chemkin()
 
     @property
