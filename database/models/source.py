@@ -71,5 +71,8 @@ class Authorship(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     order = models.IntegerField("Order of authorship")
 
+    class Meta:
+        ordering = ('order',)
+
     def __str__(self):
-        return ("{s.id} author {s.author} " "was # {s.order} in {s.source}").format(s=self)
+        return f"Author: {self.author}, Source: {self.source.name}, Order: {self.order}"
