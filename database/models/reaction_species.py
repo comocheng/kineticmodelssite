@@ -99,8 +99,8 @@ class Reaction(models.Model):
     """
 
     species = models.ManyToManyField(Species, through="Stoichiometry")
-    prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
-    reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
+    prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
+    reversible = models.BooleanField()
 
     class Meta:
         ordering = ("prime_id",)
