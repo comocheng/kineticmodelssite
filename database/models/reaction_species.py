@@ -24,6 +24,10 @@ class Species(models.Model):
     inchi = models.CharField("InChI", blank=True, max_length=500)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
+    class Meta:
+        ordering = ("prime_id",)
+        verbose_name_plural = "Species"
+
     def __str__(self):
         return self.formula
 
@@ -36,10 +40,6 @@ class Species(models.Model):
             return species
         else:
             return None
-
-    class Meta:
-        ordering = ("prime_id",)
-        verbose_name_plural = "Species"
 
 
 class Isomer(models.Model):
@@ -100,6 +100,9 @@ class Reaction(models.Model):
     species = models.ManyToManyField(Species, through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
     reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
+
+    class Meta:
+        ordering = ("prime_id",)
 
     def stoich_species(self):
         """
@@ -203,9 +206,6 @@ class Reaction(models.Model):
 
         return f"{left_side} {arrow} {right_side}"
 
-    class Meta:
-        ordering = ("prime_id",)
-
 
 class Stoichiometry(models.Model):
     """
@@ -221,16 +221,16 @@ class Stoichiometry(models.Model):
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
     stoichiometry = models.FloatField(default=0.0)
 
-    def __str__(self):
-        return (
-            "{s.id} species {s.species} " "in reaction {s.reaction} is {s.stoichiometry}"
-        ).format(s=self)
-
     class Meta:
         verbose_name_plural = "Stoichiometries"
         unique_together = ["species", "reaction", "stoichiometry"]
 
+    def __str__(self):
+        return (
+            "{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}"
+        ).format(s=self)
+
     def __repr__(self):
         return (
-            "{s.id} species {s.species} " "in reaction {s.reaction} is {s.stoichiometry}"
+            "{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}"
         ).format(s=self)

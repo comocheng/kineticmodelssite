@@ -369,7 +369,6 @@ class Kinetics(models.Model):
         """
         Creates a chemkin-formatted string
         """
-
         return self.to_rmg().to_chemkin()
 
     @property
