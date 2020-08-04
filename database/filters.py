@@ -41,10 +41,6 @@ class ReactionFilter(django_filters.FilterSet):
 
 
 class SourceFilter(django_filters.FilterSet):
-    sourcename_name = django_filters.CharFilter(
-        field_name="sourcename", lookup_expr="name", label="Source Name"
-    )
-
     class Meta:
         model = Source
-        fields = ["name", "prime_id", "publication_year", "source_title", "doi"]
+        fields = ["prime_id", "publication_year", "source_title", "journal_name", "doi"]
