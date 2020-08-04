@@ -1,6 +1,8 @@
 from math import log
 
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
+from rmgpy.constants import R as gas_constant
 
 from .source import Source
 from .reaction_species import Species
@@ -29,127 +31,93 @@ class Thermo(models.Model):
         coefficients 1 thru 7
     """
 
-    R = 8.314472
-
     source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
-    species = models.ForeignKey(Species, null=True, on_delete=models.CASCADE)
+    species = models.ForeignKey(Species, on_delete=models.CASCADE)
     prime_id = models.CharField(blank=True, max_length=11)
     preferred_key = models.CharField(blank=True, help_text="i.e. T 11/97, or J 3/65", max_length=20)
     reference_temp = models.FloatField(
-        "Reference State Temperature", blank=True, help_text="units: K", default=0.0
+        "Reference State Temperature", help_text="units: K", default=0.0
     )
     reference_pressure = models.FloatField(
-        "Reference State Pressure", blank=True, help_text="units: Pa", default=0.0
+        "Reference State Pressure", help_text="units: Pa", default=0.0
     )
-    dHf = models.FloatField(
-        "Enthalpy of Formation", blank=True, help_text="units: J/mol", default=0.0
+    enthalpy_formation = models.FloatField(
+        "Enthalpy of Formation", help_text="units: J/mol", null=True
     )
-    Tmin1 = models.FloatField("Polynomial 1 Lower Temp Bound", help_text="units: K", default=0.0)
-    Tmax1 = models.FloatField("Polynomial 1 Upper Temp Bound", help_text="units: K", default=0.0)
-    coeff11 = models.FloatField("Polynomial 1 Coefficient 1", default=0.0)
-    coeff12 = models.FloatField("Polynomial 1 Coefficient 2", default=0.0)
-    coeff13 = models.FloatField("Polynomial 1 Coefficient 3", default=0.0)
-    coeff14 = models.FloatField("Polynomial 1 Coefficient 4", default=0.0)
-    coeff15 = models.FloatField("Polynomial 1 Coefficient 5", default=0.0)
-    coeff16 = models.FloatField("Polynomial 1 Coefficient 6", default=0.0)
-    coeff17 = models.FloatField("Polynomial 1 Coefficient 7", default=0.0)
-    Tmin2 = models.FloatField("Polynomial 2 Lower Temp Bound", help_text="units: K", default=0.0)
-    Tmax2 = models.FloatField("Polynomial 2 Upper Temp Bound", help_text="units: K", default=0.0)
-    coeff21 = models.FloatField("Polynomial 2 Coefficient 1", default=0.0)
-    coeff22 = models.FloatField("Polynomial 2 Coefficient 2", default=0.0)
-    coeff23 = models.FloatField("Polynomial 2 Coefficient 3", default=0.0)
-    coeff24 = models.FloatField("Polynomial 2 Coefficient 4", default=0.0)
-    coeff25 = models.FloatField("Polynomial 2 Coefficient 5", default=0.0)
-    coeff26 = models.FloatField("Polynomial 2 Coefficient 6", default=0.0)
-    coeff27 = models.FloatField("Polynomial 2 Coefficient 7", default=0.0)
+    coeffs_poly1 = ArrayField(models.FloatField(), size=7)
+    coeffs_poly2 = ArrayField(models.FloatField(), size=7)
+    temp_min_1 = models.FloatField("Polynomial 1 Lower Temp Bound", help_text="units: K")
+    temp_max_1 = models.FloatField("Polynomial 1 Upper Temp Bound", help_text="units: K")
+    temp_min_2 = models.FloatField("Polynomial 2 Lower Temp Bound", help_text="units: K")
+    temp_max_2 = models.FloatField("Polynomial 2 Upper Temp Bound", help_text="units: K")
 
-    def heat_capacity(self, T, poly):
-        if poly == 1:
-            return (
-                self.coeff11
-                + T * (self.coeff12 + T * (self.coeff13 + T * (self.coeff14 + self.coeff15 * T)))
-            ) * self.R
-        return (
-            self.coeff21
-            + T * (self.coeff22 + T * (self.coeff23 + T * (self.coeff24 + self.coeff25 * T)))
-        ) * self.R
+    def heat_capacity(self, temp, poly_num):
+        c1, c2, c3, c4, c5, _, _ = self._polynomial_select(
+            poly_num, self.coeffs_poly1, self.coeffs_poly2
+        )
+        return (c1 + temp * (c2 + temp * (c3 + temp * (c4 + c5 * temp)))) * gas_constant
 
-    def enthalpy(self, T, poly):
-        T2 = T * T
-        T4 = T2 * T2
-
-        if poly == 1:
-            return (
-                (
-                    self.coeff11
-                    + self.coeff12 * T / 2.0
-                    + self.coeff13 * T2 / 3.0
-                    + self.coeff14 * T2 * T / 4.0
-                    + self.coeff15 * T4 / 5.0
-                    + self.coeff16 / T
-                )
-                * self.R
-                * T
-            )
+    def enthalpy(self, temp, poly_num):
+        c1, c2, c3, c4, c5, c6, _ = self._polynomial_select(
+            poly_num, self.coeffs_poly1, self.coeffs_poly2
+        )
         return (
             (
-                self.coeff21
-                + self.coeff22 * T / 2.0
-                + self.coeff23 * T2 / 3.0
-                + self.coeff24 * T2 * T / 4.0
-                + self.coeff25 * T4 / 5.0
-                + self.coeff26 / T
+                c1
+                + c2 * temp / 2.0
+                + c3 * temp ** 2 / 3.0
+                + c4 * temp ** 2 * temp / 4.0
+                + c5 * temp ** 4 / 5.0
+                + c6 / temp
             )
-            * self.R
-            * T
+            * gas_constant
+            * temp
         )
 
-    def entropy(self, T, poly):
-        T2 = T * T
-        T4 = T2 * T2
-
-        if poly == 1:
-            return (
-                self.coeff11 * log(T)
-                + self.coeff12 * T
-                + self.coeff13 * T2 / 2.0
-                + self.coeff14 * T2 * T / 3.0
-                + self.coeff15 * T4 / 4.0
-                + self.coeff17
-            ) * self.R
-        return (
-            self.coeff21 * log(T)
-            + self.coeff22 * T
-            + self.coeff23 * T2 / 2.0
-            + self.coeff24 * T2 * T / 3.0
-            + self.coeff25 * T4 / 4.0
-            + self.coeff27
-        ) * self.R
-
-    def free_energy(self, T, poly):
-        return self.enthalpy(T, poly) - T * self.entropy(T, poly)
-
-    def T_range(self, poly, dT=10):
-        return (
-            range(self.Tmin1, self.Tmax1 + 1, dT)
-            if poly == 1
-            else range(self.Tmin2, self.Tmax2 + 1, dT)
+    def entropy(self, temp, poly_num):
+        c1, c2, c3, c4, c5, _, c7 = self._polynomial_select(
+            poly_num, self.coeffs_poly1, self.coeffs_poly2
         )
+        return (
+            c1 * log(temp)
+            + c2 * temp
+            + c3 * temp ** 2 / 2.0
+            + c4 * temp ** 2 * temp / 3.0
+            + c5 * temp ** 4 / 4.0
+            + c7
+        ) * gas_constant
 
-    def heat_capacities(self, poly):
-        return [self.heat_capacity(T, poly) for T in self.T_range(poly)]
+    def free_energy(self, temp, poly_num):
+        return self.enthalpy(temp, poly_num) - temp * self.entropy(temp, poly_num)
 
-    def enthalpies(self, poly):
-        return [self.enthalpy(T, poly) for T in self.T_range(poly)]
+    def temp_range(self, poly_num, temp_step):
+        temp_min, temp_max = self._polynomial_select(
+            poly_num, (self.temp_min_1, self.temp_max_1), (self.temp_min_2, self.temp_max_2)
+        )
+        return range(temp_min, temp_max + 1, temp_step)
 
-    def entropies(self, poly):
-        return [self.entropy(T, poly) for T in self.T_range(poly)]
+    def heat_capacities(self, poly_num, temp_step):
+        return self._get_properties_over_temp_range(self.heat_capacity, poly_num, temp_step)
 
-    def free_energies(self, poly):
-        return [self.free_energy(T, poly) for T in self.T_range(poly)]
+    def enthalpies(self, poly_num, temp_step):
+        return self._get_properties_over_temp_range(self.enthalpy, poly_num, temp_step)
 
-    def __str__(self):
-        return str(self.id)
+    def entropies(self, poly_num, temp_step):
+        return self._get_properties_over_temp_range(self.entropy, poly_num, temp_step)
+
+    def free_energies(self, poly_num, temp_step):
+        return self._get_properties_over_temp_range(self.free_energy, poly_num, temp_step)
+
+    def _polynomial_select(poly_num, result_poly1, result_poly2):
+        if poly_num == 1:
+            return result_poly1
+        elif poly_num == 2:
+            return result_poly2
+        else:
+            raise ValueError("polynomial number invalid, pick '1' or '2'")
+
+    def _get_properties_over_temp_range(self, property_func, poly_num, temp_step):
+        return [property_func(temp, poly_num) for temp in self.temp_range(poly_num, temp_step)]
 
 
 class Transport(models.Model):
