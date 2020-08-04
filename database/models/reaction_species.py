@@ -220,7 +220,7 @@ class Stoichiometry(models.Model):
 
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
-    stoichiometry = models.FloatField(default=0.0)
+    stoichiometry = models.FloatField()
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
