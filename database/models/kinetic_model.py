@@ -113,7 +113,7 @@ class ThermoComment(models.Model):
 
     thermo = models.ForeignKey(Thermo, on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
-    comment = models.CharField(blank=True, max_length=1000)
+    comment = models.TextField(blank=True)
 
     def __str__(self):
         return self.comment
