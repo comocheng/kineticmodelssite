@@ -133,11 +133,11 @@ class Transport(models.Model):
         "Potential Well Depth", blank=True, help_text="units: K", default=0.0
     )
     collision_diameter = models.FloatField(
-        "Collision Diameter", blank=True, help_text="units: Angstroms", default=0.0
+        "Collision Diameter", blank=True, help_text="units: angstroms", default=0.0
     )
-    dipole_moment = models.FloatField(blank=True, help_text="units: Debye", default=0.0)
-    polarizability = models.FloatField(blank=True, help_text="units: cubic Angstroms", default=0.0)
+    dipole_moment = models.FloatField(blank=True, help_text="units: debye", default=0.0)
+    polarizability = models.FloatField(blank=True, help_text="units: cubic angstroms", default=0.0)
     rotational_relaxation = models.FloatField("Rotational Relaxation", blank=True, default=0.0)
 
     def __str__(self):
-        return f"{self.id} {self.species}"
+        return f"{super().__str__()} | Species: {self.species}"
