@@ -19,8 +19,9 @@ class Species(models.Model):
     Fuel ID (N/A for now)
     names (very optional)
     """
-    prime_id = models.CharField("PrIMe ID", max_length=9)
-    formula = models.CharField(blank=True, max_length=50)
+
+    prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
+    formula = models.CharField(max_length=50)
     inchi = models.CharField("InChI", blank=True, max_length=500)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
