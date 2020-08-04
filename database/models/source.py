@@ -6,8 +6,8 @@ class Author(models.Model):
     An author of a Source, i.e. a person who published it.
     """
 
-    firstname = models.CharField(default="", max_length=80)
-    lastname = models.CharField(default="", max_length=80)
+    firstname = models.CharField(max_length=80)
+    lastname = models.CharField(max_length=80)
 
     @property
     def name(self):
