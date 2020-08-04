@@ -21,36 +21,36 @@
 </div>
 </br>
 <h3>Kinetics</h3>
-{% for k, data in kinetics_data %}
+{% for k in kinetics %}
     <div class="card">
         <a href="{% url 'kinetics-detail' k.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
             <div class="d-flex w-100 justify-content-between">
               <h5 class="mb-1">{{ k.source.name }}</h5>
               <small>ID: {{ k.pk }}</small>
             </div>
-            <small>{{ data.kinetics_type }}</small>
+            <small>{{ k.data.kinetics_type }}</small>
         </a>
-            {% with data.table_data|last as table%}
-            <table class="table table-condensed">
-                <thead>
-                    {% for head in table.1 %}
-                    <th scope="col">{{ head }}</th>
-                    {% endfor %}
-                </thead>
-                {% for row_header, cells in table.2 %}
-                <tbody>
-                    <tr>
-                        {% if row_header %}
-                        <th scope="row">{{ row_header }}</th>
-                        {% endif %}
-                        {% for cell in cells %}
-                        <td>{{ cell }}</td>
-                        {% endfor %}
-                    </tr>
-                </tbody>
+        {% with k.data.table_data|last as table%}
+        <table class="table table-condensed">
+            <thead>
+                {% for head in table.1 %}
+                <th scope="col">{{ head }}</th>
                 {% endfor %}
-            </table>
-            {% endwith %}
+            </thead>
+            {% for row_header, cells in table.2 %}
+            <tbody>
+                <tr>
+                    {% if row_header %}
+                    <th scope="row">{{ row_header }}</th>
+                    {% endif %}
+                    {% for cell in cells %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+            {% endfor %}
+        </table>
+        {% endwith %}
     </div>
     <br>
 {% endfor %}

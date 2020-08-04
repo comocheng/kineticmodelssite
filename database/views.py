@@ -200,10 +200,7 @@ class ReactionDetail(DetailView):
 
         context["reactants"] = reactants
         context["products"] = products
-        context["kinetics_data"] = [
-            (k, BaseKineticsData.objects.get_subclass(kinetics=k))
-            for k in reaction.kinetics_set.all()
-        ]
+        context["kinetics"] = reaction.kinetics_set.all()
 
         return context
 
