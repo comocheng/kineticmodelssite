@@ -63,15 +63,15 @@ class Isomer(models.Model):
 
 class Structure(models.Model):
     """
-    A structure is the resonance structure of Isomers.
+    A structure is a specific resonance structure of an Isomer.
 
     The equivalent term in RMG would be a molecule
     """
 
     isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
     smiles = models.CharField("SMILES", blank=True, max_length=500)
-    adjacency_list = models.TextField("Adjacency List")
-    electronic_state = models.IntegerField("Electronic State")
+    adjacency_list = models.TextField("Adjacency List", unique=True)
+    multiplicity = models.IntegerField()
 
     def __str__(self):
         return "{s.adjacency_list}".format(s=self)
