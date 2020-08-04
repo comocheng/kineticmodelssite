@@ -49,6 +49,26 @@ class TestKineticModelDetail(TestCase):
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
         self.assertEqual(len(response.context["thermo_transport"]), kinetic_model.species.count())
 
+    def test_thermo_transport_aligned(self):
+        """
+        The thermo-transport pairs passed to the context should be related to the same species
+        """
+        kinetic_model = create_kinetic_model_with_detail_view_dependencies()
+        paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
+        for _ in range(1, paginate_per_page):
+            species = models.Species.objects.create()
+            thermo = models.Thermo.objects.create(species=species)
+            transport = models.Transport.objects.create(species=species)
+            kinetic_model.species.add(species)
+            kinetic_model.thermo.add(thermo)
+            kinetic_model.transport.add(transport)
+
+        response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
+        thermo_transport = response.context["thermo_transport"]
+        for thermo, transport in thermo_transport:
+            self.assertEqual(thermo.thermo.species.pk, transport.transport.species.pk)
+
+
     def test_download_links_present(self):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         kinetic_model.chemkin_reactions_file.save(
@@ -61,10 +81,12 @@ class TestKineticModelDetail(TestCase):
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
         download_content = "".join(
             """
-            <dt>Downloads</dt>
-                <dd><a href='{}' download>Chemkin Reactions File</a></dd>
-                <dd><a href='{}' download>Chemkin Thermo File</a></dd>
-                <dd><a href='{}' download>Chemkin Transport File</a></dd>
+            <h2>Downloads</h2>
+                <ul class='list-group'>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Reactions File</a></li>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Thermo File</a></li>
+                    <li class='list-group-item'><a href='{}' download>Chemkin Transport File</a></li>
+                </ul>
             """.format(
                 kinetic_model.chemkin_reactions_file.url,
                 kinetic_model.chemkin_thermo_file.url,
@@ -78,6 +100,6 @@ class TestKineticModelDetail(TestCase):
     def test_download_links_missing(self):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
-        download_content = "<dt>Downloads</dt>"
+        download_content = "<h2>Downloads</h2>"
         response_content = "".join(response.content.decode("utf-8").split()).replace('"', "'")
         self.assertFalse(download_content in response_content)

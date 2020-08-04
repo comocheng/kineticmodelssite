@@ -27,6 +27,7 @@ class BaseKineticsData(models.Model):
     def rate_constant_units(self):
         return f"(mol/m^3)^({1-self.order})/s"
 
+
 class KineticsData(BaseKineticsData):
     temp_array = models.TextField()  # JSON might be appropriate here
     rate_coefficients = models.TextField()  # JSON also appropriate here
@@ -126,7 +127,10 @@ class PDepArrhenius(BaseKineticsData):
         )
 
     def table_data(self):
-        table_heads = [r"$P$ $(\textit{Pa})$", *self.pressure_set.first().arrhenius.table_data()[0][1]]
+        table_heads = [
+            r"$P$ $(\textit{Pa})$",
+            *self.pressure_set.first().arrhenius.table_data()[0][1],
+        ]
         table_bodies = []
         for pressure in self.pressure_set.all():
             _, _, bodies = pressure.arrhenius.table_data()[0]
@@ -281,6 +285,7 @@ class Troe(BaseKineticsData):
             Pmax=ScalarQuantity(self.max_pressure, "Pa"),
             efficiencies=efficiencies,
         )
+
     kinetics_type = "Troe Kinetics"
 
     def table_data(self):
@@ -329,7 +334,9 @@ class Kinetics(models.Model):
     reverse = models.BooleanField(
         default=False, help_text="Is this the rate for the reverse reaction?"
     )
-    data = models.OneToOneField(BaseKineticsData, null=True, blank=True, on_delete=models.CASCADE)
+    base_data = models.OneToOneField(
+        BaseKineticsData, null=True, blank=True, on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name_plural = "Kinetics"
@@ -352,6 +359,12 @@ class Kinetics(models.Model):
         """
 
         return self.to_rmg().to_chemkin()
+
     @property
     def kinetics_type(self):
         return BaseKineticsData.objects.get_subclass(kinetics=self).kinetics_type
+
+    @property
+    def data(self):
+        if self.basekineticsdata is not None:
+            return BaseKineticsData.objects.get_subclass(kinetics=self)

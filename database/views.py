@@ -217,10 +217,10 @@ class KineticModelDetail(DetailView):
     def get_context_data(self, **kwargs):
         kinetic_model = self.get_object()
         context = super().get_context_data(**kwargs)
-        thermo = kinetic_model.thermo.order_by("species")
-        transport = kinetic_model.transport.order_by("species")
+        thermo = kinetic_model.thermocomment_set.order_by("thermo__species__id")
+        transport = kinetic_model.transportcomment_set.order_by("transport__species__id")
         thermo_transport = list(zip_longest(thermo, transport))
-        kinetics = kinetic_model.kinetics.order_by("reaction")
+        kinetics_data = kinetic_model.kineticscomment_set.order_by("kinetics__reaction__id")
 
         paginator1 = Paginator(thermo_transport, self.paginate_per_page)
         page1 = self.request.GET.get("page1", 1)
@@ -231,17 +231,17 @@ class KineticModelDetail(DetailView):
         except EmptyPage:
             paginated_thermo_transport = paginator1.page(paginator1.num_pages)
 
-        paginator2 = Paginator(kinetics, self.paginate_per_page)
+        paginator2 = Paginator(kinetics_data, self.paginate_per_page)
         page2 = self.request.GET.get("page2", 1)
         try:
-            paginated_kinetics = paginator2.page(page2)
+            paginated_kinetics_data = paginator2.page(page2)
         except PageNotAnInteger:
-            paginated_kinetics = paginator2.page(1)
+            paginated_kinetics_data = paginator2.page(1)
         except EmptyPage:
-            paginated_kinetics = paginator2.page(paginator2.num_pages)
+            paginated_kinetics_data = paginator2.page(paginator2.num_pages)
 
         context["thermo_transport"] = paginated_thermo_transport
-        context["kinetics"] = paginated_kinetics
+        context["kinetics_data"] = paginated_kinetics_data
         context["page1"] = page1
         context["page2"] = page2
         context["source"] = kinetic_model.source

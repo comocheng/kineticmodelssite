@@ -5,80 +5,130 @@
 {% block content %}
 <h1>{{kinetic_model.model_name}}</h1>
 
-<dl>
     {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file %}
-    <dt>Downloads</dt>
+    <h2>Downloads</h2>
+    <ul class="list-group">
         {% if kinetic_model.chemkin_reactions_file %}
-        <dd><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download>Chemkin Reactions File</a></dd>
+        <li class="list-group-item"><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download>Chemkin Reactions File</a></li>
         {% endif %}
         {% if kinetic_model.chemkin_thermo_file %}
-        <dd><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download>Chemkin Thermo File</a></dd>
+        <li class="list-group-item"><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download>Chemkin Thermo File</a></li>
         {% endif %}
         {% if kinetic_model.chemkin_transport_file %}
-        <dd><a href="{{ kinetic_model.chemkin_transport_file.url }}" download>Chemkin Transport File</a></dd>
+        <li class="list-group-item"><a href="{{ kinetic_model.chemkin_transport_file.url }}" download>Chemkin Transport File</a></li>
         {% endif %}
+    </ul>
     {% endif %}
-    <dt>Source</dt>
-        <dd><a href="{% url 'source-detail' source.pk %}">{{source.name}}</a></dd>
-    <dt>Species</dt>
-    {% for thermo, transport in thermo_transport %}
-    <dd>
+    <h2>Source</h2>
+    <a href="{% url 'source-detail' source.pk %}">{{source.name}}</a>
+    <br>
+    <h2>Species</h2>
+    <div class="card">
+    {% for th, tr in thermo_transport %}
+    {% with thermo=th.thermo transport=tr.transport%}
+    {% if thermo %}
+    <a href="{% url 'species-detail' thermo.species.pk %}" class="list-group-item list-group-item-action">
+    {% else %}
+    <a href="{% url 'species-detail' transport.species.pk %}" class="list-group-item list-group-item-action">
+    {% endif %}
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{% firstof thermo.species.formula transport.species.formula %}</h5>
+            <small>ID: {% firstof thermo.species.pk transport.species.pk %}</small>
+        </div>
         {% if thermo %}
-        <a href="{% url 'species-detail' thermo.species.pk %}">{{thermo.species.formula}}</a>
-        {% else %}
-        <a href="{% url 'species-detail' transport.species.pk %}">{{transport.species.formula}}</a>
+        <h6 class="mb-1">Thermo Data</h6>
+        {% if th.comment %}<p class="mb-1">{{ th.comment }}</p>{% endif %}
+        {{ thermo|render_thermo_table:True }}
         {% endif %}
-        <br>
-        {% if thermo %}
-        <small><a href="{% url 'thermo-detail' thermo.pk %}">Thermo</a></small>
-        {% endif %}
-        {% if transport and thermo %} | {% endif %}
         {% if transport %}
-        <small><a href="{% url 'transport-detail' transport.pk %}">Transport</a></small>
+        <h6 class="mb-1">Transport Data</h6>
+        {% if tr.comment %}<p class="mb-1">{{ tr.comment }}</p>{% endif %}
+        {{ transport|render_transport_table:True }}
         {% endif %}
-    </dd>
+    </a>
+    {% endwith %}
     {% endfor %}
-    <div class="thermo_transport-pagination">
-        <span class="step-links">
+    </div>
+    <br>
+    <nav aria-label="Thermo-Transport Pagination">
+        <span class="current">
+            Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}.
+        </span>
+        <ul class="pagination">
             {% if thermo_transport.has_previous %}
-                <a href="?page1=1&page2={{ page2 }}">&laquo; first</a>
-                <a href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}">previous</a>
+            <li class="page-item"><a class="page-link" href="?page1=1&page2={{ page2 }}">First</a></li>
+            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}">Previous</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
             {% endif %}
-
-            <span class="current">
-                Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}.
-            </span>
-
             {% if thermo_transport.has_next %}
-                <a href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}">next</a>
-                <a href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}">last &raquo;</a>
+            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}">Last</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
             {% endif %}
-        </span>
+        </ul>
+    </nav>
+    <br>
+    <h2>Reactions</h2>
+    {% for k in kinetics_data %}
+    {% with kinetics=k.kinetics %}
+    <div class="card">
+        <a href="{% url 'reaction-detail' kinetics.reaction.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+            <div class="d-flex w-100 justify-content-between">
+              <h5 class="mb-1">{{ kinetics.reaction }}</h5>
+              <small>ID: {{ kinetics.reaction.pk }}</small>
+            </div>
+            {% if kinetics.reaction.prime_id %}<p>PrIMe ID: {{kinetics.reaction.prime_id}}</p>{% endif %}
+            {% if k.comment %}<p>{{ k.comment }}</p>{% endif %}
+            <small>{{ kinetics.data.kinetics_type }}</small>
+            {% with kinetics.data.table_data|last as table%}
+            <table class="table table-condensed">
+                <thead>
+                    {% for head in table.1 %}
+                    <th scope="col">{{ head }}</th>
+                    {% endfor %}
+                </thead>
+                {% for row_header, cells in table.2 %}
+                <tbody>
+                    <tr>
+                        {% if row_header %}
+                        <th scope="row">{{ row_header }}</th>
+                        {% endif %}
+                        {% for cell in cells %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+                {% endfor %}
+            </table>
+            {% endwith %}
+        </a>
     </div>
-    <dt>Reactions</dt>
-    {% for k in kinetics %}
-        <dd>
-            <a href="{% url 'reaction-detail' k.reaction.pk %}">{{k.reaction}}</a>
-            <br>
-            <small><a href="{% url 'kinetics-detail' k.pk %}">Kinetics Data ({{k.source.name}})</a></small>
-        </dd>
+    {% endwith %}
     {% endfor %}
-    <div class="kinetic-pagination">
-        <span class="step-links">
-            {% if kinetics.has_previous %}
-                <a href="?page2=1&page1={{ page1 }}">&laquo; first</a>
-                <a href="?page2={{ kinetics.previous_page_number }}&page1={{ page1 }}">previous</a>
-            {% endif %}
-
-            <span class="current">
-                Page {{ kinetics.number }} of {{ kinetics.paginator.num_pages }}.
-            </span>
-
-            {% if kinetics.has_next %}
-                <a href="?page2={{ kinetics.next_page_number }}&page1={{ page1 }}">next</a>
-                <a href="?page2={{ kinetics.paginator.num_pages }}&page1={{ page1 }}">last &raquo;</a>
-            {% endif %}
+    <br>
+    <nav aria-label="Kinetics Pagination">
+        <span class="current">
+            Page {{ kinetics_data.number }} of {{ kinetics_data.paginator.num_pages }}.
         </span>
-    </div>
-</dl>
+        <ul class="pagination">
+            {% if kinetics_data.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page1=1&page2={{ page2 }}">First</a></li>
+            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.previous_page_number }}&page2={{ page2 }}">Previous</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
+            {% endif %}
+            {% if kinetics_data.has_next %}
+            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.next_page_number }}&page2={{ page2 }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.paginator.num_pages }}&page2={{ page2 }}">Last</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
+            {% endif %}
+        </ul>
+    </nav>
 {% endblock %}
