@@ -30,8 +30,8 @@ class BaseKineticsData(models.Model):
 
 
 class KineticsData(BaseKineticsData):
-    temp_array = models.TextField()  # JSON might be appropriate here
-    rate_coefficients = models.TextField()  # JSON also appropriate here
+    temp_array = ArrayField(models.FloatField())
+    rate_coefficients = ArrayField(models.FloatField())
 
 
 class Arrhenius(BaseKineticsData):
