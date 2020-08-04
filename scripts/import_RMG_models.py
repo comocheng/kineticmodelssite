@@ -199,9 +199,9 @@ class SourceImporter(Importer):
             matched_doi = None
         elif len(matched_set) > 1:
             logger.warning(
-                f"Found more than one DOI in the souce.txt file for {path}, choosing the first"
+                f"Found more than one DOI in the souce.txt file for {path}, setting to None"
             )
-            matched_doi = matched_list[0]
+            matched_doi = None
         else:
             matched_doi = matched_list[0]
 
