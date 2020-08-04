@@ -155,6 +155,12 @@ class SourceImporter(Importer):
     To obtain sources from RMG-models directory
     """
 
+    def __init__(self, *args, **kwargs):
+        super(SourceImporter, self).__init__(*args, **kwargs)
+        self.authors = None
+        self.dj_source = None
+        self.doi = None
+
     def name_from_path(self, path=None):
         """
         Get the library name from the (full) source text file path
@@ -279,6 +285,7 @@ class SourceImporter(Importer):
 
         setattr(self.dj_km, "source", dj_source)
         save_model(self.dj_km)
+        self.dj_source = dj_source
         return dj_source, source_created
 
     def import_authors(self, doi=None):
@@ -319,7 +326,7 @@ class SourceImporter(Importer):
                     order = i + 1
             save_model(dj_author, library_name=self.name)
             authors.append((order, dj_author, author_created))
-
+        self.authors = authors
         return authors
 
     def import_authorship(self):
@@ -331,8 +338,10 @@ class SourceImporter(Importer):
         self.get_doi()
         if not self.doi:
             return False
-        authors = self.import_authors()
-        dj_source, _ = self.import_source()
+        authors = self.authors or self.import_authors()
+        dj_source = self.dj_source
+        if not dj_source:
+            dj_source, _ = self.import_source() # didn't we just do this?
         if not dj_source:
             return False
         logger.info(dj_source)
