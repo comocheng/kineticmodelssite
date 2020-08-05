@@ -45,4 +45,4 @@ jobs:
 
       - shell: bash -l {0}
         run: |
-          python manage.py test
+          python manage.py test --settings=kms.test_settings
