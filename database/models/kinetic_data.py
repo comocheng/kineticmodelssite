@@ -279,7 +279,7 @@ class Troe(BaseKineticsData):
     )
     alpha = models.FloatField()
     t1 = models.FloatField()
-    t2 = models.FloatField()
+    t2 = models.FloatField(default=0.0, blank=True)
     t3 = models.FloatField()
 
     def to_rmg(self):
