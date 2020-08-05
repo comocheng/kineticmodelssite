@@ -182,7 +182,7 @@ class MultiPDepArrhenius(BaseKineticsData):
     kinetics_type = "Multi Pressure Dependent Arrhenius Kinetics"
 
     def to_rmg(self):
-        return kinetics.MultiArrhenius(
+        return kinetics.MultiPdepArrhenius(
             arrhenius=[arrhenius.to_rmg() for arrhenius in self.pdep_arrhenius_set.all()],
             Tmin=ScalarQuantity(self.min_temp, "K"),
             Tmax=ScalarQuantity(self.max_temp, "K"),
@@ -378,5 +378,5 @@ class Kinetics(models.Model):
 
     @property
     def data(self):
-        if self.basekineticsdata is not None:
+        if self.base_data is not None:
             return BaseKineticsData.objects.get_subclass(kinetics=self)
