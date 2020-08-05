@@ -1,4 +1,3 @@
-from django.db import models
 import os
 
 from django.db import models
@@ -13,15 +12,15 @@ def upload_to(instance, filename):
     return os.path.join("kineticmodels", str(instance.id), f"{instance.model_name}_{filename}")
 
 
-def upload_chemkin_to(instance, filename):
+def upload_chemkin_to(instance, _):
     return upload_to(instance, "chemkin_reaction.txt")
 
 
-def upload_thermo_to(instance, filename):
+def upload_thermo_to(instance, _):
     return upload_to(instance, "chemkin_thermo.txt")
 
 
-def upload_transport_to(instance, filename):
+def upload_transport_to(instance, _):
     return upload_to(instance, "chemkin_transport.txt")
 
 
