@@ -57,4 +57,4 @@ In order to update the models and migrate existing data to reflect the new schem
 ### Version Control Strategy
 1. Create a feature branch from `master`
 2. When finished, rebase the feature branch to the tip of `master`
-3. Open a PR and perform a Squash & Merge once approved
+3. Open a PR and perform a Merge once approved
