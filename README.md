@@ -27,7 +27,10 @@ https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-th
 
 ## Importing:
 To import RMG models from the importer project
-- python scripts/import_RMG_models.py path/to/your/RMG-models/
+- set your RMGMODELSPATH enviroment variable `export RMGMODELSPATH=path/to/your/RMG-models/`
+- clear everything in your database (are you sure?) `$ python manage.py reset_db`
+- import the models `$ python manage.py migrate database import_rmg_models`
+
 
 ## Contributing:
 
