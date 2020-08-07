@@ -1,4 +1,4 @@
-import re
+import math
 
 from django.db import models
 import rmgpy.species
@@ -107,38 +107,39 @@ class Reaction(models.Model):
 
     def stoich_species(self):
         """
-        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        Returns a list of tuples like [(-1, reactant), (+1, product)].
+        Coefficients can be 0.
         """
+
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
-        return reaction
+
+        return sorted(reaction, key=lambda x: x[1].pk * math.copysign(1, x[0]))
 
     def reverse_stoich_species(self):
         """
-        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        Returns a list of tuples like [(-1, reactant), (+1, product)].
+        Coefficients can be 0.
         """
+
         if not self.reversible:
             # maybe define reaction exception so it's more specific?
             raise Exception("This reaction is not reversible")
-        reaction = []
-        for stoich in self.stoichiometry_set.all():
-            reaction.append((-1.0 * stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
-        return reaction
+
+        return sorted(self.stoich_species(), key=lambda x: x[1].pk * math.copysign(1, -x[0]))
 
     def reactants(self):
         """
         Returns a list of the reactants in the reaction
         """
-        return [species for stoich, species in self.stoich_species() if stoich < 0]
+        return [species for stoich, species in self.stoich_species() if stoich <= 0]
 
     def products(self):
         """
         Returns a list of the products in the reaction
         """
-        return [species for stoich, species in self.stoich_species() if stoich > 0]
+        return [species for stoich, species in self.stoich_species() if stoich >= 0]
 
     def stoich_reactants(self):
         """
@@ -193,6 +194,9 @@ class Reaction(models.Model):
         for stoich, species in self.stoich_species():
             if stoich < 0:
                 stoich_reactants.append((stoich, species))
+            elif stoich == 0:
+                stoich_reactants.append((-1, species))
+                stoich_products.append((1, species))
             else:
                 stoich_products.append((stoich, species))
         left_side = " + ".join(
