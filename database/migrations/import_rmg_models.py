@@ -172,7 +172,7 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
     species_map = {}
     for s in species:
         name = s.label
-        if species_map.get(name) is not None:
+        if species_map.get(name) is None:
             species_map[name] = s
 
     with transaction.atomic():
