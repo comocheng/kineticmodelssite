@@ -401,8 +401,7 @@ def import_thermo(thermo_path, kinetic_model, **models):
             species = create_and_save_species(kinetic_model, species_name, entry.item, **models)
             thermo_data = entry.data
             poly1, poly2 = thermo_data.polynomials
-            thermo = models["Thermo"].objects.create(
-                kineticmodel=kinetic_model,
+            thermo, _ = models["Thermo"].objects.get_or_create(
                 species=species,
                 coeffs_poly1=poly1.coeffs.tolist(),
                 coeffs_poly2=poly2.coeffs.tolist(),
