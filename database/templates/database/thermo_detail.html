@@ -35,4 +35,17 @@ $$\frac{S^\circ \left(T\right)}{RT} = {% if thermo.coeff21 != 0 %}{{thermo.coeff
     <li class="list-group-item"><b>Reference Pressure:</b> {{ thermo.reference_pressure }} Pa</li>
     <li class="list-group-item"><b>Heat of Formation</b>: {{ thermo.dHf }} J/mol</li>
 </ul>
+<br>
+<h2>Kinetic Models</h2>
+<div class="list-group">
+    {% for tc in thermo_comments %}
+    <a href="{% url 'kinetic-model-detail' tc.kinetic_model.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{tc.kinetic_model.model_name}}</h5>
+        <small>ID: {{tc.kinetic_model.pk}}</small>
+    </div>
+    <p class="mb-1">{{tc.comment}}</p>
+    </a>
+    {% endfor %}
+</div>
 {% endblock %}

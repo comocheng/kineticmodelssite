@@ -148,11 +148,8 @@ class ThermoDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         thermo = self.get_object()
-        kinetic_model = KineticModel.objects.get(thermo=thermo)
-        context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
-        context["species"] = thermo.species
-        context["source"] = thermo.source
-        context["species_name"] = kinetic_model.speciesname_set.get(species=thermo.species).name
+        thermo_comments = thermo.thermocomment_set.all()
+        context["thermo_comments"] = thermo_comments
         return context
 
 
