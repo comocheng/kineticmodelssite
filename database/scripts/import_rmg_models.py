@@ -367,7 +367,7 @@ def import_kinetics(kinetics_path, kinetic_model, **models):
                 reaction = create_and_save_reaction(kinetic_model, rmg_reaction, **models)
                 kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, **models)
                 kinetics_model = models["Kinetics"].objects.create(
-                    reaction=reaction, source=kinetic_model.source, base_data=kinetics_data
+                    reaction=reaction, base_data=kinetics_data
                 )
                 kinetics_comment = models["KineticsComment"].objects.create(
                     kinetics=kinetics_model, kinetic_model=kinetic_model, comment=comment
