@@ -3,6 +3,7 @@
 
 # SQLite database files
 *.sqlite3
+postgres/
 
 # Django media root
 media/
@@ -15,3 +16,4 @@ media/
 # Misc
 ignore/*
 errors.txt
+import_log.txt

@@ -31,27 +31,27 @@ def render_thermo_table(thermo, condensed=False):
         <tbody>
             <tr>
                 <th scope="row">1</th>
-                <td>{thermo.Tmin1}</td>
-                <td>{thermo.Tmax1}</td>
-                <td>{thermo.coeff11}</td>
-                <td>{thermo.coeff12}</td>
-                <td>{thermo.coeff13}</td>
-                <td>{thermo.coeff14}</td>
-                <td>{thermo.coeff15}</td>
-                <td>{thermo.coeff16}</td>
-                <td>{thermo.coeff17}</td>
+                <td>{thermo.temp_min_1}</td>
+                <td>{thermo.temp_max_1}</td>
+                <td>{thermo.coeffs_poly1[0]}</td>
+                <td>{thermo.coeffs_poly1[1]}</td>
+                <td>{thermo.coeffs_poly1[2]}</td>
+                <td>{thermo.coeffs_poly1[3]}</td>
+                <td>{thermo.coeffs_poly1[4]}</td>
+                <td>{thermo.coeffs_poly1[5]}</td>
+                <td>{thermo.coeffs_poly1[6]}</td>
             </tr>
             <tr>
                 <th scope="row">2</th>
-                <td>{thermo.Tmin2}</td>
-                <td>{thermo.Tmax2}</td>
-                <td>{thermo.coeff21}</td>
-                <td>{thermo.coeff22}</td>
-                <td>{thermo.coeff23}</td>
-                <td>{thermo.coeff24}</td>
-                <td>{thermo.coeff25}</td>
-                <td>{thermo.coeff26}</td>
-                <td>{thermo.coeff27}</td>
+                <td>{thermo.temp_min_2}</td>
+                <td>{thermo.temp_max_2}</td>
+                <td>{thermo.coeffs_poly2[0]}</td>
+                <td>{thermo.coeffs_poly2[1]}</td>
+                <td>{thermo.coeffs_poly2[2]}</td>
+                <td>{thermo.coeffs_poly2[3]}</td>
+                <td>{thermo.coeffs_poly2[4]}</td>
+                <td>{thermo.coeffs_poly2[5]}</td>
+                <td>{thermo.coeffs_poly2[6]}</td>
             </tr>
         </tbody>
     </table>

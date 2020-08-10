@@ -9,6 +9,18 @@ def create_kinetic_model_with_detail_view_dependencies():
     kinetic_model = models.KineticModel.objects.create(source=source)
     return kinetic_model
 
+def create_thermo(species):
+    fields = {
+        "coeffs_poly1": list(range(7)),
+        "coeffs_poly2": list(range(7)),
+        "temp_min_1": 0,
+        "temp_max_1": 0,
+        "temp_min_2": 0,
+        "temp_max_2": 0,
+    }
+    thermo = models.Thermo.objects.create(species=species, **fields)
+
+    return thermo
 
 # Create your tests here.
 class TestKineticModelDetail(TestCase):
@@ -25,7 +37,7 @@ class TestKineticModelDetail(TestCase):
             kinetic_model.species.add(species)
             kinetic_model.transport.add(transport)
             if i <= paginate_per_page / 2:
-                thermo = models.Thermo.objects.create(species=species)
+                thermo = create_thermo(species=species)
                 kinetic_model.thermo.add(thermo)
 
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
@@ -39,7 +51,7 @@ class TestKineticModelDetail(TestCase):
         paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
         for i in range(1, paginate_per_page):
             species = models.Species.objects.create()
-            thermo = models.Thermo.objects.create(species=species)
+            thermo = create_thermo(species=species)
             kinetic_model.species.add(species)
             kinetic_model.thermo.add(thermo)
             if i <= paginate_per_page / 2:
@@ -57,7 +69,7 @@ class TestKineticModelDetail(TestCase):
         paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
         for _ in range(1, paginate_per_page):
             species = models.Species.objects.create()
-            thermo = models.Thermo.objects.create(species=species)
+            thermo = create_thermo(species=species)
             transport = models.Transport.objects.create(species=species)
             kinetic_model.species.add(species)
             kinetic_model.thermo.add(thermo)

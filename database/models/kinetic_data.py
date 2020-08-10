@@ -1,6 +1,7 @@
-from django.db import models
-from model_utils.managers import InheritanceManager
 import rmgpy.kinetics as kinetics
+from django.db import models
+from django.contrib.postgres.fields import ArrayField
+from model_utils.managers import InheritanceManager
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 
 from .source import Source
@@ -29,8 +30,8 @@ class BaseKineticsData(models.Model):
 
 
 class KineticsData(BaseKineticsData):
-    temp_array = models.TextField()  # JSON might be appropriate here
-    rate_coefficients = models.TextField()  # JSON also appropriate here
+    temp_array = ArrayField(models.FloatField())
+    rate_coefficients = ArrayField(models.FloatField())
 
 
 class Arrhenius(BaseKineticsData):
@@ -181,7 +182,7 @@ class MultiPDepArrhenius(BaseKineticsData):
     kinetics_type = "Multi Pressure Dependent Arrhenius Kinetics"
 
     def to_rmg(self):
-        return kinetics.MultiArrhenius(
+        return kinetics.MultiPdepArrhenius(
             arrhenius=[arrhenius.to_rmg() for arrhenius in self.pdep_arrhenius_set.all()],
             Tmin=ScalarQuantity(self.min_temp, "K"),
             Tmax=ScalarQuantity(self.max_temp, "K"),
@@ -200,7 +201,7 @@ class MultiPDepArrhenius(BaseKineticsData):
 
 
 class Chebyshev(BaseKineticsData):
-    coefficient_matrix = models.TextField()  # Array of Constants -- pickled list
+    coefficient_matrix = ArrayField(ArrayField(models.FloatField()), null=True, blank=True)
     units = models.CharField(max_length=25)
 
     kinetics_type = "Chebyshev Kinetics"
@@ -278,7 +279,7 @@ class Troe(BaseKineticsData):
     )
     alpha = models.FloatField()
     t1 = models.FloatField()
-    t2 = models.FloatField()
+    t2 = models.FloatField(default=0.0, blank=True)
     t3 = models.FloatField()
 
     def to_rmg(self):
@@ -377,5 +378,5 @@ class Kinetics(models.Model):
 
     @property
     def data(self):
-        if self.basekineticsdata is not None:
+        if self.base_data is not None:
             return BaseKineticsData.objects.get_subclass(kinetics=self)

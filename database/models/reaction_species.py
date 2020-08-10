@@ -1,4 +1,4 @@
-import re
+import math
 
 from django.db import models
 import rmgpy.species
@@ -19,8 +19,9 @@ class Species(models.Model):
     Fuel ID (N/A for now)
     names (very optional)
     """
-    prime_id = models.CharField("PrIMe ID", max_length=9)
-    formula = models.CharField(blank=True, max_length=50)
+
+    prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
+    formula = models.CharField(max_length=50)
     inchi = models.CharField("InChI", blank=True, max_length=500)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
@@ -62,15 +63,15 @@ class Isomer(models.Model):
 
 class Structure(models.Model):
     """
-    A structure is the resonance structure of Isomers.
+    A structure is a specific resonance structure of an Isomer.
 
     The equivalent term in RMG would be a molecule
     """
 
     isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
     smiles = models.CharField("SMILES", blank=True, max_length=500)
-    adjacency_list = models.TextField("Adjacency List")
-    electronic_state = models.IntegerField("Electronic State")
+    adjacency_list = models.TextField("Adjacency List", unique=True)
+    multiplicity = models.IntegerField()
 
     def __str__(self):
         return "{s.adjacency_list}".format(s=self)
@@ -98,46 +99,47 @@ class Reaction(models.Model):
     """
 
     species = models.ManyToManyField(Species, through="Stoichiometry")
-    prime_id = models.CharField("PrIMe ID", blank=True, null=True, max_length=10)
-    reversible = models.BooleanField(default=True, help_text="Is this reaction reversible?")
+    prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
+    reversible = models.BooleanField()
 
     class Meta:
         ordering = ("prime_id",)
 
     def stoich_species(self):
         """
-        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        Returns a list of tuples like [(-1, reactant), (+1, product)].
+        Coefficients can be 0.
         """
+
         reaction = []
         for stoich in self.stoichiometry_set.all():
             reaction.append((stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
-        return reaction
+
+        return sorted(reaction, key=lambda x: x[1].pk * math.copysign(1, x[0]))
 
     def reverse_stoich_species(self):
         """
-        Returns a list of tuples like [(-1, reactant), (+1, product)]
+        Returns a list of tuples like [(-1, reactant), (+1, product)].
+        Coefficients can be 0.
         """
+
         if not self.reversible:
             # maybe define reaction exception so it's more specific?
             raise Exception("This reaction is not reversible")
-        reaction = []
-        for stoich in self.stoichiometry_set.all():
-            reaction.append((-1.0 * stoich.stoichiometry, stoich.species))
-        reaction = sorted(reaction, key=lambda sp: sp[1].pk * sp[0] / abs(sp[0]))
-        return reaction
+
+        return sorted(self.stoich_species(), key=lambda x: x[1].pk * math.copysign(1, -x[0]))
 
     def reactants(self):
         """
         Returns a list of the reactants in the reaction
         """
-        return [species for stoich, species in self.stoich_species() if stoich < 0]
+        return [species for stoich, species in self.stoich_species() if stoich <= 0]
 
     def products(self):
         """
         Returns a list of the products in the reaction
         """
-        return [species for stoich, species in self.stoich_species() if stoich > 0]
+        return [species for stoich, species in self.stoich_species() if stoich >= 0]
 
     def stoich_reactants(self):
         """
@@ -192,6 +194,9 @@ class Reaction(models.Model):
         for stoich, species in self.stoich_species():
             if stoich < 0:
                 stoich_reactants.append((stoich, species))
+            elif stoich == 0:
+                stoich_reactants.append((-1, species))
+                stoich_products.append((1, species))
             else:
                 stoich_products.append((stoich, species))
         left_side = " + ".join(
@@ -219,7 +224,7 @@ class Stoichiometry(models.Model):
 
     species = models.ForeignKey(Species, on_delete=models.CASCADE)
     reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
-    stoichiometry = models.FloatField(default=0.0)
+    stoichiometry = models.FloatField()
 
     class Meta:
         verbose_name_plural = "Stoichiometries"

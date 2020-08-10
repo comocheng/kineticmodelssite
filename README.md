@@ -10,6 +10,15 @@ To get a virtual environment up and running, [install an Anaconda distribution](
 
 ```conda env create -f environment.yml```
 
+Then set up PostgreSQL:
+- ```$ conda install postgresql psycopg2```
+- ```$ initdb -D postgres```
+- ```$ pg_ctl -D postgres -l postgres.log start```
+- ```$ createuser --interactive --pwprompt``` then add user `postgres` password `postgres` as superuser (y).
+- ```$ psql postgres``` then `\du` to check the `postgres` Role is defined, then `\q` to quit.
+- ```$ python manage.py migrate`
+
+
 ## Quickstart:
 To get a local version of the site up and running, run these commands in order:
 - ```conda activate kms_env```
@@ -27,7 +36,10 @@ https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-th
 
 ## Importing:
 To import RMG models from the importer project
-- python scripts/import_RMG_models.py path/to/your/RMG-models/
+- set your RMGMODELSPATH enviroment variable `export RMGMODELSPATH=path/to/your/RMG-models/`
+- clear everything in your database (are you sure?) `$ python manage.py reset_db`
+- import the models `$ python manage.py migrate database import_rmg_models`
+
 
 ## Contributing:
 

@@ -6,8 +6,8 @@ class Author(models.Model):
     An author of a Source, i.e. a person who published it.
     """
 
-    firstname = models.CharField(default="", max_length=80)
-    lastname = models.CharField(default="", max_length=80)
+    firstname = models.CharField(max_length=80)
+    lastname = models.CharField(max_length=80)
 
     @property
     def name(self):
@@ -31,34 +31,32 @@ class Source(models.Model):
     page numbers
     """
 
-    name = models.CharField("Model Name in Importer", blank=True, max_length=100)
-    prime_id = models.CharField("Prime ID", blank=True, max_length=9, default="")
-    publication_year = models.CharField("Year of Publication", blank=True, default="", max_length=4)
-    source_title = models.CharField("Article Title", default="", blank=True, max_length=300)
+    doi = models.CharField(blank=True, max_length=80)
+    prime_id = models.CharField("Prime ID", blank=True, max_length=9)
+    publication_year = models.CharField("Year of Publication", blank=True, max_length=4)
+    source_title = models.CharField("Article Title", blank=True, max_length=300)
     journal_name = models.CharField("Journal Name", blank=True, max_length=300)
     journal_volume_number = models.CharField("Journal Volume Number", blank=True, max_length=10)
     page_numbers = models.CharField(
         "Page Numbers", blank=True, help_text="[page #]-[page #]", max_length=100
     )
     authors = models.ManyToManyField(Author, blank=True, through="Authorship")
-    doi = models.CharField(blank=True, max_length=80)  # not in PrIMe
 
     def __str__(self):
-        self_string = ""
-        self_string += "{s.source_title}:\n".format(s=self).upper()
-        self_string += "Published in {s.publication_year}:\n".format(s=self)
-        self_string += (
-            "\t {s.journal_name},\n\t "
-            "Vol. {s.journal_volume_number}\n\t "
-            "Pgs. {s.page_numbers}\n".format(s=self)
+        authors = ", ".join(
+            str(authorship.author) for authorship in self.authorship_set.order_by("order")
         )
-        self_string += "Authors: {s.authors}".format(s=self)
-
-        return self_string
+        return f"""
+        {self.source_title.upper()}:
+        Published in {self.publication_year}:
+            {self.journal_name},
+            Vol. {self.journal_volume_number}
+            Pgs. {self.page_numbers}
+        Authors: {authors}
+        """
 
     class Meta:
         ordering = ("prime_id",)
-        unique_together = ["publication_year", "source_title"]
 
 
 class Authorship(models.Model):
@@ -73,5 +71,8 @@ class Authorship(models.Model):
     author = models.ForeignKey(Author, on_delete=models.CASCADE)
     order = models.IntegerField("Order of authorship")
 
+    class Meta:
+        ordering = ('order',)
+
     def __str__(self):
-        return ("{s.id} author {s.author} " "was # {s.order} in {s.source}").format(s=self)
+        return f"Author: {self.author}, Source: {self.source.name}, Order: {self.order}"

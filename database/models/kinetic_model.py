@@ -1,6 +1,7 @@
-from django.db import models
 import os
-import uuid
+
+from django.db import models
+
 from .reaction_species import Species
 from .source import Source
 from .thermo_transport import Thermo, Transport
@@ -11,15 +12,15 @@ def upload_to(instance, filename):
     return os.path.join("kineticmodels", str(instance.id), f"{instance.model_name}_{filename}")
 
 
-def upload_chemkin_to(instance, filename):
+def upload_chemkin_to(instance, _):
     return upload_to(instance, "chemkin_reaction.txt")
 
 
-def upload_thermo_to(instance, filename):
+def upload_thermo_to(instance, _):
     return upload_to(instance, "chemkin_thermo.txt")
 
 
-def upload_transport_to(instance, filename):
+def upload_transport_to(instance, _):
     return upload_to(instance, "chemkin_transport.txt")
 
 
@@ -48,20 +49,17 @@ class KineticModel(models.Model):
     additional info
     """
 
+    model_name = models.CharField(max_length=200, unique=True)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
-    model_name = models.CharField(default=uuid.uuid4, max_length=200, unique=True)
-
-    species = models.ManyToManyField(Species, through="SpeciesName", blank=True)
-    kinetics = models.ManyToManyField(Kinetics, through="KineticsComment", blank=True)
-    thermo = models.ManyToManyField(Thermo, through="ThermoComment", blank=True)
-    transport = models.ManyToManyField(Transport, through="TransportComment", blank=True)
-    source = models.ForeignKey(Source, null=True, blank=True, on_delete=models.CASCADE)
-
+    species = models.ManyToManyField(Species, through="SpeciesName")
+    kinetics = models.ManyToManyField(Kinetics, through="KineticsComment")
+    thermo = models.ManyToManyField(Thermo, through="ThermoComment")
+    transport = models.ManyToManyField(Transport, through="TransportComment")
+    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
     info = models.CharField(max_length=1000, blank=True)
-    chemkin_reactions_file = models.FileField(upload_to=upload_chemkin_to)
-    chemkin_thermo_file = models.FileField(upload_to=upload_thermo_to)
+    chemkin_reactions_file = models.FileField(blank=True, upload_to=upload_chemkin_to)
+    chemkin_thermo_file = models.FileField(blank=True, upload_to=upload_thermo_to)
     chemkin_transport_file = models.FileField(blank=True, upload_to=upload_transport_to)
-    rmg_import_path = models.CharField(blank=True, max_length=300)
 
     class Meta:
         verbose_name_plural = "Kinetic Models"
@@ -114,7 +112,7 @@ class ThermoComment(models.Model):
 
     thermo = models.ForeignKey(Thermo, on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
-    comment = models.CharField(blank=True, max_length=1000)
+    comment = models.TextField(blank=True)
 
     def __str__(self):
         return self.comment

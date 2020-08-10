@@ -10,6 +10,20 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v2
       - name: Cache conda
@@ -19,6 +33,8 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+      - name: psycopg2 prerequisites
+        run: sudo apt-get install python-dev libpq-dev
       - uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: kms_env
@@ -26,6 +42,7 @@ jobs:
           use-only-tar-bz2: true
           python-version: 3.7
           auto-activate-base: false
+
       - shell: bash -l {0}
         run: |
-          python manage.py test
+          python manage.py test --settings=kms.test_settings
