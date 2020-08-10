@@ -10,6 +10,12 @@ def fields(obj):
 
 
 @register.filter
+def pluralize(num, singular_word):
+    word = singular_word if num == 1 else mark_safe(f"{singular_word}s")
+    return f"{num} {word}"
+
+
+@register.filter
 def render_thermo_table(thermo, condensed=False):
     return mark_safe(
         """
