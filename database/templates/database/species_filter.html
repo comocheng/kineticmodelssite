@@ -10,23 +10,55 @@
     </form>
     <br>
     {% for species in object_list %}
-        <a href="{% url 'species-detail' species.pk %}">Species</a>: {{ species.prime_id }} - {{ species.formula }} - {{ species.inchi }} - {{ species.cas_number }}<br/>
-    {% endfor %}
-    <div class="pagination">
-        <span class="step-links">
-            {% if page_obj.has_previous %}
-                <a href="?page=1">&laquo; first</a>
-                <a href="?page={{ page_obj.previous_page_number }}">previous</a>
-            {% endif %}
-
-            <span class="current">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-            </span>
-
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}">next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
-            {% endif %}
-        </span>
+    <div class="list-group">
+        <a href="{% url 'species-detail' species.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ species.formula }}</h5>
+            <small>ID: {{ species.pk }}</small>
+          </div>
+          {% if species.enthalpy_formation %}
+          <p class="mb-1">$\Delta H_f^\circ = {{ species.enthalpy_formation }} \left(\frac{J}{mol}\right)$</p>
+          {% endif %}
+          {% if species.names %}
+          <h6>Names</h6>
+          <ul class="list-group">
+              {% for name in species.names %}
+              <li class="list-group-item">{{ name }}</li>
+              {% endfor %}
+          </ul>
+          <br>
+          {% endif %}
+          {% if species.structures %}
+          <h6>Structures</h6>
+          <ul class="list-group">
+              {% for structure in species.structures %}
+              <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}"/></li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </a>
     </div>
+    {% endfor %}
+    <br>
+    <nav aria-label="Species Pagination">
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+            {% else %}
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
+            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
+            {% endif %}
+        </ul>
+    </nav>
 {% endblock %}
