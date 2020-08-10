@@ -5,3 +5,6 @@ from django.apps import AppConfig
 
 class DatabaseConfig(AppConfig):
     name = "database"
+
+    def ready(self):
+        from . import signals

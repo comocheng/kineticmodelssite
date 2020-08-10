@@ -5,7 +5,8 @@ from datetime import datetime
 from pathlib import Path
 
 import habanero
-from django.db import transaction
+from django.db import migrations, transaction
+from django.core.exceptions import ValidationError
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -157,12 +158,32 @@ def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **model
         raise
 
 
+def get_reaction_from_stoich_set(stoichiometry_data, **models):
+    filter_candidates = []
+    for stoich, species in stoichiometry_data:
+        filter_candidates = models["Reaction"].filter(
+            stoichiometry__stoichiometry=stoich, stoichiometry__species=species
+        )
+
+    return filter_candidates.get()
+
+
 def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
+    """
+    Create and save a reaction from an RMG reaction
+
+    The kinetic model argument is needed to create species that are not yet in the database.
+    If a reaction already exists, it is looked up and returned.
+    The uniqueness of a reaction consists of a set of species
+    and respective stoichiometric coefficients.
+    """
+
     reversible = rmg_reaction.reversible
     reactants = rmg_reaction.reactants
     products = rmg_reaction.products
     species = [*reactants, *products]
     reaction = models["Reaction"].objects.create(reversible=reversible)
+    stoich_data = []
     species_map = {}
     for s in species:
         name = s.label
@@ -177,10 +198,15 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
                     kinetic_model, "", rmg_molecule, inchi=rmg_species.inchi, **models
                 )
                 stoich_coeff = rmg_reaction.get_stoichiometric_coefficient(rmg_species)
-                stoichiometry = models["Stoichiometry"].objects.create(
-                    reaction=reaction, species=species, stoichiometry=stoich_coeff
-                )
-                stoichiometry.save()
+                stoich_data.append((stoich_coeff, species))
+                try:
+                    stoich, created = models["Stoichiometry"].objects.get_or_create(
+                        species=species, stoichiometry=stoich_coeff, defaults={"reaction": reaction}
+                    )
+                    if created:
+                        stoich.save()
+                except ValidationError:
+                    reaction = get_reaction_from_stoich_set(stoich_data, **models)
 
     return reaction
 
