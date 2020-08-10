@@ -2,10 +2,7 @@ import os
 
 from django.db import models
 
-from .reaction_species import Species
-from .source import Source
-from .thermo_transport import Thermo, Transport
-from .kinetic_data import Kinetics
+from . import Source, Thermo, Transport
 
 
 def upload_to(instance, filename):
@@ -51,11 +48,11 @@ class KineticModel(models.Model):
 
     model_name = models.CharField(max_length=200, unique=True)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
-    species = models.ManyToManyField(Species, through="SpeciesName")
-    kinetics = models.ManyToManyField(Kinetics, through="KineticsComment")
-    thermo = models.ManyToManyField(Thermo, through="ThermoComment")
-    transport = models.ManyToManyField(Transport, through="TransportComment")
-    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
+    species = models.ManyToManyField("Species", through="SpeciesName")
+    kinetics = models.ManyToManyField("Kinetics", through="KineticsComment")
+    thermo = models.ManyToManyField("Thermo", through="ThermoComment")
+    transport = models.ManyToManyField("Transport", through="TransportComment")
+    source = models.ForeignKey("Source", null=True, on_delete=models.CASCADE)
     info = models.CharField(max_length=1000, blank=True)
     chemkin_reactions_file = models.FileField(blank=True, upload_to=upload_chemkin_to)
     chemkin_thermo_file = models.FileField(blank=True, upload_to=upload_thermo_to)
@@ -73,7 +70,7 @@ class SpeciesName(models.Model):
     A Species Name specific to a given Kinetic Model
     """
 
-    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    species = models.ForeignKey("Species", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(blank=True, max_length=200)
 
@@ -93,7 +90,7 @@ class KineticsComment(models.Model):
     links that kinetics entry with that kinetic model.
     """
 
-    kinetics = models.ForeignKey(Kinetics, on_delete=models.CASCADE)
+    kinetics = models.ForeignKey("Kinetics", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
@@ -110,7 +107,7 @@ class ThermoComment(models.Model):
     links that thermo entry with that kinetic model.
     """
 
-    thermo = models.ForeignKey(Thermo, on_delete=models.CASCADE)
+    thermo = models.ForeignKey("Thermo", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.TextField(blank=True)
 
@@ -124,6 +121,6 @@ class ThermoComment(models.Model):
 
 
 class TransportComment(models.Model):
-    transport = models.ForeignKey(Transport, on_delete=models.CASCADE)
+    transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)

@@ -1,9 +1,9 @@
 import math
 
+import rmgpy
 from django.db import models
-import rmgpy.species
-import rmgpy.reaction
 from rmgpy.molecule import Molecule
+from . import KineticModel, Kinetics
 
 
 class Species(models.Model):
@@ -244,6 +244,6 @@ class Stoichiometry(models.Model):
         ).format(s=self)
 
     def __repr__(self):
-        return (
-            "{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}"
-        ).format(s=self)
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+            s=self
+        )
