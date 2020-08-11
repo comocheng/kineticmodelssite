@@ -44,8 +44,7 @@
         <h2>Transport Results</h2>
         <ul class="list-group">
             {% for transport in transport_list %}
-            <li class="list-group-item"><a
-                    href="{% url 'transport-detail' transport.pk %}">{{ transport.source.source_title }}</a> -
+            <li class="list-group-item"><a href="{% url 'transport-detail' transport.pk %}">{{ transport }}</a> -
                 {{ transport.prime_id  }}</li>
             {% endfor %}
         </ul>
