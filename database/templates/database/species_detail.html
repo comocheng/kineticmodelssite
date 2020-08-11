@@ -1,15 +1,15 @@
 {% extends "database/base.html" %}
 
 {% block content %}
-<h1>Detail</h1>
-    <h3>ID: {{ species.pk }}</h2>
+<h1>Species Detail</h1>
+<h3>ID: {{ species.pk }}</h2>
     <h2>Names</h2>
     <ul class="list-group">
         {% for name in names %}
-            <li class="list-group-item">{{ name }}</li>
+        <li class="list-group-item">{{ name }}</li>
         {% endfor %}
     </ul>
-    <br/>
+    <br />
     <h2>Structure Info</h2>
     <table class="table table-bordered table-hover">
         <thead>
@@ -20,29 +20,31 @@
         <tbody>
             {% for structure in structures %}
             <tr>
-                <td><img src="{% url 'draw-structure' structure.pk %}"/></td>
+                <td><img src="{% url 'draw-structure' structure.pk %}" /></td>
                 <td>{{ structure.adjacency_list }}</td>
                 <td>{{ structure.smiles }}</td>
             </tr>
-        {% endfor %}
+            {% endfor %}
         </tbody>
     </table>
-    <br/>
+    <br />
     <h2>Isomer Inchis</h2>
     <ul class="list-group">
         {% for isomer_inchi in isomer_inchis %}
-            <li class="list-group-item">{{ isomer_inchi }}</li>
+        <li class="list-group-item">{{ isomer_inchi }}</li>
         {% endfor %}
-    <h2>Thermo Results</h2>
-    <ul class="list-group">
-        {% for thermo in thermo_list %}
+        <h2>Thermo Results</h2>
+        <ul class="list-group">
+            {% for thermo in thermo_list %}
             <li class="list-group-item"><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.name }}</a></li>
-        {% endfor %}
-    </ul>
-    <h2>Transport Results</h2>
-    <ul class="list-group">
-        {% for transport in transport_list %}
-            <li class="list-group-item"><a href="{% url 'transport-detail' transport.pk %}">{{ transport.source.source_title }}</a> - {{ transport.prime_id  }}</li>
-        {% endfor %}
-    </ul>
-{% endblock %}
+            {% endfor %}
+        </ul>
+        <h2>Transport Results</h2>
+        <ul class="list-group">
+            {% for transport in transport_list %}
+            <li class="list-group-item"><a
+                    href="{% url 'transport-detail' transport.pk %}">{{ transport.source.source_title }}</a> -
+                {{ transport.prime_id  }}</li>
+            {% endfor %}
+        </ul>
+        {% endblock %}
