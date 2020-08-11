@@ -21,7 +21,9 @@
             {% for structure in structures %}
             <tr>
                 <td><img src="{% url 'draw-structure' structure.pk %}" /></td>
-                <td>{{ structure.adjacency_list }}</td>
+                <td>
+                    <pre>{{ structure.adjacency_list }}</pre>
+                </td>
                 <td>{{ structure.smiles }}</td>
             </tr>
             {% endfor %}
