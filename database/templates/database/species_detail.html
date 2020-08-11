@@ -36,11 +36,25 @@
         <li class="list-group-item">{{ isomer_inchi }}</li>
         {% endfor %}
         <h2>Thermo Results</h2>
-        <ul class="list-group">
-            {% for thermo in thermo_list %}
-            <li class="list-group-item"><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.source.name }}</a></li>
-            {% endfor %}
-        </ul>
+        <table class="table table-bordered table-hover">
+            <thead>
+                <th scope="col">Thermo Entry</th>
+                <th scope="col">&Delta;H<sub>f</sub>(298 K)</th>
+                <th scope="col">S(298 K)</th>
+                <th scope="col">Models</th>
+            </thead>
+            <tbody>
+                {% for thermo in thermo_list %}
+                <tr>
+                    <td><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.pk }}</a></td>
+                    <td>{{ thermo.enthalpy298|floatformat:1 }} J/mol</td>
+                    <td>{{ thermo.entropy298|floatformat:1 }} J/mol/K</td>
+                    <td>{{ thermo.kineticmodel_set.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
         <h2>Transport Results</h2>
         <ul class="list-group">
             {% for transport in transport_list %}
