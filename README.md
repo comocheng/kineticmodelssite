@@ -46,13 +46,19 @@ To import RMG models from the importer project
 ### Dev Environment
 To start contributing, clone the project and setup a conda environment.
 
+We use [flake8] for code style checks.
+It is configured in the `setup.cfg` file.
+To check if your changes pass the checks, run:
+
+```python -m flake8```
+
 We use [black](https://github.com/psf/black) to format our codebase.
 To format the codebase, `cd` to the project root and run:
 
 ```black .```
 
-If you add a `.py` file that you don't want formatted,
-add it to the `tool.black` section of the `pyproject.toml`.
+If you add a `.py` file that you don't want formatted, add it to the `tool.black` section of the `pyproject.toml`.
+If you don't want to it to be checked for code style either (likely!), then also add the file pattern to the `extend-exclude` option in the `flake8` section of the `setup.cfg` file.
 
 ### Updating the Models
 Whenever you make a change to the models, make sure to add a database migration file to reflect those changes in the database.
