@@ -83,7 +83,7 @@ class Arrhenius(BaseKineticsData):
         return [
             (
                 "",
-                ["$A$", r"$\delta A$", "$n$", "$E$", r"$\delta E$",],
+                ["$A$", r"$\delta A$", "$n$", "$E$", r"$\delta E$"],
                 [
                     (
                         "",
@@ -280,7 +280,7 @@ class Troe(BaseKineticsData):
     t3 = models.FloatField()
 
     def to_rmg(self):
-        # efficiencies = {e.species.to_rmg(): e.efficiency for e in self.efficiency_set.all()} or None
+        # efficiencies = {e.species.to_rmg(): e.efficiency for e in self.efficiency_set.all()} or None  # noqa: E501
         efficiencies = None
         return kinetics.Lindemann(
             arrheniusHigh=self.high_arrhenius.to_rmg(),

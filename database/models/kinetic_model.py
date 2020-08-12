@@ -2,8 +2,6 @@ import os
 
 from django.db import models
 
-from . import Source, Thermo, Transport
-
 
 def upload_to(instance, filename):
     return os.path.join("kineticmodels", str(instance.id), f"{instance.model_name}_{filename}")
