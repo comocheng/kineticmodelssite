@@ -5,7 +5,7 @@ from model_utils.managers import InheritanceManager
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 
 
-class BaseKineticsData(models.Model):
+class BaseKineticsData(models.Model):  # noqa: DJ08
     objects = InheritanceManager()
 
     order = models.FloatField(help_text="Overall reaction order", null=True, blank=True)
@@ -318,11 +318,29 @@ class Pressure(models.Model):
     pdep_arrhenius = models.ForeignKey(PDepArrhenius, on_delete=models.CASCADE)
     pressure = models.FloatField()
 
+    def __str__(self):
+        name = self.__class__.__name__
+        arrhenius = self.arrhenius
+        pdep_arrhenius = self.pdep_arrhenius.id
+        pressure = self.pressure
+
+        return (
+            f"{name}(arrhenius={arrhenius}, pdep_arrhenius={pdep_arrhenius}, pressure={pressure})"
+        )
+
 
 class Efficiency(models.Model):
     species = models.ForeignKey("Species", on_delete=models.CASCADE)
     kinetics_data = models.ForeignKey(BaseKineticsData, on_delete=models.CASCADE)
     efficiency = models.FloatField()
+
+    def __str__(self):
+        name = self.__class__.__name__
+        species = self.species
+        kinetics_data = self.kinetics_data.id
+        efficiency = self.efficiency
+
+        return f"{name}(species={species}, kinetics_data={kinetics_data}, efficiency={efficiency})"
 
 
 class Kinetics(models.Model):
@@ -377,3 +395,13 @@ class Kinetics(models.Model):
     def data(self):
         if self.base_data is not None:
             return BaseKineticsData.objects.get_subclass(kinetics=self)
+
+    def __str__(self):
+        name = self.__class__.__name__
+        data = self.data.__class__.__name__
+        pid = self.prime_id
+        rxn = self.reaction.id
+        src = self.source.id if self.source is not None else None
+        rev = self.reverse
+
+        return f"{name}(prime_id={pid}, reaction={rxn}, data={data}, source={src}, reverse={rev})"

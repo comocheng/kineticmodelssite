@@ -116,6 +116,20 @@ class Thermo(models.Model):
     def _get_properties_over_temp_range(self, property_func, poly_num, temp_step):
         return [property_func(temp, poly_num) for temp in self.temp_range(poly_num, temp_step)]
 
+    def __str__(self):
+        name = self.__class__.__name__
+        tmin1 = self.temp_min_1
+        tmax1 = self.temp_max_1
+        tmin2 = self.temp_min_2
+        tmax2 = self.temp_max_2
+        poly1 = f"Poly1(coeffs={self.coeffs_poly1}, temp_min={tmin1}, temp_max={tmax1})"
+        poly2 = f"Poly2(coeffs={self.coeffs_poly2}, temp_min={tmin2}, temp_max={tmax2})"
+        prime_id = self.prime_id
+        species = self.species.id
+        source = self.source.id if self.source is not None else None
+
+        return f"{name}(prime_id={prime_id}, species={species}, source={source}, {poly1}, {poly2})"
+
 
 class Transport(models.Model):
     """

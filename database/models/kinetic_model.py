@@ -122,3 +122,11 @@ class TransportComment(models.Model):
     transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
+
+    def __str__(self):
+        name = self.__class__.__name__
+        transport = self.transport.id
+        kinetic_model = self.kinetic_model.id
+        comment = self.comment
+
+        return f"{name}(transport={transport}, kinetic_mode={kinetic_model}, comment={comment})"
