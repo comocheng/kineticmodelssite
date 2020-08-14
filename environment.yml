@@ -25,6 +25,7 @@ dependencies:
   - django-model-utils
   - django-crispy-forms
   - psycopg2
+  - pip
   - pip:
     - black
     - flake8
