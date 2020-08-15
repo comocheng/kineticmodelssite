@@ -4,15 +4,12 @@ from django.contrib.postgres.fields import ArrayField
 from model_utils.managers import InheritanceManager
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 
-from .source import Source
-from .reaction_species import Reaction, Species
-
 
 class BaseKineticsData(models.Model):
     objects = InheritanceManager()
 
     order = models.FloatField(help_text="Overall reaction order", null=True, blank=True)
-    collider_efficiencies = models.ManyToManyField(Species, through="Efficiency", blank=True)
+    collider_efficiencies = models.ManyToManyField("Species", through="Efficiency", blank=True)
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
     min_pressure = models.FloatField(
@@ -323,7 +320,7 @@ class Pressure(models.Model):
 
 
 class Efficiency(models.Model):
-    species = models.ForeignKey(Species, on_delete=models.CASCADE)
+    species = models.ForeignKey("Species", on_delete=models.CASCADE)
     kinetics_data = models.ForeignKey(BaseKineticsData, on_delete=models.CASCADE)
     efficiency = models.FloatField()
 
@@ -341,8 +338,8 @@ class Kinetics(models.Model):
     """
 
     prime_id = models.CharField(blank=True, max_length=10)
-    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
-    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
+    reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
+    source = models.ForeignKey("Source", null=True, on_delete=models.CASCADE)
     relative_uncertainty = models.FloatField(blank=True, null=True)
     reverse = models.BooleanField(
         default=False, help_text="Is this the rate for the reverse reaction?"

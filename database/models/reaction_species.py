@@ -1,9 +1,9 @@
 import math
 
+import rmgpy
 from django.db import models
-import rmgpy.species
-import rmgpy.reaction
 from rmgpy.molecule import Molecule
+from . import KineticModel, Kinetics
 
 
 class Species(models.Model):
@@ -188,6 +188,14 @@ class Reaction(models.Model):
             reactants=rmg_reactants, products=rmg_products, reversible=self.reversible
         )
 
+    @property
+    def kinetic_model_count(self):
+        return KineticModel.objects.filter(kinetics__reaction=self).count()
+
+    @property
+    def kinetics_count(self):
+        return Kinetics.objects.filter(reaction=self).count()
+
     def __str__(self):
         stoich_reactants = []
         stoich_products = []
@@ -236,6 +244,6 @@ class Stoichiometry(models.Model):
         ).format(s=self)
 
     def __repr__(self):
-        return (
-            "{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}"
-        ).format(s=self)
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+            s=self
+        )
