@@ -98,6 +98,7 @@ class SidebarLookup:
 
         return inner
 
+
 @SidebarLookup
 class BaseView(TemplateView):
     template_name = "database/base.html"

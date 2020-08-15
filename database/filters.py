@@ -39,7 +39,6 @@ class ReactionFilter(django_filters.FilterSet):
         fields = ["prime_id", "reversible"]
 
 
-
 class SourceFilter(django_filters.FilterSet):
     class Meta:
         model = Source
