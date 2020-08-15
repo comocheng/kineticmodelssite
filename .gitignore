@@ -1,5 +1,6 @@
-# Python bytecode files
+# Python files
 *.py[cod]
+**/__pycache__/
 
 # SQLite database files
 *.sqlite3

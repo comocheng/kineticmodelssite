@@ -42,6 +42,14 @@ class Species(models.Model):
         else:
             return None
 
+    @property
+    def names(self):
+        return [name for name in self.speciesname_set.values_list("name", flat=True) if name]
+
+    @property
+    def structures(self):
+        return Structure.objects.filter(isomer__species=self)
+
 
 class Isomer(models.Model):
     """
@@ -239,9 +247,9 @@ class Stoichiometry(models.Model):
         unique_together = ["species", "reaction", "stoichiometry"]
 
     def __str__(self):
-        return (
-            "{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}"
-        ).format(s=self)
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+            s=self
+        )
 
     def __repr__(self):
         return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(

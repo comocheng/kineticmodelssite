@@ -107,6 +107,7 @@ class BaseView(TemplateView):
 class SpeciesFilterView(FilterView):
     filterset_class = SpeciesFilter
     paginate_by = 25
+    queryset = Species.objects.order_by("id")
 
 
 @SidebarLookup
