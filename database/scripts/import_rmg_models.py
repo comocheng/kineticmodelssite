@@ -5,7 +5,8 @@ from datetime import datetime
 from pathlib import Path
 
 import habanero
-from django.db import migrations, transaction
+from django.db import transaction
+from django.db.models import Count
 from django.core.exceptions import ValidationError
 from dateutil import parser
 from rmgpy import kinetics, constants
@@ -128,34 +129,40 @@ def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **model
     smiles = rmg_molecule.to_smiles()
     isomer_inchi = rmg_molecule.to_inchi()
     try:
-        species, _ = kinetic_model.species.get_or_create(
-            formula=rmg_molecule.get_formula(), inchi=inchi
-        )
-        species.save()
-        species_name = models["SpeciesName"].objects.create(species=species, name=name)
-        species_name.save()
-        isomer, _ = models["Isomer"].objects.get_or_create(inchi=isomer_inchi)
-        isomer.species.add(species)
-        isomer.save()
-        if rmg_molecule.multiplicity is None:
-            raise ValueError(f"Could not create structure for molecule {rmg_molecule}")
         try:
             structure = models["Structure"].objects.get(
                 adjacency_list=rmg_molecule.to_adjacency_list(),
             )
+            isomer = models["Isomer"].objects.get(structure=structure, inchi=isomer_inchi)
+            species = (
+                models["Species"]
+                .objects.annotate(isomer_count=Count("isomer"))
+                .filter(isomer_count=1, isomer=isomer, formula=rmg_molecule.get_formula())
+                .get()
+            )
         except models["Structure"].DoesNotExist:
-            structure = models["Structure"].objects.create(
+            isomer = models["Isomer"](inchi=isomer_inchi)
+            structure = models["Structure"](
                 adjacency_list=rmg_molecule.to_adjacency_list(),
-                isomer=isomer,
                 smiles=smiles,
                 multiplicity=rmg_molecule.multiplicity,
+                isomer=isomer,
             )
+            species = models["Species"].objects.create(
+                formula=rmg_molecule.get_formula(), inchi=inchi
+            )
+            isomer.save()
             structure.save()
+            species.isomer_set.add(isomer)
+            species.save()
+
+        species_name = models["SpeciesName"].objects.create(
+            species=species, name=name, kinetic_model=kinetic_model
+        )
 
         return species
     except Exception:
         logging.exception("Failed to import species")
-        raise
 
 
 def get_reaction_from_stoich_set(stoichiometry_data, **models):
