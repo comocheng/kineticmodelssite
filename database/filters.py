@@ -18,10 +18,10 @@ class SpeciesFilter(django_filters.FilterSet):
         lookup_expr="structure__adjacency_list",
         label="Structure Adjacency List",
     )
-    isomer__structure__electronic_state = django_filters.NumberFilter(
+    isomer__structure__multiplicity = django_filters.NumberFilter(
         field_name="isomer",
-        lookup_expr="structure__electronic_state",
-        label="Structure Electronic State",
+        lookup_expr="structure__multiplicity",
+        label="Structure Multiplicity",
     )
 
     class Meta:
