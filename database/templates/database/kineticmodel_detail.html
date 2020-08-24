@@ -56,15 +56,15 @@
         </span>
         <ul class="pagination">
             {% if thermo_transport.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page1=1&page2={{ page2 }}">First</a></li>
-            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page1=1 %}">First</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.previous_page_number%}">Previous</a></li>
             {% else %}
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
             {% endif %}
             {% if thermo_transport.has_next %}
-            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}">Last</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.next_page_number%}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.paginator.num_pages %}">Last</a></li>
             {% else %}
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
@@ -116,15 +116,15 @@
         </span>
         <ul class="pagination">
             {% if kinetics_data.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page1=1&page2={{ page2 }}">First</a></li>
-            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.previous_page_number }}&page2={{ page2 }}">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page2=1 %}">First</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.previous_page_number %}">Previous</a></li>
             {% else %}
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
             {% endif %}
             {% if kinetics_data.has_next %}
-            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.next_page_number }}&page2={{ page2 }}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page1={{ kinetics_data.paginator.num_pages }}&page2={{ page2 }}">Last</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.next_page_number %}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.paginator.num_pages %}">Last</a></li>
             {% else %}
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
             <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
