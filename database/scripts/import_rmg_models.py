@@ -156,7 +156,7 @@ def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **model
             species.isomer_set.add(isomer)
             species.save()
 
-        species_name = models["SpeciesName"].objects.create(
+        models["SpeciesName"].objects.create(
             species=species, name=name, kinetic_model=kinetic_model
         )
 
