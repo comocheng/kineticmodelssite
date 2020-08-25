@@ -44,7 +44,7 @@ class Species(models.Model):
 
     @property
     def names(self):
-        return [name for name in self.speciesname_set.values_list("name", flat=True) if name]
+        return set(name for name in self.speciesname_set.values_list("name", flat=True) if name)
 
     @property
     def structures(self):

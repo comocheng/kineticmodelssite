@@ -5,7 +5,7 @@ from .models import Species, Reaction, Source
 
 class SpeciesFilter(django_filters.FilterSet):
     speciesname__name = django_filters.CharFilter(
-        field_name="speciesname", lookup_expr="name", label="Species Name"
+        field_name="speciesname", lookup_expr="name", distinct=True, label="Species Name",
     )
     isomer__inchi = django_filters.CharFilter(
         field_name="isomer", lookup_expr="inchi", label="Isomer InChI"
@@ -18,10 +18,10 @@ class SpeciesFilter(django_filters.FilterSet):
         lookup_expr="structure__adjacency_list",
         label="Structure Adjacency List",
     )
-    isomer__structure__electronic_state = django_filters.NumberFilter(
+    isomer__structure__multiplicity = django_filters.NumberFilter(
         field_name="isomer",
-        lookup_expr="structure__electronic_state",
-        label="Structure Electronic State",
+        lookup_expr="structure__multiplicity",
+        label="Structure Multiplicity",
     )
 
     class Meta:
@@ -31,7 +31,7 @@ class SpeciesFilter(django_filters.FilterSet):
 
 class ReactionFilter(django_filters.FilterSet):
     species__name = django_filters.CharFilter(
-        field_name="species", lookup_expr="speciesname__name", label="Species Name"
+        field_name="species", lookup_expr="speciesname__name", distinct=True, label="Species Name"
     )
 
     class Meta:
