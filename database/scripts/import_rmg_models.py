@@ -6,6 +6,8 @@ from pathlib import Path
 
 import habanero
 from django.db import transaction
+from django.db.models import Count
+from django.core.exceptions import ValidationError
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -127,42 +129,68 @@ def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **model
     smiles = rmg_molecule.to_smiles()
     isomer_inchi = rmg_molecule.to_inchi()
     try:
-        species, _ = kinetic_model.species.get_or_create(
-            formula=rmg_molecule.get_formula(), inchi=inchi
-        )
-        species.save()
-        species_name = models["SpeciesName"].objects.create(species=species, name=name)
-        species_name.save()
-        isomer, _ = models["Isomer"].objects.get_or_create(inchi=isomer_inchi)
-        isomer.species.add(species)
-        isomer.save()
-        if rmg_molecule.multiplicity is None:
-            raise ValueError(f"Could not create structure for molecule {rmg_molecule}")
         try:
             structure = models["Structure"].objects.get(
                 adjacency_list=rmg_molecule.to_adjacency_list(),
             )
+            isomer = models["Isomer"].objects.get(structure=structure, inchi=isomer_inchi)
+            species = (
+                models["Species"]
+                .objects.annotate(isomer_count=Count("isomer"))
+                .filter(isomer_count=1, isomer=isomer, formula=rmg_molecule.get_formula())
+                .get()
+            )
         except models["Structure"].DoesNotExist:
-            structure = models["Structure"].objects.create(
+            isomer = models["Isomer"](inchi=isomer_inchi)
+            structure = models["Structure"](
                 adjacency_list=rmg_molecule.to_adjacency_list(),
-                isomer=isomer,
                 smiles=smiles,
                 multiplicity=rmg_molecule.multiplicity,
+                isomer=isomer,
             )
+            species = models["Species"].objects.create(
+                formula=rmg_molecule.get_formula(), inchi=inchi
+            )
+            isomer.save()
             structure.save()
+            species.isomer_set.add(isomer)
+            species.save()
+
+        models["SpeciesName"].objects.create(
+            species=species, name=name, kinetic_model=kinetic_model
+        )
 
         return species
     except Exception:
         logging.exception("Failed to import species")
-        raise
+
+
+def get_reaction_from_stoich_set(stoichiometry_data, **models):
+    filter_candidates = []
+    for stoich, species in stoichiometry_data:
+        filter_candidates = models["Reaction"].filter(
+            stoichiometry__stoichiometry=stoich, stoichiometry__species=species
+        )
+
+    return filter_candidates.get()
 
 
 def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
+    """
+    Create and save a reaction from an RMG reaction
+
+    The kinetic model argument is needed to create species that are not yet in the database.
+    If a reaction already exists, it is looked up and returned.
+    The uniqueness of a reaction consists of a set of species
+    and respective stoichiometric coefficients.
+    """
+
     reversible = rmg_reaction.reversible
     reactants = rmg_reaction.reactants
     products = rmg_reaction.products
     species = [*reactants, *products]
     reaction = models["Reaction"].objects.create(reversible=reversible)
+    stoich_data = []
     species_map = {}
     for s in species:
         name = s.label
@@ -177,10 +205,15 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
                     kinetic_model, "", rmg_molecule, inchi=rmg_species.inchi, **models
                 )
                 stoich_coeff = rmg_reaction.get_stoichiometric_coefficient(rmg_species)
-                stoichiometry = models["Stoichiometry"].objects.create(
-                    reaction=reaction, species=species, stoichiometry=stoich_coeff
-                )
-                stoichiometry.save()
+                stoich_data.append((stoich_coeff, species))
+                try:
+                    stoich, created = models["Stoichiometry"].objects.get_or_create(
+                        species=species, stoichiometry=stoich_coeff, defaults={"reaction": reaction}
+                    )
+                    if created:
+                        stoich.save()
+                except ValidationError:
+                    reaction = get_reaction_from_stoich_set(stoich_data, **models)
 
     return reaction
 
@@ -367,7 +400,7 @@ def import_kinetics(kinetics_path, kinetic_model, **models):
                 reaction = create_and_save_reaction(kinetic_model, rmg_reaction, **models)
                 kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, **models)
                 kinetics_model = models["Kinetics"].objects.create(
-                    reaction=reaction, source=kinetic_model.source, base_data=kinetics_data
+                    reaction=reaction, base_data=kinetics_data
                 )
                 kinetics_comment = models["KineticsComment"].objects.create(
                     kinetics=kinetics_model, kinetic_model=kinetic_model, comment=comment
