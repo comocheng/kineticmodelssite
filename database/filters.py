@@ -29,9 +29,6 @@ class SpeciesFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
-    # species__name = django_filters.CharFilter(
-    #     field_name="species", lookup_expr="speciesname__name", distinct=True, label="Species Name"
-    # )
     reactant1 = django_filters.ModelChoiceFilter(
         queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
@@ -80,7 +77,7 @@ class ReactionFilter(django_filters.FilterSet):
 
     class Meta:
         model = Reaction
-        fields = ("reversible",)
+        fields = ("prime_id", "reversible",)
 
 
 class SourceFilter(django_filters.FilterSet):
