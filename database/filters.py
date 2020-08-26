@@ -1,6 +1,7 @@
 import django_filters
+from django.db.models import Count
 
-from .models import Species, Reaction, Source
+from .models import Species, Reaction, Source, Stoichiometry
 
 
 class SpeciesFilter(django_filters.FilterSet):
@@ -19,9 +20,7 @@ class SpeciesFilter(django_filters.FilterSet):
         label="Structure Adjacency List",
     )
     isomer__structure__multiplicity = django_filters.NumberFilter(
-        field_name="isomer",
-        lookup_expr="structure__multiplicity",
-        label="Structure Multiplicity",
+        field_name="isomer", lookup_expr="structure__multiplicity", label="Structure Multiplicity",
     )
 
     class Meta:
@@ -30,13 +29,58 @@ class SpeciesFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
-    species__name = django_filters.CharFilter(
-        field_name="species", lookup_expr="speciesname__name", distinct=True, label="Species Name"
+    # species__name = django_filters.CharFilter(
+    #     field_name="species", lookup_expr="speciesname__name", distinct=True, label="Species Name"
+    # )
+    reactant1 = django_filters.ModelChoiceFilter(
+        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+            reaction_count__gt=0
+        ),
+        field_name="species",
+        method="filter_reactant",
+        label="Reactant",
     )
+    reactant2 = django_filters.ModelChoiceFilter(
+        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+            reaction_count__gt=0
+        ),
+        field_name="species",
+        method="filter_reactant",
+        label="Reactant",
+    )
+    product1 = django_filters.ModelChoiceFilter(
+        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+            reaction_count__gt=0
+        ),
+        field_name="species",
+        method="filter_product",
+        label="Product",
+    )
+    product2 = django_filters.ModelChoiceFilter(
+        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+            reaction_count__gt=0
+        ),
+        field_name="species",
+        method="filter_product",
+        label="Product",
+    )
+
+    def filter_reactant(self, queryset, name, value):
+        reaction_ids = Stoichiometry.objects.filter(
+            **{name: value}, stoichiometry__lt=0
+        ).values_list("reaction", flat=True)
+        return Reaction.objects.filter(id__in=reaction_ids)
+
+    def filter_product(self, queryset, name, value):
+        reaction_ids = Stoichiometry.objects.filter(
+            **{name: value}, stoichiometry__gt=0
+        ).values_list("reaction", flat=True)
+
+        return Reaction.objects.filter(id__in=reaction_ids)
 
     class Meta:
         model = Reaction
-        fields = ["prime_id", "reversible"]
+        fields = ("reversible",)
 
 
 class SourceFilter(django_filters.FilterSet):
