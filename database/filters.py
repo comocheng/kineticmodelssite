@@ -66,6 +66,7 @@ class ReactionFilter(django_filters.FilterSet):
         reaction_ids = Stoichiometry.objects.filter(
             **{name: value}, stoichiometry__lt=0
         ).values_list("reaction", flat=True)
+
         return Reaction.objects.filter(id__in=reaction_ids)
 
     def filter_product(self, queryset, name, value):
@@ -77,7 +78,10 @@ class ReactionFilter(django_filters.FilterSet):
 
     class Meta:
         model = Reaction
-        fields = ("prime_id", "reversible",)
+        fields = (
+            "prime_id",
+            "reversible",
+        )
 
 
 class SourceFilter(django_filters.FilterSet):
