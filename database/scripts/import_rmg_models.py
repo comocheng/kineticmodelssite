@@ -165,14 +165,18 @@ def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **model
         logging.exception("Failed to import species")
 
 
-def get_reaction_from_stoich_set(stoichiometry_data, **models):
-    filter_candidates = []
-    for stoich, species in stoichiometry_data:
-        filter_candidates = models["Reaction"].filter(
+def get_or_create_reaction_from_stoich_data(stoich_data, models, **defaults):
+    stoich_data_iter = iter(stoich_data)
+    stoich, species = next(stoich_data_iter)
+    queryset = models["Reaction"].objects.filter(
+        stoichiometry__stoichiometry=stoich, stoichiometry__species=species
+    )
+    for stoich, species in stoich_data_iter:
+        queryset = queryset.filter(
             stoichiometry__stoichiometry=stoich, stoichiometry__species=species
         )
 
-    return filter_candidates.get()
+    return queryset.get_or_create(defaults=defaults)
 
 
 def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
