@@ -7,7 +7,6 @@ from pathlib import Path
 import habanero
 from django.db import transaction
 from django.db.models import Count
-from django.core.exceptions import ValidationError
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -193,7 +192,6 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
     reactants = rmg_reaction.reactants
     products = rmg_reaction.products
     species = [*reactants, *products]
-    reaction = models["Reaction"].objects.create(reversible=reversible)
     stoich_data = []
     species_map = {}
     for s in species:
@@ -202,7 +200,6 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
             species_map[name] = s
 
     with transaction.atomic():
-        reaction.save()
         for rmg_species in species_map.values():
             for rmg_molecule in rmg_species.molecule:
                 species = create_and_save_species(
@@ -210,14 +207,15 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
                 )
                 stoich_coeff = rmg_reaction.get_stoichiometric_coefficient(rmg_species)
                 stoich_data.append((stoich_coeff, species))
-                try:
-                    stoich, created = models["Stoichiometry"].objects.get_or_create(
-                        species=species, stoichiometry=stoich_coeff, defaults={"reaction": reaction}
-                    )
-                    if created:
-                        stoich.save()
-                except ValidationError:
-                    reaction = get_reaction_from_stoich_set(stoich_data, **models)
+
+        reaction, created = get_or_create_reaction_from_stoich_data(
+            stoich_data, models, reversible=reversible
+        )
+
+        if created:
+            for stoich_coeff, species in stoich_data:
+                reaction.species.add(species, through_defaults={"stoichiometry": stoich_coeff})
+        reaction.save()
 
     return reaction
 
