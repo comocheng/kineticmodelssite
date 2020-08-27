@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import habanero
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Count
 from dateutil import parser
 from rmgpy import kinetics, constants
@@ -216,6 +216,12 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
             for stoich_coeff, species in stoich_data:
                 reaction.species.add(species, through_defaults={"stoichiometry": stoich_coeff})
         reaction.save()
+
+        stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
+        stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
+        if not (stoich_reactants or stoich_products):
+            reactants_or_products = "reactants" if not stoich_reactants else "products"
+            raise IntegrityError(f"Reaction cannot have zero {reactants_or_products}")
 
     return reaction
 
