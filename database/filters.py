@@ -1,7 +1,7 @@
 import django_filters
 from django.db.models import Count
 
-from .models import Species, Reaction, Source, Stoichiometry
+from .models import Species, Reaction, Source
 
 
 class SpeciesFilter(django_filters.FilterSet):
@@ -63,18 +63,10 @@ class ReactionFilter(django_filters.FilterSet):
     )
 
     def filter_reactant(self, queryset, name, value):
-        reaction_ids = Stoichiometry.objects.filter(
-            **{name: value}, stoichiometry__lt=0
-        ).values_list("reaction", flat=True)
-
-        return Reaction.objects.filter(id__in=reaction_ids)
+        return queryset.filter(**{name: value}, stoichiometry__stoichiometry__lt=0)
 
     def filter_product(self, queryset, name, value):
-        reaction_ids = Stoichiometry.objects.filter(
-            **{name: value}, stoichiometry__gt=0
-        ).values_list("reaction", flat=True)
-
-        return Reaction.objects.filter(id__in=reaction_ids)
+        return queryset.filter(**{name: value}, stoichiometry__stoichiometry__gt=0)
 
     class Meta:
         model = Reaction
