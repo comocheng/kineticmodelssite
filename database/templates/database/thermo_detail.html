@@ -29,6 +29,13 @@ $$\frac{S^\circ \left(T\right)}{RT} = a_0 + \frac{1}{2}a_1T + \frac{1}{3}a_2T^2 
 </ul>
 <br>
 
+<h4>Properties at 298 K</h4>
+<ul class="list-group">
+    <li class="list-group-item"><b>Enthalpy</b>:</b> {{ thermo.enthalpy298|floatformat:1 }} J/mol</li>
+    <li class="list-group-item"><b>Entropy</b>: {{ thermo.entropy298|floatformat:1 }} J/mol/K</li>
+</ul>
+<br>
+
 <h2>Kinetic Models</h2>
 <div class="list-group">
     {% for tc in thermo_comments %}

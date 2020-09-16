@@ -48,73 +48,70 @@ class Thermo(models.Model):
     temp_min_2 = models.FloatField("Polynomial 2 Lower Temp Bound", help_text="units: K")
     temp_max_2 = models.FloatField("Polynomial 2 Upper Temp Bound", help_text="units: K")
 
-    def heat_capacity(self, temp, poly_num):
-        c1, c2, c3, c4, c5, _, _ = self._polynomial_select(
-            poly_num, self.coeffs_poly1, self.coeffs_poly2
-        )
+    def heat_capacity(self, temp):
+        "Heat capacity (J/mol/K) at specified temperature (K)"
+        c1, c2, c3, c4, c5, _, _ = self._select_polynomial(temp)
         return (c1 + temp * (c2 + temp * (c3 + temp * (c4 + c5 * temp)))) * gas_constant
 
-    def enthalpy(self, temp, poly_num):
-        c1, c2, c3, c4, c5, c6, _ = self._polynomial_select(
-            poly_num, self.coeffs_poly1, self.coeffs_poly2
-        )
+    def enthalpy(self, temp):
+        "Enthalpy (J/mol) at specified temperature (K)"
+        c1, c2, c3, c4, c5, c6, _ = self._select_polynomial(temp)
+        temp2 = temp * temp
         return (
-            (
-                c1
-                + c2 * temp / 2.0
-                + c3 * temp ** 2 / 3.0
-                + c4 * temp ** 2 * temp / 4.0
-                + c5 * temp ** 4 / 5.0
-                + c6 / temp
-            )
-            * gas_constant
-            * temp
-        )
+            c1 * temp
+            + c2 * temp2 / 2.0
+            + c3 * temp2 * temp / 3.0
+            + c4 * temp2 * temp2 / 4.0
+            + c5 * temp2 * temp2 * temp / 5.0
+            + c6
+        ) * gas_constant
 
-    def entropy(self, temp, poly_num):
-        c1, c2, c3, c4, c5, _, c7 = self._polynomial_select(
-            poly_num, self.coeffs_poly1, self.coeffs_poly2
-        )
+    @property
+    def enthalpy298(self):
+        "Enthalpy (J/mol) at 298.15 K"
+        return self.enthalpy(298.15)
+
+    def entropy(self, temp):
+        "Entropy (J/mol/K) at specified temperature (K)"
+        c1, c2, c3, c4, c5, _, c7 = self._select_polynomial(temp)
+        temp2 = temp * temp
         return (
             c1 * log(temp)
             + c2 * temp
-            + c3 * temp ** 2 / 2.0
-            + c4 * temp ** 2 * temp / 3.0
-            + c5 * temp ** 4 / 4.0
+            + c3 * temp2 / 2.0
+            + c4 * temp2 * temp / 3.0
+            + c5 * temp2 * temp2 / 4.0
             + c7
         ) * gas_constant
 
+    @property
+    def entropy298(self):
+        "Entropy (J/mol/K) at 298.15 K"
+        return self.entropy(298.15)
+
     def free_energy(self, temp, poly_num):
-        return self.enthalpy(temp, poly_num) - temp * self.entropy(temp, poly_num)
+        "Gibbs Free Energy (J/mol) at specified temperature (K)"
+        return self.enthalpy(temp) - temp * self.entropy(temp)
 
-    def temp_range(self, poly_num, temp_step):
-        temp_min, temp_max = self._polynomial_select(
-            poly_num, (self.temp_min_1, self.temp_max_1), (self.temp_min_2, self.temp_max_2)
-        )
-        return range(temp_min, temp_max + 1, temp_step)
-
-    def heat_capacities(self, poly_num, temp_step):
-        return self._get_properties_over_temp_range(self.heat_capacity, poly_num, temp_step)
-
-    def enthalpies(self, poly_num, temp_step):
-        return self._get_properties_over_temp_range(self.enthalpy, poly_num, temp_step)
-
-    def entropies(self, poly_num, temp_step):
-        return self._get_properties_over_temp_range(self.entropy, poly_num, temp_step)
-
-    def free_energies(self, poly_num, temp_step):
-        return self._get_properties_over_temp_range(self.free_energy, poly_num, temp_step)
-
-    def _polynomial_select(poly_num, result_poly1, result_poly2):
-        if poly_num == 1:
-            return result_poly1
-        elif poly_num == 2:
-            return result_poly2
+    def _select_polynomial(self, temperature):
+        """
+        Picks the appropriate polynomial for the specified temperature
+        and returns the coefficients.
+        """
+        if temperature < self.temp_min_1:
+            raise ValueError(
+                f"Requested temperature {temperature:.0f} K is below "
+                f"minimum {self.temp_min_1:.0f} K"
+            )
+        elif temperature < self.temp_max_1:
+            return self.coeffs_poly1
+        elif temperature < self.temp_max_2:
+            return self.coeffs_poly2
         else:
-            raise ValueError("polynomial number invalid, pick '1' or '2'")
-
-    def _get_properties_over_temp_range(self, property_func, poly_num, temp_step):
-        return [property_func(temp, poly_num) for temp in self.temp_range(poly_num, temp_step)]
+            raise ValueError(
+                f"Requested temperature {temperature:.0f} K is above "
+                f"maximum {self.temp_max_2:.0f} K"
+            )
 
     def __str__(self):
         name = self.__class__.__name__
