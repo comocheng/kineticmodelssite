@@ -7,9 +7,11 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    expose:
+        - "5432"
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: conda run -vvv -n kms_env python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
     ports:
