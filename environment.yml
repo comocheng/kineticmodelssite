@@ -27,6 +27,7 @@ dependencies:
   - psycopg2
   - pip
   - pip:
+    - python-dotenv
     - black
     - flake8
     - flake8-django

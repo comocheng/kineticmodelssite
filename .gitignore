@@ -18,3 +18,6 @@ media/
 ignore/*
 errors.txt
 import_log.txt
+
+# Deployment files
+.env.prod
