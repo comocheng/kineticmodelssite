@@ -10,10 +10,15 @@ services:
   web:
     build: .
     volumes:
-      - .:/code
+      - .:/app
+      - kms-static:/app/static
+      - kms-media:/app/media
     ports:
       - 8000:8000
     depends_on:
       - db
     environment:
       - ENV_FILE
+volumes:
+  kms-static:
+  kms-media:
