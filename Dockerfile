@@ -21,4 +21,5 @@ ENV CONDA_DEFAULT_ENV /kms_env
 RUN source activate /kms_env
 
 COPY . /app/
-ENTRYPOINT [ "python", "manage.py", "runserver", "0.0.0.0:8000" ]
+RUN [ "chmod", "+x", "./bin/entrypoint.sh" ]
+ENTRYPOINT [ "./bin/entrypoint.sh" ]
