@@ -28,7 +28,6 @@ dependencies:
   - gunicorn
   - pip
   - pip:
-    - python-dotenv
     - black
     - flake8
     - flake8-django
