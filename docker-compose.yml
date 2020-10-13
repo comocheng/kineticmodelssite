@@ -5,8 +5,6 @@ services:
     image: postgres
     expose:
       - 5432
-    env_file:
-      - ${ENV_FILE}
   web:
     build: .
     volumes:
@@ -17,8 +15,8 @@ services:
       - 8000:8000
     depends_on:
       - db
-    environment:
-      - ENV_FILE
+    env_file:
+      - ./.env.${ENV}
 volumes:
   static:
   media:
