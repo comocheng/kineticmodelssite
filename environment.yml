@@ -26,7 +26,6 @@ dependencies:
   - django-crispy-forms
   - psycopg2
   - gunicorn
-  - whitenoise
   - pip
   - pip:
     - python-dotenv
