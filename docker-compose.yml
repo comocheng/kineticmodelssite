@@ -11,8 +11,8 @@ services:
     build: .
     volumes:
       - .:/app
-      - kms-static:/app/static
-      - kms-media:/app/media
+      - static:/app/static
+      - media:/app/media
     ports:
       - 8000:8000
     depends_on:
@@ -20,5 +20,5 @@ services:
     environment:
       - ENV_FILE
 volumes:
-  kms-static:
-  kms-media:
+  static:
+  media:
