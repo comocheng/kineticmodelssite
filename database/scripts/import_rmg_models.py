@@ -86,7 +86,7 @@ def import_rmg_models(apps, schema_editor):
     models = {model_name: apps.get_model("database", model_name) for model_name in model_names}
     logging.basicConfig(filename="import_log.txt", level=logging.DEBUG)
 
-    path = os.getenv("RMGMODELSPATH", os.path.expanduser("~/RMG-models/"))
+    path = os.getenv("RMGMODELSPATH", "./rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
     model_paths = get_models(path, skip_list)
 
