@@ -4,49 +4,56 @@ A django site for kinetic models
 ![build](https://github.com/comocheng/kineticmodelssite/workflows/Run%20Tests/badge.svg)
 
 
-## Setup
-Install Dependencies:
-To get a virtual environment up and running, [install an Anaconda distribution](https://www.anaconda.com/products/individual), then run:
+## Development Setup
+Clone the project and setup [docker](https://www.docker.com/products/docker-desktop) and [docker-compose](https://docs.docker.com/compose/install/).
 
-```conda env create -f environment.yml```
+For the first time, you need to run the initial migrations, which use [RMG-models](https://github.com/comocheng/RMG-models).
+To do this, first clone the RMG-models repo via ssh or https (ssh shown below):
 
-Then set up PostgreSQL:
-- ```$ conda install postgresql psycopg2```
-- ```$ initdb -D postgres```
-- ```$ pg_ctl -D postgres -l postgres.log start```
-- ```$ createuser --interactive --pwprompt``` then add user `postgres` password `postgres` as superuser (y).
-- ```$ psql postgres``` then `\du` to check the `postgres` Role is defined, then `\q` to quit.
-- ```$ python manage.py migrate`
+```git clone git@github.com:comocheng/RMG-models.git```
 
+Now create a named volume and copy the files over using `docker`:
 
-## Quickstart:
-To get a local version of the site up and running, run these commands in order:
-- ```conda activate kms_env```
-- ```python manage.py migrate```
-- ```python manage.py runserver```
+```docker volume create rmg-models```
 
-The terminal will then output which address and port the site is hosted on.
+```
+docker run --rm \
+--volume=/path/to/RMG-models:/source \
+--volume=rmg-models:/target \
+busybox cp -av "/source/." "/target/"
+```
+
+Then run:
+
+```docker-compose up```
 
 ## Project Structure:
 - The main project is `kms/`
 - The main app is `database/`
 
-Check out this project's wiki for more details
-https://github.com/comocheng/kineticmodelssite/wiki/Making-a-Local-Version-of-the-Site
+## Migrations:
+When you build the docker container, it automatically applies all current migrations.
+If you make changes to your code and need to migrate again, either rebuild the image (slow!)
+or attach a shell to your running container and run the migrate command:
 
-## Importing:
-To import RMG models from the importer project
-- set your RMGMODELSPATH enviroment variable `export RMGMODELSPATH=path/to/your/RMG-models/`
-- clear everything in your database (are you sure?) `$ python manage.py reset_db`
-- import the models `$ python manage.py migrate database import_rmg_models`
+```docker-compose exec web sh```
+
+Now in your interactive container shell:
+
+```python manage.py migrate```
+
+Similarly, if you want to nuke your migrations, you can run this in your interactive shell:
+
+```python manage.py reset_db```
+
+This is useful if RMG-models gets updated and you want to reset your database and migrate again.
 
 
 ## Contributing:
 
-### Dev Environment
-To start contributing, clone the project and setup a conda environment.
+### Code Style
 
-We use [flake8] for code style checks.
+We use [flake8](https://flake8.pycqa.org/en/latest/) for code style checks.
 It is configured in the `setup.cfg` file.
 To check if your changes pass the checks, run:
 
