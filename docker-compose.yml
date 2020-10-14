@@ -5,6 +5,8 @@ services:
     image: postgres
     expose:
       - 5432
+    env_file:
+      - ./.env.${ENV}
   web:
     build: .
     volumes:
