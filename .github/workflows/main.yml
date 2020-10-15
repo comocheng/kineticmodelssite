@@ -10,42 +10,10 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v2
-      - name: Cache conda
-        uses: actions/cache@v1
-        env:
-          CACHE_NUMBER: 0
-        with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
-      - name: psycopg2 prerequisites
-        run: sudo apt-get install python-dev libpq-dev
-      - uses: goanpeca/setup-miniconda@v1
-        with:
-          activate-environment: kms_env
-          environment-file: environment.yml
-          use-only-tar-bz2: true
-          python-version: 3.7
-          auto-activate-base: false
-      - name: Run style checks
-        shell: bash -l {0}
+      - name: run tests
         run: |
-          python -m flake8
-      - shell: bash -l {0}
-        run: |
-          python manage.py test --settings=kms.test_settings
+          docker volume create rmg-models
+          docker-compose run web ./bin/test.sh --rm
+          docker-compose down

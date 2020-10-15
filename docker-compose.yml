@@ -9,6 +9,8 @@ services:
       - ./.env.${ENV}
   web:
     build: .
+    entrypoint: /bin/bash
+    command: ./bin/entrypoint.sh
     volumes:
       - .:/app
       - static:/app/static
