@@ -27,6 +27,8 @@ Then run:
 
 ```docker-compose up```
 
+If you use MS Visual Studio Code, you can use the debugger by running `docker-compose -f docker-compose.debug.yml up` and starting a debugging session using the project's configuration (`.vscode/launch.json`).
+
 ## Project Structure:
 - The main project is `kms/`
 - The main app is `database/`

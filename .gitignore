@@ -7,7 +7,7 @@
 postgres/
 
 # IDE settings
-.vscode/
+.vscode/settings.json
 .pydevproject
 .settings/*
 
