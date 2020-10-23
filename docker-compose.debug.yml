@@ -1,4 +1,4 @@
-version: '3.4'
+version: "3.8"
 
 services:
   db:
@@ -7,15 +7,15 @@ services:
       - 5432
     env_file:
       - ./.env.dev
-  kineticmodelssite:
-    image: kineticmodelssite
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:5678 --nothreading --noreload"]
+  debug:
+    build: .
+    entrypoint: ["/bin/bash", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8080 --nothreading"]
     env_file:
       - ./.env.dev
+    volumes:
+      - .:/app
     ports:
       - "5678:5678"
+      - "8080:8080"
     depends_on:
       - db

@@ -21,5 +21,3 @@ ENV CONDA_DEFAULT_ENV /kms_env
 RUN source activate /kms_env
 
 COPY . /app/
-RUN [ "chmod", "+x", "./bin/entrypoint.sh" ]
-ENTRYPOINT [ "./bin/entrypoint.sh" ]
