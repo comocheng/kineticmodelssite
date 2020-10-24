@@ -27,6 +27,8 @@ Then run:
 
 ```docker-compose up```
 
+If you get an error ending `...returned a non-zero code: 137` then probably your Docker needs more RAM. On MacOS or Windows you can configure this using your Docker Dashboard app settings. In our experience 2GB is not enough but 4GB is.
+
 If you use MS Visual Studio Code, you can use the debugger by running `docker-compose -f docker-compose.debug.yml up` and starting a debugging session using the project's configuration (`.vscode/launch.json`).
 
 ## Project Structure:
