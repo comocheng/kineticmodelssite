@@ -5,7 +5,7 @@ A django site for kinetic models
 
 
 ## Development Setup
-Clone the project and setup [docker](https://www.docker.com/products/docker-desktop) and [docker-compose](https://docs.docker.com/compose/install/).
+Clone the project and set up [docker](https://www.docker.com/products/docker-desktop) and [docker-compose](https://docs.docker.com/compose/install/) (on desktop systems like Docker Desktop for Mac and Windows, Docker Compose is included as part of the Docker Desktop install).
 
 For the first time, you need to run the initial migrations, which use [RMG-models](https://github.com/comocheng/RMG-models).
 To do this, first clone the RMG-models repo via ssh or https (ssh shown below):
