@@ -13,10 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: docker-compose pull
-      - uses: satackey/action-docker-layer-caching@v0.0.8
         continue-on-error: true
       - name: run tests
         run: |
           docker volume create rmg-models
           docker-compose run web ./bin/test.sh --rm
-          docker-compose down
