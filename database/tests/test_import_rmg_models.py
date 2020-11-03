@@ -1,10 +1,19 @@
 from django.core.exceptions import MultipleObjectsReturned
 from django.test import TestCase
+from django_test_migrations.contrib.unittest_case import MigratorTestCase
 from database import models
 from database.scripts.import_rmg_models import *
 
 
-class TestImportRmgModels(TestCase):
+class TestImportRmgModelsIntegration(MigratorTestCase):
+    migrate_from = ("database","0001_initial")
+    migrate_to = ("database","import_rmg_models")
+
+    def model(self, model_name):
+        return self.new_state.apps.get_model("database", model_name)
+
+
+class TestImportRmgModelsUnit(TestCase):
     def test_get_or_create_reaction_from_stoich_set(self):
         """
         A Reaction with a unique set of stoich-species pairs should be found if the entire set of pairs is queried.
