@@ -14,8 +14,15 @@ services:
       - ./.env.dev
     volumes:
       - .:/app
+      - rmg-models:/app/rmg-models
+      - conda:/kms_env
     ports:
       - "5678:5678"
       - "8080:8080"
     depends_on:
       - db
+volumes:
+  rmg-models:
+    external: True
+  conda:
+    external: True
