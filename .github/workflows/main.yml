@@ -1,4 +1,4 @@
-name: tests
+name: CI/CD
 on:
   push:
     branches: [ master ]
@@ -6,15 +6,13 @@ on:
     branches: [ master ]
     types: [ opened, synchronize, ready_for_review ]
 jobs:
-  build:
-    name: build
+  testing:
+    name: Testing
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
-      - run: docker-compose pull
-        continue-on-error: true
-      - name: run tests
+      - name: Run Tests
         run: |
           docker volume create rmg-models
           docker-compose run web ./bin/test.sh --rm
