@@ -6,11 +6,8 @@
 *.sqlite3
 postgres/
 
-# Django media root
-media/
-
 # IDE settings
-.vscode/
+.vscode/settings.json
 .pydevproject
 .settings/*
 
@@ -18,3 +15,8 @@ media/
 ignore/*
 errors.txt
 import_log.txt
+
+# Deployment files
+.env.prod
+static/
+media/
