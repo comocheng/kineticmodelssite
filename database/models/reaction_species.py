@@ -6,34 +6,51 @@ from rmgpy.molecule import Molecule
 from . import KineticModel, Kinetics
 
 
-class Species(models.Model):
+class Formula(models.Model):
     """
-    A chemical species.
-
-    This is the equivalent of 'Species' in PrIMe, which contain:
-    *****in catalog*******
-    bibliography
-    InChI
-    CAS number
-    formula
-    Fuel ID (N/A for now)
-    names (very optional)
+    A chemical formula with references to all information related to it.
     """
 
-    prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     formula = models.CharField(max_length=50)
-    inchi = models.CharField("InChI", blank=True, max_length=500)
-    cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
 
     class Meta:
-        ordering = ("prime_id",)
-        verbose_name_plural = "Species"
+        ordering = ("formula",)
 
     def __str__(self):
         return self.formula
 
-    # This method should output an object in RMG format
-    # Will be used in RMG section to access the PRIME DB
+
+class Isomer(models.Model):
+    inchi = models.CharField("InChI", unique=True, max_length=500)
+    formula = models.ForeignKey(Formula, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return "{s.inchi}".format(s=self)
+
+
+class Structure(models.Model):
+    isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
+    smiles = models.CharField("SMILES", blank=True, max_length=500)
+    adjacency_list = models.TextField("Adjacency List", unique=True)
+    multiplicity = models.IntegerField()
+
+    def __str__(self):
+        return self.adjacency_list
+
+    def to_rmg(self):
+        return Molecule().from_adjacency_list(self.adjacency_list)
+
+
+class Species(models.Model):
+    scope = models.TextField()
+    prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
+    cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
+    inchi = models.CharField("InChI", blank=True, max_length=500)
+    formula = models.ForeignKey(Formula, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ("formula", "scope")
+
     def to_rmg(self):
         if self.inchi:
             species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
@@ -47,65 +64,29 @@ class Species(models.Model):
         return set(name for name in self.speciesname_set.values_list("name", flat=True) if name)
 
     @property
+    def isomers(self):
+        formula_isomers = Isomer.objects.filter(formula=self.formula)
+        isomer_scopes = [entry.split(".")[0] for entry in self.scope.splitlines()]
+        if self.scope == "*":
+            return formula_isomers
+        else:
+            return formula_isomers.filter(id__in=isomer_scopes)
+
+    @property
     def structures(self):
-        return Structure.objects.filter(isomer__species=self)
-
-
-class Isomer(models.Model):
-    """
-    An isomer of a species which stores the InChI of the species.
-
-    This doesn't have an equivalent term in rmg the most similar term would
-    be an InChI
-
-    An Isomer is linked to Structures by a one to many relationship because
-    an isomer may point to multiple structures
-    """
-
-    inchi = models.CharField("InChI", blank=True, max_length=500)
-    species = models.ManyToManyField(Species)
-
-    def __str__(self):
-        return "{s.inchi}".format(s=self)
-
-
-class Structure(models.Model):
-    """
-    A structure is a specific resonance structure of an Isomer.
-
-    The equivalent term in RMG would be a molecule
-    """
-
-    isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
-    smiles = models.CharField("SMILES", blank=True, max_length=500)
-    adjacency_list = models.TextField("Adjacency List", unique=True)
-    multiplicity = models.IntegerField()
-
-    def __str__(self):
-        return "{s.adjacency_list}".format(s=self)
-
-    def to_rmg(self):
-        return Molecule().from_adjacency_list(self.adjacency_list)
+        if self.scope == "*":
+             return Structure.objects.filter(isomer__formula=self.formula)
+        scope_entries = [entry.split(".") for entry in self.scope.splitlines()]
+        structures = []
+        for isomer_id, structure_id in scope_entries:
+            isomer = Isomer.objects.get(id=isomer_id)
+            if structure_id == "*":
+                structures += isomer.structure_set.all()
+            else:
+                structures.append(isomer.structure_set.filter(id=structure_id))
 
 
 class Reaction(models.Model):
-    """
-    A chemical reaction, with several species, has a rate in one or
-    more models.
-
-    Should have:
-     * species (linked via stoichiometry)
-     * prime ID
-
-    It will be linked into various kinetic models and sources
-    via the kinetics objects.
-    There will not be a unique source for each reaction.
-
-    This is the equivalent of 'Reactions' in PrIMe, which contain:
-    *****in catalog******
-    species involved w/stoichiometries
-    """
-
     species = models.ManyToManyField(Species, through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
@@ -230,7 +211,7 @@ class Reaction(models.Model):
 
 class Stoichiometry(models.Model):
     """
-    How many times a species is created in a reaction.
+    The number of molecules or atoms of a species that participate in a reaction .
 
     Reactants have negative stoichiometries, products have positive.
     eg. in the reaction A <=> 2B  the stoichiometry of A is -1 and of B is +2
