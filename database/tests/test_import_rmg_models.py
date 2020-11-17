@@ -18,44 +18,64 @@ class TestImportRmgModelsUnit(TestCase):
         """
         A Reaction with a unique set of stoich-species pairs should be found if the entire set of pairs is queried.
 
-        A partial match should return a Reaction if the partial match is unique.
-        A duplicate reaction or a non-unique partial match should throw MultipleObjectsReturned.
+        A partial match should create a new Reaction.
+        A partial match and an exact match should return the exact match.
+        Multiple partial matches should create a new Reaction.
+        Multiple exact matches should throw MultipleObjectsReturned.
         """
 
-        species_a = models.Species.objects.create(formula="A")
-        species_b = models.Species.objects.create(formula="B")
-        species_c = models.Species.objects.create(formula="C")
+        formula_a = models.Formula.objects.create(formula="A")
+        formula_b = models.Formula.objects.create(formula="B")
+        formula_c = models.Formula.objects.create(formula="C")
+        formula_d = models.Formula.objects.create(formula="D")
+        species_a = models.Species.objects.create(scope="*", formula=formula_a)
+        species_b = models.Species.objects.create(formula=formula_b)
+        species_c = models.Species.objects.create(formula=formula_c)
+        species_d = models.Species.objects.create(formula=formula_d)
         reaction1 = models.Reaction.objects.create(reversible=False)
         reaction2 = models.Reaction.objects.create(reversible=False)
         reaction3 = models.Reaction.objects.create(reversible=True)
+        reaction4 = models.Reaction.objects.create(reversible=True)
         reaction1.species.add(species_a, through_defaults={"stoichiometry": -1})
         reaction1.species.add(species_b, through_defaults={"stoichiometry": 1})
+        reaction1.species.add(species_c, through_defaults={"stoichiometry": 1})
         reaction1.save()
         reaction2.species.add(species_a, through_defaults={"stoichiometry": -1})
         reaction2.species.add(species_b, through_defaults={"stoichiometry": 1})
         reaction2.species.add(species_c, through_defaults={"stoichiometry": 1})
+        reaction2.species.add(species_d, through_defaults={"stoichiometry": 1})
         reaction2.save()
         reaction3.species.add(species_a, through_defaults={"stoichiometry": -1})
         reaction3.species.add(species_b, through_defaults={"stoichiometry": 1})
         reaction3.save()
+        reaction4.species.add(species_a, through_defaults={"stoichiometry": -1})
+        reaction4.species.add(species_b, through_defaults={"stoichiometry": 1})
+        reaction4.save()
 
-        stoich_data_exact_match = [(-1, species_a), (1, species_b), (1, species_c)]
+        stoich_data_exact_match = [(-1, species_a), (1, species_b), (1, species_c), (1, species_d)]
         stoich_data_exact_match_multiple = [(-1, species_a), (1, species_b)]
-        stoich_data_partial_match = [(-1, species_a), (1, species_c)]
+        stoich_data_partial_match = [(-1, species_a), (1, species_c), (1, species_d)]
         stoich_data_partial_match_multiple = [(-1, species_a)]
+        stoich_data_exact_partial_match = [(-1, species_a), (1, species_b), (1, species_c)]
         _models = {"Reaction": models.Reaction}
 
         exact_match_reaction, exact_match_created = get_or_create_reaction_from_stoich_data(
-            stoich_data_exact_match, _models, reversible=True
+            stoich_data_exact_match, _models, reversible=False
         )
-        partial_match_reaction, partial_match_created = get_or_create_reaction_from_stoich_data(
-            stoich_data_partial_match, _models, reversible=True
+        _, multiple_partial_match_created = get_or_create_reaction_from_stoich_data(
+            stoich_data_partial_match_multiple, _models, reversible=False
+        )
+        _, partial_match_created = get_or_create_reaction_from_stoich_data(
+            stoich_data_partial_match, _models, reversible=False
+        )
+        exact_partial_match_reaction, exact_partial_match_created = get_or_create_reaction_from_stoich_data(
+            stoich_data_exact_partial_match, _models, reversible=False
         )
 
         self.assertFalse(exact_match_created)
         self.assertEqual(reaction2, exact_match_reaction)
-        self.assertFalse(partial_match_created)
-        self.assertEqual(reaction2, partial_match_reaction)
+        self.assertTrue(partial_match_created)
+        self.assertTrue(multiple_partial_match_created)
         self.assertRaises(
             MultipleObjectsReturned,
             get_or_create_reaction_from_stoich_data,
@@ -63,10 +83,5 @@ class TestImportRmgModelsUnit(TestCase):
             _models,
             reversible=True,
         )
-        self.assertRaises(
-            MultipleObjectsReturned,
-            get_or_create_reaction_from_stoich_data,
-            stoich_data_partial_match_multiple,
-            _models,
-            reversible=True,
-        )
+        self.assertFalse(exact_partial_match_created)
+        self.assertEqual(reaction1, exact_partial_match_reaction)
