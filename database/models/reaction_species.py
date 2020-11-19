@@ -51,7 +51,7 @@ class Species(models.Model):
     def to_rmg(self):
         if self.inchi:
             species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
-            species.generate_resonance_structures()
+            species.molecule = [s.to_rmg() for s in self.structures]
             return species
         else:
             return None
