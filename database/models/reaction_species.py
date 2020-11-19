@@ -72,6 +72,7 @@ class Species(models.Model):
 
 
 class Reaction(models.Model):
+    hash = models.CharField(max_length=32, unique=True)
     species = models.ManyToManyField(Species, through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
