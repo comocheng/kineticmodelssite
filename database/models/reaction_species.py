@@ -42,14 +42,11 @@ class Structure(models.Model):
 
 
 class Species(models.Model):
-    scope = models.TextField()
+    hash = models.CharField(max_length=32, unique=True)
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     inchi = models.CharField("InChI", blank=True, max_length=500)
-    formula = models.ForeignKey(Formula, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ("formula", "scope")
+    structures = models.ManyToManyField(Structure)
 
     def to_rmg(self):
         if self.inchi:
@@ -65,25 +62,13 @@ class Species(models.Model):
 
     @property
     def isomers(self):
-        formula_isomers = Isomer.objects.filter(formula=self.formula)
-        isomer_scopes = [entry.split(".")[0] for entry in self.scope.splitlines()]
-        if self.scope == "*":
-            return formula_isomers
-        else:
-            return formula_isomers.filter(id__in=isomer_scopes)
+        isomer_ids = self.structures.values("isomer").distinct()
+
+        return Isomer.objects.filter(id__in=isomer_ids)
 
     @property
-    def structures(self):
-        if self.scope == "*":
-             return Structure.objects.filter(isomer__formula=self.formula)
-        scope_entries = [entry.split(".") for entry in self.scope.splitlines()]
-        structures = []
-        for isomer_id, structure_id in scope_entries:
-            isomer = Isomer.objects.get(id=isomer_id)
-            if structure_id == "*":
-                structures += isomer.structure_set.all()
-            else:
-                structures.append(isomer.structure_set.filter(id=structure_id))
+    def formula(self):
+        return self.structures.first().isomer.formula.formula
 
 
 class Reaction(models.Model):
