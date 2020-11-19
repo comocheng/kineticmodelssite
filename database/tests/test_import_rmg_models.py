@@ -6,11 +6,23 @@ from database.scripts.import_rmg_models import *
 
 
 class TestImportRmgModelsIntegration(MigratorTestCase):
-    migrate_from = ("database","0001_initial")
-    migrate_to = ("database","import_rmg_models")
+    migrate_from = ("database", "0001_initial")
+    migrate_to = ("database", "import_rmg_models")
 
     def model(self, model_name):
         return self.new_state.apps.get_model("database", model_name)
+
+    def test_consistent_species_hash(self):
+        Species = self.model("Species")
+        self.assertTrue(
+            all(get_species_hash(s.structures.all()) == s.hash for s in Species.objects.all())
+        )
+
+    def test_consistent_reaction_hash(self):
+        Reaction = self.model("Reaction")
+        self.assertTure(
+            all(get_reaction_hash(r.stoich_species()) == r.hash for r in Reaction.objects.all())
+        )
 
 
 class TestImportRmgModelsUnit(TestCase):
@@ -68,7 +80,10 @@ class TestImportRmgModelsUnit(TestCase):
         _, partial_match_created = get_or_create_reaction_from_stoich_data(
             stoich_data_partial_match, _models, reversible=False
         )
-        exact_partial_match_reaction, exact_partial_match_created = get_or_create_reaction_from_stoich_data(
+        (
+            exact_partial_match_reaction,
+            exact_partial_match_created,
+        ) = get_or_create_reaction_from_stoich_data(
             stoich_data_exact_partial_match, _models, reversible=False
         )
 

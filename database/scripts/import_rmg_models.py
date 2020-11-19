@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -85,7 +86,7 @@ def import_rmg_models(apps, schema_editor):
         "Stoichiometry",
     ]
     models = {model_name: apps.get_model("database", model_name) for model_name in model_names}
-    logging.basicConfig(filename="import_log.txt", level=logging.DEBUG)
+    logging.basicConfig(filename="import_log.txt", level=logging.DEBUG, filemode="w")
 
     path = os.getenv("RMGMODELSPATH", "./rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
@@ -125,54 +126,52 @@ def filter_fields(fields, filter_value=None):
     return {k: v for k, v in fields.items() if v != filter_value}
 
 
-def create_and_save_species(kinetic_model, name, molecules, inchi="", **models):
+def get_species_hash(structures):
+    structure_fingerprint = "".join(sorted(set(str(structure.id) for structure in structures)))
+
+    return hashlib.md5(bytes(structure_fingerprint, "UTF-8")).hexdigest()
+
+
+def get_or_create_species(kinetic_model, name, molecules, inchi="", **models):
     formula = molecules[0].get_formula()
     formula_obj, _ = models["Formula"].objects.get_or_create(formula=formula)
-    scope = ""
+    structures = []
     for molecule in molecules:
         smiles = molecule.to_smiles()
         isomer_inchi = molecule.to_inchi()
         adjacency_list = molecule.to_adjacency_list()
         multiplicity = molecule.multiplicity
         isomer, _ = models["Isomer"].objects.get_or_create(inchi=isomer_inchi, formula=formula_obj)
-        structure, _ = models["Structure"].objects.get_or_create(
-            adjacency_list=adjacency_list,
-            defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
+        structures.append(
+            models["Structure"].objects.get_or_create(
+                adjacency_list=adjacency_list,
+                defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
+            )[0]
         )
-        scope += f"{isomer.id}.{structure.id}\n"
 
+    species_hash = get_species_hash(structures)
     species, species_created = models["Species"].objects.get_or_create(
-        formula=formula_obj, defaults={"inchi": inchi, "scope": scope}
+        hash=species_hash, defaults={"inchi": inchi}
     )
     if species_created:
-        models["SpeciesName"].objects.create(
-            name=name, species=species, kinetic_model=kinetic_model
-        )
+        species.structures.add(*structures)
+
+    models["SpeciesName"].objects.get_or_create(
+        name=name, species=species, kinetic_model=kinetic_model
+    )
 
     return species
 
 
-def get_or_create_reaction_from_stoich_data(stoich_data, models, **defaults):
-    stoich_data_iter = iter(stoich_data)
-    stoich, species = next(stoich_data_iter)
-    queryset = (
-        models["Reaction"]
-        .objects.annotate(species_count=Count("species"))
-        .filter(
-            species_count=len(stoich_data),
-            stoichiometry__stoichiometry=stoich,
-            stoichiometry__species=species,
-        )
+def get_reaction_hash(stoich_data):
+    reaction_fingerprint = "".join(
+        sorted(set(f"{stoich}{species.id}" for stoich, species in stoich_data))
     )
-    for stoich, species in stoich_data_iter:
-        queryset = queryset.filter(
-            stoichiometry__stoichiometry=stoich, stoichiometry__species=species
-        )
 
-    return queryset.get_or_create(defaults=defaults)
+    return hashlib.md5(bytes(reaction_fingerprint, "UTF-8")).hexdigest()
 
 
-def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
+def get_or_create_reaction(kinetic_model, rmg_reaction, **models):
     """
     Create and save a reaction from an RMG reaction
 
@@ -195,7 +194,7 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
 
     with transaction.atomic():
         for rmg_species in species_map.values():
-            species = create_and_save_species(
+            species = get_or_create_species(
                 kinetic_model, "", rmg_species.molecule, inchi=rmg_species.inchi, **models
             )
             reactant_coeff = sum(-1 for reactant in reactants if reactant == rmg_species)
@@ -206,14 +205,12 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
             if product_coeff != 0:
                 stoich_data.append((product_coeff, species))
 
-        reaction, created = get_or_create_reaction_from_stoich_data(
-            stoich_data, models, reversible=reversible
+        reaction, created = models["Reaction"].objects.get_or_create(
+            hash=get_reaction_hash(stoich_data=stoich_data), defaults={"reversible": reversible}
         )
-
         if created:
             for stoich_coeff, species in stoich_data:
                 reaction.species.add(species, through_defaults={"stoichiometry": stoich_coeff})
-        reaction.save()
 
         stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
         stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
@@ -332,7 +329,7 @@ def create_general_kinetics_data(rmg_kinetics_data, base_fields, **models):
 
 def create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, **models):
     for rmg_molecule, efficiency in rmg_kinetics_data.efficiencies.items():
-        species = create_and_save_species(kinetic_model, "", [rmg_molecule], **models)
+        species = get_or_create_species(kinetic_model, "", [rmg_molecule], **models)
         efficiency = models["Efficiency"].objects.create(
             species=species, kinetics_data=kinetics_data, efficiency=efficiency
         )
@@ -403,7 +400,7 @@ def import_kinetics(kinetics_path, kinetic_model, **models):
                 rmg_kinetics_data = entry.data
                 comment = entry.short_desc
                 rmg_reaction = entry.item
-                reaction = create_and_save_reaction(kinetic_model, rmg_reaction, **models)
+                reaction = get_or_create_reaction(kinetic_model, rmg_reaction, **models)
                 kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, **models)
                 kinetics_model = models["Kinetics"].objects.create(
                     reaction=reaction, base_data=kinetics_data
@@ -431,7 +428,7 @@ def import_thermo(thermo_path, kinetic_model, **models):
     for species_name, entry in library.entries.items():
         logging.info(f"Importing Thermo entry for {species_name}")
         try:
-            species = create_and_save_species(kinetic_model, species_name, [entry.item], **models)
+            species = get_or_create_species(kinetic_model, species_name, [entry.item], **models)
             thermo_data = entry.data
             poly1, poly2 = thermo_data.polynomials
             thermo, _ = models["Thermo"].objects.get_or_create(
