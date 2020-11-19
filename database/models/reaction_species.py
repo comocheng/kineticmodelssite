@@ -11,7 +11,7 @@ class Formula(models.Model):
     A chemical formula with references to all information related to it.
     """
 
-    formula = models.CharField(max_length=50)
+    formula = models.CharField(max_length=50, unique=True)
 
     class Meta:
         ordering = ("formula",)
@@ -29,10 +29,10 @@ class Isomer(models.Model):
 
 
 class Structure(models.Model):
-    isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
-    smiles = models.CharField("SMILES", blank=True, max_length=500)
     adjacency_list = models.TextField("Adjacency List", unique=True)
+    smiles = models.CharField("SMILES", blank=True, max_length=500)
     multiplicity = models.IntegerField()
+    isomer = models.ForeignKey(Isomer, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.adjacency_list
