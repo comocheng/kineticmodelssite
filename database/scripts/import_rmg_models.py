@@ -165,7 +165,7 @@ def get_or_create_species(kinetic_model, name, molecules, inchi="", **models):
 
 def get_reaction_hash(stoich_data):
     reaction_fingerprint = "".join(
-        sorted(set(f"{stoich}{species.id}" for stoich, species in stoich_data))
+        sorted(set(f"{stoich:.4f}{species.id}" for stoich, species in stoich_data))
     )
 
     return hashlib.md5(bytes(reaction_fingerprint, "UTF-8")).hexdigest()
