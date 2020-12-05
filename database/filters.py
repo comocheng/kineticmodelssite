@@ -8,24 +8,27 @@ class SpeciesFilter(django_filters.FilterSet):
     speciesname__name = django_filters.CharFilter(
         field_name="speciesname", lookup_expr="name", distinct=True, label="Species Name",
     )
-    isomer__inchi = django_filters.CharFilter(
-        field_name="isomer", lookup_expr="inchi", label="Isomer InChI"
+    isomers__formula__formula = django_filters.CharFilter(
+        field_name="isomers", lookup_expr="formula__formula", label="Formula"
     )
-    isomer__structure__smiles = django_filters.CharFilter(
-        field_name="isomer", lookup_expr="structure__smiles", label="Structure SMILES"
+    isomers__inchi = django_filters.CharFilter(
+        field_name="isomers", lookup_expr="inchi", label="Isomer InChI"
     )
-    isomer__structure__adjacency_list = django_filters.CharFilter(
-        field_name="isomer",
+    isomers__structure__smiles = django_filters.CharFilter(
+        field_name="isomers", lookup_expr="structure__smiles", label="Structure SMILES"
+    )
+    isomers__structure__adjacency_list = django_filters.CharFilter(
+        field_name="isomers",
         lookup_expr="structure__adjacency_list",
         label="Structure Adjacency List",
     )
-    isomer__structure__multiplicity = django_filters.NumberFilter(
-        field_name="isomer", lookup_expr="structure__multiplicity", label="Structure Multiplicity",
+    isomers__structure__multiplicity = django_filters.NumberFilter(
+        field_name="isomers", lookup_expr="structure__multiplicity", label="Structure Multiplicity",
     )
 
     class Meta:
         model = Species
-        fields = ["prime_id", "formula", "inchi", "cas_number"]
+        fields = ["prime_id", "inchi", "cas_number"]
 
 
 class ReactionFilter(django_filters.FilterSet):
