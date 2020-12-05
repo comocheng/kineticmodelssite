@@ -13,11 +13,11 @@ dependencies:
   - beautifulsoup4
   - cairo
   - cairocffi
-  - matplotlib >=1.5
+  - matplotlib>=1.5
   - xlrd
   - xlwt
   - habanero>=0.6,<0.7
-  - rmg == 3.0
+  - rmg==3.0
   - pandas
   - django==3.0
   - django-filter
