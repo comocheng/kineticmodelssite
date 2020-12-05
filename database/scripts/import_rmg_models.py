@@ -210,7 +210,9 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, **models):
         )
         if created:
             for stoich_coeff, species in stoich_data:
-                reaction.species.add(species, through_defaults={"stoichiometry": stoich_coeff})
+                models["Stoichiometry"].objects.create(
+                    reaction=reaction, species=species, stoichiometry=stoich_coeff
+                )
 
         stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
         stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
