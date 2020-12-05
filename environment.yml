@@ -19,7 +19,7 @@ dependencies:
   - habanero>=0.6,<0.7
   - rmg == 3.0
   - pandas
-  - django
+  - django==3.0
   - django-filter
   - django-extensions
   - django-model-utils
