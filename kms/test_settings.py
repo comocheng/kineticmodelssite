@@ -1,3 +1,3 @@
 from .settings import *
 
-MIGRATION_MODULES = {"database": None}
+DATABASES["default"] = {"ENGINE": "django.db.backends.sqlite3"}
