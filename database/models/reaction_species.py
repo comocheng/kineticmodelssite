@@ -21,11 +21,11 @@ class Formula(models.Model):
 
 
 class Isomer(models.Model):
-    inchi = models.CharField("InChI", unique=True, max_length=500)
+    inchi = models.CharField("Augmented InChI", unique=True, max_length=500)
     formula = models.ForeignKey(Formula, on_delete=models.CASCADE)
 
     def __str__(self):
-        return "{s.inchi}".format(s=self)
+        return f"{self.inchi}"
 
 
 class Structure(models.Model):
@@ -46,7 +46,7 @@ class Species(models.Model):
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     inchi = models.CharField("InChI", blank=True, max_length=500)
-    structures = models.ManyToManyField(Structure)
+    isomers = models.ManyToManyField(Isomer)
 
     def to_rmg(self):
         if self.inchi:
@@ -61,14 +61,14 @@ class Species(models.Model):
         return set(name for name in self.speciesname_set.values_list("name", flat=True) if name)
 
     @property
-    def isomers(self):
-        isomer_ids = self.structures.values("isomer").distinct()
+    def structures(self):
+        structure_ids = self.isomers.values_list("structure", flat=True)
 
-        return Isomer.objects.filter(id__in=isomer_ids)
+        return Structure.objects.filter(id__in=structure_ids)
 
     @property
     def formula(self):
-        return self.structures.first().isomer.formula.formula
+        return self.isomers.first().formula.formula
 
 
 class Reaction(models.Model):

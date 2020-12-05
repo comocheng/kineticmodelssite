@@ -7,7 +7,6 @@ from pathlib import Path
 
 import habanero
 from django.db import transaction, IntegrityError
-from django.db.models import Count
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -126,35 +125,36 @@ def filter_fields(fields, filter_value=None):
     return {k: v for k, v in fields.items() if v != filter_value}
 
 
-def get_species_hash(structures):
-    structure_fingerprint = "".join(sorted(set(str(structure.id) for structure in structures)))
+def get_species_hash(isomers):
+    isomer_fingerprint = "".join(sorted(set(str(isomer.id) for isomer in isomers)))
 
-    return hashlib.md5(bytes(structure_fingerprint, "UTF-8")).hexdigest()
+    return hashlib.md5(bytes(isomer_fingerprint, "UTF-8")).hexdigest()
 
 
 def get_or_create_species(kinetic_model, name, molecules, inchi="", **models):
     formula = molecules[0].get_formula()
     formula_obj, _ = models["Formula"].objects.get_or_create(formula=formula)
-    structures = []
+    isomers = []
     for molecule in molecules:
         smiles = molecule.to_smiles()
-        isomer_inchi = molecule.to_inchi()
+        augmented_inchi = molecule.to_augmented_inchi()
         adjacency_list = molecule.to_adjacency_list()
         multiplicity = molecule.multiplicity
-        isomer, _ = models["Isomer"].objects.get_or_create(inchi=isomer_inchi, formula=formula_obj)
-        structures.append(
-            models["Structure"].objects.get_or_create(
-                adjacency_list=adjacency_list,
-                defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
-            )[0]
+        isomer, _ = models["Isomer"].objects.get_or_create(
+            inchi=augmented_inchi, formula=formula_obj
+        )
+        isomers.append(isomer)
+        models["Structure"].objects.get_or_create(
+            adjacency_list=adjacency_list,
+            defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
         )
 
-    species_hash = get_species_hash(structures)
+    species_hash = get_species_hash(isomers)
     species, species_created = models["Species"].objects.get_or_create(
         hash=species_hash, defaults={"inchi": inchi}
     )
     if species_created:
-        species.structures.add(*structures)
+        species.isomers.add(*isomers)
 
     models["SpeciesName"].objects.get_or_create(
         name=name, species=species, kinetic_model=kinetic_model
