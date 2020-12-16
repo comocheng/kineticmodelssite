@@ -9,7 +9,7 @@ services:
       - ./.env.dev
   debug:
     build: .
-    command: ./bin/migrate.sh
+    tty: true
     env_file:
       - ./.env.dev
     volumes:
