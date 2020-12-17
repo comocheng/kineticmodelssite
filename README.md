@@ -83,6 +83,17 @@ If you have a local database and want to update it with new migrations, run this
 
 In order to update the models and migrate existing data to reflect the new schema, you will have to manually write a [data migration](https://docs.djangoproject.com/en/3.0/topics/migrations/#data-migrations).
 
+
+### Writing and Running Tests
+This project uses the built-in `unittest` module with the [Django testing framework](https://docs.djangoproject.com/en/3.0/topics/testing/).
+
+To run tests, run the shell scripts `test.sh` and `test-migrations.sh` in the docker container.
+
+There are a few different test classes to use when writing tests. When writing simple unit test cases with no backend dependencies (ie. models), use `django.test.SimpleTestCase`. When writing unit tests with backend dependencies, use `django.test.TestCase`. When writing tests for a specific migration or series of migrations, use `django_test_migrations.contrib.unittest_case.MigratorTestCase`.
+
+> **_IMPORTANT:_** All test files should be in the `/tests/` directory and should be prefixed with `test_` and subsequently snake-cased. Additionally, all unit tests should be suffixed with `unit` and all migration tests should be suffixed with `mig`. If you do not do this, the test shell scripts will not run properly and your tests with fail in CI!
+
+
 ### Version Control Strategy
 1. Create a feature branch from `master`
 2. When finished, rebase the feature branch to the tip of `master`
