@@ -1,3 +1,6 @@
+import random
+import string
+
 from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
@@ -8,6 +11,17 @@ def create_kinetic_model_with_detail_view_dependencies():
     source = models.Source.objects.create()
     kinetic_model = models.KineticModel.objects.create(source=source)
     return kinetic_model
+
+
+def create_species():
+    hsh = "".join(random.choices(string.ascii_letters, k=10))
+    formula = models.Formula.objects.create(formula=hsh)
+    isomer = models.Isomer.objects.create(inchi=hsh, formula=formula)
+    species = models.Species.objects.create(hash=hsh)
+    species.isomers.add(isomer)
+
+    return species
+
 
 def create_thermo(species):
     fields = {
@@ -32,7 +46,7 @@ class TestKineticModelDetail(TestCase):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
         for i in range(1, paginate_per_page):
-            species = models.Species.objects.create()
+            species = create_species()
             transport = models.Transport.objects.create(species=species)
             kinetic_model.species.add(species)
             kinetic_model.transport.add(transport)
@@ -50,7 +64,7 @@ class TestKineticModelDetail(TestCase):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
         for i in range(1, paginate_per_page):
-            species = models.Species.objects.create()
+            species = create_species()
             thermo = create_thermo(species=species)
             kinetic_model.species.add(species)
             kinetic_model.thermo.add(thermo)
@@ -67,8 +81,8 @@ class TestKineticModelDetail(TestCase):
         """
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         paginate_per_page = views.KineticModelDetail.cls.paginate_per_page
-        for _ in range(1, paginate_per_page):
-            species = models.Species.objects.create()
+        for i in range(1, paginate_per_page):
+            species = create_species()
             thermo = create_thermo(species=species)
             transport = models.Transport.objects.create(species=species)
             kinetic_model.species.add(species)
