@@ -134,7 +134,7 @@ def get_species_hash(isomers):
     return hashlib.md5(bytes(isomer_fingerprint, "UTF-8")).hexdigest()
 
 
-def get_or_create_species(kinetic_model, name, molecules, models, inchi=""):
+def get_or_create_species(kinetic_model, name, molecules, models):
     formula = molecules[0].get_formula()
     formula_obj, _ = models.Formula.objects.get_or_create(formula=formula)
     isomers = []
@@ -143,9 +143,7 @@ def get_or_create_species(kinetic_model, name, molecules, models, inchi=""):
         augmented_inchi = molecule.to_augmented_inchi()
         adjacency_list = molecule.to_adjacency_list()
         multiplicity = molecule.multiplicity
-        isomer, _ = models.Isomer.objects.get_or_create(
-            inchi=augmented_inchi, formula=formula_obj
-        )
+        isomer, _ = models.Isomer.objects.get_or_create(inchi=augmented_inchi, formula=formula_obj)
         isomers.append(isomer)
         models.Structure.objects.get_or_create(
             adjacency_list=adjacency_list,
@@ -153,9 +151,7 @@ def get_or_create_species(kinetic_model, name, molecules, models, inchi=""):
         )
 
     species_hash = get_species_hash(isomers)
-    species, species_created = models.Species.objects.get_or_create(
-        hash=species_hash, defaults={"inchi": inchi}
-    )
+    species, species_created = models.Species.objects.get_or_create(hash=species_hash)
     if species_created:
         species.isomers.add(*isomers)
 
@@ -198,7 +194,10 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
     with transaction.atomic():
         for rmg_species in species_map.values():
             species = get_or_create_species(
-                kinetic_model, "", rmg_species.molecule, models, inchi=rmg_species.inchi,
+                kinetic_model,
+                "",
+                rmg_species.molecule,
+                models,
             )
             reactant_coeff = sum(-1 for reactant in reactants if reactant == rmg_species)
             product_coeff = sum(1 for product in products if product == rmg_species)

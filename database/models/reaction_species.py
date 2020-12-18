@@ -45,13 +45,10 @@ class Species(models.Model):
     hash = models.CharField(max_length=32, unique=True)
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
-    inchi = models.CharField("InChI", blank=True, max_length=500)
     isomers = models.ManyToManyField(Isomer)
 
     def __str__(self):
-        string = "-".join(
-            x for x in [self.formula, self.prime_id, self.cas_number, self.inchi] if x
-        )
+        string = "-".join(x for x in [self.formula, self.prime_id, self.cas_number] if x)
 
         return string
 

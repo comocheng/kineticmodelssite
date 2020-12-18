@@ -28,7 +28,7 @@ class SpeciesFilter(django_filters.FilterSet):
 
     class Meta:
         model = Species
-        fields = ["prime_id", "inchi", "cas_number"]
+        fields = ["prime_id", "cas_number"]
 
 
 class ReactionFilter(django_filters.FilterSet):
