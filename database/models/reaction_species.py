@@ -48,6 +48,13 @@ class Species(models.Model):
     inchi = models.CharField("InChI", blank=True, max_length=500)
     isomers = models.ManyToManyField(Isomer)
 
+    def __str__(self):
+        string = "-".join(
+            x for x in [self.formula, self.prime_id, self.cas_number, self.inchi] if x
+        )
+
+        return string
+
     def to_rmg(self):
         if self.inchi:
             species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
