@@ -1,22 +1,16 @@
-from django.core.exceptions import ValidationError
 from django.dispatch import receiver
-from django.db.models.signals import post_save
-from .models import Reaction, Stoichiometry
+from django.db.models.signals import m2m_changed
+from .models import Reaction, Species
+from .scripts.import_rmg_models import get_species_hash, get_reaction_hash
 
 
-def _flatten_stoich_species(stoich_species):
-    return [(stoich, species.id) for stoich, species in stoich_species]
+@receiver(m2m_changed, sender=Reaction.species.through)
+def change_reaction_hash_on_stoichiometry_change(instance, **kwargs):
+    instance.hash = get_reaction_hash(instance.stoich_species())
+    instance.save()
 
 
-@receiver(post_save, sender=Stoichiometry)
-def validate_unique_reaction_stoichiometry(instance, **kwargs):
-    reaction = instance.reaction
-    stoich_species = _flatten_stoich_species(reaction.stoich_species())
-    rest_stoich_species = [
-        _flatten_stoich_species(r.stoich_species())
-        for r in Reaction.objects.exclude(pk=reaction.pk)
-    ]
-    if stoich_species in rest_stoich_species:
-        raise ValidationError(
-            f"stoichiometry-species_id pairs {stoich_species} not unique together in reaction"
-        )
+@receiver(m2m_changed, sender=Species.isomers.through)
+def change_species_hash_on_isomers_change(instance, **kwargs):
+    instance.hash = get_species_hash(instance.isomers.all())
+    instance.save()

@@ -1,12 +1,13 @@
 import os
 import re
 import logging
+import hashlib
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import habanero
 from django.db import transaction, IntegrityError
-from django.db.models import Count
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -63,6 +64,7 @@ def import_rmg_models(apps, schema_editor):
         "Thermo",
         "ThermoComment",
         "Species",
+        "Formula",
         "Isomer",
         "Structure",
         "SpeciesName",
@@ -83,8 +85,10 @@ def import_rmg_models(apps, schema_editor):
         "Reaction",
         "Stoichiometry",
     ]
-    models = {model_name: apps.get_model("database", model_name) for model_name in model_names}
-    logging.basicConfig(filename="import_log.txt", level=logging.DEBUG)
+    models = SimpleNamespace()
+    for name in model_names:
+        setattr(models, name, apps.get_model("database", name))
+    logging.basicConfig(filename="import_log.txt", level=logging.DEBUG, filemode="w")
 
     path = os.getenv("RMGMODELSPATH", "./rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
@@ -93,23 +97,23 @@ def import_rmg_models(apps, schema_editor):
     for rmg_model_name, thermo_path, kinetics_path, source_path in model_paths:
         logging.info(f"IMPORTING KINETIC MODEL: {rmg_model_name}")
         safe_import(
-            import_kinetic_model, rmg_model_name, thermo_path, kinetics_path, source_path, **models
+            import_kinetic_model, rmg_model_name, thermo_path, kinetics_path, source_path, models
         )
 
 
-def import_kinetic_model(rmg_model_name, thermo_path, kinetics_path, source_path, **models):
+def import_kinetic_model(rmg_model_name, thermo_path, kinetics_path, source_path, models):
     now = datetime.now()
-    kinetic_model = models["KineticModel"].objects.create(
+    kinetic_model = models.KineticModel.objects.create(
         model_name=rmg_model_name, info=f"Imported via RMG-models migration at {now.isoformat()}"
     )
 
     kinetic_model.save()
     logging.info(f"Importing Source {source_path}")
-    safe_import(import_source, source_path, kinetic_model, **models)
+    safe_import(import_source, source_path, kinetic_model, models)
     logging.info(f"Importing Thermo Library {thermo_path}")
-    safe_import(import_thermo, thermo_path, kinetic_model, **models)
+    safe_import(import_thermo, thermo_path, kinetic_model, models)
     logging.info(f"Importing Kinetics Library {kinetics_path}")
-    safe_import(import_kinetics, kinetics_path, kinetic_model, **models)
+    safe_import(import_kinetics, kinetics_path, kinetic_model, models)
 
 
 def safe_save(instance):
@@ -124,61 +128,49 @@ def filter_fields(fields, filter_value=None):
     return {k: v for k, v in fields.items() if v != filter_value}
 
 
-def create_and_save_species(kinetic_model, name, rmg_molecule, inchi="", **models):
-    smiles = rmg_molecule.to_smiles()
-    isomer_inchi = rmg_molecule.to_inchi()
-    try:
-        try:
-            structure = models["Structure"].objects.get(
-                adjacency_list=rmg_molecule.to_adjacency_list(),
-            )
-            isomer = models["Isomer"].objects.get(structure=structure, inchi=isomer_inchi)
-            species = (
-                models["Species"]
-                .objects.annotate(isomer_count=Count("isomer"))
-                .filter(isomer_count=1, isomer=isomer, formula=rmg_molecule.get_formula())
-                .get()
-            )
-        except models["Structure"].DoesNotExist:
-            isomer = models["Isomer"](inchi=isomer_inchi)
-            structure = models["Structure"](
-                adjacency_list=rmg_molecule.to_adjacency_list(),
-                smiles=smiles,
-                multiplicity=rmg_molecule.multiplicity,
-                isomer=isomer,
-            )
-            species = models["Species"].objects.create(
-                formula=rmg_molecule.get_formula(), inchi=inchi
-            )
-            isomer.save()
-            structure.save()
-            species.isomer_set.add(isomer)
-            species.save()
+def get_species_hash(isomers):
+    isomer_fingerprint = "".join(sorted(set(str(isomer.id) for isomer in isomers)))
 
-        models["SpeciesName"].objects.create(
-            species=species, name=name, kinetic_model=kinetic_model
+    return hashlib.md5(bytes(isomer_fingerprint, "UTF-8")).hexdigest()
+
+
+def get_or_create_species(kinetic_model, name, molecules, models):
+    formula = molecules[0].get_formula()
+    formula_obj, _ = models.Formula.objects.get_or_create(formula=formula)
+    isomers = []
+    for molecule in molecules:
+        smiles = molecule.to_smiles()
+        augmented_inchi = molecule.to_augmented_inchi()
+        adjacency_list = molecule.to_adjacency_list()
+        multiplicity = molecule.multiplicity
+        isomer, _ = models.Isomer.objects.get_or_create(inchi=augmented_inchi, formula=formula_obj)
+        isomers.append(isomer)
+        models.Structure.objects.get_or_create(
+            adjacency_list=adjacency_list,
+            defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
         )
 
-        return species
-    except Exception:
-        logging.exception("Failed to import species")
+    species_hash = get_species_hash(isomers)
+    species, species_created = models.Species.objects.get_or_create(hash=species_hash)
+    if species_created:
+        species.isomers.add(*isomers)
 
-
-def get_or_create_reaction_from_stoich_data(stoich_data, models, **defaults):
-    stoich_data_iter = iter(stoich_data)
-    stoich, species = next(stoich_data_iter)
-    queryset = models["Reaction"].objects.filter(
-        stoichiometry__stoichiometry=stoich, stoichiometry__species=species
+    models.SpeciesName.objects.get_or_create(
+        name=name, species=species, kinetic_model=kinetic_model
     )
-    for stoich, species in stoich_data_iter:
-        queryset = queryset.filter(
-            stoichiometry__stoichiometry=stoich, stoichiometry__species=species
-        )
 
-    return queryset.get_or_create(defaults=defaults)
+    return species
 
 
-def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
+def get_reaction_hash(stoich_data):
+    reaction_fingerprint = "".join(
+        sorted(set(f"{stoich:.4f}{species.id}" for stoich, species in stoich_data))
+    )
+
+    return hashlib.md5(bytes(reaction_fingerprint, "UTF-8")).hexdigest()
+
+
+def get_or_create_reaction(kinetic_model, rmg_reaction, models):
     """
     Create and save a reaction from an RMG reaction
 
@@ -191,31 +183,38 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
     reversible = rmg_reaction.reversible
     reactants = rmg_reaction.reactants
     products = rmg_reaction.products
-    species = [*reactants, *products]
+    reaction_species = [*reactants, *products]
     stoich_data = []
     species_map = {}
-    for s in species:
+    for s in reaction_species:
         name = s.label
         if species_map.get(name) is None:
             species_map[name] = s
 
     with transaction.atomic():
         for rmg_species in species_map.values():
-            for rmg_molecule in rmg_species.molecule:
-                species = create_and_save_species(
-                    kinetic_model, "", rmg_molecule, inchi=rmg_species.inchi, **models
-                )
-                stoich_coeff = rmg_reaction.get_stoichiometric_coefficient(rmg_species)
-                stoich_data.append((stoich_coeff, species))
+            species = get_or_create_species(
+                kinetic_model,
+                "",
+                rmg_species.molecule,
+                models,
+            )
+            reactant_coeff = sum(-1 for reactant in reactants if reactant == rmg_species)
+            product_coeff = sum(1 for product in products if product == rmg_species)
 
-        reaction, created = get_or_create_reaction_from_stoich_data(
-            stoich_data, models, reversible=reversible
+            if reactant_coeff != 0:
+                stoich_data.append((reactant_coeff, species))
+            if product_coeff != 0:
+                stoich_data.append((product_coeff, species))
+
+        reaction, created = models.Reaction.objects.get_or_create(
+            hash=get_reaction_hash(stoich_data=stoich_data), defaults={"reversible": reversible}
         )
-
         if created:
             for stoich_coeff, species in stoich_data:
-                reaction.species.add(species, through_defaults={"stoichiometry": stoich_coeff})
-        reaction.save()
+                models.Stoichiometry.objects.create(
+                    reaction=reaction, species=species, stoichiometry=stoich_coeff
+                )
 
         stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
         stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
@@ -226,8 +225,8 @@ def create_and_save_reaction(kinetic_model, rmg_reaction, **models):
     return reaction
 
 
-def create_arrhenius(rmg_kinetics_data, base_fields, **models):
-    return models["Arrhenius"].objects.create(
+def create_arrhenius(rmg_kinetics_data, base_fields, models):
+    return models.Arrhenius.objects.create(
         a_value=rmg_kinetics_data.A.value_si,
         n_value=rmg_kinetics_data.n.value_si,
         e_value=rmg_kinetics_data.Ea.value_si,
@@ -235,8 +234,8 @@ def create_arrhenius(rmg_kinetics_data, base_fields, **models):
     )
 
 
-def create_arrhenius_ep(rmg_kinetics_data, base_fields, **models):
-    return models["ArrheniusEP"].objects.create(
+def create_arrhenius_ep(rmg_kinetics_data, base_fields, models):
+    return models.ArrheniusEP.objects.create(
         a=rmg_kinetics_data.A.value_si,
         n=rmg_kinetics_data.n.value_si,
         ep_alpha=rmg_kinetics_data.alpha.value_si,
@@ -245,11 +244,11 @@ def create_arrhenius_ep(rmg_kinetics_data, base_fields, **models):
     )
 
 
-def create_multi_arrhenius(rmg_kinetics_data, base_fields, **models):
-    multi_arrhenius = models["MultiArrhenius"].objects.create(**base_fields)
+def create_multi_arrhenius(rmg_kinetics_data, base_fields, models):
+    multi_arrhenius = models.MultiArrhenius.objects.create(**base_fields)
     multi_arrhenius.arrhenius_set.add(
         *[
-            create_arrhenius(rmg_arrhenius, base_fields, **models)
+            create_arrhenius(rmg_arrhenius, base_fields, models)
             for rmg_arrhenius in rmg_kinetics_data.arrhenius
         ]
     )
@@ -257,14 +256,14 @@ def create_multi_arrhenius(rmg_kinetics_data, base_fields, **models):
     return multi_arrhenius
 
 
-def create_pdep_arrhenius(rmg_kinetics_data, base_fields, **models):
-    pdep_arrhenius = models["PDepArrhenius"].objects.create(**base_fields)
+def create_pdep_arrhenius(rmg_kinetics_data, base_fields, models):
+    pdep_arrhenius = models.PDepArrhenius.objects.create(**base_fields)
     for pressure, arrhenius in zip(
         rmg_kinetics_data.pressures.value_si, rmg_kinetics_data.arrhenius
     ):
-        pressure_model = models["Pressure"].objects.create(
+        pressure_model = models.Pressure.objects.create(
             pdep_arrhenius=pdep_arrhenius,
-            arrhenius=create_arrhenius(arrhenius, base_fields, **models),
+            arrhenius=create_arrhenius(arrhenius, base_fields, models),
             pressure=pressure,
         )
         pressure_model.save()
@@ -272,11 +271,11 @@ def create_pdep_arrhenius(rmg_kinetics_data, base_fields, **models):
     return pdep_arrhenius
 
 
-def create_multi_pdep_arrhenius(rmg_kinetics_data, base_fields, **models):
-    multi_pdep_arrhenius = models["MultiPDepArrhenius"].objects.create(**base_fields)
+def create_multi_pdep_arrhenius(rmg_kinetics_data, base_fields, models):
+    multi_pdep_arrhenius = models.MultiPDepArrhenius.objects.create(**base_fields)
     multi_pdep_arrhenius.pdep_arrhenius_set.add(
         *[
-            create_pdep_arrhenius(rmg_arrhenius, base_fields, **models)
+            create_pdep_arrhenius(rmg_arrhenius, base_fields, models)
             for rmg_arrhenius in rmg_kinetics_data.arrhenius
         ]
     )
@@ -284,30 +283,30 @@ def create_multi_pdep_arrhenius(rmg_kinetics_data, base_fields, **models):
     return multi_pdep_arrhenius
 
 
-def create_chebyshev(rmg_kinetics_data, base_fields, **models):
-    return models["Chebyshev"].objects.create(
+def create_chebyshev(rmg_kinetics_data, base_fields, models):
+    return models.Chebyshev.objects.create(
         coefficient_matrix=rmg_kinetics_data.coeffs.tolist(),
         units=rmg_kinetics_data.kunits,
         **base_fields,
     )
 
 
-def create_third_body(rmg_kinetics_data, base_fields, **models):
-    return models["ThirdBody"].objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, **models),
+def create_third_body(rmg_kinetics_data, base_fields, models):
+    return models.ThirdBody.objects.create(
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
         **base_fields,
     )
 
 
-def create_lindemann(rmg_kinetics_data, base_fields, **models):
-    return models["Lindemann"].objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, **models),
-        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, **models),
+def create_lindemann(rmg_kinetics_data, base_fields, models):
+    return models.Lindemann.objects.create(
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
+        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, models),
         **base_fields,
     )
 
 
-def create_troe(rmg_kinetics_data, base_fields, **models):
+def create_troe(rmg_kinetics_data, base_fields, models):
     troe_fields = filter_fields(
         {
             "t1": rmg_kinetics_data.T1.value_si if rmg_kinetics_data.T1 is not None else None,
@@ -315,27 +314,27 @@ def create_troe(rmg_kinetics_data, base_fields, **models):
             "t3": rmg_kinetics_data.T3.value_si if rmg_kinetics_data.T3 is not None else None,
         }
     )
-    return models["Troe"].objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, **models),
-        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, **models),
+    return models.Troe.objects.create(
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
+        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, models),
         alpha=rmg_kinetics_data.alpha,
         **troe_fields,
         **base_fields,
     )
 
 
-def create_general_kinetics_data(rmg_kinetics_data, base_fields, **models):
-    return models["KineticsData"].objects.create(
+def create_general_kinetics_data(rmg_kinetics_data, base_fields, models):
+    return models.KineticsData.objects.create(
         temp_array=rmg_kinetics_data.Tdata,
         rate_coefficients=rmg_kinetics_data.kdata,
         **base_fields,
     )
 
 
-def create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, **models):
+def create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, models):
     for rmg_molecule, efficiency in rmg_kinetics_data.efficiencies.items():
-        species = create_and_save_species(kinetic_model, "", rmg_molecule, **models)
-        efficiency = models["Efficiency"].objects.create(
+        species = get_or_create_species(kinetic_model, "", [rmg_molecule], models)
+        efficiency = models.Efficiency.objects.create(
             species=species, kinetics_data=kinetics_data, efficiency=efficiency
         )
         efficiency.save()
@@ -360,7 +359,7 @@ def get_base_kinetics_data_fields(rmg_kinetics_data):
     )
 
 
-def create_kinetics_data(kinetic_model, rmg_kinetics_data, **models):
+def create_kinetics_data(kinetic_model, rmg_kinetics_data, models):
     kinetics_factory = {
         "KineticsData": create_general_kinetics_data,
         "Arrhenius": create_arrhenius,
@@ -375,14 +374,14 @@ def create_kinetics_data(kinetic_model, rmg_kinetics_data, **models):
     }
     model_name = rmg_kinetics_data.__class__.__name__
     base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
-    kinetics_data = kinetics_factory[model_name](rmg_kinetics_data, base_fields, **models)
+    kinetics_data = kinetics_factory[model_name](rmg_kinetics_data, base_fields, models)
     if model_name not in ["Arrhenius", "ArrheniusEP", "MultiArrhenius"]:
-        create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, **models)
+        create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, models)
 
     return kinetics_data
 
 
-def import_kinetics(kinetics_path, kinetic_model, **models):
+def import_kinetics(kinetics_path, kinetic_model, models):
     local_context = {
         "KineticsData": kinetics.KineticsData,
         "Arrhenius": kinetics.Arrhenius,
@@ -405,12 +404,12 @@ def import_kinetics(kinetics_path, kinetic_model, **models):
                 rmg_kinetics_data = entry.data
                 comment = entry.short_desc
                 rmg_reaction = entry.item
-                reaction = create_and_save_reaction(kinetic_model, rmg_reaction, **models)
-                kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, **models)
-                kinetics_model = models["Kinetics"].objects.create(
+                reaction = get_or_create_reaction(kinetic_model, rmg_reaction, models)
+                kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, models)
+                kinetics_model = models.Kinetics.objects.create(
                     reaction=reaction, base_data=kinetics_data
                 )
-                kinetics_comment = models["KineticsComment"].objects.create(
+                kinetics_comment = models.KineticsComment.objects.create(
                     kinetics=kinetics_model, kinetic_model=kinetic_model, comment=comment
                 )
                 kinetics_model.save()
@@ -419,7 +418,7 @@ def import_kinetics(kinetics_path, kinetic_model, **models):
             logging.exception(f"Failed to import reaction {entry.label}")
 
 
-def import_thermo(thermo_path, kinetic_model, **models):
+def import_thermo(thermo_path, kinetic_model, models):
     local_context = {
         "ThermoData": ThermoData,
         "Wilhoit": Wilhoit,
@@ -433,10 +432,10 @@ def import_thermo(thermo_path, kinetic_model, **models):
     for species_name, entry in library.entries.items():
         logging.info(f"Importing Thermo entry for {species_name}")
         try:
-            species = create_and_save_species(kinetic_model, species_name, entry.item, **models)
+            species = get_or_create_species(kinetic_model, species_name, [entry.item], models)
             thermo_data = entry.data
             poly1, poly2 = thermo_data.polynomials
-            thermo, _ = models["Thermo"].objects.get_or_create(
+            thermo, _ = models.Thermo.objects.get_or_create(
                 species=species,
                 coeffs_poly1=poly1.coeffs.tolist(),
                 coeffs_poly2=poly2.coeffs.tolist(),
@@ -445,7 +444,7 @@ def import_thermo(thermo_path, kinetic_model, **models):
                 temp_min_2=poly2.Tmin.value_si,
                 temp_max_2=poly2.Tmax.value_si,
             )
-            thermo_comment = models["ThermoComment"].objects.create(
+            thermo_comment = models.ThermoComment.objects.create(
                 kinetic_model=kinetic_model, thermo=thermo
             )
             thermo_comment.comment = entry.long_desc or entry.short_desc or thermo_comment.comment
@@ -455,18 +454,18 @@ def import_thermo(thermo_path, kinetic_model, **models):
             logging.exception("Failed to import entry")
 
 
-def create_and_save_authorships(source, author_data, **models):
+def create_and_save_authorships(source, author_data, models):
     for order, author_datum in enumerate(author_data):
         firstname = author_datum.get("given")
         lastname = author_datum.get("family")
         author_fields = filter_fields({"firstname": firstname, "lastname": lastname})
-        author = models["Author"].objects.create(**author_fields)
-        authorship = models["Authorship"].objects.create(source=source, author=author, order=order)
+        author = models.Author.objects.create(**author_fields)
+        authorship = models.Authorship.objects.create(source=source, author=author, order=order)
         safe_save(author)
         safe_save(authorship)
 
 
-def import_source(source_path, kinetic_model, **models):
+def import_source(source_path, kinetic_model, models):
     crossref = habanero.Crossref(mailto="kianmehrabani@gmail.com")
     try:
         doi = get_doi(source_path)
@@ -488,7 +487,7 @@ def import_source(source_path, kinetic_model, **models):
             journal_volume_number=volume_number,
             page_numbers=page_numbers,
         )
-        source, created = models["Source"].objects.get_or_create(doi=doi)
+        source, created = models.Source.objects.get_or_create(doi=doi)
         if created:
             for k, v in fields.items():
                 setattr(source, k, v)
@@ -496,7 +495,7 @@ def import_source(source_path, kinetic_model, **models):
         source.kineticmodel_set.add(kinetic_model)
         source.save()
         if author_data is not None:
-            create_and_save_authorships(source, author_data, **models)
+            create_and_save_authorships(source, author_data, models)
         else:
             logging.warning("Could not find author data")
     except FileNotFoundError:
