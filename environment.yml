@@ -1,24 +1,17 @@
-name: kms_env
+name: kms
 channels:
-  - defaults
-  - pr-omethe-us
-  - rmg
-  - rdkit
-  - cantera
-  - pytorch
-  - anaconda
   - conda-forge
+  - rmg
+  - nodefaults
 dependencies:
   - python>=3.7
-  - beautifulsoup4
+  - nomkl
   - cairo
   - cairocffi
-  - matplotlib>=1.5
   - xlrd
   - xlwt
   - habanero>=0.6,<0.7
   - rmg==3.0
-  - pandas
   - django==3.0
   - django-filter
   - django-extensions
