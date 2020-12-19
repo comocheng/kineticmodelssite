@@ -1,4 +1,4 @@
-FROM comocheng/kms-build
+FROM ghcr.io/comocheng/kineticmodelssite/kms-build:latest
 
 RUN conda config --set channel_priority strict
 RUN conda env update --prefix $ENV_PREFIX --file environment.yml
