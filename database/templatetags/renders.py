@@ -1,5 +1,7 @@
 from django import template
 from django.utils.safestring import mark_safe
+from django.urls import reverse
+
 from database.templatetags.utils import pluralize, param_replace
 
 
@@ -56,6 +58,57 @@ def render_thermo_table(thermo, condensed=False):
             thermo=thermo, condensed_class="table-condensed" if condensed else ""
         )
     )
+
+
+@register.filter
+def render_transport_table(transport, condensed=False):
+    return mark_safe("<table></table>")
+
+
+def _render_reaction_list_card(reaction):
+    prime_id_render = f"<p>PrIMe ID: {reaction.prime_id}</p>" if reaction.prime_id else ""
+    rates = pluralize(reaction.kinetics_count, "Rate")
+    models = pluralize(reaction.kinetic_model_count, "Kinetic Model")
+    reaction_detail_url = reverse("reaction-detail", args=[reaction.id])
+    return mark_safe(
+        """
+        <a
+            href="{reaction_detail_url}"
+            class="list-group-item list-group-item-action flex-column align-items-start"
+        >
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{reaction}</h5>
+                <small>ID: {reaction.pk}</small>
+            </div>
+            {prime_id_render}
+            {rates}
+            <br />
+            {models}
+        </a>
+        """.format(
+            reaction=reaction,
+            prime_id_render=prime_id_render,
+            rates=rates,
+            models=models,
+            reaction_detail_url=reaction_detail_url,
+        )
+    )
+
+
+@register.filter
+def render_reaction_list(reactions):
+    cards = "\n".join(_render_reaction_list_card(r) for r in reactions)
+
+    return mark_safe(
+        """
+        <div class="list-group">
+            {cards}
+        </div>
+        """.format(
+            cards=cards
+        )
+    )
+
 
 @register.simple_tag(takes_context=True)
 def render_pagination(context, objects, page_name):

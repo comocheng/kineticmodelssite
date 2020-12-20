@@ -1,5 +1,8 @@
 {% extends "database/base.html" %}
 
+{% load renders %}
+{% load utils %}
+
 {% block content %}
 <h1>Species Detail</h1>
 <h3>ID: {{ species.pk }}</h2>
@@ -71,21 +74,27 @@
                 <div class="list-group">
                     {% for model in models %}
                     <a class="list-group-item list-group-item-action flex-column align-items-start" href="{% url 'kinetic-model-detail' model.id %}">{{ model.model_name }}</a>
-        {% endfor %}
+                    {% endfor %}
                 </div>
                 {% endif %}
             </a>
         </div>
-                {% endfor %}
+        {% endfor %}
     </div>
     <br>
     {% if transport_list %}
-        <h2>Transport Results</h2>
-        <ul class="list-group">
-            {% for transport in transport_list %}
-            <li class="list-group-item"><a href="{% url 'transport-detail' transport.pk %}">{{ transport }}</a> -
-                {{ transport.prime_id  }}</li>
-            {% endfor %}
-        </ul>
+    <h2>Transport Results</h2>
+    <ul class="list-group">
+        {% for transport in transport_list %}
+        <li class="list-group-item"><a href="{% url 'transport-detail' transport.pk %}">{{ transport }}</a> -
+            {{ transport.prime_id  }}</li>
+        {% endfor %}
+    </ul>
     <br>
-        {% endblock %}
+    {% endif %}
+    <h2>Reactions</h2>
+    {% render_pagination objects=reactions page_name="page" %}
+    {{ reactions|render_reaction_list }}
+    <br>
+    {% render_pagination objects=reactions page_name="page" %}
+{% endblock %}

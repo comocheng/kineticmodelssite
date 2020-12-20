@@ -12,19 +12,7 @@
 <br />
 {% render_pagination objects=page_obj page_name="page" %}
 <br />
-{% for reaction in object_list %}
-<div class="list-group">
-    <a
-        href="{% url 'reaction-detail' reaction.pk %}"
-        class="list-group-item list-group-item-action flex-column align-items-start"
-    >
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ reaction }}</h5>
-            <small>ID: {{ reaction.pk }}</small>
-        </div>
-        {% if reaction.prime_id %}
-        <p>PrIMe ID: {{reaction.prime_id}}</p>
-        {% endif %} {{ reaction.kinetics_count|pluralize:"Rate"}}
-        <br />
+{{ object_list|render_reaction_list }}
+<br />
 {% render_pagination objects=page_obj page_name="page" %}
 {% endblock %}
