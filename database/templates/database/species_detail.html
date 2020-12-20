@@ -4,12 +4,30 @@
 <h1>Species Detail</h1>
 <h3>ID: {{ species.pk }}</h2>
     <h2>Names</h2>
+    <div class="list-group">
+        {% for name, models in names_models %}
+        <div class="list-group-item list-group-item-action flex-column align-items-start">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ name }}</h5>
+            </div>
+            <br />
+            <h6>Models</h6>
+            <div class="list-group">
+                {% for model_name, model_id in models %}
+                <a class="list-group-item list-group-item-action flex-column align-items-start"href="{% url 'kinetic-model-detail' model_id %}">{{ model_name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <br />
+    <h2>Isomer Inchis</h2>
     <ul class="list-group">
-        {% for name in names %}
-        <li class="list-group-item">{{ name }}</li>
+        {% for isomer_inchi in isomer_inchis %}
+        <li class="list-group-item">{{ isomer_inchi }}</li>
         {% endfor %}
     </ul>
-    <br />
+    <br>
     <h2>Structure Info</h2>
     <table class="table table-bordered table-hover">
         <thead>
@@ -30,31 +48,38 @@
         </tbody>
     </table>
     <br />
-    <h2>Isomer Inchis</h2>
-    <ul class="list-group">
-        {% for isomer_inchi in isomer_inchis %}
-        <li class="list-group-item">{{ isomer_inchi }}</li>
+    <h2>Thermo Results</h2>
+    <div class="list-group">
+        {% for thermo, models in thermos_models %}
+        <div
+           class="list-group-item list-group-item-action flex-column align-items-start"
+        >
+            <a href="{% url 'thermo-detail' thermo.id%}"
+               class="list-group-item-action"
+            >
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        $\Delta H_f \, (298 \, K):{{ thermo.enthalpy298|floatformat:1 }} \, \frac{J}{mol}$
+                        <br>
+                        $S \, (298 \, K):{{ thermo.entropy298|floatformat:1 }} \, \frac{J}{mol-K}$
+                    </h5>
+                    <small>ID: {{ thermo.id }}</small>
+                </div>
+                <br />
+                {% if models %}
+                <h6>Models</h6>
+                <div class="list-group">
+                    {% for model in models %}
+                    <a class="list-group-item list-group-item-action flex-column align-items-start" href="{% url 'kinetic-model-detail' model.id %}">{{ model.model_name }}</a>
         {% endfor %}
-        <h2>Thermo Results</h2>
-        <table class="table table-bordered table-hover">
-            <thead>
-                <th scope="col">Thermo Entry</th>
-                <th scope="col">&Delta;H<sub>f</sub>(298 K)</th>
-                <th scope="col">S(298 K)</th>
-                <th scope="col">Models</th>
-            </thead>
-            <tbody>
-                {% for thermo in thermo_list %}
-                <tr>
-                    <td><a href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.pk }}</a></td>
-                    <td>{{ thermo.enthalpy298|floatformat:1 }} J/mol</td>
-                    <td>{{ thermo.entropy298|floatformat:1 }} J/mol/K</td>
-                    <td>{{ thermo.kineticmodel_set.count }}</td>
-                </tr>
+                </div>
+                {% endif %}
+            </a>
+        </div>
                 {% endfor %}
-            </tbody>
-        </table>
-
+    </div>
+    <br>
+    {% if transport_list %}
         <h2>Transport Results</h2>
         <ul class="list-group">
             {% for transport in transport_list %}
@@ -62,4 +87,5 @@
                 {{ transport.prime_id  }}</li>
             {% endfor %}
         </ul>
+    <br>
         {% endblock %}

@@ -1,5 +1,6 @@
 import functools
 from itertools import zip_longest
+from collections import defaultdict
 
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -126,18 +127,42 @@ class ReactionFilterView(FilterView):
 @SidebarLookup
 class SpeciesDetail(DetailView):
     model = Species
+    paginate_per_page = 10
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         species = self.get_object()
         structures = Structure.objects.filter(isomer__species=species)
-        context["names"] = set(species.speciesname_set.all().values_list("name", flat=True))
+        reactions = Reaction.objects.filter(species=species).order_by("id")
+        thermos = Thermo.objects.filter(species=species)
+
+        names_models = defaultdict(list)
+        for values in species.speciesname_set.values(
+            "name", "kinetic_model__model_name", "kinetic_model"
+        ):
+            name, model_name, model_id = values.values()
+            if name:
+                names_models[name].append((model_name, model_id))
+
+        context["names_models"] = sorted(list(names_models.items()), key=lambda x: x[0])
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
-        context["isomer_inchis"] = species.isomer_set.values_list("inchi", flat=True)
-        context["thermo_list"] = Thermo.objects.filter(species=species)
+        context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
+        context["thermos_models"] = [(thermo, thermo.kineticmodel_set.all()) for thermo in thermos]
         context["transport_list"] = Transport.objects.filter(species=species)
         context["structures"] = structures
+
+        paginator = Paginator(reactions, self.paginate_per_page)
+        page = self.request.GET.get("page", 1)
+        try:
+            paginated_reactions = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_reactions = paginator.page(1)
+        except EmptyPage:
+            paginated_reactions = paginator.page(paginator.num_pages)
+
+        context["reactions"] = paginated_reactions
+        context["page"] = page
 
         return context
 
