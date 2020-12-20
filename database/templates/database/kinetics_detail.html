@@ -4,8 +4,10 @@
 
 {% block content %}
 <h1>
-    <a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction }} </a> |
-    <a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.name }}</a>
+    <a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction }} </a>
+    {% if kinetics.source %}
+    | <a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.name }}</a>
+    {% endif %}
 </h1>
 <br>
 {% if kinetics.prime_id%}
