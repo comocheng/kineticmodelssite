@@ -1,6 +1,7 @@
 {% extends "database/base.html" %}
 
 {% load utils %}
+{% load renders %}
 
 {% block content %}
 <h1>{{kinetic_model.model_name}}</h1>
@@ -50,27 +51,7 @@
     {% endfor %}
     </div>
     <br>
-    <nav aria-label="Thermo-Transport Pagination">
-        <span class="current">
-            Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}.
-        </span>
-        <ul class="pagination">
-            {% if thermo_transport.has_previous %}
-            <li class="page-item"><a class="page-link" href="?{% param_replace page1=1 %}">First</a></li>
-            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.previous_page_number%}">Previous</a></li>
-            {% else %}
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
-            {% endif %}
-            {% if thermo_transport.has_next %}
-            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.next_page_number%}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?{% param_replace page1=thermo_transport.paginator.num_pages %}">Last</a></li>
-            {% else %}
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+    {% render_pagination objects=thermo_transport page_name="page1" %}
     <br>
     <h2>Reactions</h2>
     {% for k in kinetics_data %}
@@ -110,25 +91,5 @@
     {% endwith %}
     {% endfor %}
     <br>
-    <nav aria-label="Kinetics Pagination">
-        <span class="current">
-            Page {{ kinetics_data.number }} of {{ kinetics_data.paginator.num_pages }}.
-        </span>
-        <ul class="pagination">
-            {% if kinetics_data.has_previous %}
-            <li class="page-item"><a class="page-link" href="?{% param_replace page2=1 %}">First</a></li>
-            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.previous_page_number %}">Previous</a></li>
-            {% else %}
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
-            {% endif %}
-            {% if kinetics_data.has_next %}
-            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.next_page_number %}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?{% param_replace page2=kinetics_data.paginator.num_pages %}">Last</a></li>
-            {% else %}
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
-            <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+    {% render_pagination objects=kinetics_data page_name="page2" %}
 {% endblock %}
