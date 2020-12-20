@@ -1,3 +1,4 @@
+from functools import lru_cache
 import math
 
 import rmgpy
@@ -168,10 +169,12 @@ class Reaction(models.Model):
         )
 
     @property
+    @lru_cache(maxsize=None)
     def kinetic_model_count(self):
         return KineticModel.objects.filter(kinetics__reaction=self).count()
 
     @property
+    @lru_cache(maxsize=None)
     def kinetics_count(self):
         return Kinetics.objects.filter(reaction=self).count()
 
