@@ -20,9 +20,11 @@
         {% endif %}
     </ul>
     {% endif %}
+    {% if source %}
     <h2>Source</h2>
     <a href="{% url 'source-detail' source.pk %}">{{source.name}}</a>
     <br>
+    {% endif %}
     <h2>Species</h2>
     <div class="card">
     {% for th, tr in thermo_transport %}
@@ -92,4 +94,5 @@
     {% endfor %}
     <br>
     {% render_pagination objects=kinetics_data page_name="page2" %}
+
 {% endblock %}
