@@ -2,6 +2,7 @@
 
 {% load crispy_forms_tags %}
 {% load utils %}
+{% load renders %}
 
 <h1>Species</h1>
 
@@ -11,24 +12,22 @@
         <button type="submit" class="btn btn-primary">Submit</button>
     </form>
     <br>
-    {% for source in filter.qs %}
-        <a href="{% url 'source-detail' source.pk %}">Source</a>: {{ source.name }}<br/>
-    {% endfor %}
-    <div class="pagination">
-        <span class="step-links">
-            {% if page_obj.has_previous %}
-                <a href="?{% param_replace page=1 %}">&laquo; first</a>
-                <a href="?{% param_replace page=page_obj.previous_page_number %}">previous</a>
-            {% endif %}
-
-            <span class="current">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-            </span>
-
-            {% if page_obj.has_next %}
-                <a href="?{% param_replace page=page_obj.next_page_number %}">next</a>
-                <a href="?{% param_replace page=page_obj.paginator.num_pages %}">last &raquo;</a>
-            {% endif %}
-        </span>
+    {% render_pagination objects=page_obj page_name="page"%}
+    <div class="list-group">
+        {% for source in object_list %}
+            <a href="{% url 'source-detail' source.pk %}"
+               class="list-group-item list-group-item-action flex-column align-items-start"
+            >
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">{{ source.source_title.title }}</h6>
+                    <small>ID: {{ source.id }}</small>
+                </div>
+                <i>{{ source.pub_info }}</i>
+                <br>
+                {{ source.author_line }}
+            </a>
+        {% endfor %}
     </div>
+    <br>
+    {% render_pagination objects=page_obj page_name="page"%}
 {% endblock %}
