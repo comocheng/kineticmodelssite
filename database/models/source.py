@@ -18,20 +18,7 @@ class Author(models.Model):
 
 
 class Source(models.Model):
-    """
-    A source, or bibliography item.
-
-    This is equivalent of a 'Bibliography' entry in PrIMe, which contain:
-    *****in catalog******
-    publication year
-    authors
-    source title
-    journal name
-    journal volume
-    page numbers
-    """
-
-    doi = models.CharField(blank=True, max_length=80)
+    doi = models.CharField("DOI", blank=True, max_length=80)
     prime_id = models.CharField("Prime ID", blank=True, max_length=9)
     publication_year = models.CharField("Year of Publication", blank=True, max_length=4)
     source_title = models.CharField("Article Title", blank=True, max_length=300)
@@ -41,6 +28,14 @@ class Source(models.Model):
         "Page Numbers", blank=True, help_text="[page #]-[page #]", max_length=100
     )
     authors = models.ManyToManyField(Author, blank=True, through="Authorship")
+
+    @property
+    def pub_info(self):
+        return f"{self.journal_name}, vol. {self.journal_volume_number}, pp. {self.page_numbers}, {self.publication_year}"
+
+    @property
+    def author_line(self):
+        return "; ".join(str(a.author) for a in self.authorship_set.order_by("order"))
 
     def __str__(self):
         authors = ", ".join(
@@ -72,7 +67,7 @@ class Authorship(models.Model):
     order = models.IntegerField("Order of authorship")
 
     class Meta:
-        ordering = ('order',)
+        ordering = ("order",)
 
     def __str__(self):
         return f"Author: {self.author}, Source: {self.source.name}, Order: {self.order}"
