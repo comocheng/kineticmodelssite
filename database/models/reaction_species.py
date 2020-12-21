@@ -52,12 +52,10 @@ class Species(models.Model):
         return f"{self.id} Formula: {self.formula or None}"
 
     def to_rmg(self):
-        if self.inchi:
-            species = rmgpy.species.Species(inchi=self.inchi, label=str(self))
-            species.molecule = [s.to_rmg() for s in self.structures]
-            return species
-        else:
-            return None
+        species = rmgpy.species.Species(label=str(self))
+        species.molecule = [s.to_rmg() for s in self.structures]
+
+        return species
 
     class Meta:
         verbose_name_plural = "Species"
