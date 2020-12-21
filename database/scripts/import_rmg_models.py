@@ -227,19 +227,27 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
 
 def create_arrhenius(rmg_kinetics_data, base_fields, models):
     return models.Arrhenius.objects.create(
-        a_value=rmg_kinetics_data.A.value_si,
+        a_value=rmg_kinetics_data.A.value,
+        a_value_si=rmg_kinetics_data.A.value_si,
+        a_value_units=rmg_kinetics_data.A.units,
         n_value=rmg_kinetics_data.n.value_si,
-        e_value=rmg_kinetics_data.Ea.value_si,
+        e_value=rmg_kinetics_data.Ea.value,
+        e_value_si=rmg_kinetics_data.Ea.value_si,
+        e_units=rmg_kinetics_data.Ea.units,
         **base_fields,
     )
 
 
 def create_arrhenius_ep(rmg_kinetics_data, base_fields, models):
     return models.ArrheniusEP.objects.create(
-        a=rmg_kinetics_data.A.value_si,
+        a=rmg_kinetics_data.A.value,
+        a_si=rmg_kinetics_data.A.value_si,
+        a_units=rmg_kinetics_data.A.units,
         n=rmg_kinetics_data.n.value_si,
-        ep_alpha=rmg_kinetics_data.alpha.value_si,
-        e0=rmg_kinetics_data.E0.value_si,
+        alpha=rmg_kinetics_data.alpha.value_si,
+        e0=rmg_kinetics_data.E0.value,
+        e0_si=rmg_kinetics_data.E0.value_si,
+        e0_units=rmg_kinetics_data.E0.units,
         **base_fields,
     )
 

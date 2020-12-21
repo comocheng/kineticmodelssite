@@ -8,7 +8,6 @@ from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 class BaseKineticsData(models.Model):  # noqa: DJ08
     objects = InheritanceManager()
 
-    order = models.FloatField(help_text="Overall reaction order", null=True, blank=True)
     collider_efficiencies = models.ManyToManyField("Species", through="Efficiency", blank=True)
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
@@ -38,11 +37,14 @@ class KineticsData(BaseKineticsData):
 
 
 class Arrhenius(BaseKineticsData):
-
-    a_value = models.FloatField(default=0.0)
+    a_value = models.FloatField()
+    a_value_si = models.FloatField()
     a_value_uncertainty = models.FloatField(blank=True, null=True)
-    n_value = models.FloatField(default=0.0)
-    e_value = models.FloatField(default=0.0)
+    a_value_units = models.CharField(max_length=15)
+    n_value = models.FloatField()
+    e_value = models.FloatField()
+    e_value_si = models.FloatField()
+    e_value_units = models.CharField(max_length=15)
     e_value_uncertainty = models.FloatField(blank=True, null=True)
 
     kinetics_type = "Arrhenius Kinetics"
@@ -51,22 +53,20 @@ class Arrhenius(BaseKineticsData):
         verbose_name_plural = "Arrhenius"
 
     def __str__(self):
-        return f"{self.id} A:{self.a_value:g} n: {self.n_value:g} E: {self.e_value:g}".format(
-            s=self
-        )
+        return f"{self.id} A:{self.a_value:g} n: {self.n_value:g} E: {self.e_value:g}"
 
     def to_rmg(self):
         """
         Return an rmgpy.kinetics.Arrhenius object for this rate expression.
         """
         if self.a_value_uncertainty:
-            A = ScalarQuantity(self.a_value, self.rate_constant_units(), self.a_value_uncertainty)
+            A = ScalarQuantity(self.a_value, self.a_value_units, self.a_value_uncertainty)
         else:
-            A = ScalarQuantity(self.a_value, self.rate_constant_units())
+            A = ScalarQuantity(self.a_value, self.a_value_units)
         if self.e_value_uncertainty:
-            Ea = ScalarQuantity(self.e_value, "J/mol", self.e_value_uncertainty)
+            Ea = ScalarQuantity(self.e_value, self.e_value_units, self.e_value_uncertainty)
         else:
-            Ea = ScalarQuantity(self.e_value, "J/mol")
+            Ea = ScalarQuantity(self.e_value, self.e_value_units)
 
         return kinetics.Arrhenius(
             A=A,
@@ -87,11 +87,11 @@ class Arrhenius(BaseKineticsData):
                     (
                         "",
                         [
-                            self.a_value,
-                            self.a_value_uncertainty,
+                            self.a_value_si,
+                            self.a_value_uncertainty or "-",
                             self.n_value,
-                            self.e_value,
-                            self.e_value_uncertainty,
+                            self.e_value_si,
+                            self.e_value_uncertainty or "-",
                         ],
                     )
                 ],
@@ -101,9 +101,13 @@ class Arrhenius(BaseKineticsData):
 
 class ArrheniusEP(BaseKineticsData):
     a = models.FloatField()
+    a_si = models.FloatField()
+    a_units = models.CharField(max_length=15)
     n = models.FloatField()
-    ep_alpha = models.FloatField()
+    alpha = models.FloatField()
     e0 = models.FloatField()
+    e0_si = models.FloatField()
+    e0_units = models.CharField(max_length=15)
 
     kinetics_type = "Arrhenius EP Kinetics"
 
@@ -111,14 +115,19 @@ class ArrheniusEP(BaseKineticsData):
         verbose_name_plural = "ArrheniusEP"
 
     def to_rmg(self):
-        return kinetics.ArrheniusEP(A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0)
+        return kinetics.ArrheniusEP(
+            A=ScalarQuantity(self.a, self.a_units),
+            n=self.n,
+            alpha=self.alpha,
+            E0=ScalarQuantity(self.e0, self.e0_units),
+        )
 
     def table_data(self):
         return [
             (
                 "",
-                ["$A$", "$n$", r"$Ep_{\alpha}$", "$E_0$"],
-                [("", [self.a, self.n, self.ep_alpha, self.e0])],
+                ["$A$", "$n$", r"$\alpha$", "$E_0$"],
+                [("", [self.a_si, self.n, self.alpha, self.e0_si])],
             )
         ]
 
