@@ -77,7 +77,7 @@ def _render_reaction_list_card(reaction):
             class="list-group-item list-group-item-action flex-column align-items-start"
         >
             <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">{reaction}</h5>
+                <h5 class="mb-1">{reaction.equation}</h5>
                 <small>ID: {reaction.pk}</small>
             </div>
             {prime_id_render}

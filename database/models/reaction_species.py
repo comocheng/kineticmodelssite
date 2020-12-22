@@ -180,6 +180,10 @@ class Reaction(models.Model):
         return Kinetics.objects.filter(reaction=self).count()
 
     def __str__(self):
+        return f"{self.id} {self.equation}"
+
+    @property
+    def equation(self):
         stoich_reactants = []
         stoich_products = []
         for stoich, species in self.stoich_species():

@@ -73,7 +73,7 @@
     <div class="card">
         <a href="{% url 'reaction-detail' kinetics.reaction.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
             <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">{{ kinetics.reaction }}</h5>
+              <h5 class="mb-1">{{ kinetics.reaction.equation }}</h5>
               <small>ID: {{ kinetics.reaction.pk }}</small>
             </div>
             {% if kinetics.reaction.prime_id %}<p>PrIMe ID: {{kinetics.reaction.prime_id}}</p>{% endif %}
