@@ -4,16 +4,25 @@
 
 {% block content %}
 <h1>{{ source.source_title|titlecase }}</h1>
-<h3>ID: {{ source.pk }}</h2>
 
-<ul>
+<ul class="list-group">
     {% for name, val in source|fields %}
-    <li><b>{{ name }}: </b> {{ val }}</li>
+    {% if val %}
+    <li class="list-group-item"><b>{{ name }}: </b> {{ val }}</li>
+    {% endif %}
     {% endfor %}
 </ul>
+<br>
 <h2>Kinetic Models</h2>
-{% for kinetic_model in kinetic_models %}
-    <li><a href="{% url 'kinetic-model-detail' kinetic_model.pk %}">{{kinetic_model.model_name}}</a></li>
-{% endfor %}
+<div class="list-group">
+    {% for km in kinetic_models %}
+    <a href="{% url 'kinetic-model-detail' km.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{km.model_name}}</h5>
+        <small>ID: {{km.pk}}</small>
+    </div>
+    </a>
+    {% endfor %}
+</div>
 
 {% endblock %}
