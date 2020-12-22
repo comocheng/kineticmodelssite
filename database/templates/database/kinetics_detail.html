@@ -68,4 +68,18 @@
     <pre><code id="input">{{ kinetics.to_chemkin }}</code></pre>
 </figure>
 <button id="copy" type="button" class="btn btn-outline-primary">Copy to Clipboard</button>
+<br>
+<br>
+<h2>Kinetic Models</h2>
+<div class="list-group">
+    {% for kc in kinetics_comments %}
+    <a href="{% url 'kinetic-model-detail' kc.kinetic_model.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{kc.kinetic_model.model_name}}</h5>
+        <small>ID: {{kc.kinetic_model.pk}}</small>
+    </div>
+    <p class="mb-1">{{kc.comment}}</p>
+    </a>
+    {% endfor %}
+</div>
 {% endblock %}
