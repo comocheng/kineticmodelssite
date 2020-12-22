@@ -1,4 +1,5 @@
 from django.db import models
+from titlecase import titlecase
 
 
 class Author(models.Model):
@@ -42,7 +43,7 @@ class Source(models.Model):
             str(authorship.author) for authorship in self.authorship_set.order_by("order")
         )
         return f"""
-        {self.source_title.upper()}:
+        {titlecase(self.source_title)}:
         Published in {self.publication_year}:
             {self.journal_name},
             Vol. {self.journal_volume_number}
