@@ -50,3 +50,11 @@ def fields(obj):
 def pluralize(num, singular_word):
     word = singular_word if num == 1 else mark_safe(f"{singular_word}s")
     return f"{num} {word}"
+
+
+@register.filter
+def format_g_or_str(obj):
+    if isinstance(obj, str):
+        return mark_safe(obj)
+    else:
+        return f"{obj:G}"
