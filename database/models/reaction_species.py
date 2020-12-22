@@ -49,9 +49,7 @@ class Species(models.Model):
     isomers = models.ManyToManyField(Isomer)
 
     def __str__(self):
-        string = "-".join(x for x in [self.formula, self.prime_id, self.cas_number] if x)
-
-        return string
+        return f"{self.id} Formula: {self.formula}"
 
     def to_rmg(self):
         if self.inchi:
@@ -60,6 +58,9 @@ class Species(models.Model):
             return species
         else:
             return None
+
+    class Meta:
+        verbose_name_plural = "Species"
 
     @property
     def names(self):

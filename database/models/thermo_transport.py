@@ -6,28 +6,6 @@ from rmgpy.constants import R as gas_constant
 
 
 class Thermo(models.Model):
-    """
-    A thermochemistry polynomial set
-
-    What Kinetics is to Reaction, Thermo is to Species.
-
-    This is the equivalent of the 'th' data within 'Species/data' in PrIMe,
-    which contain:
-    *****in data******* (usually has thp prime ID (shown below), but sometimes
-        near end of list has completely different xml type under a ca prime ID)
-    Preferred Key (in thermo file, group="prime": What does this mean?)
-                    (i.e. ATcT /A, RUS 79)
-    Tref (units K)
-    Pref (units Pa)
-    dfH (units J/mol)
-    Polynomial 1:
-        lower/upper temp bounds (units K)
-        coefficients 1 thru 7
-    Polynomial 2:
-        lower/upper temp bounds (units K)
-        coefficients 1 thru 7
-    """
-
     source = models.ForeignKey("Source", null=True, on_delete=models.CASCADE)
     species = models.ForeignKey("Species", on_delete=models.CASCADE)
     prime_id = models.CharField(blank=True, max_length=11)
@@ -41,12 +19,15 @@ class Thermo(models.Model):
     enthalpy_formation = models.FloatField(
         "Enthalpy of Formation", help_text="units: J/mol", null=True
     )
-    coeffs_poly1 = ArrayField(models.FloatField(), size=7)
-    coeffs_poly2 = ArrayField(models.FloatField(), size=7)
+    coeffs_poly1 = ArrayField(models.FloatField(), verbose_name="Polynomial 1 Coefficients", size=7)
+    coeffs_poly2 = ArrayField(models.FloatField(), verbose_name="Polynomial 2 Coefficients", size=7)
     temp_min_1 = models.FloatField("Polynomial 1 Lower Temp Bound", help_text="units: K")
     temp_max_1 = models.FloatField("Polynomial 1 Upper Temp Bound", help_text="units: K")
     temp_min_2 = models.FloatField("Polynomial 2 Lower Temp Bound", help_text="units: K")
     temp_max_2 = models.FloatField("Polynomial 2 Upper Temp Bound", help_text="units: K")
+
+    class Meta:
+        verbose_name_plural = "Thermodynamics"
 
     def heat_capacity(self, temp):
         "Heat capacity (J/mol/K) at specified temperature (K)"
@@ -114,18 +95,7 @@ class Thermo(models.Model):
             )
 
     def __str__(self):
-        name = self.__class__.__name__
-        tmin1 = self.temp_min_1
-        tmax1 = self.temp_max_1
-        tmin2 = self.temp_min_2
-        tmax2 = self.temp_max_2
-        poly1 = f"Poly1(coeffs={self.coeffs_poly1}, temp_min={tmin1}, temp_max={tmax1})"
-        poly2 = f"Poly2(coeffs={self.coeffs_poly2}, temp_min={tmin2}, temp_max={tmax2})"
-        prime_id = self.prime_id
-        species = self.species.id
-        source = self.source.id if self.source is not None else None
-
-        return f"{name}(prime_id={prime_id}, species={species}, source={source}, {poly1}, {poly2})"
+        return f"{self.id} Species: {self.species.id} H298: {self.enthalpy298:g} S298: {self.entropy298:g}"
 
 
 class Transport(models.Model):
@@ -148,4 +118,4 @@ class Transport(models.Model):
     rotational_relaxation = models.FloatField("Rotational Relaxation", blank=True, default=0.0)
 
     def __str__(self):
-        return f"{super().__str__()} | Species: {self.species}"
+        return f"{self.id} Species: {self.species} Source: {self.source.id}"

@@ -19,6 +19,9 @@ class BaseKineticsData(models.Model):  # noqa: DJ08
         "Upper Pressure Bound", help_text="units: Pa", null=True, blank=True
     )
 
+    class Meta:
+        verbose_name_plural = "BaseKineticsData"
+
     def table_data(self):
         raise NotImplementedError
 
@@ -30,20 +33,11 @@ class KineticsData(BaseKineticsData):
     temp_array = ArrayField(models.FloatField())
     rate_coefficients = ArrayField(models.FloatField())
 
+    class Meta:
+        verbose_name_plural = "KineticsData"
+
 
 class Arrhenius(BaseKineticsData):
-    """
-    A reaction rate expression in modified Arrhenius form
-
-    For now let's keep things simple, and only use 3-parameter Arrhenius
-
-    *****in data********
-    a value
-    a value uncertainty
-    n value
-    e value
-    bibliography
-    """
 
     a_value = models.FloatField(default=0.0)
     a_value_uncertainty = models.FloatField(blank=True, null=True)
@@ -53,8 +47,11 @@ class Arrhenius(BaseKineticsData):
 
     kinetics_type = "Arrhenius Kinetics"
 
+    class Meta:
+        verbose_name_plural = "Arrhenius"
+
     def __str__(self):
-        return "{s.id} with A={s.a_value:g} n={s.n_value:g} E={s.e_value:g}".format(s=self)
+        return f"{self.id} A:{self.a_value:g} n: {self.n_value:g} E: {self.e_value:g}".format(s=self)
 
     def to_rmg(self):
         """
@@ -108,6 +105,10 @@ class ArrheniusEP(BaseKineticsData):
 
     kinetics_type = "Arrhenius EP Kinetics"
 
+    class Meta:
+        verbose_name_plural = "ArrheniusEP"
+
+
     def to_rmg(self):
         return kinetics.ArrheniusEP(
             A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0
@@ -127,6 +128,9 @@ class PDepArrhenius(BaseKineticsData):
     arrhenius_set = models.ManyToManyField(Arrhenius, through="Pressure")
 
     kinetics_type = "Pressure Dependent Arrhenius Kinetics"
+
+    class Meta:
+        verbose_name_plural = "PDepArrhenius"
 
     def to_rmg(self):
         return kinetics.PDepArrhenius(
@@ -156,6 +160,9 @@ class MultiArrhenius(BaseKineticsData):
 
     kinetics_type = "Multi Arrhenius Kinetics"
 
+    class Meta:
+        verbose_name_plural = "MultiArrhenius"
+
     def to_rmg(self):
         return kinetics.MultiArrhenius(
             arrhenius=[arrhenius.to_rmg() for arrhenius in self.arrhenius_set.all()],
@@ -179,6 +186,10 @@ class MultiPDepArrhenius(BaseKineticsData):
     pdep_arrhenius_set = models.ManyToManyField(PDepArrhenius)
 
     kinetics_type = "Multi Pressure Dependent Arrhenius Kinetics"
+
+    class Meta:
+        verbose_name_plural = "MultiPDepArrhenius"
+
 
     def to_rmg(self):
         return kinetics.MultiPdepArrhenius(
@@ -205,6 +216,9 @@ class Chebyshev(BaseKineticsData):
 
     kinetics_type = "Chebyshev Kinetics"
 
+    class Meta:
+        verbose_name_plural = "Chebyshev"
+
     def to_rmg(self):
         return kinetics.Chebyshev(
             coeffs=self.coefficient_matrix,
@@ -222,6 +236,9 @@ class ThirdBody(BaseKineticsData):
     )  # Cannot be ArrheniusEP according to Dr. West
 
     kinetics_type = "Third Body Kinetics"
+
+    class Meta:
+        verbose_name_plural = "ThirdBody"
 
     def to_rmg(self):
         return kinetics.ThirdBody(
@@ -245,6 +262,9 @@ class Lindemann(BaseKineticsData):
     )
 
     kinetics_type = "Lindemann Kinetics"
+
+    class Meta:
+        verbose_name_plural = "Lindemann"
 
     def to_rmg(self):
         # efficiencies = {
@@ -280,6 +300,9 @@ class Troe(BaseKineticsData):
     t1 = models.FloatField()
     t2 = models.FloatField(default=0.0, blank=True)
     t3 = models.FloatField()
+
+    class Meta:
+        verbose_name_plural = "Troe"
 
     def to_rmg(self):
         # efficiencies = {e.species.to_rmg(): e.efficiency for e in self.efficiency_set.all()} or None  # noqa: E501
@@ -335,6 +358,9 @@ class Efficiency(models.Model):
     species = models.ForeignKey("Species", on_delete=models.CASCADE)
     kinetics_data = models.ForeignKey(BaseKineticsData, on_delete=models.CASCADE)
     efficiency = models.FloatField()
+
+    class Meta:
+        verbose_name_plural = "Efficiencies"
 
     def __str__(self):
         name = self.__class__.__name__
@@ -399,11 +425,4 @@ class Kinetics(models.Model):
             return BaseKineticsData.objects.get_subclass(kinetics=self)
 
     def __str__(self):
-        name = self.__class__.__name__
-        data = self.data.__class__.__name__
-        pid = self.prime_id
-        rxn = self.reaction.id
-        src = self.source.id if self.source is not None else None
-        rev = self.reverse
-
-        return f"{name}(prime_id={pid}, reaction={rxn}, data={data}, source={src}, reverse={rev})"
+        return f"{self.id} Reaction: {self.reaction.id}"
