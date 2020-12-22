@@ -9,14 +9,28 @@
 <h3>Reactants</h3>
 <div class="list-group">
     {% for reactant in reactants %}
-    <a href="{% url 'species-detail' reactant.pk %}" class="list-group-item list-group-item-action"><strong>{{ reactant.formula }}</strong></a>
+    <a href="{% url 'species-detail' reactant.pk %}" class="list-group-item list-group-item-action">
+        <strong>{{ reactant.formula }}</strong>
+        <ul class="list-group">
+            {% for structure in reactant.structures %}
+            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
+            {% endfor %}
+        </ul>
+    </a>
     {% endfor %}
 </div>
 <br>
 <h3>Products</h3>
 <div class="list-group">
-{% for product in products %}
-    <a href="{% url 'species-detail' product.pk %}" class="list-group-item list-group-item-action"><strong>{{ product.formula }}</strong></a>
+    {% for product in products %}
+    <a href="{% url 'species-detail' product.pk %}" class="list-group-item list-group-item-action">
+        <strong>{{ product.formula }}</strong>
+        <ul class="list-group">
+            {% for structure in product.structures %}
+            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
+            {% endfor %}
+        </ul>
+    </a>
 {% endfor %}
 </div>
 </br>
