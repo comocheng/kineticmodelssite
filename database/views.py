@@ -144,7 +144,8 @@ class SpeciesDetail(DetailView):
             if name:
                 names_models[name].append((model_name, model_id))
 
-        context["names_models"] = sorted(list(names_models.items()), key=lambda x: x[0])
+        context["names_models"] = sorted(list(names_models.items()), key=lambda x: -len(x[1]))
+        print(context["names_models"])
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
