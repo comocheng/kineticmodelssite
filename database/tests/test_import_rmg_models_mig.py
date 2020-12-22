@@ -87,3 +87,31 @@ class TestImportRmgModelsIntegration(MigratorTestCase):
         hashes = [self._get_kinetics_hash(k) for k in Kinetics.objects.all()]
 
         self.assertEqual(len(hashes), len(set(hashes)))
+
+    def _get_thermo_hash(self, thermo):
+        signature = "".join(
+            str(x)
+            for x in [
+                thermo.coeffs_poly1,
+                thermo.coeffs_poly2,
+                thermo.enthalpy_formation,
+                thermo.preferred_key,
+                thermo.prime_id,
+                thermo.reference_pressure,
+                thermo.reference_temp,
+                thermo.source,
+                thermo.species,
+                thermo.temp_max_1,
+                thermo.temp_max_2,
+                thermo.temp_min_1,
+                thermo.temp_min_2,
+            ]
+        )
+
+        return hash(signature)
+
+    def test_unique_thermo(self):
+        Thermo = self.model("Thermo")
+        hashes = [self._get_thermo_hash(t) for t in Thermo.objects.all()]
+
+        self.assertEqual(len(hashes), len(set(hashes)))
