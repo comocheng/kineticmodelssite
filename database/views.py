@@ -1,3 +1,4 @@
+from database.models import kinetic_model
 import functools
 from itertools import zip_longest
 from collections import defaultdict
@@ -225,7 +226,10 @@ class ReactionDetail(DetailView):
 
         context["reactants"] = reactants
         context["products"] = products
-        context["kinetics"] = reaction.kinetics_set.all()
+        context["kinetics_modelnames"] = [
+            (k, k.kineticmodel_set.values_list("model_name", flat=True))
+            for k in reaction.kinetics_set.all()
+        ]
 
         return context
 
@@ -291,7 +295,11 @@ class DrawStructure(View):
     def get(self, request, pk):
         structure = Structure.objects.get(pk=pk)
         molecule = structure.to_rmg()
-        surface, _, _, = MoleculeDrawer().draw(molecule, file_format="png")
+        (
+            surface,
+            _,
+            _,
+        ) = MoleculeDrawer().draw(molecule, file_format="png")
         response = HttpResponse(surface.write_to_png(), content_type="image/png")
 
         return response
