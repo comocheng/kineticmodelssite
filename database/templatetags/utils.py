@@ -1,3 +1,4 @@
+import titlecase as tc
 from django import template
 from django.utils.safestring import mark_safe
 
@@ -33,6 +34,11 @@ def param_replace(context, **kwargs):
         del get[k]
 
     return get.urlencode()
+
+
+@register.filter
+def titlecase(object):
+    return mark_safe(tc.titlecase(str(object)))
 
 
 @register.filter

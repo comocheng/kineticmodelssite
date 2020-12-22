@@ -19,7 +19,7 @@
                class="list-group-item list-group-item-action flex-column align-items-start"
             >
                 <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">{{ source.source_title.title }}</h6>
+                    <h6 class="mb-1">{{ source.source_title.title|titlecase }}</h6>
                     <small>ID: {{ source.id }}</small>
                 </div>
                 <i>{{ source.pub_info }}</i>

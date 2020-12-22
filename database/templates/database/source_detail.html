@@ -3,7 +3,7 @@
 {% load utils %}
 
 {% block content %}
-<h1>{{ source.source_title }}</h1>
+<h1>{{ source.source_title|titlecase }}</h1>
 <h3>ID: {{ source.pk }}</h2>
 
 <ul>
