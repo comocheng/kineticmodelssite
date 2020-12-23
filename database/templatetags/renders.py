@@ -123,8 +123,12 @@ def render_pagination(context, objects, page_name):
         )
     else:
         prev = """
-        <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a></li>
-        <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a></li>
+        <li class="page-item disabled">
+            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a>
+        </li>
+        <li class="page-item disabled">
+            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a>
+        </li>
         """
     if objects.has_next():
         next_args = param_replace(context, **{page_name: objects.next_page_number()})
@@ -137,8 +141,12 @@ def render_pagination(context, objects, page_name):
         )
     else:
         nxt = """
-        <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a></li>
-        <li class="page-item disabled"><a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a></li>
+        <li class="page-item disabled">
+            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a>
+        </li>
+        <li class="page-item disabled">
+            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a>
+        </li>
         """
 
     return mark_safe(
@@ -153,6 +161,6 @@ def render_pagination(context, objects, page_name):
             </ul>
         </nav>
         """.format(
-            objects=objects, page_name=page_name, prev=prev, nxt=nxt
+            objects=objects, prev=prev, nxt=nxt
         )
     )

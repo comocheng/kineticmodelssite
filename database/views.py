@@ -1,4 +1,3 @@
-from database.models import kinetic_model
 import functools
 from itertools import zip_longest
 from collections import defaultdict

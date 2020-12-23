@@ -32,7 +32,12 @@ class Source(models.Model):
 
     @property
     def pub_info(self):
-        return f"{self.journal_name}, vol. {self.journal_volume_number}, pp. {self.page_numbers}, {self.publication_year}"
+        return (
+            f"{self.journal_name}, "
+            f"vol. {self.journal_volume_number}, "
+            f"pp. {self.page_numbers}, "
+            f"{self.publication_year}"
+        )
 
     @property
     def author_line(self):
