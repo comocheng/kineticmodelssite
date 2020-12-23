@@ -181,6 +181,8 @@ class Migration(migrations.Migration):
                 ('a_value_units', models.CharField(max_length=15)),
                 ('n_value', models.FloatField()),
                 ('e_value', models.FloatField()),
+                ('e_value_si', models.FloatField()),
+                ('e_value_units', models.CharField(max_length=15)),
                 ('e_value_uncertainty', models.FloatField(blank=True, null=True)),
             ],
             options={
@@ -196,8 +198,10 @@ class Migration(migrations.Migration):
                 ('a_si', models.FloatField()),
                 ('a_units', models.CharField(max_length=15)),
                 ('n', models.FloatField()),
-                ('ep_alpha', models.FloatField()),
+                ('alpha', models.FloatField()),
                 ('e0', models.FloatField()),
+                ('e0_si', models.FloatField()),
+                ('e0_units', models.CharField(max_length=15)),
             ],
             options={
                 'verbose_name_plural': 'ArrheniusEP',
