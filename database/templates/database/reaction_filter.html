@@ -1,6 +1,7 @@
 {% extends "database/base.html" %}
 {% load crispy_forms_tags %}
 {% load utils %}
+{% load renders %}
 
 {% block content %}
 <h1>Reaction</h1>
@@ -9,92 +10,9 @@
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 <br />
-<nav aria-label="Reaction Pagination">
-    <span class="current">
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-    </span>
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?{% param_replace page=1 %}">First</a></li>
-        <li class="page-item">
-            <a class="page-link" href="?{% param_replace page=page_obj.previous_page_number %}">Previous</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a>
-        </li>
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a>
-        </li>
-        {% endif %} {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?{% param_replace page=page_obj.next_page_number %}">Next</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?{% param_replace page=page_obj.paginator.num_pages %}">Last</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a>
-        </li>
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
+{% render_pagination objects=page_obj page_name="page" %}
 <br />
-{% for reaction in object_list %}
-<div class="list-group">
-    <a
-        href="{% url 'reaction-detail' reaction.pk %}"
-        class="list-group-item list-group-item-action flex-column align-items-start"
-    >
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ reaction }}</h5>
-            <small>ID: {{ reaction.pk }}</small>
-        </div>
-        {% if reaction.prime_id %}
-        <p>PrIMe ID: {{reaction.prime_id}}</p>
-        {% endif %} {{ reaction.kinetics_count|pluralize:"Rate"}}
-        <br />
-        {{ reaction.kinetic_model_count|pluralize:"Kinetic Model"}}
-    </a>
-</div>
-{% endfor %}
+{{ object_list|render_reaction_list }}
 <br />
-<nav aria-label="Reaction Pagination">
-    <span class="current">
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-    </span>
-    <ul class="pagination">
-        {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">First</a>
-        </li>
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Previous</a>
-        </li>
-        {% endif %} {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-        </li>
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Next</a>
-        </li>
-        <li class="page-item disabled">
-            <a class="page-link" tabindex="-1" aria-disabled="true" href="#">Last</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
+{% render_pagination objects=page_obj page_name="page" %}
 {% endblock %}

@@ -84,6 +84,7 @@
                 </form>
             </div>
         </nav>
+        <br>
         <main role="main" class="container">
             <div class="row">
                 <div class="col-md-8">{% block content %}{% endblock %}</div>
@@ -96,6 +97,7 @@
                             <div class="form-group">
                                 <input
                                     type="number"
+                                    min="1"
                                     name="species_pk"
                                     placeholder="Enter ID"
                                     class="form-control"
@@ -112,6 +114,7 @@
                             <div class="form-group">
                                 <input
                                     type="number"
+                                    min="1"
                                     name="reaction_pk"
                                     placeholder="Enter ID"
                                     class="form-control"
@@ -128,6 +131,7 @@
                             <div class="form-group">
                                 <input
                                     type="number"
+                                    min="1"
                                     name="source_pk"
                                     id="source_pk"
                                     placeholder="Enter ID"

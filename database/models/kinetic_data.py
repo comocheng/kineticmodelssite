@@ -109,7 +109,9 @@ class ArrheniusEP(BaseKineticsData):
     kinetics_type = "Arrhenius EP Kinetics"
 
     def to_rmg(self):
-        return kinetics.ArrheniusEP(A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0)
+        return kinetics.ArrheniusEP(
+            A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0
+        )
 
     def table_data(self):
         return [
