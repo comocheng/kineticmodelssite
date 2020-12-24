@@ -367,24 +367,32 @@ class SpeciesRevisionView(RevisionView):
 
 
 class RevisionApprovalView(UserPassesTestMixin, View):
-    model = SpeciesRevision
-    target_model = Species
 
     def test_func(self):
         return self.request.user.is_staff
 
+    def get_object(self):
+        return self.model.objects.get(id=self.kwargs.get("pk"))
+
     def post(self, request, pk):
         revision = self.get_object()
-        target = revision.target
-        target.prime_id = revision.prime_id
-        target.cas_number = revision.cas_number
-        target.isomers.clear()
-        target.isomers.add(*revision.isomers.all())
-        target.save()
+        self.update_model(revision)
         revision.status = revision.APPROVED
         revision.save()
 
-        return HttpResponseRedirect("/admin/database/speciesrevision/")
+        return HttpResponseRedirect(self.get_url())
 
-    def get_object(self):
-        return self.model.objects.get(id=self.kwargs.get("pk"))
+
+class SpeciesRevisionApprovalView(RevisionApprovalView):
+    model = SpeciesRevision
+
+    def get_url(self):
+        return reverse("admin:database_speciesrevision_changelist")
+
+    def update_model(self, revision):
+        species = revision.target
+        species.prime_id = revision.prime_id
+        species.cas_number = revision.cas_number
+        species.isomers.clear()
+        species.isomers.add(*revision.isomers.all())
+        species.save()
