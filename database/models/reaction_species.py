@@ -4,7 +4,7 @@ import math
 import rmgpy
 from django.db import models
 from rmgpy.molecule import Molecule
-from . import KineticModel, Kinetics
+from . import KineticModel, Kinetics, RevisionMixin
 
 
 class Formula(models.Model):
@@ -42,14 +42,14 @@ class Structure(models.Model):
         return Molecule().from_adjacency_list(self.adjacency_list)
 
 
-class Species(models.Model):
-    hash = models.CharField(max_length=32, unique=True)
+class Species(RevisionMixin):
+    hash = models.CharField(max_length=32)
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
-    isomers = models.ManyToManyField(Isomer)
+    isomers = models.ManyToManyField("Isomer")
 
     def __str__(self):
-        return f"{self.id} Formula: {self.formula}"
+        return f"{self.id} Formula: {self.formula or None}"
 
     def to_rmg(self):
         if self.inchi:
@@ -61,6 +61,7 @@ class Species(models.Model):
 
     class Meta:
         verbose_name_plural = "Species"
+        unique_together = ("hash", "revision", "created_on")
 
     @property
     def names(self):
@@ -74,12 +75,13 @@ class Species(models.Model):
 
     @property
     def formula(self):
-        return self.isomers.first().formula.formula
+        if self.isomers.first():
+            return self.isomers.first().formula.formula
 
 
 class Reaction(models.Model):
     hash = models.CharField(max_length=32, unique=True)
-    species = models.ManyToManyField(Species, through="Stoichiometry")
+    species = models.ManyToManyField("Species", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
 
@@ -217,8 +219,8 @@ class Stoichiometry(models.Model):
     floats, so we do too.
     """
 
-    species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
+    species = models.ForeignKey("Species", on_delete=models.CASCADE)
+    reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
     stoichiometry = models.FloatField()
 
     class Meta:

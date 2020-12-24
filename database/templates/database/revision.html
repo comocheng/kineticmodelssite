@@ -1,0 +1,12 @@
+{% extends "database/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+<h2>{{ name }} {{ object.id }} Revision</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <input type="submit" class="btn btn-primary" value="Propose Changes">
+</form>
+{% endblock %}

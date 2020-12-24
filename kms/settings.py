@@ -31,6 +31,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(" ")
 # Application definition
 
 INSTALLED_APPS = [
+    "database.apps.DatabaseConfig",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -40,7 +41,6 @@ INSTALLED_APPS = [
     "django_filters",
     "django_extensions",
     "crispy_forms",
-    "database.apps.DatabaseConfig",
 ]
 
 MIDDLEWARE = [

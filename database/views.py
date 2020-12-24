@@ -1,13 +1,16 @@
 import functools
 from itertools import zip_longest
 from collections import defaultdict
+from datetime import datetime
 
 from django.contrib.auth import login
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views import View
 from django.views.generic import TemplateView, DetailView
+from django.views.generic.edit import FormView, CreateView
 from django_filters.views import FilterView
 from django.http import HttpResponse
 from rmgpy.molecule.draw import MoleculeDrawer
@@ -22,12 +25,14 @@ from .models import (
     Source,
     Reaction,
     Kinetics,
+    SpeciesRevision
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm
 
 
 class SidebarLookup:
+
     def __init__(self, cls, *args, **kwargs):
         cls.get = self.lookup_get(cls.get)
         cls.get_context_data = self.lookup_get_context_data(cls.get_context_data)
@@ -315,3 +320,71 @@ class RegistrationView(FormView):
         login(self.request, user)
 
         return super().form_valid(form)
+
+
+class RevisionView(LoginRequiredMixin, CreateView):
+    template_name = "database/revision.html"
+    login_url = "login/"
+
+    def get_success_url(self):
+        return reverse(self.url_name, args=[self.get_object().pk])
+
+    def get_object(self):
+        return self.model.objects.get(id=self.kwargs.get("pk"))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        obj = self.get_object()
+        context["object"] = obj
+        context["name"] = obj.__class__.__name__
+
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["instance"] = self.get_object()
+
+        return kwargs
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        self.object.id = None
+        self.object.revision = True
+        self.object.created_by = self.request.user
+        self.object.created_on = datetime.now()
+        self.object.target = self.get_object()
+        self.object.status = self.object.PENDING
+        self.object.save()
+        form.save_m2m()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class SpeciesRevisionView(RevisionView):
+    model = Species
+    url_name = "species-detail"
+    fields = ["prime_id", "cas_number", "isomers"]
+
+
+class RevisionApprovalView(UserPassesTestMixin, View):
+    model = SpeciesRevision
+    target_model = Species
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def post(self, request, pk):
+        revision = self.get_object()
+        target = revision.target
+        target.prime_id = revision.prime_id
+        target.cas_number = revision.cas_number
+        target.isomers.clear()
+        target.isomers.add(*revision.isomers.all())
+        target.save()
+        revision.status = revision.APPROVED
+        revision.save()
+
+        return HttpResponseRedirect("/admin/database/speciesrevision/")
+
+    def get_object(self):
+        return self.model.objects.get(id=self.kwargs.get("pk"))
