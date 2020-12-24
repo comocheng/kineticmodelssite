@@ -70,6 +70,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'source-search' %}">Source Search</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
                 </ul>
                 <form class="form-inline my-2 my-lg-0">
                     <input
@@ -85,7 +91,7 @@
             </div>
         </nav>
         <br>
-        <main role="main" class="container">
+        <main role="main" class="container-fluid">
             <div class="row">
                 <div class="col-md-8">{% block content %}{% endblock %}</div>
                 <div class="col-md-4">

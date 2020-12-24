@@ -3,6 +3,7 @@ from database import views
 
 urlpatterns = [
     path(r"", views.BaseView.as_view(), name="home"),
+    path(r"register/", views.RegistrationView.as_view(), name="register"),
     path(
         r"species_search/",
         views.SpeciesFilterView.as_view(),

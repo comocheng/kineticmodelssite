@@ -2,6 +2,7 @@ import functools
 from itertools import zip_longest
 from collections import defaultdict
 
+from django.contrib.auth import login
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -23,6 +24,7 @@ from .models import (
     Kinetics,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
+from .forms import RegistrationForm
 
 
 class SidebarLookup:
@@ -145,7 +147,6 @@ class SpeciesDetail(DetailView):
                 names_models[name].append((model_name, model_id))
 
         context["names_models"] = sorted(list(names_models.items()), key=lambda x: -len(x[1]))
-        print(context["names_models"])
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
@@ -302,3 +303,15 @@ class DrawStructure(View):
         response = HttpResponse(surface.write_to_png(), content_type="image/png")
 
         return response
+
+
+class RegistrationView(FormView):
+    template_name = "database/register.html"
+    form_class = RegistrationForm
+    success_url = "/"
+
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+
+        return super().form_valid(form)
