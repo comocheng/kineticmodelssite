@@ -7,6 +7,18 @@ class NoRevisionManager(models.Manager):
         return super().get_queryset().filter(revision=False)
 
 
+class RevisionManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(revision=True)
+
+
+class RevisionProxyMixin(models.Model):
+    objects = RevisionManager()
+
+    class Meta:
+        proxy = True
+
+
 class RevisionMixin(models.Model):
     APPROVED = "A"
     PENDING = "P"

@@ -79,7 +79,7 @@ class Species(RevisionMixin):
             return self.isomers.first().formula.formula
 
 
-class Reaction(models.Model):
+class Reaction(RevisionMixin):
     hash = models.CharField(max_length=32, unique=True)
     species = models.ManyToManyField("Species", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
@@ -87,6 +87,7 @@ class Reaction(models.Model):
 
     class Meta:
         ordering = ("prime_id",)
+        unique_together = ("hash", "revision", "created_on")
 
     def stoich_species(self):
         """
