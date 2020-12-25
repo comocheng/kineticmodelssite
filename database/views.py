@@ -5,6 +5,7 @@ from datetime import datetime
 
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -28,7 +29,7 @@ from .models import (
     SpeciesRevision
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
-from .forms import RegistrationForm
+from .forms import RegistrationForm, StoichiometryFormSet
 
 
 class SidebarLookup:
@@ -346,7 +347,7 @@ class RevisionView(LoginRequiredMixin, CreateView):
 
         return kwargs
 
-    def form_valid(self, form):
+    def save_form(self, form):
         self.object = form.save(commit=False)
         self.object.id = None
         self.object.revision = True
@@ -357,6 +358,12 @@ class RevisionView(LoginRequiredMixin, CreateView):
         self.object.save()
         form.save_m2m()
 
+        return self.object
+
+
+    def form_valid(self, form):
+        self.save_form(form)
+
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -364,6 +371,44 @@ class SpeciesRevisionView(RevisionView):
     model = Species
     url_name = "species-detail"
     fields = ["prime_id", "cas_number", "isomers"]
+
+
+class ReactionRevisionView(RevisionView):
+    model = Reaction
+    url_name = "reaction-detail"
+    fields = ["prime_id", "reversible"]
+    formset_class = StoichiometryFormSet
+
+    def get_formset(self):
+        instance = self.get_object()
+        if self.request.POST:
+            return self.formset_class(self.request.POST, instance=instance)
+        else:
+            return self.formset_class(instance=instance)
+
+    def post(self, request):
+        form = self.get_form()
+        formset = self.get_formset()
+        self.object = self.get_object()
+
+        if form.is_valid() and formset.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form):
+        instance = self.save_form(form)
+        formset = self.get_formset()
+        objects = formset.save(commit=False)
+        for o in objects:
+            o.id = None
+            o.revision = True
+            o.created_by = self.request.user
+            o.created_on = datetime.now()
+            o.reaction = instance
+            o.save()
+
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class RevisionApprovalView(UserPassesTestMixin, View):

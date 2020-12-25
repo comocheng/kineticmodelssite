@@ -12,11 +12,8 @@ class RevisionManager(models.Manager):
         return super().get_queryset().filter(revision=True)
 
 
-class RevisionProxyMixin(models.Model):
+class RevisionManagerMixin:
     objects = RevisionManager()
-
-    class Meta:
-        proxy = True
 
 
 class RevisionMixin(models.Model):

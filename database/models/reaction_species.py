@@ -210,7 +210,7 @@ class Reaction(RevisionMixin):
         return f"{left_side} {arrow} {right_side}"
 
 
-class Stoichiometry(models.Model):
+class Stoichiometry(RevisionMixin):
     """
     The number of molecules or atoms of a species that participate in a reaction .
 
@@ -226,7 +226,7 @@ class Stoichiometry(models.Model):
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
-        unique_together = ["species", "reaction", "stoichiometry"]
+        unique_together = ("species", "reaction", "stoichiometry", "revision", "created_on")
 
     def __str__(self):
         return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
