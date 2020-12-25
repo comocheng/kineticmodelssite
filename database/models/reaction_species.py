@@ -97,7 +97,7 @@ class Reaction(RevisionMixin):
 
         reaction = []
         for stoich in self.stoichiometry_set.all():
-            reaction.append((stoich.stoichiometry, stoich.species))
+            reaction.append((stoich.coeff, stoich.species))
 
         return sorted(reaction, key=lambda x: x[1].pk * math.copysign(1, x[0]))
 
@@ -222,18 +222,18 @@ class Stoichiometry(RevisionMixin):
 
     species = models.ForeignKey("Species", on_delete=models.CASCADE)
     reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
-    stoichiometry = models.FloatField()
+    coeff = models.FloatField()
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
-        unique_together = ("species", "reaction", "stoichiometry", "revision", "created_on")
+        unique_together = ("species", "reaction", "coeff", "revision", "created_on")
 
     def __str__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
             s=self
         )
 
     def __repr__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
             s=self
         )

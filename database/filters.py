@@ -66,10 +66,10 @@ class ReactionFilter(django_filters.FilterSet):
     )
 
     def filter_reactant(self, queryset, name, value):
-        return queryset.filter(**{name: value}, stoichiometry__stoichiometry__lt=0)
+        return queryset.filter(**{name: value}, stoichiometry__coeff__lt=0)
 
     def filter_product(self, queryset, name, value):
-        return queryset.filter(**{name: value}, stoichiometry__stoichiometry__gt=0)
+        return queryset.filter(**{name: value}, stoichiometry__coeff__gt=0)
 
     class Meta:
         model = Reaction

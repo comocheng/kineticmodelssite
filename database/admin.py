@@ -66,7 +66,7 @@ class SpeciesRevisionAdmin(RevisionAdmin):
 
 class StoichiometryInline(admin.TabularInline):
     model = models.Stoichiometry
-    fields = ("species", "stoichiometry")
+    fields = ("species", "coeff")
 
 
 @admin.register(models.Reaction)

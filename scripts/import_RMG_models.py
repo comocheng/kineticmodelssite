@@ -739,7 +739,7 @@ class KineticsLibraryImporter(Importer):
                 try:
                     for coeff, species in stoichiometry_list:
                         stoich, created = Stoichiometry.objects.get_or_create(
-                            species=species, stoichiometry=coeff, reaction=matched_reaction
+                            species=species, coeff=coeff, reaction=matched_reaction
                         )
                         matched_reaction.species.add(species)
                         save_model(stoich, library_name=library.name)

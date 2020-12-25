@@ -4,7 +4,7 @@
 """
 Run this like so:
  $  python import_prime.py /path/to/local/mirror/warehouse.primekinetics.org/
- 
+
 It should dig through all the prime XML files and import them into
 the Django database.
 """
@@ -46,8 +46,8 @@ class PrimeError(Exception):
 
 class Importer(object):
     """
-    A default importer, imports nothing in particular. 
-    
+    A default importer, imports nothing in particular.
+
     Make subclasses of this to import specific things.
     This just contains generic parts common to all.
     """
@@ -123,7 +123,7 @@ class Importer(object):
     def import_elementtree_root(self, root):
         """
         Import from an ElementTree.Element which is the root of the document.
-        
+
         This method should be overridden in subclasses of this Importer class.
         """
         raise NotImplementedError("Should define this in a subclass")
@@ -358,7 +358,7 @@ class ReactionImporter(Importer):
             stoichiometry = float(reactant.text)
             print("Stoichiometry of {} is {}".format(species_primeID, stoichiometry))
             dj_stoich, created = Stoichiometry.objects.get_or_create(
-                species=dj_species, reaction=dj_reaction, stoichiometry=stoichiometry
+                species=dj_species, reaction=dj_reaction, coeff=stoichiometry
             )
             # This test currently broken or finds false failures:
             # if stoichiometry_already_in_database:
