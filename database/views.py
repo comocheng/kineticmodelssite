@@ -5,7 +5,7 @@ from datetime import datetime
 
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.forms.formsets import formset_factory
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -26,7 +26,9 @@ from .models import (
     Source,
     Reaction,
     Kinetics,
-    SpeciesRevision
+    SpeciesRevision,
+    ReactionRevision,
+    StoichiometryRevision,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm, StoichiometryFormSet
@@ -223,15 +225,8 @@ class ReactionDetail(DetailView):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
 
-        try:
-            reactants = reaction.stoich_reactants()
-            products = reaction.stoich_products()
-        except NotImplementedError:
-            reactants = reaction.reactants()
-            products = reaction.products()
-
-        context["reactants"] = reactants
-        context["products"] = products
+        context["reactants"] = reaction.reactants()
+        context["products"] = reaction.products()
         context["kinetics_modelnames"] = [
             (k, k.kineticmodel_set.values_list("model_name", flat=True))
             for k in reaction.kinetics_set.all()
@@ -360,7 +355,6 @@ class RevisionView(LoginRequiredMixin, CreateView):
 
         return self.object
 
-
     def form_valid(self, form):
         self.save_form(form)
 
@@ -381,12 +375,13 @@ class ReactionRevisionView(RevisionView):
 
     def get_formset(self):
         instance = self.get_object()
+
         if self.request.POST:
             return self.formset_class(self.request.POST, instance=instance)
         else:
             return self.formset_class(instance=instance)
 
-    def post(self, request):
+    def post(self, request, **kwargs):
         form = self.get_form()
         formset = self.get_formset()
         self.object = self.get_object()
@@ -396,7 +391,14 @@ class ReactionRevisionView(RevisionView):
         else:
             return self.form_invalid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["formset"] = self.get_formset()
+
+        return context
+
     def form_valid(self, form):
+        with transaction.atomic():
         instance = self.save_form(form)
         formset = self.get_formset()
         objects = formset.save(commit=False)
@@ -430,6 +432,7 @@ class RevisionApprovalView(UserPassesTestMixin, View):
 
 class SpeciesRevisionApprovalView(RevisionApprovalView):
     model = SpeciesRevision
+    url_name = "species-approval"
 
     def get_url(self):
         return reverse("admin:database_speciesrevision_changelist")
@@ -441,3 +444,26 @@ class SpeciesRevisionApprovalView(RevisionApprovalView):
         species.isomers.clear()
         species.isomers.add(*revision.isomers.all())
         species.save()
+
+
+class ReactionRevisionApprovalView(RevisionApprovalView):
+    model = ReactionRevision
+    url_name = "reaction-approval"
+
+    def get_url(self):
+        return reverse("admin:database_reactionrevision_changelist")
+
+    def update_model(self, revision):
+        reaction = revision.target
+        reaction.prime_id = revision.prime_id
+        reaction.reversible = revision.reversible
+        reaction.stoichiometry_set.all().delete()
+        reaction.save()
+        new_stoichs = StoichiometryRevision.objects.filter(reaction=revision)
+        for stoich in new_stoichs:
+            stoich.revision = False
+            stoich.created_on = None
+            stoich.created_by = None
+            stoich.status = ""
+            stoich.reaction = reaction
+            stoich.save()

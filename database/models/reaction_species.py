@@ -80,7 +80,7 @@ class Species(RevisionMixin):
 
 
 class Reaction(RevisionMixin):
-    hash = models.CharField(max_length=32, unique=True)
+    hash = models.CharField(max_length=32)
     species = models.ManyToManyField("Species", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()

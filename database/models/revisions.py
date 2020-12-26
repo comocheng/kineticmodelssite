@@ -2,13 +2,17 @@ from . import Species, Reaction, Stoichiometry
 from .mixins import RevisionManagerMixin
 
 
-class SpeciesRevision(Species, RevisionManagerMixin):
-    pass
+class SpeciesRevision(RevisionManagerMixin, Species):
+
+    class Meta:
+        proxy = True
 
 
-class ReactionRevision(Reaction, RevisionManagerMixin):
-    pass
+class ReactionRevision(RevisionManagerMixin, Reaction):
+    class Meta:
+        proxy = True
 
 
-class StoichiometryRevision(Stoichiometry, RevisionManagerMixin):
-    pass
+class StoichiometryRevision(RevisionManagerMixin, Stoichiometry):
+    class Meta:
+        proxy = True

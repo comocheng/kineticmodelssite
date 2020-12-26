@@ -6,7 +6,14 @@
 <h2>{{ name }} {{ object.id }} Revision</h2>
 <form method="post">
     {% csrf_token %}
-    {{ form|crispy }}
+    {% if formset %}
+        {% for form in formset %}
+            {{ form|crispy }}
+        {% endfor %}
+        {{ form|crispy }}
+    {% else %}
+        {{ form|crispy }}
+    {% endif %}
     <input type="submit" class="btn btn-primary" value="Propose Changes">
 </form>
 {% endblock %}

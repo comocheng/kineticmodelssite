@@ -23,8 +23,9 @@ for name in dir(models):
             "Efficiency",
             "RevisionMixin",
             "User",
-            "Species",
             "SpeciesRevision",
+            "ReactionRevision",
+            "RevisionManagerMixin",
         ]
         and isinstance(obj, type)
         and issubclass(obj, Model)
@@ -33,35 +34,45 @@ for name in dir(models):
 
 
 class RevisionAdmin(admin.ModelAdmin):
-
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in obj._meta.fields]
-
-
-class IsomerInline(TabularInline):
-    model = models.Species.isomers.through
-    readonly_fields = ("isomer",)
-    can_delete = False
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-@admin.register(models.Species)
-class SpeciesRevisionAdmin(RevisionAdmin):
-    exclude = ("hash", "isomers")
-    inlines = [IsomerInline]
 
     def get_urls(self):
         urls = super().get_urls()
 
         return [
             path(
-                r"species/<int:pk>/approve",
-                self.admin_site.admin_view(views.RevisionApprovalView.as_view()),
-                name="species-approval",
+                f"{self.url_name}/<int:pk>",
+                self.admin_site.admin_view(self.approval_view.as_view()),
+                name=self.url_name,
             ),
             *urls,
         ]
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        context["url_name"] = f"admin:{self.url_name}"
+
+        return super().render_change_form(request, context, *args, **kwargs)
+
+
+class ImmutablePermissionMixin:
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class IsomerInline(ImmutablePermissionMixin, TabularInline):
+    model = models.Species.isomers.through
+    readonly_fields = ("isomer",)
+
+
+@admin.register(models.SpeciesRevision)
+class SpeciesRevisionAdmin(admin.ModelAdmin):
+    exclude = ("hash", "isomers")
+    inlines = [IsomerInline]
+    url_name = "species-revision"
+    approval_view = views.SpeciesRevisionApprovalView
 
 
 class StoichiometryInline(admin.TabularInline):
@@ -69,9 +80,21 @@ class StoichiometryInline(admin.TabularInline):
     fields = ("species", "coeff")
 
 
+class StoichiometryRevisionInline(ImmutablePermissionMixin, admin.TabularInline):
+    model = models.StoichiometryRevision
+    fields = ("species", "coeff")
+
+
 @admin.register(models.Reaction)
 class ReactionAdmin(admin.ModelAdmin):
     inlines = [StoichiometryInline]
+
+
+@admin.register(models.ReactionRevision)
+class ReactionRevisionAdmin(RevisionAdmin):
+    inlines = [StoichiometryRevisionInline]
+    url_name = "reaction-approval"
+    approval_view = views.ReactionRevisionApprovalView
 
 
 class AuthorshipInline(admin.TabularInline):

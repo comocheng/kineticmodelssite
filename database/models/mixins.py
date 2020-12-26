@@ -12,8 +12,11 @@ class RevisionManager(models.Manager):
         return super().get_queryset().filter(revision=True)
 
 
-class RevisionManagerMixin:
+class RevisionManagerMixin(models.Model):
     objects = RevisionManager()
+
+    class Meta:
+        abstract = True
 
 
 class RevisionMixin(models.Model):
@@ -25,10 +28,10 @@ class RevisionMixin(models.Model):
         (PENDING, "Pending"),
         (DENIED, "Denied"),
     )
-    created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    created_on = models.DateTimeField(default=None, null=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    created_on = models.DateTimeField(default=None, null=True, blank=True)
     revision = models.BooleanField(default=False)
-    target = models.ForeignKey("self", null=True, on_delete=models.SET_NULL)
+    target = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(choices=STATUS_CHOICES, max_length=1, blank=True)
 
     objects = NoRevisionManager()

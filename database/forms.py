@@ -13,9 +13,17 @@ class RegistrationForm(UserCreationForm):
 class StoichiometryForm(forms.ModelForm):
     class Meta:
         model = Stoichiometry
-        exclude = []
+        fields = "__all__"
+
+    def has_changed(self):
+        return True
 
 
 StoichiometryFormSet = inlineformset_factory(
-    Reaction, Stoichiometry, form=StoichiometryForm, can_delete=True
+    Reaction,
+    Stoichiometry,
+    form=StoichiometryForm,
+    can_delete=True,
+    fields=("species", "coeff"),
+    extra=0,
 )

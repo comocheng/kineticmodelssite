@@ -18,11 +18,10 @@
 {% endif %}
 
 <form method="post" action="{% url 'login' %}">
-{% csrf_token %}
-{{ form|crispy }}
-
-<input type="submit" class="btn btn-primary" value="login">
-<input type="hidden" name="next" value="{{ next }}">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <input type="submit" class="btn btn-primary" value="login">
+    <input type="hidden" name="next" value="{{ next }}">
 </form>
 Need an Account? <a href="{% url 'register' %}">Register Here</a>
 {% endblock %}
