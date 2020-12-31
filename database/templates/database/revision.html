@@ -8,6 +8,7 @@
     {% csrf_token %}
     {% if formset %}
         {% for form in formset %}
+        {{ form.media }}
             {{ form|crispy }}
         {% endfor %}
         {{ form|crispy }}

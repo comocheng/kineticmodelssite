@@ -32,6 +32,8 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(" ")
 
 INSTALLED_APPS = [
     "database.apps.DatabaseConfig",
+    "dal",
+    "dal_select2",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

@@ -1,4 +1,5 @@
 import django_filters
+from dal import autocomplete
 from django.db.models import Count
 
 from .models import Species, Reaction, Source
@@ -6,7 +7,10 @@ from .models import Species, Reaction, Source
 
 class SpeciesFilter(django_filters.FilterSet):
     speciesname__name = django_filters.CharFilter(
-        field_name="speciesname", lookup_expr="name", distinct=True, label="Species Name",
+        field_name="speciesname",
+        lookup_expr="name",
+        distinct=True,
+        label="Species Name",
     )
     isomers__formula__formula = django_filters.CharFilter(
         field_name="isomers", lookup_expr="formula__formula", label="Formula"
@@ -23,7 +27,9 @@ class SpeciesFilter(django_filters.FilterSet):
         label="Structure Adjacency List",
     )
     isomers__structure__multiplicity = django_filters.NumberFilter(
-        field_name="isomers", lookup_expr="structure__multiplicity", label="Structure Multiplicity",
+        field_name="isomers",
+        lookup_expr="structure__multiplicity",
+        label="Structure Multiplicity",
     )
 
     class Meta:
@@ -39,6 +45,10 @@ class ReactionFilter(django_filters.FilterSet):
         field_name="species",
         method="filter_reactant",
         label="Reactant",
+        widget=autocomplete.ModelSelect2(
+            url="species-autocomplete",
+            attrs={"data-html": True},
+        ),
     )
     reactant2 = django_filters.ModelChoiceFilter(
         queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
@@ -47,6 +57,10 @@ class ReactionFilter(django_filters.FilterSet):
         field_name="species",
         method="filter_reactant",
         label="Reactant",
+        widget=autocomplete.ModelSelect2(
+            url="species-autocomplete",
+            attrs={"data-html": True},
+        ),
     )
     product1 = django_filters.ModelChoiceFilter(
         queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
@@ -55,6 +69,10 @@ class ReactionFilter(django_filters.FilterSet):
         field_name="species",
         method="filter_product",
         label="Product",
+        widget=autocomplete.ModelSelect2(
+            url="species-autocomplete",
+            attrs={"data-html": True},
+        ),
     )
     product2 = django_filters.ModelChoiceFilter(
         queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
@@ -63,6 +81,10 @@ class ReactionFilter(django_filters.FilterSet):
         field_name="species",
         method="filter_product",
         label="Product",
+        widget=autocomplete.ModelSelect2(
+            url="species-autocomplete",
+            attrs={"data-html": True},
+        ),
     )
 
     def filter_reactant(self, queryset, name, value):

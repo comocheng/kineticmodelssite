@@ -1,3 +1,4 @@
+from dal import autocomplete
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.forms import inlineformset_factory
@@ -14,6 +15,11 @@ class StoichiometryForm(forms.ModelForm):
     class Meta:
         model = Stoichiometry
         fields = "__all__"
+        widgets = {
+            "species": autocomplete.ModelSelect2(
+                url="species-autocomplete", attrs={"data-html": True}
+            )
+        }
 
     def has_changed(self):
         return True

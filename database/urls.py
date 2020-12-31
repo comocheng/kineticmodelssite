@@ -5,6 +5,11 @@ urlpatterns = [
     path(r"", views.BaseView.as_view(), name="home"),
     path(r"register/", views.RegistrationView.as_view(), name="register"),
     path(
+        r"species-autocomplete/",
+        views.SpeciesAutocomplete.as_view(),
+        name="species-autocomplete",
+    ),
+    path(
         r"species_search/",
         views.SpeciesFilterView.as_view(),
         name="species-search",

@@ -95,9 +95,8 @@ def _render_reaction_list_card(reaction):
     )
 
 
-@register.filter
-def render_reaction_list(reactions):
-    cards = "\n".join(_render_reaction_list_card(r) for r in reactions)
+def _render_card_list(card_render_func, objects):
+    cards = "\n".join(card_render_func(o) for o in objects)
 
     return mark_safe(
         """
@@ -108,6 +107,11 @@ def render_reaction_list(reactions):
             cards=cards
         )
     )
+
+
+@register.filter
+def render_reaction_list(reactions):
+    return _render_card_list(_render_reaction_list_card, reactions)
 
 
 @register.simple_tag(takes_context=True)
@@ -164,3 +168,58 @@ def render_pagination(context, objects, page_name):
             objects=objects, prev=prev, nxt=nxt
         )
     )
+
+
+def render_species_list_card(species):
+    if species.names:
+        names_inner = "\n".join(
+            f"<li class='list-group-item'>{name}</li>" for name in species.names
+        )
+        names_render = f"""
+        <h6>Names</h6>
+        <ul class="list-group">
+            {names_inner}
+        </ul>
+        <br />
+        """.strip()
+    else:
+        names_render = ""
+
+    if species.structures:
+        structures_inner = "\n".join(
+            f"""
+            <li class='list-group-item'>
+                <img src='{reverse('draw-structure', args=[structure.pk])}'/>
+            </li>
+            """.strip()
+            for structure in species.structures
+        )
+        structures_render = f"""
+        <h6>Structures</h6>
+        <ul class="list-group">
+            {structures_inner}
+        </ul>
+        """.strip()
+    else:
+        structures_render = ""
+
+    return mark_safe(
+        f"""
+        <a
+            href="{reverse('species-detail', args=[species.pk])}"
+            class="list-group-item list-group-item-action flex-column align-items-start"
+        >
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{species.formula}</h5>
+            <small>ID: {species.pk}</small>
+        </div>
+        {names_render}
+        {structures_render}
+        </a>
+        """.strip()
+    )
+
+
+@register.filter
+def render_species_list(species):
+    return _render_card_list(render_species_list_card, species)

@@ -1,4 +1,5 @@
-{% load static %} {% load crispy_forms_tags %}
+{% load static %}
+{% load crispy_forms_tags %}
 
 <!DOCTYPE html>
 <html>
@@ -35,6 +36,12 @@
             async
             src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
         ></script>
+        <script
+            src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"
+        ></script>
+        <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
         {% if title %}
         <title>Kinetic Models Site - {{ title }}</title>
         {% else %}
@@ -154,11 +161,6 @@
             </div>
         </main>
         <!-- Bootstrap JS-->
-        <script
-            src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
-            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
-            crossorigin="anonymous"
-        ></script>
         <script
             src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"
             crossorigin="anonymous"

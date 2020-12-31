@@ -3,6 +3,7 @@ from itertools import zip_longest
 from collections import defaultdict
 from datetime import datetime
 
+from dal import autocomplete
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import transaction
@@ -32,6 +33,7 @@ from .models import (
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm, StoichiometryFormSet
+from .templatetags.renders import render_species_list_card
 
 
 class SidebarLookup:
@@ -399,16 +401,16 @@ class ReactionRevisionView(RevisionView):
 
     def form_valid(self, form):
         with transaction.atomic():
-        instance = self.save_form(form)
-        formset = self.get_formset()
-        objects = formset.save(commit=False)
-        for o in objects:
-            o.id = None
-            o.revision = True
-            o.created_by = self.request.user
-            o.created_on = datetime.now()
-            o.reaction = instance
-            o.save()
+            instance = self.save_form(form)
+            formset = self.get_formset()
+            objects = formset.save(commit=False)
+            for o in objects:
+                o.id = None
+                o.revision = True
+                o.created_by = self.request.user
+                o.created_on = datetime.now()
+                o.reaction = instance
+                o.save()
 
         return HttpResponseRedirect(self.get_success_url())
 
@@ -467,3 +469,25 @@ class ReactionRevisionApprovalView(RevisionApprovalView):
             stoich.status = ""
             stoich.reaction = reaction
             stoich.save()
+
+
+class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        queryset = Species.objects.all()
+
+        if self.q:
+            for query in ["speciesname__name__istartswith", "isomers__formula", "id"]:
+                try:
+                    filtered = queryset.filter(**{query: self.q})
+                    if filtered:
+                        return filtered
+                except ValueError:
+                    continue
+
+        return queryset if not self.q else []
+
+    def get_result_label(self, item):
+        return render_species_list_card(item)
+
+    def get_selected_result_label(self, item):
+        return str(item)
