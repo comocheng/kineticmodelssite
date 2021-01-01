@@ -476,7 +476,7 @@ class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
         queryset = Species.objects.all()
 
         if self.q:
-            for query in ["speciesname__name__istartswith", "isomers__formula", "id"]:
+            for query in ["speciesname__name__istartswith", "isomers__formula__formula", "id"]:
                 try:
                     filtered = queryset.filter(**{query: self.q})
                     if filtered:

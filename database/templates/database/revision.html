@@ -4,17 +4,24 @@
 
 {% block content %}
 <h2>{{ name }} {{ object.id }} Revision</h2>
-<form method="post">
+<form id="dynamic-form" method="post">
     {% csrf_token %}
+    {{ form|crispy }}
     {% if formset %}
+        {{ formset.management_form }}
         {% for form in formset %}
-        {{ form.media }}
-            {{ form|crispy }}
+            {{ form.media }}
+            <div class="formset-form">
+                {{ form|crispy }}
+            </div>
+            <br/>
         {% endfor %}
-        {{ form|crispy }}
-    {% else %}
-        {{ form|crispy }}
     {% endif %}
-    <input type="submit" class="btn btn-primary" value="Propose Changes">
+    <input type="submit" class="btn btn-outline-success" value="Propose Changes">
 </form>
+<script type="text/javascript">
+    $(function() {
+        $('#dynamic-form .formset-form').formset({prefix: '{{ formset.prefix }}'});
+    })
+</script>
 {% endblock %}
