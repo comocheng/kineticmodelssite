@@ -3,7 +3,6 @@ from .mixins import RevisionManagerMixin
 
 
 class SpeciesRevision(RevisionManagerMixin, Species):
-
     class Meta:
         proxy = True
 

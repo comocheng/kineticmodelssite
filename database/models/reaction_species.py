@@ -4,7 +4,7 @@ import math
 import rmgpy
 from django.db import models
 from rmgpy.molecule import Molecule
-from . import KineticModel, Kinetics, RevisionMixin
+from . import KineticModel, Kinetics, RevisionMixin, revision_str
 
 
 class Formula(models.Model):
@@ -48,6 +48,7 @@ class Species(RevisionMixin):
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     isomers = models.ManyToManyField("Isomer")
 
+    @revision_str
     def __str__(self):
         return f"{self.id} Formula: {self.formula or None}"
 
@@ -182,6 +183,7 @@ class Reaction(RevisionMixin):
     def kinetics_count(self):
         return Kinetics.objects.filter(reaction=self).count()
 
+    @revision_str
     def __str__(self):
         return f"{self.id} {self.equation}"
 

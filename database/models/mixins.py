@@ -1,3 +1,4 @@
+import functools
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -38,3 +39,19 @@ class RevisionMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+def revision_str(func):
+    @functools.wraps(func)
+    def inner(self):
+        if self.revision:
+            return (
+                f"Revision of {self.target}"
+                "| Status: {self.status}"
+                "| By: {self.created_by}"
+                "| On: {self.created_on}"
+            )
+        else:
+            return func(self)
+
+    return inner
