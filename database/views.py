@@ -322,7 +322,7 @@ class RegistrationView(FormView):
 
 class RevisionView(LoginRequiredMixin, CreateView):
     template_name = "database/revision.html"
-    login_url = "login/"
+    login_url = "/login/"
 
     def get_success_url(self):
         return reverse(self.url_name, args=[self.get_object().pk])
