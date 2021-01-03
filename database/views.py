@@ -369,40 +369,41 @@ class SpeciesRevisionView(RevisionView):
     fields = ["prime_id", "cas_number", "isomers"]
 
 
-class ReactionRevisionView(RevisionView):
-    model = Reaction
-    url_name = "reaction-detail"
-    fields = ["prime_id", "reversible"]
-    formset_class = StoichiometryFormSet
-
-    def get_formset(self):
+class FormSetRevisionView(RevisionView):
+    def get_formsets(self):
         instance = self.get_object()
+        formsets = []
 
+        for i, formset_class in enumerate(self.formset_classes):
+            prefix = f"fs{i}"
         if self.request.POST:
-            return self.formset_class(self.request.POST, instance=instance)
+                formsets.append(formset_class(self.request.POST, instance=instance, prefix=prefix))
         else:
-            return self.formset_class(instance=instance)
+                formsets.append(formset_class(instance=instance, prefix=prefix))
+
+        return formsets
 
     def post(self, request, **kwargs):
         form = self.get_form()
-        formset = self.get_formset()
+        formsets = self.get_formsets()
         self.object = self.get_object()
 
-        if form.is_valid() and formset.is_valid():
+        if all(f.is_valid() for f in [form, *formsets]):
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["formset"] = self.get_formset()
+        context["formsets"] = self.get_formsets()
 
         return context
 
     def form_valid(self, form):
         with transaction.atomic():
             instance = self.save_form(form)
-            formset = self.get_formset()
+            formsets = self.get_formsets()
+            for formset in formsets:
             objects = formset.save(commit=False)
             for o in objects:
                 o.id = None
@@ -413,6 +414,13 @@ class ReactionRevisionView(RevisionView):
                 o.save()
 
         return HttpResponseRedirect(self.get_success_url())
+
+
+class ReactionRevisionView(FormSetRevisionView):
+    model = Reaction
+    url_name = "reaction-detail"
+    fields = ["prime_id", "reversible"]
+    formset_classes = [StoichiometryFormSet]
 
 
 class RevisionApprovalView(UserPassesTestMixin, View):

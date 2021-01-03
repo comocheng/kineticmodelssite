@@ -7,14 +7,16 @@
 <form id="dynamic-form" method="post">
     {% csrf_token %}
     {{ form|crispy }}
-    {% if formset %}
+    {% if formsets %}
+        {% for formset in formsets %}
         {{ formset.management_form }}
         {% for form in formset %}
             {{ form.media }}
-            <div class="formset-form">
+                <div class="{{ formset.prefix }}-form">
                 {{ form|crispy }}
             </div>
             <br/>
+        {% endfor %}
         {% endfor %}
     {% endif %}
     <input type="submit" class="btn btn-outline-success" value="Propose Changes">
