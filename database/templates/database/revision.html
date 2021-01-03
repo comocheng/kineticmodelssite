@@ -9,21 +9,26 @@
     {{ form|crispy }}
     {% if formsets %}
         {% for formset in formsets %}
-        {{ formset.management_form }}
-        {% for form in formset %}
-            {{ form.media }}
+            {{ formset.management_form }}
+            {% for form in formset %}
+                {{ form.media }}
                 <div class="{{ formset.prefix }}-form">
-                {{ form|crispy }}
-            </div>
-            <br/>
-        {% endfor %}
+                    {{ form|crispy }}
+                </div>
+                <br/>
+            {% endfor %}
         {% endfor %}
     {% endif %}
     <input type="submit" class="btn btn-outline-success" value="Propose Changes">
 </form>
 <script type="text/javascript">
     $(function() {
-        $('#dynamic-form .formset-form').formset({prefix: '{{ formset.prefix }}'});
+        {% for formset in formsets %}
+        $('#dynamic-form .{{ formset.prefix }}-form').formset({
+            prefix: '{{ formset.prefix }}'
+            formCssClass: 'dynamic-{{ formset.prefix }}'
+        });
+        {% endfor %}
     })
 </script>
 {% endblock %}

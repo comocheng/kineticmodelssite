@@ -4,7 +4,7 @@
 {% load renders %}
 
 {% block content %}
-<h1>{{kinetic_model.model_name}}</h1>
+<h1>{{kinetic_model.model_name}}</h1><a class="btn btn-primary" href="{% url 'kinetic-model-revision' kinetic_model.pk %}">Edit</a>
 
     {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file %}
     <h2>Downloads</h2>
@@ -36,7 +36,7 @@
     </div>
     <br>
     {% endif %}
-    <br>
+    {% if thermo_transport %}
     <h2>Species</h2>
     <div class="card">
     {% for th, tr in thermo_transport %}
@@ -67,44 +67,11 @@
     <br>
     {% render_pagination objects=thermo_transport page_name="page1" %}
     <br>
+    {% endif %}
+    {% if kinetics_data %}
     <h2>Reactions</h2>
-    {% for k in kinetics_data %}
-    {% with kinetics=k.kinetics %}
-    <div class="card">
-        <a href="{% url 'reaction-detail' kinetics.reaction.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
-            <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">{{ kinetics.reaction.equation }}</h5>
-              <small>ID: {{ kinetics.reaction.pk }}</small>
-            </div>
-            {% if kinetics.reaction.prime_id %}<p>PrIMe ID: {{kinetics.reaction.prime_id}}</p>{% endif %}
-            {% if k.comment %}<p>{{ k.comment }}</p>{% endif %}
-            <small>{{ kinetics.data.kinetics_type }}</small>
-            {% with kinetics.data.table_data|last as table%}
-            <table class="table table-condensed">
-                <thead>
-                    {% for head in table.1 %}
-                    <th scope="col">{{ head }}</th>
-                    {% endfor %}
-                </thead>
-                {% for row_header, cells in table.2 %}
-                <tbody>
-                    <tr>
-                        {% if row_header %}
-                        <th scope="row">{{ row_header }}</th>
-                        {% endif %}
-                        {% for cell in cells %}
-                        <td>{{ cell }}</td>
-                        {% endfor %}
-                    </tr>
-                </tbody>
-                {% endfor %}
-            </table>
-            {% endwith %}
-        </a>
-    </div>
-    {% endwith %}
-    {% endfor %}
+    {{ kinetics_data|render_kinetics_list:True }}
     <br>
     {% render_pagination objects=kinetics_data page_name="page2" %}
-
+    {% endif %}
 {% endblock %}

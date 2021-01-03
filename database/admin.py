@@ -26,6 +26,8 @@ for name in dir(models):
             "SpeciesRevision",
             "ReactionRevision",
             "RevisionManagerMixin",
+            "KineticModelRevision",
+            "SpeciesName",
         ]
         and isinstance(obj, type)
         and issubclass(obj, Model)
@@ -71,7 +73,7 @@ class IsomerInline(ImmutablePermissionMixin, TabularInline):
 class SpeciesRevisionAdmin(admin.ModelAdmin):
     exclude = ("hash", "isomers")
     inlines = [IsomerInline]
-    url_name = "species-revision"
+    url_name = "species-approval"
     approval_view = views.SpeciesRevisionApprovalView
 
 
@@ -155,3 +157,31 @@ class KineticModelAdmin(admin.ModelAdmin):
         TransportCommentInline,
         KineticsCommentInline,
     ]
+
+
+class SpeciesNameRevisionInline(ImmutablePermissionMixin, SpeciesNameInline):
+    model = models.SpeciesNameRevision
+
+
+class KineticsCommentRevisionInline(ImmutablePermissionMixin, KineticsCommentInline):
+    model = models.KineticsCommentRevision
+
+
+class ThermoCommentRevisionInline(ImmutablePermissionMixin, ThermoCommentInline):
+    model = models.ThermoCommentRevision
+
+
+class TransportCommentRevisionInline(ImmutablePermissionMixin, TransportCommentInline):
+    model = models.TransportCommentRevision
+
+
+@admin.register(models.KineticModelRevision)
+class KineticModelRevisionAdmin(admin.ModelAdmin):
+    inlines = [
+        SpeciesNameRevisionInline,
+        ThermoCommentRevisionInline,
+        TransportCommentRevisionInline,
+        KineticsCommentRevisionInline,
+    ]
+    url_name = "kinetic-model-revision"
+    approval_view = views.KineticModelRevisionApprovalView

@@ -30,14 +30,25 @@ from .models import (
     SpeciesRevision,
     ReactionRevision,
     StoichiometryRevision,
+    KineticModelRevision,
+    SpeciesNameRevision,
+    KineticsCommentRevision,
+    ThermoCommentRevision,
+    TransportCommentRevision,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
-from .forms import RegistrationForm, StoichiometryFormSet
-from .templatetags.renders import render_species_list_card
+from .forms import (
+    RegistrationForm,
+    StoichiometryFormSet,
+    SpeciesNameFormSet,
+    KineticsCommentFormSet,
+    ThermoCommentFormSet,
+    TransportCommentFormSet,
+)
+from database.templatetags import renders
 
 
 class SidebarLookup:
-
     def __init__(self, cls, *args, **kwargs):
         cls.get = self.lookup_get(cls.get)
         cls.get_context_data = self.lookup_get_context_data(cls.get_context_data)
@@ -146,7 +157,6 @@ class SpeciesDetail(DetailView):
         species = self.get_object()
         structures = Structure.objects.filter(isomer__species=species)
         reactions = Reaction.objects.filter(species=species).order_by("id")
-        thermos = Thermo.objects.filter(species=species)
 
         names_models = defaultdict(list)
         for values in species.speciesname_set.values(
@@ -160,7 +170,7 @@ class SpeciesDetail(DetailView):
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
-        context["thermos_models"] = [(thermo, thermo.kineticmodel_set.all()) for thermo in thermos]
+        context["thermo_list"] = Thermo.objects.filter(species=species)
         context["transport_list"] = Transport.objects.filter(species=species)
         context["structures"] = structures
 
@@ -376,9 +386,9 @@ class FormSetRevisionView(RevisionView):
 
         for i, formset_class in enumerate(self.formset_classes):
             prefix = f"fs{i}"
-        if self.request.POST:
+            if self.request.POST:
                 formsets.append(formset_class(self.request.POST, instance=instance, prefix=prefix))
-        else:
+            else:
                 formsets.append(formset_class(instance=instance, prefix=prefix))
 
         return formsets
@@ -404,14 +414,14 @@ class FormSetRevisionView(RevisionView):
             instance = self.save_form(form)
             formsets = self.get_formsets()
             for formset in formsets:
-            objects = formset.save(commit=False)
-            for o in objects:
-                o.id = None
-                o.revision = True
-                o.created_by = self.request.user
-                o.created_on = datetime.now()
-                o.reaction = instance
-                o.save()
+                objects = formset.save(commit=False)
+                for o in objects:
+                    o.id = None
+                    o.revision = True
+                    o.created_by = self.request.user
+                    o.created_on = datetime.now()
+                    o.reaction = instance
+                    o.save()
 
         return HttpResponseRedirect(self.get_success_url())
 
@@ -423,7 +433,32 @@ class ReactionRevisionView(FormSetRevisionView):
     formset_classes = [StoichiometryFormSet]
 
 
+class KineticModelRevisionView(FormSetRevisionView):
+    model = KineticModel
+    url_name = "kinetic-model-detail"
+    fields = [
+        "prime_id",
+        "model_name",
+        "source",
+        "info",
+        "chemkin_reactions_file",
+        "chemkin_thermo_file",
+        "chemkin_transport_file",
+    ]
+    formset_classes = [
+        SpeciesNameFormSet,
+        KineticsCommentFormSet,
+        ThermoCommentFormSet,
+        TransportCommentFormSet,
+    ]
+
+
 class RevisionApprovalView(UserPassesTestMixin, View):
+    fields = []
+    m2m_fields = []
+    m2m_through_related_names = []
+    m2m_through_models = []
+    reverse_name = None
 
     def test_func(self):
         return self.request.user.is_staff
@@ -439,52 +474,87 @@ class RevisionApprovalView(UserPassesTestMixin, View):
 
         return HttpResponseRedirect(self.get_url())
 
+    def update_model(self, revision):
+        obj = revision.target
+
+        for field in self.fields:
+            setattr(obj, field, getattr(revision, field))
+
+        for name in self.m2m_fields:
+            m2m_field = getattr(obj, name)
+            m2m_field.clear()
+            m2m_field.add(*getattr(revision, name).all())
+
+        for name in self.related_names:
+            getattr(obj, name).all().delete()
+
+        obj.save()
+
+        for model in self.m2m_models:
+            objs = model.objects.filter(**{self.reverse_name: revision})
+            for o in objs:
+                o.revision = False
+                o.created_on = None
+                o.created_by = None
+                o.status = ""
+                setattr(o, self.reverse_name, obj)
+                o.save()
+
 
 class SpeciesRevisionApprovalView(RevisionApprovalView):
     model = SpeciesRevision
-    url_name = "species-approval"
+    fields = ["prime_id", "cas_number"]
+    m2m_fields = ["isomers"]
 
     def get_url(self):
         return reverse("admin:database_speciesrevision_changelist")
 
-    def update_model(self, revision):
-        species = revision.target
-        species.prime_id = revision.prime_id
-        species.cas_number = revision.cas_number
-        species.isomers.clear()
-        species.isomers.add(*revision.isomers.all())
-        species.save()
-
 
 class ReactionRevisionApprovalView(RevisionApprovalView):
     model = ReactionRevision
-    url_name = "reaction-approval"
+    fields = ["prime_id", "reversible"]
+    m2m_through_related_names = ["stoichiometry_set"]
+    m2m_through_models = [StoichiometryRevision]
+    reverse_name = "reaction"
 
     def get_url(self):
         return reverse("admin:database_reactionrevision_changelist")
 
-    def update_model(self, revision):
-        reaction = revision.target
-        reaction.prime_id = revision.prime_id
-        reaction.reversible = revision.reversible
-        reaction.stoichiometry_set.all().delete()
-        reaction.save()
-        new_stoichs = StoichiometryRevision.objects.filter(reaction=revision)
-        for stoich in new_stoichs:
-            stoich.revision = False
-            stoich.created_on = None
-            stoich.created_by = None
-            stoich.status = ""
-            stoich.reaction = reaction
-            stoich.save()
+
+class KineticModelRevisionApprovalView(RevisionApprovalView):
+    model = KineticModelRevision
+    fields = [
+        "prime_id",
+        "model_name",
+        "info",
+        "chemkin_reactions_file",
+        "chemkin_thermo_file",
+        "chemkin_transport_file",
+    ]
+    m2m_through_related_names = [
+        "speciesname_set",
+        "kineticscomment_set",
+        "transportcomment_set",
+        "thermocomment_set",
+    ]
+    m2m_through_models = [
+        SpeciesNameRevision,
+        KineticsCommentRevision,
+        ThermoCommentRevision,
+        TransportCommentRevision,
+    ]
+    reverse_name = "kinetic_model"
+
+    def get_url(self):
+        return reverse("admin:database_kineticmodelrevision_changelist")
 
 
-class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
+class AutocompleteView(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        queryset = Species.objects.all()
+        queryset = self.model.objects.all()
 
         if self.q:
-            for query in ["speciesname__name__istartswith", "isomers__formula__formula", "id"]:
+            for query in self.queries:
                 try:
                     filtered = queryset.filter(**{query: self.q})
                     if filtered:
@@ -495,7 +565,63 @@ class SpeciesAutocomplete(autocomplete.Select2QuerySetView):
         return queryset if not self.q else []
 
     def get_result_label(self, item):
-        return render_species_list_card(item)
+        return self.card_render_func(item)
 
     def get_selected_result_label(self, item):
         return str(item)
+
+
+class SpeciesAutocompleteView(AutocompleteView):
+    model = Species
+    queries = [
+        "speciesname__name__istartswith",
+        "isomers__formula__formula",
+        "prime_id",
+        "cas_number",
+        "id",
+    ]
+
+    def card_render_func(self, item):
+        return renders.render_species_list_card(item)
+
+
+class KineticsAutocompleteView(AutocompleteView):
+    model = Kinetics
+    queries = [
+        "prime_id__istartswith",
+        "source__authors__lastname__istartswith",
+        "source__authors__firstname__istartswith",
+        "source__source_title_istartswith",
+        "id",
+    ]
+
+    def card_render_func(self, *args, **kwargs):
+        return renders.render_kinetics_list_card(*args, is_comment=False, **kwargs)
+
+
+class ThermoAutocompleteView(AutocompleteView):
+    model = Thermo
+    card_render_func = renders.render_thermo_list_card
+    queries = [
+        "prime_id__istartswith",
+        "species__speciesname__name__istartswith",
+        "species__isomers__formula__formula",
+        "source__authors__lastname__istartswith",
+        "source__authors__firstname__istartswith",
+        "source__source_title_istartswith",
+        "id",
+    ]
+
+
+class TransportAutocompleteView(AutocompleteView):
+    model = Transport
+    card_render_func = renders.render_transport_list_card
+    queries = [
+        "prime_id__istartswith",
+        "species__speciesname__name__istartswith",
+        "species__isomers__formula__formula",
+        "source__authors__lastname__istartswith",
+        "source__authors__firstname__istartswith",
+        "source__source_title_istartswith",
+        "id",
+    ]

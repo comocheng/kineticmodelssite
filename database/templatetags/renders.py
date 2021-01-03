@@ -65,7 +65,7 @@ def render_transport_table(transport, condensed=False):
     return mark_safe("<table></table>")
 
 
-def _render_reaction_list_card(reaction):
+def render_reaction_list_card(reaction):
     prime_id_render = f"<p>PrIMe ID: {reaction.prime_id}</p>" if reaction.prime_id else ""
     rates = pluralize(reaction.kinetics_count, "Rate")
     models = pluralize(reaction.kinetic_model_count, "Kinetic Model")
@@ -95,23 +95,21 @@ def _render_reaction_list_card(reaction):
     )
 
 
-def _render_card_list(card_render_func, objects):
+def _render_card_list(card_render_func, objects, **kwargs):
     cards = "\n".join(card_render_func(o) for o in objects)
 
     return mark_safe(
-        """
+        f"""
         <div class="list-group">
             {cards}
         </div>
-        """.format(
-            cards=cards
-        )
+        """
     )
 
 
 @register.filter
 def render_reaction_list(reactions):
-    return _render_card_list(_render_reaction_list_card, reactions)
+    return _render_card_list(render_reaction_list_card, reactions)
 
 
 @register.simple_tag(takes_context=True)
@@ -223,3 +221,177 @@ def render_species_list_card(species):
 @register.filter
 def render_species_list(species):
     return _render_card_list(render_species_list_card, species)
+
+
+@register.filter
+def render_kinetics_list_card(kinetics, is_comment=False):
+    if is_comment:
+        comment = kinetics.comment
+        kinetics = kinetics.kinetics
+    else:
+        comment = None
+
+    reaction_url = reverse("reaction-detail", args=[kinetics.reaction.pk])
+    if kinetics.reaction.prime_id:
+        prime_id_render = f"<p>PrIMe ID: {kinetics.reaction.prime_id}</p>"
+    else:
+        prime_id_render = ""
+    comment_render = f"<p>{comment}</p>" if is_comment and comment else ""
+    table = kinetics.data.table_data()[-1]
+    heads = "\n".join(f"<th scope='col'>{head}</th>" for head in table[1])
+    head = f"""
+    <thead>
+        {heads}
+    </thead>
+    """.strip()
+    bodies = []
+    for row_header, cells in table[2]:
+        row_header_render = f"<th scope='row'>{row_header}</th>" if row_header else ""
+        cell_render = "\n".join(f"<td>{cell}<td>" for cell in cells)
+        bodies.append(
+            f"""
+            <tbody>
+                <tr>
+                    {row_header_render}
+                    {cell_render}
+                </tr>
+            </tbody>
+            """.strip()
+        )
+    bodies_render = "\n".join(bodies)
+
+    return mark_safe(
+        f"""
+        <div class="card">
+            <a href="{reaction_url}"
+            class="list-group-item list-group-item-action flex-column align-items-start"
+            >
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{kinetics.reaction.equation}</h5>
+                    <small>ID: {kinetics.reaction.pk}</small>
+                </div>
+                {prime_id_render}
+                {comment_render}
+                <small>{kinetics.data.kinetics_type}</small>
+                <table class="table table-condensed">
+                    {head}
+                    {bodies_render}
+                </table>
+            </a>
+        </div>
+        """.strip()
+    )
+
+
+@register.filter
+def render_kinetics_list(kinetics, is_comment=True):
+    return _render_card_list(render_kinetics_list_card, kinetics, is_comment=is_comment)
+
+
+def render_thermo_list_card(thermo):
+    models = thermo.kineticmodel_set.all()
+    if models:
+        model_renders = "\n".join(
+            (
+                '<a class="list-group-item list-group-item-action flex-column align-items-start"'
+                f'href="{reverse("kinetic-model-detail", args=[model.pk])}">{model.model_name}</a>'
+            )
+            for model in models
+        )
+        models_render = f"""
+        <h6>Models</h6>
+        <div class="list-group">
+            {model_renders}
+        </div>
+        """.strip()
+    else:
+        models_render = ""
+    thermo_url = reverse("thermo-detail", args=[thermo.pk])
+    return mark_safe(
+        fr"""
+        <div class="list-group-item list-group-item-action flex-column align-items-start">
+            <a href="{thermo_url}"
+                class="list-group-item-action"
+            >
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        $\Delta H_f \, (298 \, K):{thermo.enthalpy298():.1f} \, \frac{{J}}{{mol}}$
+                        <br>
+                        $S \, (298 \, K):{thermo.entropy298():.1f} \, \frac{{J}}{{mol-K}}$
+                    </h5>
+                    <small>ID: {thermo.pk}</small>
+                </div>
+                <br />
+                {models_render}
+            </a>
+        </div>
+        """
+    )
+
+
+@register.filter
+def render_thermo_list(thermo_list):
+    return _render_card_list(render_thermo_list_card, thermo_list)
+
+
+def render_transport_list_card(transport):
+    models = transport.kineticmodel_set.all()
+    if models:
+        model_renders = "\n".join(
+            (
+                '<a class="list-group-item list-group-item-action flex-column align-items-start"'
+                f'href="{reverse("kinetic-model-detail", args=[model.pk])}">{model.model_name}</a>'
+            )
+            for model in models
+        )
+        models_render = f"""
+        <br/>
+        <h6>Models</h6>
+        <div class="list-group">
+            {model_renders}
+        </div>
+        """.strip()
+    else:
+        models_render = ""
+    prime_id_render = f'<h5 class="mb-1">{transport.prime_id}</h5>' if transport.prime_id else ""
+    info_render = fr"""
+    <br />
+    <ul class="list-group">
+        <li class="list-group-item">Geometry: {transport.geometry}</li>
+        <li class="list-group-item">
+            Potential Well Depth: $\SI{{{transport.potential_well_depth}}}{{K}}$
+        </li>
+        <li class="list-group-item">
+            Collision Diameter: $\SI{{{transport.collision_diameter}}}{{\angstrom}}$
+        </li>
+        <li class="list-group-item">Dipole Moment: $\SI{{{transport.dipole_moment}}}{{\debye}}$</li>
+        <li class="list-group-item">
+            Polarizability: $\SI{{{transport.polarizability}}}{{\angstrom^3}}$
+        </li>
+        <li class="list-group-item">
+            Rotational Relaxation: ${transport.rotational_relaxation}$
+        </li>
+    </ul>
+    """
+    transport_url = reverse("transport_detail", args=[transport.pk])
+    return mark_safe(
+        fr"""
+        <div class="list-group-item list-group-item-action flex-column align-items-start">
+            <a href="{transport_url}"
+                class="list-group-item-action"
+            >
+                <div class="d-flex w-100 justify-content-between">
+                    {prime_id_render}
+                    <small>ID: {transport.pk}</small>
+                </div>
+                {info_render}
+                {models_render}
+            </a>
+        </div>
+        """.strip()
+    )
+
+
+@register.filter
+def render_transport_list(transport_list):
+    return _render_card_list(render_transport_list_card, transport_list)
