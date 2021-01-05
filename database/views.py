@@ -12,8 +12,10 @@ from django.views.generic import TemplateView, DetailView
 from django.views.generic.edit import FormView
 from django_filters.views import FilterView
 from django.http import HttpResponse
+from django.utils.html import format_html
 from rmgpy.molecule.draw import MoleculeDrawer
 
+from database import models
 from .models import (
     BaseKineticsData,
     Species,
@@ -327,12 +329,6 @@ class AutocompleteView(autocomplete.Select2QuerySetView):
 
         return queryset if not self.q else []
 
-    def get_result_label(self, item):
-        return self.card_render_func(item)
-
-    def get_selected_result_label(self, item):
-        return str(item)
-
 
 class SpeciesAutocompleteView(AutocompleteView):
     model = Species
@@ -344,5 +340,22 @@ class SpeciesAutocompleteView(AutocompleteView):
         "id",
     ]
 
-    def card_render_func(self, item):
+    def get_result_label(self, item):
         return renders.render_species_list_card(item)
+
+    def get_selected_result_label(self, item):
+        return str(item)
+
+
+class IsomerAutocompleteView(AutocompleteView):
+    model = models.Isomer
+    queries = ["inchi__istartswith", "formula__formula__istartswith", "id"]
+
+
+class StructureAutocompleteView(AutocompleteView):
+    model = models.Structure
+    queries = ["adjacency_list__istartswith", "smiles__istartswith", "multiplicity", "id"]
+
+    def get_result_label(self, item):
+        draw_url = reverse("draw-structure", args=[item.pk])
+        return format_html(f'<img src="{draw_url}" />')

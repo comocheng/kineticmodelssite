@@ -6,7 +6,8 @@
 
 {% block content %}
 <h1>Species Search</h1>
-<form action="" method="get">
+<form method="get">
+    {{ filter.form.media }}
     {{ filter.form|crispy }}
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
