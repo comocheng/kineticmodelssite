@@ -315,9 +315,9 @@ def render_thermo_list_card(thermo):
             >
                 <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">
-                        $\Delta H_f \, (298 \, K):{thermo.enthalpy298():.1f} \, \frac{{J}}{{mol}}$
+                        $\Delta H_f \, (298 \, K):{thermo.enthalpy298:.1f} \, \frac{{J}}{{mol}}$
                         <br>
-                        $S \, (298 \, K):{thermo.entropy298():.1f} \, \frac{{J}}{{mol-K}}$
+                        $S \, (298 \, K):{thermo.entropy298:.1f} \, \frac{{J}}{{mol-K}}$
                     </h5>
                     <small>ID: {thermo.pk}</small>
                 </div>
