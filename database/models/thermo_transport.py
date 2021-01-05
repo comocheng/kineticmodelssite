@@ -95,7 +95,12 @@ class Thermo(models.Model):
             )
 
     def __str__(self):
-        return f"{self.id} Species: {self.species.id} H298: {self.enthalpy298:g} S298: {self.entropy298:g}"
+        return (
+            f"{self.id} "
+            f"Species: {self.species.id} "
+            f"H298: {self.enthalpy298:g} "
+            f"S298: {self.entropy298:g}"
+        )
 
 
 class Transport(models.Model):

@@ -76,4 +76,9 @@ class Authorship(models.Model):
         ordering = ("order",)
 
     def __str__(self):
-        return f"{self.id} Author: {self.author}, Source: {self.source.source_title}, Order: {self.order}"
+        return (
+            f"{self.id} "
+            f"Author: {self.author}, "
+            f"Source: {self.source.source_title}, "
+            f"Order: {self.order}"
+        )
