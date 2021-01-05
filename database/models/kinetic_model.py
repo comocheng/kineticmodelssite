@@ -20,30 +20,6 @@ def upload_transport_to(instance, _):
 
 
 class KineticModel(models.Model):
-    """
-    A kinetic model.
-
-    Should have one of these:
-     * source # eg. citation
-     * chemkin_reactions_file
-     * chemkin_thermo_file
-     * chemkin_transport_file
-
-    And many of these:
-     * species, liked via species name?
-     * kinetics, each of which have a unique reaction, linked through comments
-
-    This is the equivalent of 'Models' in PrIMe, which contain:
-    ******in catalog*******
-    model name
-    species involved
-        thermo
-        transport
-    reactions involved
-        kinetics
-    additional info
-    """
-
     model_name = models.CharField(max_length=200, unique=True)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
     species = models.ManyToManyField("Species", through="SpeciesName")
@@ -74,9 +50,6 @@ class SpeciesName(models.Model):
 
     def __str__(self):
         return self.name
-
-    class Meta:
-        verbose_name_plural = "Alternative Species Names"
 
 
 class KineticsComment(models.Model):
@@ -111,11 +84,6 @@ class ThermoComment(models.Model):
 
     def __str__(self):
         return self.comment
-
-        # class Element(models.Model):
-        #     isotope massnumber
-        #     isotope relativeatomicmass
-        #     atomicmass uncertainty
 
 
 class TransportComment(models.Model):

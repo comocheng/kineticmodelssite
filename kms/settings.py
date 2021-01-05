@@ -12,12 +12,22 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 
+from pathlib import Path
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
+root = Path(".")
+prod_path = root / ".env"
+dev_path = root / ".env.dev"
+if prod_path.exists():
+    load_dotenv(dotenv_path=prod_path)
+else:
+    load_dotenv(dotenv_path=dev_path)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
@@ -31,6 +41,9 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(" ")
 # Application definition
 
 INSTALLED_APPS = [
+    "database.apps.DatabaseConfig",
+    "dal",
+    "dal_select2",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -40,7 +53,6 @@ INSTALLED_APPS = [
     "django_filters",
     "django_extensions",
     "crispy_forms",
-    "database.apps.DatabaseConfig",
 ]
 
 MIDDLEWARE = [
@@ -83,7 +95,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB"),
         "USER": os.getenv("POSTGRES_USER"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": "db",
+        "HOST": os.getenv("DB_HOST"),
         "PORT": 5432,
     }
 }

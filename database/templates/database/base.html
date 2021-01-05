@@ -1,4 +1,5 @@
-{% load static %} {% load crispy_forms_tags %}
+{% load static %}
+{% load crispy_forms_tags %}
 
 <!DOCTYPE html>
 <html>
@@ -35,6 +36,13 @@
             async
             src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
         ></script>
+        <script
+            src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"
+        ></script>
+        <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+        <script type="text/javascript" src="{% static 'database/jquery.formset.js' %}"></script>
         {% if title %}
         <title>Kinetic Models Site - {{ title }}</title>
         {% else %}
@@ -70,6 +78,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'source-search' %}">Source Search</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
                 </ul>
                 <form class="form-inline my-2 my-lg-0">
                     <input
@@ -85,7 +99,7 @@
             </div>
         </nav>
         <br>
-        <main role="main" class="container">
+        <main role="main" class="container-fluid">
             <div class="row">
                 <div class="col-md-8">{% block content %}{% endblock %}</div>
                 <div class="col-md-4">
@@ -148,11 +162,6 @@
             </div>
         </main>
         <!-- Bootstrap JS-->
-        <script
-            src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
-            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
-            crossorigin="anonymous"
-        ></script>
         <script
             src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"
             crossorigin="anonymous"

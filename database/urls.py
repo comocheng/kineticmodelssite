@@ -3,6 +3,22 @@ from database import views
 
 urlpatterns = [
     path(r"", views.BaseView.as_view(), name="home"),
+    path(r"register/", views.RegistrationView.as_view(), name="register"),
+    path(
+        r"isomer-autocomplete/",
+        views.IsomerAutocompleteView.as_view(),
+        name="isomer-autocomplete",
+    ),
+    path(
+        r"structure-autocomplete/",
+        views.StructureAutocompleteView.as_view(),
+        name="structure-autocomplete",
+    ),
+    path(
+        r"species-autocomplete/",
+        views.SpeciesAutocompleteView.as_view(),
+        name="species-autocomplete",
+    ),
     path(
         r"species_search/",
         views.SpeciesFilterView.as_view(),

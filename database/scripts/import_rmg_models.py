@@ -213,11 +213,11 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
         if created:
             for stoich_coeff, species in stoich_data:
                 models.Stoichiometry.objects.create(
-                    reaction=reaction, species=species, stoichiometry=stoich_coeff
+                    reaction=reaction, species=species, coeff=stoich_coeff
                 )
 
-        stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
-        stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
+        stoich_reactants = reaction.stoichiometry_set.filter(coeff__lte=0)
+        stoich_products = reaction.stoichiometry_set.filter(coeff__gte=0)
         if not (stoich_reactants or stoich_products):
             reactants_or_products = "reactants" if not stoich_reactants else "products"
             raise IntegrityError(f"Reaction cannot have zero {reactants_or_products}")

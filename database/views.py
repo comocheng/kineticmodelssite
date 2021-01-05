@@ -2,15 +2,20 @@ import functools
 from itertools import zip_longest
 from collections import defaultdict
 
+from dal import autocomplete
+from django.contrib.auth import login
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views import View
 from django.views.generic import TemplateView, DetailView
+from django.views.generic.edit import FormView
 from django_filters.views import FilterView
 from django.http import HttpResponse
+from django.utils.html import format_html
 from rmgpy.molecule.draw import MoleculeDrawer
 
+from database import models
 from .models import (
     BaseKineticsData,
     Species,
@@ -23,6 +28,8 @@ from .models import (
     Kinetics,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
+from .forms import RegistrationForm
+from database.templatetags import renders
 
 
 class SidebarLookup:
@@ -134,7 +141,6 @@ class SpeciesDetail(DetailView):
         species = self.get_object()
         structures = Structure.objects.filter(isomer__species=species)
         reactions = Reaction.objects.filter(species=species).order_by("id")
-        thermos = Thermo.objects.filter(species=species)
 
         names_models = defaultdict(list)
         for values in species.speciesname_set.values(
@@ -145,11 +151,10 @@ class SpeciesDetail(DetailView):
                 names_models[name].append((model_name, model_id))
 
         context["names_models"] = sorted(list(names_models.items()), key=lambda x: -len(x[1]))
-        print(context["names_models"])
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
-        context["thermos_models"] = [(thermo, thermo.kineticmodel_set.all()) for thermo in thermos]
+        context["thermo_list"] = Thermo.objects.filter(species=species)
         context["transport_list"] = Transport.objects.filter(species=species)
         context["structures"] = structures
 
@@ -216,15 +221,8 @@ class ReactionDetail(DetailView):
         context = super().get_context_data(**kwargs)
         reaction = self.get_object()
 
-        try:
-            reactants = reaction.stoich_reactants()
-            products = reaction.stoich_products()
-        except NotImplementedError:
-            reactants = reaction.reactants()
-            products = reaction.products()
-
-        context["reactants"] = reactants
-        context["products"] = products
+        context["reactants"] = reaction.reactants()
+        context["products"] = reaction.products()
         context["kinetics_modelnames"] = [
             (k, k.kineticmodel_set.values_list("model_name", flat=True))
             for k in reaction.kinetics_set.all()
@@ -302,3 +300,62 @@ class DrawStructure(View):
         response = HttpResponse(surface.write_to_png(), content_type="image/png")
 
         return response
+
+
+class RegistrationView(FormView):
+    template_name = "database/register.html"
+    form_class = RegistrationForm
+    success_url = "/"
+
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+
+        return super().form_valid(form)
+
+
+class AutocompleteView(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        queryset = self.model.objects.all()
+
+        if self.q:
+            for query in self.queries:
+                try:
+                    filtered = queryset.filter(**{query: self.q})
+                    if filtered:
+                        return filtered
+                except ValueError:
+                    continue
+
+        return queryset if not self.q else []
+
+
+class SpeciesAutocompleteView(AutocompleteView):
+    model = Species
+    queries = [
+        "speciesname__name__istartswith",
+        "isomers__formula__formula",
+        "prime_id",
+        "cas_number",
+        "id",
+    ]
+
+    def get_result_label(self, item):
+        return renders.render_species_list_card(item)
+
+    def get_selected_result_label(self, item):
+        return str(item)
+
+
+class IsomerAutocompleteView(AutocompleteView):
+    model = models.Isomer
+    queries = ["inchi__istartswith", "formula__formula__istartswith", "id"]
+
+
+class StructureAutocompleteView(AutocompleteView):
+    model = models.Structure
+    queries = ["adjacency_list__istartswith", "smiles__istartswith", "multiplicity", "id"]
+
+    def get_result_label(self, item):
+        draw_url = reverse("draw-structure", args=[item.pk])
+        return format_html(f'<img src="{draw_url}" />')
