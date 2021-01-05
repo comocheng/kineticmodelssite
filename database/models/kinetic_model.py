@@ -1,7 +1,6 @@
 import os
 
 from django.db import models
-from database.models import RevisionMixin, revision_str
 
 
 def upload_to(instance, filename):
@@ -20,8 +19,8 @@ def upload_transport_to(instance, _):
     return upload_to(instance, "chemkin_transport.txt")
 
 
-class KineticModel(RevisionMixin):
-    model_name = models.CharField(max_length=200)
+class KineticModel(models.Model):
+    model_name = models.CharField(max_length=200, unique=True)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
     species = models.ManyToManyField("Species", through="SpeciesName")
     kinetics = models.ManyToManyField("Kinetics", through="KineticsComment")
@@ -35,14 +34,12 @@ class KineticModel(RevisionMixin):
 
     class Meta:
         verbose_name_plural = "Kinetic Models"
-        unique_together = ("model_name", "revision", "created_on")
 
-    @revision_str
     def __str__(self):
         return "{s.id} {s.model_name}".format(s=self)
 
 
-class SpeciesName(RevisionMixin):
+class SpeciesName(models.Model):
     """
     A Species Name specific to a given Kinetic Model
     """
@@ -55,7 +52,7 @@ class SpeciesName(RevisionMixin):
         return self.name
 
 
-class KineticsComment(RevisionMixin):
+class KineticsComment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
 
@@ -72,7 +69,7 @@ class KineticsComment(RevisionMixin):
         return self.comment
 
 
-class ThermoComment(RevisionMixin):
+class ThermoComment(models.Model):
     """
     The comment that a kinetic model made about a thermo entry it used.
 
@@ -89,7 +86,7 @@ class ThermoComment(RevisionMixin):
         return self.comment
 
 
-class TransportComment(RevisionMixin):
+class TransportComment(models.Model):
     transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)

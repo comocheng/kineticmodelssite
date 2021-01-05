@@ -51,7 +51,9 @@ class Arrhenius(BaseKineticsData):
         verbose_name_plural = "Arrhenius"
 
     def __str__(self):
-        return f"{self.id} A:{self.a_value:g} n: {self.n_value:g} E: {self.e_value:g}".format(s=self)
+        return f"{self.id} A:{self.a_value:g} n: {self.n_value:g} E: {self.e_value:g}".format(
+            s=self
+        )
 
     def to_rmg(self):
         """
@@ -108,11 +110,8 @@ class ArrheniusEP(BaseKineticsData):
     class Meta:
         verbose_name_plural = "ArrheniusEP"
 
-
     def to_rmg(self):
-        return kinetics.ArrheniusEP(
-            A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0
-        )
+        return kinetics.ArrheniusEP(A=self.a, n=self.n, alpha=self.ep_alpha, E0=self.e0)
 
     def table_data(self):
         return [
@@ -189,7 +188,6 @@ class MultiPDepArrhenius(BaseKineticsData):
 
     class Meta:
         verbose_name_plural = "MultiPDepArrhenius"
-
 
     def to_rmg(self):
         return kinetics.MultiPdepArrhenius(

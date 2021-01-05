@@ -4,7 +4,7 @@ import math
 import rmgpy
 from django.db import models
 from rmgpy.molecule import Molecule
-from . import KineticModel, Kinetics, RevisionMixin, revision_str
+from . import KineticModel, Kinetics
 
 
 class Formula(models.Model):
@@ -42,13 +42,12 @@ class Structure(models.Model):
         return Molecule().from_adjacency_list(self.adjacency_list)
 
 
-class Species(RevisionMixin):
-    hash = models.CharField(max_length=32)
+class Species(models.Model):
+    hash = models.CharField(max_length=32, unique=True)
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     isomers = models.ManyToManyField("Isomer")
 
-    @revision_str
     def __str__(self):
         return f"{self.id} Formula: {self.formula or None}"
 
@@ -62,7 +61,6 @@ class Species(RevisionMixin):
 
     class Meta:
         verbose_name_plural = "Species"
-        unique_together = ("hash", "revision", "created_on")
 
     @property
     def names(self):
@@ -80,15 +78,14 @@ class Species(RevisionMixin):
             return self.isomers.first().formula.formula
 
 
-class Reaction(RevisionMixin):
-    hash = models.CharField(max_length=32)
+class Reaction(models.Model):
+    hash = models.CharField(max_length=32, unique=True)
     species = models.ManyToManyField("Species", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
 
     class Meta:
         ordering = ("prime_id",)
-        unique_together = ("hash", "revision", "created_on")
 
     def stoich_species(self):
         """
@@ -183,7 +180,6 @@ class Reaction(RevisionMixin):
     def kinetics_count(self):
         return Kinetics.objects.filter(reaction=self).count()
 
-    @revision_str
     def __str__(self):
         return f"{self.id} {self.equation}"
 
@@ -212,7 +208,7 @@ class Reaction(RevisionMixin):
         return f"{left_side} {arrow} {right_side}"
 
 
-class Stoichiometry(RevisionMixin):
+class Stoichiometry(models.Model):
     """
     The number of molecules or atoms of a species that participate in a reaction .
 
@@ -228,7 +224,7 @@ class Stoichiometry(RevisionMixin):
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
-        unique_together = ("species", "reaction", "coeff", "revision", "created_on")
+        unique_together = ("species", "reaction", "coeff")
 
     def __str__(self):
         return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(

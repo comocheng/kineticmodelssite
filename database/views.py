@@ -1,18 +1,15 @@
 import functools
 from itertools import zip_longest
 from collections import defaultdict
-from datetime import datetime
 
 from dal import autocomplete
 from django.contrib.auth import login
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views import View
 from django.views.generic import TemplateView, DetailView
-from django.views.generic.edit import FormView, CreateView
+from django.views.generic.edit import FormView
 from django_filters.views import FilterView
 from django.http import HttpResponse
 from rmgpy.molecule.draw import MoleculeDrawer
@@ -27,24 +24,9 @@ from .models import (
     Source,
     Reaction,
     Kinetics,
-    SpeciesRevision,
-    ReactionRevision,
-    StoichiometryRevision,
-    KineticModelRevision,
-    SpeciesNameRevision,
-    KineticsCommentRevision,
-    ThermoCommentRevision,
-    TransportCommentRevision,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
-from .forms import (
-    RegistrationForm,
-    StoichiometryFormSet,
-    SpeciesNameFormSet,
-    KineticsCommentFormSet,
-    ThermoCommentFormSet,
-    TransportCommentFormSet,
-)
+from .forms import RegistrationForm
 from database.templatetags import renders
 
 
@@ -330,225 +312,6 @@ class RegistrationView(FormView):
         return super().form_valid(form)
 
 
-class RevisionView(LoginRequiredMixin, CreateView):
-    template_name = "database/revision.html"
-    login_url = "/login/"
-
-    def get_success_url(self):
-        return reverse(self.url_name, args=[self.get_object().pk])
-
-    def get_object(self):
-        return self.model.objects.get(id=self.kwargs.get("pk"))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        obj = self.get_object()
-        context["object"] = obj
-        context["name"] = obj.__class__.__name__
-
-        return context
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["instance"] = self.get_object()
-
-        return kwargs
-
-    def save_form(self, form):
-        self.object = form.save(commit=False)
-        self.object.id = None
-        self.object.revision = True
-        self.object.created_by = self.request.user
-        self.object.created_on = datetime.now()
-        self.object.target = self.get_object()
-        self.object.status = self.object.PENDING
-        self.object.save()
-        form.save_m2m()
-
-        return self.object
-
-    def form_valid(self, form):
-        self.save_form(form)
-
-        return HttpResponseRedirect(self.get_success_url())
-
-
-class SpeciesRevisionView(RevisionView):
-    model = Species
-    url_name = "species-detail"
-    fields = ["prime_id", "cas_number", "isomers"]
-
-
-class FormSetRevisionView(RevisionView):
-    def get_formsets(self):
-        instance = self.get_object()
-        formsets = []
-
-        for i, formset_class in enumerate(self.formset_classes):
-            prefix = f"fs{i}"
-            if self.request.POST:
-                formsets.append(formset_class(self.request.POST, instance=instance, prefix=prefix))
-            else:
-                formsets.append(formset_class(instance=instance, prefix=prefix))
-
-        return formsets
-
-    def post(self, request, **kwargs):
-        form = self.get_form()
-        formsets = self.get_formsets()
-        self.object = self.get_object()
-
-        if all(f.is_valid() for f in [form, *formsets]):
-            return self.form_valid(form)
-        else:
-            return self.form_invalid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["formsets"] = self.get_formsets()
-
-        return context
-
-    def form_valid(self, form):
-        with transaction.atomic():
-            instance = self.save_form(form)
-            formsets = self.get_formsets()
-            for formset in formsets:
-                objects = formset.save(commit=False)
-                for o in objects:
-                    o.id = None
-                    o.revision = True
-                    o.created_by = self.request.user
-                    o.created_on = datetime.now()
-                    o.reaction = instance
-                    o.save()
-
-        return HttpResponseRedirect(self.get_success_url())
-
-
-class ReactionRevisionView(FormSetRevisionView):
-    model = Reaction
-    url_name = "reaction-detail"
-    fields = ["prime_id", "reversible"]
-    formset_classes = [StoichiometryFormSet]
-
-
-class KineticModelRevisionView(FormSetRevisionView):
-    model = KineticModel
-    url_name = "kinetic-model-detail"
-    fields = [
-        "prime_id",
-        "model_name",
-        "source",
-        "info",
-        "chemkin_reactions_file",
-        "chemkin_thermo_file",
-        "chemkin_transport_file",
-    ]
-    formset_classes = [
-        SpeciesNameFormSet,
-        KineticsCommentFormSet,
-        ThermoCommentFormSet,
-        TransportCommentFormSet,
-    ]
-
-
-class RevisionApprovalView(UserPassesTestMixin, View):
-    fields = []
-    m2m_fields = []
-    m2m_through_related_names = []
-    m2m_through_models = []
-    reverse_name = None
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get_object(self):
-        return self.model.objects.get(id=self.kwargs.get("pk"))
-
-    def post(self, request, pk):
-        revision = self.get_object()
-        self.update_model(revision)
-        revision.status = revision.APPROVED
-        revision.save()
-
-        return HttpResponseRedirect(self.get_url())
-
-    def update_model(self, revision):
-        obj = revision.target
-
-        for field in self.fields:
-            setattr(obj, field, getattr(revision, field))
-
-        for name in self.m2m_fields:
-            m2m_field = getattr(obj, name)
-            m2m_field.clear()
-            m2m_field.add(*getattr(revision, name).all())
-
-        for name in self.related_names:
-            getattr(obj, name).all().delete()
-
-        obj.save()
-
-        for model in self.m2m_models:
-            objs = model.objects.filter(**{self.reverse_name: revision})
-            for o in objs:
-                o.revision = False
-                o.created_on = None
-                o.created_by = None
-                o.status = ""
-                setattr(o, self.reverse_name, obj)
-                o.save()
-
-
-class SpeciesRevisionApprovalView(RevisionApprovalView):
-    model = SpeciesRevision
-    fields = ["prime_id", "cas_number"]
-    m2m_fields = ["isomers"]
-
-    def get_url(self):
-        return reverse("admin:database_speciesrevision_changelist")
-
-
-class ReactionRevisionApprovalView(RevisionApprovalView):
-    model = ReactionRevision
-    fields = ["prime_id", "reversible"]
-    m2m_through_related_names = ["stoichiometry_set"]
-    m2m_through_models = [StoichiometryRevision]
-    reverse_name = "reaction"
-
-    def get_url(self):
-        return reverse("admin:database_reactionrevision_changelist")
-
-
-class KineticModelRevisionApprovalView(RevisionApprovalView):
-    model = KineticModelRevision
-    fields = [
-        "prime_id",
-        "model_name",
-        "info",
-        "chemkin_reactions_file",
-        "chemkin_thermo_file",
-        "chemkin_transport_file",
-    ]
-    m2m_through_related_names = [
-        "speciesname_set",
-        "kineticscomment_set",
-        "transportcomment_set",
-        "thermocomment_set",
-    ]
-    m2m_through_models = [
-        SpeciesNameRevision,
-        KineticsCommentRevision,
-        ThermoCommentRevision,
-        TransportCommentRevision,
-    ]
-    reverse_name = "kinetic_model"
-
-    def get_url(self):
-        return reverse("admin:database_kineticmodelrevision_changelist")
-
-
 class AutocompleteView(autocomplete.Select2QuerySetView):
     def get_queryset(self):
         queryset = self.model.objects.all()
@@ -583,45 +346,3 @@ class SpeciesAutocompleteView(AutocompleteView):
 
     def card_render_func(self, item):
         return renders.render_species_list_card(item)
-
-
-class KineticsAutocompleteView(AutocompleteView):
-    model = Kinetics
-    queries = [
-        "prime_id__istartswith",
-        "source__authors__lastname__istartswith",
-        "source__authors__firstname__istartswith",
-        "source__source_title_istartswith",
-        "id",
-    ]
-
-    def card_render_func(self, *args, **kwargs):
-        return renders.render_kinetics_list_card(*args, is_comment=False, **kwargs)
-
-
-class ThermoAutocompleteView(AutocompleteView):
-    model = Thermo
-    card_render_func = renders.render_thermo_list_card
-    queries = [
-        "prime_id__istartswith",
-        "species__speciesname__name__istartswith",
-        "species__isomers__formula__formula",
-        "source__authors__lastname__istartswith",
-        "source__authors__firstname__istartswith",
-        "source__source_title_istartswith",
-        "id",
-    ]
-
-
-class TransportAutocompleteView(AutocompleteView):
-    model = Transport
-    card_render_func = renders.render_transport_list_card
-    queries = [
-        "prime_id__istartswith",
-        "species__speciesname__name__istartswith",
-        "species__isomers__formula__formula",
-        "source__authors__lastname__istartswith",
-        "source__authors__firstname__istartswith",
-        "source__source_title_istartswith",
-        "id",
-    ]
