@@ -5,6 +5,8 @@ A django site for kinetic models
 
 
 ## Development Setup
+
+### Using Docker for App and Database
 Clone the project and set up [docker](https://www.docker.com/products/docker-desktop) and [docker-compose](https://docs.docker.com/compose/install/) (on desktop systems like Docker Desktop for Mac and Windows, Docker Compose is included as part of the Docker Desktop install). Be sure to launch the Docker.app (or ensure the docker daemon is running) before trying to run docker-compose commands.
 
 For the first time, you need to run the initial migrations, which use [RMG-models](https://github.com/comocheng/RMG-models).
@@ -25,11 +27,37 @@ busybox cp -av "/source/." "/target/"
 
 Then run:
 
-```docker-compose up```
+```docker-compose up -d```
 
 If you get an error ending `...returned a non-zero code: 137` then probably your Docker needs more RAM. On MacOS or Windows you can configure this using your Docker Dashboard app settings. In our experience 2GB is not enough but 4GB is.
 
 If you use MS Visual Studio Code, you can use the debugger by running `docker-compose -f docker-compose.debug.yml up` and starting a debugging session using the project's configuration (`.vscode/launch.json`).
+
+To run a lightweight, debuggable version of the app, run:
+
+```docker-compose -f docker-compose.debug.yml up -d```
+
+## Using Docker for Database Only
+If you want to setup your development environment on your local machine without the docker container, install [pgAdmin4](https://www.pgadmin.org/).
+
+Then clone the [RMG-models](https://github.com/comocheng/RMG-models) repository and set the `RMGMODELSPATH` environment variable to the path where you cloned it:
+
+```export RMGMODELSPATH=/path/to/RMG-models/```
+
+Put this in your shell config file (ie. `.bashrc`) so you don't have to type it every time.
+
+Now run:
+
+```docker-compose -f docker-compose.debug.yml run db -d```
+
+Then open pgAdmin and setup a connection with the following information:
+
+* host: localhost
+* port: 5432
+* user: postgres
+* password: postgres
+
+Keep in mind this environment is not production ready. If you want to work in a production setting, use the application container defined in `docker-compose.yml` with a `.env` file in the project root.
 
 ## Project Structure:
 - The main project is `kms/`

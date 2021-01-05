@@ -27,3 +27,4 @@ dependencies:
     - flake8-django
     - django-test-migrations
     - django-autocomplete-light
+    - python-dotenv
