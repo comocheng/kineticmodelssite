@@ -1,0 +1,36 @@
+{% extends "database/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+<h2>{{ name }} {{ original_id }} Revision</h2>
+<form id="dynamic-form" method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    {% if formsets %}
+        {% for formset in formsets %}
+            {{ formset.management_form }}
+            {% for form in formset %}
+                {{ form.media }}
+                <div class="{{ formset.prefix }}-form">
+                    {{ form|crispy }}
+                </div>
+                <br/>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+    <input type="submit" class="btn btn-outline-success" value="Propose Changes">
+</form>
+{% if formsets %}
+<script type="text/javascript">
+    $(function() {
+        {% for formset in formsets %}
+        $('#dynamic-form .{{ formset.prefix }}-form').formset({
+            prefix: '{{ formset.prefix }}',
+            formCssClass: 'dynamic-{{ formset.prefix }}'
+        });
+        {% endfor %}
+    })
+</script>
+{% endif %}
+{% endblock %}

@@ -5,7 +5,8 @@
 
 {% block content %}
 <h1>Species Detail</h1>
-<h3>ID: {{ species.pk }}</h2>
+<h2>ID: {{ species.pk }}</h2>
+<a class="btn btn-primary" href="{% url 'species-revision' species.id %}">Edit</a>
 {% if names_models %}
 <h2>Names</h2>
 <div class="list-group">
@@ -53,47 +54,14 @@
     </tbody>
 </table>
 <br />
-{% if thermos_models %}
+{% if thermo_list %}
 <h2>Thermo Results</h2>
-<div class="list-group">
-    {% for thermo, models in thermos_models %}
-    <div
-        class="list-group-item list-group-item-action flex-column align-items-start"
-    >
-        <a href="{% url 'thermo-detail' thermo.id%}"
-            class="list-group-item-action"
-        >
-            <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">
-                    $\Delta H_f \, (298 \, K):{{ thermo.enthalpy298|floatformat:1 }} \, \frac{J}{mol}$
-                    <br>
-                    $S \, (298 \, K):{{ thermo.entropy298|floatformat:1 }} \, \frac{J}{mol-K}$
-                </h5>
-                <small>ID: {{ thermo.id }}</small>
-            </div>
-            <br />
-            {% if models %}
-            <h6>Models</h6>
-            <div class="list-group">
-                {% for model in models %}
-                <a class="list-group-item list-group-item-action flex-column align-items-start" href="{% url 'kinetic-model-detail' model.id %}">{{ model.model_name }}</a>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </a>
-    </div>
-    {% endfor %}
-</div>
+{{ thermo_list|render_thermo_list }}
 <br>
 {% endif %}
 {% if transport_list %}
 <h2>Transport Results</h2>
-<ul class="list-group">
-    {% for transport in transport_list %}
-    <li class="list-group-item"><a href="{% url 'transport-detail' transport.pk %}">{{ transport }}</a> -
-        {{ transport.prime_id  }}</li>
-    {% endfor %}
-</ul>
+{{ transport_list|render_transport_list }}
 <br>
 {% endif %}
 <h2>Reactions</h2>

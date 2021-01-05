@@ -1,6 +1,7 @@
 import os
 
 from django.db import models
+from database.models import RevisionMixin
 
 
 def upload_to(instance, filename):
@@ -19,34 +20,10 @@ def upload_transport_to(instance, _):
     return upload_to(instance, "chemkin_transport.txt")
 
 
-class KineticModel(models.Model):
-    """
-    A kinetic model.
-
-    Should have one of these:
-     * source # eg. citation
-     * chemkin_reactions_file
-     * chemkin_thermo_file
-     * chemkin_transport_file
-
-    And many of these:
-     * species, liked via species name?
-     * kinetics, each of which have a unique reaction, linked through comments
-
-    This is the equivalent of 'Models' in PrIMe, which contain:
-    ******in catalog*******
-    model name
-    species involved
-        thermo
-        transport
-    reactions involved
-        kinetics
-    additional info
-    """
-
-    model_name = models.CharField(max_length=200, unique=True)
+class KineticModel(RevisionMixin):
+    model_name = models.CharField(max_length=200)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
-    species = models.ManyToManyField("Species", through="SpeciesName")
+    species = models.ManyToManyField("SpeciesMaster", through="SpeciesName")
     kinetics = models.ManyToManyField("Kinetics", through="KineticsComment")
     thermo = models.ManyToManyField("Thermo", through="ThermoComment")
     transport = models.ManyToManyField("Transport", through="TransportComment")
@@ -58,6 +35,7 @@ class KineticModel(models.Model):
 
     class Meta:
         verbose_name_plural = "Kinetic Models"
+        unique_together = ("model_name", "original_id", "created_on")
 
     def __str__(self):
         return "{s.id} {s.model_name}".format(s=self)
@@ -68,15 +46,14 @@ class SpeciesName(models.Model):
     A Species Name specific to a given Kinetic Model
     """
 
-    species = models.ForeignKey("Species", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(
+        "KineticModel", blank=True, null=True, on_delete=models.CASCADE
+    )
     name = models.CharField(blank=True, max_length=200)
 
     def __str__(self):
         return self.name
-
-    class Meta:
-        verbose_name_plural = "Alternative Species Names"
 
 
 class KineticsComment(models.Model):
@@ -89,7 +66,7 @@ class KineticsComment(models.Model):
     """
 
     kinetics = models.ForeignKey("Kinetics", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
@@ -106,21 +83,16 @@ class ThermoComment(models.Model):
     """
 
     thermo = models.ForeignKey("Thermo", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.TextField(blank=True)
 
     def __str__(self):
         return self.comment
 
-        # class Element(models.Model):
-        #     isotope massnumber
-        #     isotope relativeatomicmass
-        #     atomicmass uncertainty
-
 
 class TransportComment(models.Model):
     transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
@@ -129,4 +101,4 @@ class TransportComment(models.Model):
         kinetic_model = self.kinetic_model.id
         comment = self.comment
 
-        return f"{name}(transport={transport}, kinetic_mode={kinetic_model}, comment={comment})"
+        return f"{name}(transport={transport}, kinetic_model={kinetic_model}, comment={comment})"

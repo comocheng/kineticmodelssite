@@ -58,12 +58,14 @@ def safe_import(func, *args, error_message=None, **kwargs):
 def import_rmg_models(apps, schema_editor):
     model_names = [
         "KineticModel",
+        "KineticModelMaster",
         "Source",
         "Author",
         "Authorship",
         "Thermo",
         "ThermoComment",
         "Species",
+        "SpeciesMaster",
         "Formula",
         "Isomer",
         "Structure",
@@ -83,6 +85,7 @@ def import_rmg_models(apps, schema_editor):
         "Kinetics",
         "KineticsComment",
         "Reaction",
+        "ReactionMaster",
         "Stoichiometry",
     ]
     models = SimpleNamespace()
@@ -103,17 +106,22 @@ def import_rmg_models(apps, schema_editor):
 
 def import_kinetic_model(rmg_model_name, thermo_path, kinetics_path, source_path, models):
     now = datetime.now()
-    kinetic_model = models.KineticModel.objects.create(
-        model_name=rmg_model_name, info=f"Imported via RMG-models migration at {now.isoformat()}"
-    )
+    with transaction.atomic():
+        kinetic_model = models.KineticModel.objects.create(
+            model_name=rmg_model_name,
+            info=f"Imported via RMG-models migration at {now.isoformat()}",
+        )
 
-    kinetic_model.save()
-    logging.info(f"Importing Source {source_path}")
-    safe_import(import_source, source_path, kinetic_model, models)
-    logging.info(f"Importing Thermo Library {thermo_path}")
-    safe_import(import_thermo, thermo_path, kinetic_model, models)
-    logging.info(f"Importing Kinetics Library {kinetics_path}")
-    safe_import(import_kinetics, kinetics_path, kinetic_model, models)
+        kinetic_model.save()
+        models.KineticModelMaster.objects.create(
+            latest=kinetic_model, original_id=kinetic_model.original_id
+        )
+        logging.info(f"Importing Source {source_path}")
+        safe_import(import_source, source_path, kinetic_model, models)
+        logging.info(f"Importing Thermo Library {thermo_path}")
+        safe_import(import_thermo, thermo_path, kinetic_model, models)
+        logging.info(f"Importing Kinetics Library {kinetics_path}")
+        safe_import(import_kinetics, kinetics_path, kinetic_model, models)
 
 
 def safe_save(instance):
@@ -151,15 +159,16 @@ def get_or_create_species(kinetic_model, name, molecules, models):
         )
 
     species_hash = get_species_hash(isomers)
-    species, species_created = models.Species.objects.get_or_create(hash=species_hash)
-    if species_created:
+    species, created = models.Species.objects.get_or_create(hash=species_hash)
+    master, _ = models.SpeciesMaster.objects.get_or_create(
+        latest=species, defaults={"original_id": species.original_id}
+    )
+    if created:
         species.isomers.add(*isomers)
 
-    models.SpeciesName.objects.get_or_create(
-        name=name, species=species, kinetic_model=kinetic_model
-    )
+    models.SpeciesName.objects.get_or_create(name=name, species=master, kinetic_model=kinetic_model)
 
-    return species
+    return master
 
 
 def get_reaction_hash(stoich_data):
@@ -210,19 +219,22 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
         reaction, created = models.Reaction.objects.get_or_create(
             hash=get_reaction_hash(stoich_data=stoich_data), defaults={"reversible": reversible}
         )
+        master, _ = models.ReactionMaster.objects.get_or_create(
+            latest=reaction, defaults={"original_id": reaction.original_id}
+        )
         if created:
             for stoich_coeff, species in stoich_data:
                 models.Stoichiometry.objects.create(
-                    reaction=reaction, species=species, stoichiometry=stoich_coeff
+                    reaction=reaction, species=species, coeff=stoich_coeff
                 )
 
-        stoich_reactants = reaction.stoichiometry_set.filter(stoichiometry__lte=0)
-        stoich_products = reaction.stoichiometry_set.filter(stoichiometry__gte=0)
+        stoich_reactants = reaction.stoichiometry_set.filter(coeff__lte=0)
+        stoich_products = reaction.stoichiometry_set.filter(coeff__gte=0)
         if not (stoich_reactants or stoich_products):
             reactants_or_products = "reactants" if not stoich_reactants else "products"
             raise IntegrityError(f"Reaction cannot have zero {reactants_or_products}")
 
-    return reaction
+    return master
 
 
 def create_arrhenius(rmg_kinetics_data, base_fields, models):

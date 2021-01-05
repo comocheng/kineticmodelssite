@@ -4,7 +4,7 @@ import math
 import rmgpy
 from django.db import models
 from rmgpy.molecule import Molecule
-from . import KineticModel, Kinetics
+from . import KineticModel, Kinetics, RevisionMixin
 
 
 class Formula(models.Model):
@@ -42,16 +42,14 @@ class Structure(models.Model):
         return Molecule().from_adjacency_list(self.adjacency_list)
 
 
-class Species(models.Model):
-    hash = models.CharField(max_length=32, unique=True)
+class Species(RevisionMixin):
+    hash = models.CharField(max_length=32)
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
-    isomers = models.ManyToManyField(Isomer)
+    isomers = models.ManyToManyField("Isomer")
 
     def __str__(self):
-        string = "-".join(x for x in [self.formula, self.prime_id, self.cas_number] if x)
-
-        return string
+        return f"{self.id} Formula: {self.formula or None}"
 
     def to_rmg(self):
         if self.inchi:
@@ -61,9 +59,16 @@ class Species(models.Model):
         else:
             return None
 
+    class Meta:
+        verbose_name_plural = "Species"
+        unique_together = ("hash", "original_id", "created_on")
+
     @property
     def names(self):
-        return set(name for name in self.speciesname_set.values_list("name", flat=True) if name)
+        if self.is_latest():
+            return set(name for name in self.master.speciesname_set.values_list("name", flat=True) if name)
+        else:
+            return []
 
     @property
     def structures(self):
@@ -73,17 +78,19 @@ class Species(models.Model):
 
     @property
     def formula(self):
-        return self.isomers.first().formula.formula
+        if self.isomers.first():
+            return self.isomers.first().formula.formula
 
 
-class Reaction(models.Model):
-    hash = models.CharField(max_length=32, unique=True)
-    species = models.ManyToManyField(Species, through="Stoichiometry")
+class Reaction(RevisionMixin):
+    hash = models.CharField(max_length=32)
+    species = models.ManyToManyField("SpeciesMaster", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
 
     class Meta:
         ordering = ("prime_id",)
+        unique_together = ("hash", "original_id", "created_on")
 
     def stoich_species(self):
         """
@@ -93,7 +100,7 @@ class Reaction(models.Model):
 
         reaction = []
         for stoich in self.stoichiometry_set.all():
-            reaction.append((stoich.stoichiometry, stoich.species))
+            reaction.append((stoich.coeff, stoich.species))
 
         return sorted(reaction, key=lambda x: x[1].pk * math.copysign(1, x[0]))
 
@@ -171,14 +178,24 @@ class Reaction(models.Model):
     @property
     @lru_cache(maxsize=None)
     def kinetic_model_count(self):
-        return KineticModel.objects.filter(kinetics__reaction=self).count()
+        if self.is_latest():
+            return KineticModel.objects.filter(kinetics__reaction=self.master).count()
+        else:
+            return 0
 
     @property
     @lru_cache(maxsize=None)
     def kinetics_count(self):
-        return Kinetics.objects.filter(reaction=self).count()
+        if self.is_latest():
+            return Kinetics.objects.filter(reaction=self.master).count()
+        else:
+            return 0
 
     def __str__(self):
+        return f"{self.id} {self.equation}"
+
+    @property
+    def equation(self):
         stoich_reactants = []
         stoich_products = []
         for stoich, species in self.stoich_species():
@@ -190,11 +207,11 @@ class Reaction(models.Model):
             else:
                 stoich_products.append((stoich, species))
         left_side = " + ".join(
-            f"{int(abs(stoich)) if abs(stoich) != 1 else ''}{species.formula}"
+            f"{int(abs(stoich)) if abs(stoich) != 1 else ''}{species.latest.formula}"
             for stoich, species in stoich_reactants
         )
         right_side = " + ".join(
-            f"{int(stoich) if stoich != 1 else ''}{species.formula}"
+            f"{int(stoich) if stoich != 1 else ''}{species.latest.formula}"
             for stoich, species in stoich_products
         )
         arrow = "<=>" if self.reversible else "->"
@@ -212,20 +229,20 @@ class Stoichiometry(models.Model):
     floats, so we do too.
     """
 
-    species = models.ForeignKey(Species, on_delete=models.CASCADE)
-    reaction = models.ForeignKey(Reaction, on_delete=models.CASCADE)
-    stoichiometry = models.FloatField()
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
+    reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
+    coeff = models.FloatField()
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
-        unique_together = ["species", "reaction", "stoichiometry"]
+        unique_together = ("species", "reaction", "coeff")
 
     def __str__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
             s=self
         )
 
     def __repr__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.stoichiometry}").format(
+        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
             s=self
         )
