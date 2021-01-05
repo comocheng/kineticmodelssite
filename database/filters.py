@@ -2,7 +2,7 @@ import django_filters
 from dal import autocomplete
 from django.db.models import Count
 
-from .models import Species, Reaction, Source
+from database import models
 
 
 class SpeciesFilter(django_filters.FilterSet):
@@ -33,13 +33,13 @@ class SpeciesFilter(django_filters.FilterSet):
     )
 
     class Meta:
-        model = Species
+        model = models.Species
         fields = ["prime_id", "cas_number"]
 
 
 class ReactionFilter(django_filters.FilterSet):
     reactant1 = django_filters.ModelChoiceFilter(
-        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+        queryset=models.SpeciesMaster.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
         ),
         field_name="species",
@@ -51,7 +51,7 @@ class ReactionFilter(django_filters.FilterSet):
         ),
     )
     reactant2 = django_filters.ModelChoiceFilter(
-        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+        queryset=models.SpeciesMaster.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
         ),
         field_name="species",
@@ -63,7 +63,7 @@ class ReactionFilter(django_filters.FilterSet):
         ),
     )
     product1 = django_filters.ModelChoiceFilter(
-        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+        queryset=models.SpeciesMaster.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
         ),
         field_name="species",
@@ -75,7 +75,7 @@ class ReactionFilter(django_filters.FilterSet):
         ),
     )
     product2 = django_filters.ModelChoiceFilter(
-        queryset=Species.objects.annotate(reaction_count=Count("reaction")).filter(
+        queryset=models.SpeciesMaster.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
         ),
         field_name="species",
@@ -88,13 +88,13 @@ class ReactionFilter(django_filters.FilterSet):
     )
 
     def filter_reactant(self, queryset, name, value):
-        return queryset.filter(**{name: value}, stoichiometry__coeff__lt=0)
+        return queryset.filter(**{name: value}, latest__stoichiometry__coeff__lt=0)
 
     def filter_product(self, queryset, name, value):
-        return queryset.filter(**{name: value}, stoichiometry__coeff__gt=0)
+        return queryset.filter(**{name: value}, latest__stoichiometry__coeff__gt=0)
 
     class Meta:
-        model = Reaction
+        model = models.Reaction
         fields = (
             "prime_id",
             "reversible",
@@ -103,5 +103,5 @@ class ReactionFilter(django_filters.FilterSet):
 
 class SourceFilter(django_filters.FilterSet):
     class Meta:
-        model = Source
+        model = models.Source
         fields = ["prime_id", "publication_year", "source_title", "journal_name", "doi"]

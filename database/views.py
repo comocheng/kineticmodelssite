@@ -12,11 +12,12 @@ from django.urls import reverse
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views import View
 from django.views.generic import TemplateView, DetailView
-from django.views.generic.edit import FormView, CreateView
+from django.views.generic.edit import FormView, UpdateView
 from django_filters.views import FilterView
 from django.http import HttpResponse
 from rmgpy.molecule.draw import MoleculeDrawer
 
+from database import models
 from .models import (
     BaseKineticsData,
     Species,
@@ -27,14 +28,6 @@ from .models import (
     Source,
     Reaction,
     Kinetics,
-    SpeciesRevision,
-    ReactionRevision,
-    StoichiometryRevision,
-    KineticModelRevision,
-    SpeciesNameRevision,
-    KineticsCommentRevision,
-    ThermoCommentRevision,
-    TransportCommentRevision,
 )
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import (
@@ -156,10 +149,10 @@ class SpeciesDetail(DetailView):
         context = super().get_context_data(**kwargs)
         species = self.get_object()
         structures = Structure.objects.filter(isomer__species=species)
-        reactions = Reaction.objects.filter(species=species).order_by("id")
+        reactions = Reaction.objects.filter(species=species.master).order_by("id")
 
         names_models = defaultdict(list)
-        for values in species.speciesname_set.values(
+        for values in species.master.speciesname_set.values(
             "name", "kinetic_model__model_name", "kinetic_model"
         ):
             name, model_name, model_id = values.values()
@@ -170,8 +163,8 @@ class SpeciesDetail(DetailView):
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
         context["isomer_inchis"] = species.isomers.values_list("inchi", flat=True)
-        context["thermo_list"] = Thermo.objects.filter(species=species)
-        context["transport_list"] = Transport.objects.filter(species=species)
+        context["thermo_list"] = Thermo.objects.filter(species=species.master)
+        context["transport_list"] = Transport.objects.filter(species=species.master)
         context["structures"] = structures
 
         paginator = Paginator(reactions, self.paginate_per_page)
@@ -241,7 +234,7 @@ class ReactionDetail(DetailView):
         context["products"] = reaction.products()
         context["kinetics_modelnames"] = [
             (k, k.kineticmodel_set.values_list("model_name", flat=True))
-            for k in reaction.kinetics_set.all()
+            for k in reaction.master.kinetics_set.all()
         ]
 
         return context
@@ -330,20 +323,17 @@ class RegistrationView(FormView):
         return super().form_valid(form)
 
 
-class RevisionView(LoginRequiredMixin, CreateView):
+class RevisionView(LoginRequiredMixin, UpdateView):
     template_name = "database/revision.html"
     login_url = "/login/"
 
     def get_success_url(self):
         return reverse(self.url_name, args=[self.get_object().pk])
 
-    def get_object(self):
-        return self.model.objects.get(id=self.kwargs.get("pk"))
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         obj = self.get_object()
-        context["object"] = obj
+        context["original_id"] = obj.original_id
         context["name"] = obj.__class__.__name__
 
         return context
@@ -354,21 +344,14 @@ class RevisionView(LoginRequiredMixin, CreateView):
 
         return kwargs
 
-    def save_form(self, form):
+    def form_valid(self, form):
         self.object = form.save(commit=False)
         self.object.id = None
-        self.object.revision = True
+        self.object.original_id = self.get_object().original_id
         self.object.created_by = self.request.user
-        self.object.created_on = datetime.now()
-        self.object.target = self.get_object()
         self.object.status = self.object.PENDING
         self.object.save()
         form.save_m2m()
-
-        return self.object
-
-    def form_valid(self, form):
-        self.save_form(form)
 
         return HttpResponseRedirect(self.get_success_url())
 
@@ -376,7 +359,7 @@ class RevisionView(LoginRequiredMixin, CreateView):
 class SpeciesRevisionView(RevisionView):
     model = Species
     url_name = "species-detail"
-    fields = ["prime_id", "cas_number", "isomers"]
+    fields = ["prime_id", "cas_number", "isomers", "proposal_comment"]
 
 
 class FormSetRevisionView(RevisionView):
@@ -411,16 +394,12 @@ class FormSetRevisionView(RevisionView):
 
     def form_valid(self, form):
         with transaction.atomic():
-            instance = self.save_form(form)
-            formsets = self.get_formsets()
-            for formset in formsets:
+            super().form_valid(form)
+            for formset in self.get_formsets():
                 objects = formset.save(commit=False)
                 for o in objects:
                     o.id = None
-                    o.revision = True
-                    o.created_by = self.request.user
-                    o.created_on = datetime.now()
-                    o.reaction = instance
+                    setattr(o, self.reverse_name, self.object)
                     o.save()
 
         return HttpResponseRedirect(self.get_success_url())
@@ -429,8 +408,9 @@ class FormSetRevisionView(RevisionView):
 class ReactionRevisionView(FormSetRevisionView):
     model = Reaction
     url_name = "reaction-detail"
-    fields = ["prime_id", "reversible"]
+    fields = ["prime_id", "reversible", "proposal_comment"]
     formset_classes = [StoichiometryFormSet]
+    reverse_name = "reaction"
 
 
 class KineticModelRevisionView(FormSetRevisionView):
@@ -444,6 +424,7 @@ class KineticModelRevisionView(FormSetRevisionView):
         "chemkin_reactions_file",
         "chemkin_thermo_file",
         "chemkin_transport_file",
+        "proposal_comment"
     ]
     formset_classes = [
         SpeciesNameFormSet,
@@ -451,14 +432,10 @@ class KineticModelRevisionView(FormSetRevisionView):
         ThermoCommentFormSet,
         TransportCommentFormSet,
     ]
+    reverse_name = "kinetic_model"
 
 
 class RevisionApprovalView(UserPassesTestMixin, View):
-    fields = []
-    m2m_fields = []
-    m2m_through_related_names = []
-    m2m_through_models = []
-    reverse_name = None
 
     def test_func(self):
         return self.request.user.is_staff
@@ -468,85 +445,36 @@ class RevisionApprovalView(UserPassesTestMixin, View):
 
     def post(self, request, pk):
         revision = self.get_object()
-        self.update_model(revision)
         revision.status = revision.APPROVED
         revision.save()
+        master = revision._meta.get_field("master").remote_field.model.objects.get(
+            original_id=revision.original_id
+        )
+        master.latest = revision
+        master.save()
 
         return HttpResponseRedirect(self.get_url())
 
-    def update_model(self, revision):
-        obj = revision.target
-
-        for field in self.fields:
-            setattr(obj, field, getattr(revision, field))
-
-        for name in self.m2m_fields:
-            m2m_field = getattr(obj, name)
-            m2m_field.clear()
-            m2m_field.add(*getattr(revision, name).all())
-
-        for name in self.related_names:
-            getattr(obj, name).all().delete()
-
-        obj.save()
-
-        for model in self.m2m_models:
-            objs = model.objects.filter(**{self.reverse_name: revision})
-            for o in objs:
-                o.revision = False
-                o.created_on = None
-                o.created_by = None
-                o.status = ""
-                setattr(o, self.reverse_name, obj)
-                o.save()
-
 
 class SpeciesRevisionApprovalView(RevisionApprovalView):
-    model = SpeciesRevision
-    fields = ["prime_id", "cas_number"]
-    m2m_fields = ["isomers"]
+    model = models.SpeciesProposal
 
     def get_url(self):
-        return reverse("admin:database_speciesrevision_changelist")
+        return reverse("admin:database_speciesproposal_changelist")
 
 
 class ReactionRevisionApprovalView(RevisionApprovalView):
-    model = ReactionRevision
-    fields = ["prime_id", "reversible"]
-    m2m_through_related_names = ["stoichiometry_set"]
-    m2m_through_models = [StoichiometryRevision]
-    reverse_name = "reaction"
+    model = models.ReactionProposal
 
     def get_url(self):
-        return reverse("admin:database_reactionrevision_changelist")
+        return reverse("admin:database_reactionproposal_changelist")
 
 
 class KineticModelRevisionApprovalView(RevisionApprovalView):
-    model = KineticModelRevision
-    fields = [
-        "prime_id",
-        "model_name",
-        "info",
-        "chemkin_reactions_file",
-        "chemkin_thermo_file",
-        "chemkin_transport_file",
-    ]
-    m2m_through_related_names = [
-        "speciesname_set",
-        "kineticscomment_set",
-        "transportcomment_set",
-        "thermocomment_set",
-    ]
-    m2m_through_models = [
-        SpeciesNameRevision,
-        KineticsCommentRevision,
-        ThermoCommentRevision,
-        TransportCommentRevision,
-    ]
-    reverse_name = "kinetic_model"
+    model = models.KineticModelProposal
 
     def get_url(self):
-        return reverse("admin:database_kineticmodelrevision_changelist")
+        return reverse("admin:database_kineticmodelproposal_changelist")
 
 
 class AutocompleteView(autocomplete.Select2QuerySetView):

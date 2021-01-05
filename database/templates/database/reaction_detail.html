@@ -10,7 +10,8 @@
 <br>
 <h3>Reactants</h3>
 <div class="list-group">
-    {% for reactant in reactants %}
+    {% for r in reactants %}
+    {% with r.latest as reactant %}
     <a href="{% url 'species-detail' reactant.pk %}" class="list-group-item list-group-item-action">
         <strong>{{ reactant.formula }}</strong>
         <ul class="list-group">
@@ -19,12 +20,14 @@
             {% endfor %}
         </ul>
     </a>
+    {% endwith %}
     {% endfor %}
 </div>
 <br>
 <h3>Products</h3>
 <div class="list-group">
-    {% for product in products %}
+    {% for p in products %}
+    {% with p.latest as product %}
     <a href="{% url 'species-detail' product.pk %}" class="list-group-item list-group-item-action">
         <strong>{{ product.formula }}</strong>
         <ul class="list-group">
@@ -33,7 +36,8 @@
             {% endfor %}
         </ul>
     </a>
-{% endfor %}
+    {% endwith %}
+    {% endfor %}
 </div>
 </br>
 <h3>Kinetics</h3>

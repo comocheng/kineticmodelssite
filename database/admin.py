@@ -16,6 +16,8 @@ for name in dir(models):
             "KineticModel",
             "PDepArrhenius",
             "BaseKineticsData",
+            "SpeciesName",
+            "KineticsComment",
             "ThermoComment",
             "TransportComment",
             "Authorship",
@@ -23,11 +25,12 @@ for name in dir(models):
             "Efficiency",
             "RevisionMixin",
             "User",
-            "SpeciesRevision",
-            "ReactionRevision",
             "RevisionManagerMixin",
-            "KineticModelRevision",
-            "SpeciesName",
+            "MasterMixin",
+            "ProposalManagerMixin",
+            "SpeciesProposal",
+            "ReactionProposal",
+            "KineticModelProposal"
         ]
         and isinstance(obj, type)
         and issubclass(obj, Model)
@@ -35,7 +38,7 @@ for name in dir(models):
         admin.site.register(obj)
 
 
-class RevisionAdmin(admin.ModelAdmin):
+class ProposalAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in obj._meta.fields]
 
@@ -64,15 +67,15 @@ class ImmutablePermissionMixin:
         return False
 
 
-class IsomerInline(ImmutablePermissionMixin, TabularInline):
+class IsomerRevisionInline(ImmutablePermissionMixin, TabularInline):
     model = models.Species.isomers.through
     readonly_fields = ("isomer",)
 
 
-@admin.register(models.SpeciesRevision)
-class SpeciesRevisionAdmin(admin.ModelAdmin):
+@admin.register(models.SpeciesProposal)
+class SpeciesProposalAdmin(admin.ModelAdmin):
     exclude = ("hash", "isomers")
-    inlines = [IsomerInline]
+    inlines = [IsomerRevisionInline]
     url_name = "species-approval"
     approval_view = views.SpeciesRevisionApprovalView
 
@@ -82,9 +85,8 @@ class StoichiometryInline(admin.TabularInline):
     fields = ("species", "coeff")
 
 
-class StoichiometryRevisionInline(ImmutablePermissionMixin, admin.TabularInline):
-    model = models.StoichiometryRevision
-    fields = ("species", "coeff")
+class StoichiometryRevisionInline(ImmutablePermissionMixin, StoichiometryInline):
+    pass
 
 
 @admin.register(models.Reaction)
@@ -92,8 +94,8 @@ class ReactionAdmin(admin.ModelAdmin):
     inlines = [StoichiometryInline]
 
 
-@admin.register(models.ReactionRevision)
-class ReactionRevisionAdmin(RevisionAdmin):
+@admin.register(models.ReactionProposal)
+class ReactionProposalAdmin(ProposalAdmin):
     inlines = [StoichiometryRevisionInline]
     url_name = "reaction-approval"
     approval_view = views.ReactionRevisionApprovalView
@@ -160,23 +162,23 @@ class KineticModelAdmin(admin.ModelAdmin):
 
 
 class SpeciesNameRevisionInline(ImmutablePermissionMixin, SpeciesNameInline):
-    model = models.SpeciesNameRevision
+    pass
 
 
 class KineticsCommentRevisionInline(ImmutablePermissionMixin, KineticsCommentInline):
-    model = models.KineticsCommentRevision
+    pass
 
 
 class ThermoCommentRevisionInline(ImmutablePermissionMixin, ThermoCommentInline):
-    model = models.ThermoCommentRevision
+    pass
 
 
 class TransportCommentRevisionInline(ImmutablePermissionMixin, TransportCommentInline):
-    model = models.TransportCommentRevision
+    pass
 
 
-@admin.register(models.KineticModelRevision)
-class KineticModelRevisionAdmin(admin.ModelAdmin):
+@admin.register(models.KineticModelProposal)
+class KineticModelProposalAdmin(ProposalAdmin):
     inlines = [
         SpeciesNameRevisionInline,
         ThermoCommentRevisionInline,

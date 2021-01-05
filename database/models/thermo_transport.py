@@ -7,7 +7,7 @@ from rmgpy.constants import R as gas_constant
 
 class Thermo(models.Model):
     source = models.ForeignKey("Source", null=True, on_delete=models.CASCADE)
-    species = models.ForeignKey("Species", on_delete=models.CASCADE)
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
     prime_id = models.CharField(blank=True, max_length=11)
     preferred_key = models.CharField(blank=True, help_text="i.e. T 11/97, or J 3/65", max_length=20)
     reference_temp = models.FloatField(
@@ -104,7 +104,7 @@ class Transport(models.Model):
     """
 
     source = models.ForeignKey("Source", null=True, on_delete=models.CASCADE)
-    species = models.ForeignKey("Species", on_delete=models.CASCADE)
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
     prime_id = models.CharField(blank=True, max_length=10)
     geometry = models.FloatField(blank=True, default=0.0)
     potential_well_depth = models.FloatField(

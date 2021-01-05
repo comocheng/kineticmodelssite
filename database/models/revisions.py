@@ -1,42 +1,32 @@
 from database import models
-from database.models.mixins import RevisionManagerMixin
+from database.models import mixins
 
 
-class SpeciesRevision(RevisionManagerMixin, models.Species):
+class SpeciesRevision(mixins.RevisionManagerMixin, models.Species):
     class Meta:
         proxy = True
 
 
-class ReactionRevision(RevisionManagerMixin, models.Reaction):
+class SpeciesProposal(mixins.ProposalManagerMixin, models.Species):
     class Meta:
         proxy = True
 
 
-class StoichiometryRevision(RevisionManagerMixin, models.Stoichiometry):
+class ReactionRevision(mixins.RevisionManagerMixin, models.Reaction):
     class Meta:
         proxy = True
 
 
-class KineticModelRevision(RevisionManagerMixin, models.KineticModel):
+class ReactionProposal(mixins.ProposalManagerMixin, models.Reaction):
     class Meta:
         proxy = True
 
 
-class SpeciesNameRevision(RevisionManagerMixin, models.SpeciesName):
+class KineticModelRevision(mixins.RevisionManagerMixin, models.KineticModel):
     class Meta:
         proxy = True
 
 
-class KineticsCommentRevision(RevisionManagerMixin, models.KineticsComment):
-    class Meta:
-        proxy = True
-
-
-class ThermoCommentRevision(RevisionManagerMixin, models.ThermoComment):
-    class Meta:
-        proxy = True
-
-
-class TransportCommentRevision(RevisionManagerMixin, models.TransportComment):
+class KineticModelProposal(mixins.ProposalManagerMixin, models.KineticModel):
     class Meta:
         proxy = True

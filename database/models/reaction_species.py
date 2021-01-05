@@ -4,7 +4,7 @@ import math
 import rmgpy
 from django.db import models
 from rmgpy.molecule import Molecule
-from . import KineticModel, Kinetics, RevisionMixin, revision_str
+from . import KineticModel, Kinetics, RevisionMixin
 
 
 class Formula(models.Model):
@@ -48,7 +48,6 @@ class Species(RevisionMixin):
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     isomers = models.ManyToManyField("Isomer")
 
-    @revision_str
     def __str__(self):
         return f"{self.id} Formula: {self.formula or None}"
 
@@ -62,11 +61,14 @@ class Species(RevisionMixin):
 
     class Meta:
         verbose_name_plural = "Species"
-        unique_together = ("hash", "revision", "created_on")
+        unique_together = ("hash", "original_id", "created_on")
 
     @property
     def names(self):
-        return set(name for name in self.speciesname_set.values_list("name", flat=True) if name)
+        if self.is_latest():
+            return set(name for name in self.master.speciesname_set.values_list("name", flat=True) if name)
+        else:
+            return []
 
     @property
     def structures(self):
@@ -82,13 +84,13 @@ class Species(RevisionMixin):
 
 class Reaction(RevisionMixin):
     hash = models.CharField(max_length=32)
-    species = models.ManyToManyField("Species", through="Stoichiometry")
+    species = models.ManyToManyField("SpeciesMaster", through="Stoichiometry")
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=10)
     reversible = models.BooleanField()
 
     class Meta:
         ordering = ("prime_id",)
-        unique_together = ("hash", "revision", "created_on")
+        unique_together = ("hash", "original_id", "created_on")
 
     def stoich_species(self):
         """
@@ -176,14 +178,19 @@ class Reaction(RevisionMixin):
     @property
     @lru_cache(maxsize=None)
     def kinetic_model_count(self):
-        return KineticModel.objects.filter(kinetics__reaction=self).count()
+        if self.is_latest():
+            return KineticModel.objects.filter(kinetics__reaction=self.master).count()
+        else:
+            return 0
 
     @property
     @lru_cache(maxsize=None)
     def kinetics_count(self):
-        return Kinetics.objects.filter(reaction=self).count()
+        if self.is_latest():
+            return Kinetics.objects.filter(reaction=self.master).count()
+        else:
+            return 0
 
-    @revision_str
     def __str__(self):
         return f"{self.id} {self.equation}"
 
@@ -200,11 +207,11 @@ class Reaction(RevisionMixin):
             else:
                 stoich_products.append((stoich, species))
         left_side = " + ".join(
-            f"{int(abs(stoich)) if abs(stoich) != 1 else ''}{species.formula}"
+            f"{int(abs(stoich)) if abs(stoich) != 1 else ''}{species.latest.formula}"
             for stoich, species in stoich_reactants
         )
         right_side = " + ".join(
-            f"{int(stoich) if stoich != 1 else ''}{species.formula}"
+            f"{int(stoich) if stoich != 1 else ''}{species.latest.formula}"
             for stoich, species in stoich_products
         )
         arrow = "<=>" if self.reversible else "->"
@@ -212,7 +219,7 @@ class Reaction(RevisionMixin):
         return f"{left_side} {arrow} {right_side}"
 
 
-class Stoichiometry(RevisionMixin):
+class Stoichiometry(models.Model):
     """
     The number of molecules or atoms of a species that participate in a reaction .
 
@@ -222,13 +229,13 @@ class Stoichiometry(RevisionMixin):
     floats, so we do too.
     """
 
-    species = models.ForeignKey("Species", on_delete=models.CASCADE)
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
     reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
     coeff = models.FloatField()
 
     class Meta:
         verbose_name_plural = "Stoichiometries"
-        unique_together = ("species", "reaction", "coeff", "revision", "created_on")
+        unique_together = ("species", "reaction", "coeff")
 
     def __str__(self):
         return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(

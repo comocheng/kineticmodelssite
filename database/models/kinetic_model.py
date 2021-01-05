@@ -1,7 +1,7 @@
 import os
 
 from django.db import models
-from database.models import RevisionMixin, revision_str
+from database.models import RevisionMixin
 
 
 def upload_to(instance, filename):
@@ -23,7 +23,7 @@ def upload_transport_to(instance, _):
 class KineticModel(RevisionMixin):
     model_name = models.CharField(max_length=200)
     prime_id = models.CharField("PrIMe ID", max_length=9, blank=True)
-    species = models.ManyToManyField("Species", through="SpeciesName")
+    species = models.ManyToManyField("SpeciesMaster", through="SpeciesName")
     kinetics = models.ManyToManyField("Kinetics", through="KineticsComment")
     thermo = models.ManyToManyField("Thermo", through="ThermoComment")
     transport = models.ManyToManyField("Transport", through="TransportComment")
@@ -35,27 +35,28 @@ class KineticModel(RevisionMixin):
 
     class Meta:
         verbose_name_plural = "Kinetic Models"
-        unique_together = ("model_name", "revision", "created_on")
+        unique_together = ("model_name", "original_id", "created_on")
 
-    @revision_str
     def __str__(self):
         return "{s.id} {s.model_name}".format(s=self)
 
 
-class SpeciesName(RevisionMixin):
+class SpeciesName(models.Model):
     """
     A Species Name specific to a given Kinetic Model
     """
 
-    species = models.ForeignKey("Species", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, blank=True, null=True, on_delete=models.CASCADE)
+    species = models.ForeignKey("SpeciesMaster", on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey(
+        "KineticModel", blank=True, null=True, on_delete=models.CASCADE
+    )
     name = models.CharField(blank=True, max_length=200)
 
     def __str__(self):
         return self.name
 
 
-class KineticsComment(RevisionMixin):
+class KineticsComment(models.Model):
     """
     The comment that a kinetic model made about a kinetics entry it used.
 
@@ -65,14 +66,14 @@ class KineticsComment(RevisionMixin):
     """
 
     kinetics = models.ForeignKey("Kinetics", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
         return self.comment
 
 
-class ThermoComment(RevisionMixin):
+class ThermoComment(models.Model):
     """
     The comment that a kinetic model made about a thermo entry it used.
 
@@ -82,16 +83,16 @@ class ThermoComment(RevisionMixin):
     """
 
     thermo = models.ForeignKey("Thermo", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.TextField(blank=True)
 
     def __str__(self):
         return self.comment
 
 
-class TransportComment(RevisionMixin):
+class TransportComment(models.Model):
     transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
-    kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
+    kinetic_model = models.ForeignKey("KineticModel", on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
 
     def __str__(self):
@@ -100,4 +101,4 @@ class TransportComment(RevisionMixin):
         kinetic_model = self.kinetic_model.id
         comment = self.comment
 
-        return f"{name}(transport={transport}, kinetic_mode={kinetic_model}, comment={comment})"
+        return f"{name}(transport={transport}, kinetic_model={kinetic_model}, comment={comment})"

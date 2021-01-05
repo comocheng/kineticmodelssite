@@ -3,7 +3,7 @@
 
 {% block object-tools-items %}
 {{ block.super }}
-{% if original and original.revision and not approved %}
+{% if not original.is_approved %}
 <li>
     <form action="{% url url_name original.id %}" method="POST">
         {% csrf_token %}

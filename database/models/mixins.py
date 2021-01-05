@@ -1,20 +1,39 @@
-import functools
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import User
 
 
-class NoRevisionManager(models.Manager):
+class LatestRevisionManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(revision=False)
+        return super().get_queryset().exclude(master=None)
 
 
 class RevisionManager(models.Manager):
+    def approved(self):
+        return self.get_queryset().filter(status=self.model.APPROVED)
+
+    def pending(self):
+        return self.get_queryset().filter(status=self.model.PENDING)
+
+    def denied(self):
+        return self.get_queryset().filter(status=self.model.DENIED)
+
+
+class ProposalManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(revision=True)
+        return super().get_queryset().filter(status=self.model.PENDING)
 
 
 class RevisionManagerMixin(models.Model):
     objects = RevisionManager()
+
+    class Meta:
+        abstract = True
+
+
+class ProposalManagerMixin(models.Model):
+    objects = ProposalManager()
 
     class Meta:
         abstract = True
@@ -29,29 +48,24 @@ class RevisionMixin(models.Model):
         (PENDING, "Pending"),
         (DENIED, "Denied"),
     )
-    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
-    created_on = models.DateTimeField(default=None, null=True, blank=True)
-    revision = models.BooleanField(default=False)
-    target = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
+    created_by = models.ForeignKey(User, blank=True, null=True, on_delete=models.SET_NULL)
+    created_on = models.DateTimeField(auto_now_add=True)
+    original_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    proposal_comment = models.TextField(blank=True)
+    reviewer_comment = models.TextField(blank=True)
     status = models.CharField(choices=STATUS_CHOICES, max_length=1, blank=True)
 
-    objects = NoRevisionManager()
+    objects = LatestRevisionManager()
+    revisions = RevisionManager()
 
     class Meta:
         abstract = True
 
+    def is_latest(self):
+        return hasattr(self, "master")
 
-def revision_str(func):
-    @functools.wraps(func)
-    def inner(self):
-        if self.revision:
-            return (
-                f"Revision of {self.target}"
-                "| Status: {self.status}"
-                "| By: {self.created_by}"
-                "| On: {self.created_on}"
-            )
-        else:
-            return func(self)
+    def is_approved(self):
+        return self.status == self.APPROVED
 
-    return inner
+    def get_revisions(self):
+        return self.revisions.filter(original_id=self.original_id)

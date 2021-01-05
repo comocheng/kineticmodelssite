@@ -2,6 +2,7 @@
 # We use the dreaded asterisk import so we can add other models to the separate files without it breaking here
 
 from .mixins import *
+from .master import *
 from .thermo_transport import *
 from .source import *
 from .kinetic_model import *
