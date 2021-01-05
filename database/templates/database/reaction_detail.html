@@ -5,8 +5,6 @@
 {% block content %}
 <h2>{{ reaction.equation }}</h2>
 <h2>ID: {{ reaction.pk }}</h2>
-<a class="btn btn-primary" href="{% url 'reaction-revision' reaction.id %}">Edit</a>
-
 <br>
 <h3>Reactants</h3>
 <div class="list-group">

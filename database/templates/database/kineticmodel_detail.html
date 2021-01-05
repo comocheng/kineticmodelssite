@@ -4,7 +4,7 @@
 {% load renders %}
 
 {% block content %}
-<h1>{{kinetic_model.model_name}}</h1><a class="btn btn-primary" href="{% url 'kinetic-model-revision' kinetic_model.pk %}">Edit</a>
+<h1>{{kinetic_model.model_name}}</h1>
 
     {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file %}
     <h2>Downloads</h2>

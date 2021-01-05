@@ -6,7 +6,6 @@
 {% block content %}
 <h1>Species Detail</h1>
 <h2>ID: {{ species.pk }}</h2>
-<a class="btn btn-primary" href="{% url 'species-revision' species.id %}">Edit</a>
 {% if names_models %}
 <h2>Names</h2>
 <div class="list-group">
