@@ -42,6 +42,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(" ")
 
 INSTALLED_APPS = [
     "database.apps.DatabaseConfig",
+    "api.apps.ApiConfig",
     "dal",
     "dal_select2",
     "django.contrib.admin",
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     "django_filters",
     "django_extensions",
     "crispy_forms",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
