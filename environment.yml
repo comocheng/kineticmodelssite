@@ -28,4 +28,5 @@ dependencies:
     - django-test-migrations
     - django-autocomplete-light
     - djangorestframework
+    - drf-writable-nested
     - python-dotenv
