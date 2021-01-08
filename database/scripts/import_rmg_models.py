@@ -233,7 +233,7 @@ def create_arrhenius(rmg_kinetics_data, base_fields, models):
         n_value=rmg_kinetics_data.n.value_si,
         e_value=rmg_kinetics_data.Ea.value,
         e_value_si=rmg_kinetics_data.Ea.value_si,
-        e_units=rmg_kinetics_data.Ea.units,
+        e_value_units=rmg_kinetics_data.Ea.units,
         **base_fields,
     )
 
