@@ -37,7 +37,6 @@ class Migration(migrations.Migration):
             name='BaseKineticsData',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('order', models.FloatField(blank=True, help_text='Overall reaction order', null=True)),
                 ('min_temp', models.FloatField(blank=True, help_text='units: K', null=True, verbose_name='Lower Temp Bound')),
                 ('max_temp', models.FloatField(blank=True, help_text='units: K', null=True, verbose_name='Upper Temp Bound')),
                 ('min_pressure', models.FloatField(blank=True, help_text='units: Pa', null=True, verbose_name='Lower Pressure Bound')),
@@ -176,10 +175,14 @@ class Migration(migrations.Migration):
             name='Arrhenius',
             fields=[
                 ('basekineticsdata_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='database.BaseKineticsData')),
-                ('a_value', models.FloatField(default=0.0)),
+                ('a_value', models.FloatField()),
+                ('a_value_si', models.FloatField()),
                 ('a_value_uncertainty', models.FloatField(blank=True, null=True)),
-                ('n_value', models.FloatField(default=0.0)),
-                ('e_value', models.FloatField(default=0.0)),
+                ('a_value_units', models.CharField(max_length=15)),
+                ('n_value', models.FloatField()),
+                ('e_value', models.FloatField()),
+                ('e_value_si', models.FloatField()),
+                ('e_value_units', models.CharField(max_length=15)),
                 ('e_value_uncertainty', models.FloatField(blank=True, null=True)),
             ],
             options={
@@ -192,9 +195,13 @@ class Migration(migrations.Migration):
             fields=[
                 ('basekineticsdata_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='database.BaseKineticsData')),
                 ('a', models.FloatField()),
+                ('a_si', models.FloatField()),
+                ('a_units', models.CharField(max_length=15)),
                 ('n', models.FloatField()),
-                ('ep_alpha', models.FloatField()),
+                ('alpha', models.FloatField()),
                 ('e0', models.FloatField()),
+                ('e0_si', models.FloatField()),
+                ('e0_units', models.CharField(max_length=15)),
             ],
             options={
                 'verbose_name_plural': 'ArrheniusEP',

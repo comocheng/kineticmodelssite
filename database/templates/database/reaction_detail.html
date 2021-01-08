@@ -58,7 +58,7 @@
                             <th scope="row">{{ row_header }}</th>
                             {% endif %}
                             {% for cell in cells %}
-                            <td>{{ cell }}</td>
+                            <td>{{ cell|format_g_or_str }}</td>
                             {% endfor %}
                         </tr>
                     </tbody>

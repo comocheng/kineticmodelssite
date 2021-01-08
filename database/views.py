@@ -284,6 +284,7 @@ class KineticsDetail(DetailView):
             kinetics=kinetics
         ).table_data()
         context["efficiencies"] = kinetics.data.efficiency_set.all()
+        context["kinetics_comments"] = kinetics.kineticscomment_set.order_by("kinetic_model__id")
 
         return context
 
