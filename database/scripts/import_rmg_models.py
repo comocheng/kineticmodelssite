@@ -14,6 +14,8 @@ from rmgpy.data.kinetics.library import KineticsLibrary
 from rmgpy.data.thermo import ThermoLibrary
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
 
+from database.models import kinetic_data as kd
+
 
 """
 Import Flow:
@@ -68,17 +70,6 @@ def import_rmg_models(apps, schema_editor):
         "Isomer",
         "Structure",
         "SpeciesName",
-        "KineticsData",
-        "Arrhenius",
-        "ArrheniusEP",
-        "PDepArrhenius",
-        "MultiArrhenius",
-        "MultiPDepArrhenius",
-        "Chebyshev",
-        "Lindemann",
-        "Troe",
-        "ThirdBody",
-        "Pressure",
         "Efficiency",
         "Kinetics",
         "KineticsComment",
@@ -88,7 +79,7 @@ def import_rmg_models(apps, schema_editor):
     models = SimpleNamespace()
     for name in model_names:
         setattr(models, name, apps.get_model("database", name))
-    logging.basicConfig(filename="import_log.txt", level=logging.DEBUG, filemode="w")
+    logging.basicConfig(filename="importer.log", level=logging.DEBUG, filemode="w")
 
     path = os.getenv("RMGMODELSPATH", "./rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
@@ -225,21 +216,22 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
     return reaction
 
 
-def create_arrhenius(rmg_kinetics_data, base_fields, models):
-    return models.Arrhenius.objects.create(
-        a_value=rmg_kinetics_data.A.value,
-        a_value_si=rmg_kinetics_data.A.value_si,
-        a_value_units=rmg_kinetics_data.A.units,
-        n_value=rmg_kinetics_data.n.value_si,
-        e_value=rmg_kinetics_data.Ea.value,
-        e_value_si=rmg_kinetics_data.Ea.value_si,
-        e_value_units=rmg_kinetics_data.Ea.units,
-        **base_fields,
+def create_arrhenius(rmg_kinetics_data):
+    return kd.Arrhenius(
+        type="arrhenius",
+        a=rmg_kinetics_data.A.value,
+        a_si=rmg_kinetics_data.A.value_si,
+        a_units=rmg_kinetics_data.A.units,
+        n=rmg_kinetics_data.n.value_si,
+        e=rmg_kinetics_data.Ea.value,
+        e_si=rmg_kinetics_data.Ea.value_si,
+        e_units=rmg_kinetics_data.Ea.units,
     )
 
 
-def create_arrhenius_ep(rmg_kinetics_data, base_fields, models):
-    return models.ArrheniusEP.objects.create(
+def create_arrhenius_ep(rmg_kinetics_data):
+    return kd.ArrheniusEP(
+        type="arrhenius_ep",
         a=rmg_kinetics_data.A.value,
         a_si=rmg_kinetics_data.A.value_si,
         a_units=rmg_kinetics_data.A.units,
@@ -248,73 +240,59 @@ def create_arrhenius_ep(rmg_kinetics_data, base_fields, models):
         e0=rmg_kinetics_data.E0.value,
         e0_si=rmg_kinetics_data.E0.value_si,
         e0_units=rmg_kinetics_data.E0.units,
-        **base_fields,
     )
 
 
-def create_multi_arrhenius(rmg_kinetics_data, base_fields, models):
-    multi_arrhenius = models.MultiArrhenius.objects.create(**base_fields)
-    multi_arrhenius.arrhenius_set.add(
-        *[
-            create_arrhenius(rmg_arrhenius, base_fields, models)
-            for rmg_arrhenius in rmg_kinetics_data.arrhenius
-        ]
+def create_multi_arrhenius(rmg_kinetics_data):
+    return kd.MultiArrhenius(
+        type="multi_arrhenius",
+        arrhenius_set=[
+            create_arrhenius(rmg_arrhenius) for rmg_arrhenius in rmg_kinetics_data.arrhenius
+        ],
     )
 
-    return multi_arrhenius
 
-
-def create_pdep_arrhenius(rmg_kinetics_data, base_fields, models):
-    pdep_arrhenius = models.PDepArrhenius.objects.create(**base_fields)
-    for pressure, arrhenius in zip(
-        rmg_kinetics_data.pressures.value_si, rmg_kinetics_data.arrhenius
-    ):
-        pressure_model = models.Pressure.objects.create(
-            pdep_arrhenius=pdep_arrhenius,
-            arrhenius=create_arrhenius(arrhenius, base_fields, models),
-            pressure=pressure,
-        )
-        pressure_model.save()
-
-    return pdep_arrhenius
-
-
-def create_multi_pdep_arrhenius(rmg_kinetics_data, base_fields, models):
-    multi_pdep_arrhenius = models.MultiPDepArrhenius.objects.create(**base_fields)
-    multi_pdep_arrhenius.pdep_arrhenius_set.add(
-        *[
-            create_pdep_arrhenius(rmg_arrhenius, base_fields, models)
-            for rmg_arrhenius in rmg_kinetics_data.arrhenius
-        ]
+def create_pdep_arrhenius(rmg_kinetics_data):
+    return kd.PDepArrhenius(
+        type="pdep_arrhenius",
+        pressure_set=[
+            kd.Pressure(arrhenius=create_arrhenius(a), pressure=p)
+            for a, p in zip(rmg_kinetics_data.pressures.value_si, rmg_kinetics_data.arrhenius)
+        ],
     )
 
-    return multi_pdep_arrhenius
+
+def create_multi_pdep_arrhenius(rmg_kinetics_data):
+    return kd.MultiPDepArrhenius(
+        type="multi_pdep_arrhenius",
+        pdep_arrhenius_set=[create_pdep_arrhenius(a) for a in rmg_kinetics_data.arrhenius],
+    )
 
 
-def create_chebyshev(rmg_kinetics_data, base_fields, models):
-    return models.Chebyshev.objects.create(
+def create_chebyshev(rmg_kinetics_data):
+    return kd.Chebyshev(
+        type="chebyshev",
         coefficient_matrix=rmg_kinetics_data.coeffs.tolist(),
         units=rmg_kinetics_data.kunits,
-        **base_fields,
     )
 
 
-def create_third_body(rmg_kinetics_data, base_fields, models):
-    return models.ThirdBody.objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
-        **base_fields,
+def create_third_body(rmg_kinetics_data):
+    return kd.ThirdBody(
+        type="third_body",
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow),
     )
 
 
-def create_lindemann(rmg_kinetics_data, base_fields, models):
-    return models.Lindemann.objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
-        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, models),
-        **base_fields,
+def create_lindemann(rmg_kinetics_data):
+    return kd.Lindemann(
+        type="lindemann",
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow),
+        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh),
     )
 
 
-def create_troe(rmg_kinetics_data, base_fields, models):
+def create_troe(rmg_kinetics_data):
     troe_fields = filter_fields(
         {
             "t1": rmg_kinetics_data.T1.value_si if rmg_kinetics_data.T1 is not None else None,
@@ -322,28 +300,28 @@ def create_troe(rmg_kinetics_data, base_fields, models):
             "t3": rmg_kinetics_data.T3.value_si if rmg_kinetics_data.T3 is not None else None,
         }
     )
-    return models.Troe.objects.create(
-        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow, base_fields, models),
-        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh, base_fields, models),
+    return kd.Troe(
+        type="troe",
+        low_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusLow),
+        high_arrhenius=create_arrhenius(rmg_kinetics_data.arrheniusHigh),
         alpha=rmg_kinetics_data.alpha,
         **troe_fields,
-        **base_fields,
     )
 
 
-def create_general_kinetics_data(rmg_kinetics_data, base_fields, models):
-    return models.KineticsData.objects.create(
-        temp_array=rmg_kinetics_data.Tdata,
-        rate_coefficients=rmg_kinetics_data.kdata,
-        **base_fields,
+def create_general_kinetics_data(rmg_kinetics_data):
+    return kd.KineticsData(
+        type="kinetics_data",
+        temps=rmg_kinetics_data.Tdata,
+        rate_coeffs=rmg_kinetics_data.kdata,
     )
 
 
-def create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, models):
+def create_and_save_efficiencies(kinetic_model, kinetics_instance, rmg_kinetics_data, models):
     for rmg_molecule, efficiency in rmg_kinetics_data.efficiencies.items():
         species = get_or_create_species(kinetic_model, "", [rmg_molecule], models)
         efficiency = models.Efficiency.objects.create(
-            species=species, kinetics_data=kinetics_data, efficiency=efficiency
+            species=species, kinetics=kinetics_instance, efficiency=efficiency
         )
         efficiency.save()
 
@@ -381,10 +359,7 @@ def create_kinetics_data(kinetic_model, rmg_kinetics_data, models):
         "Troe": create_troe,
     }
     model_name = rmg_kinetics_data.__class__.__name__
-    base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
-    kinetics_data = kinetics_factory[model_name](rmg_kinetics_data, base_fields, models)
-    if model_name not in ["Arrhenius", "ArrheniusEP", "MultiArrhenius"]:
-        create_and_save_efficiencies(kinetic_model, kinetics_data, rmg_kinetics_data, models)
+    kinetics_data = kinetics_factory[model_name](rmg_kinetics_data).dict()
 
     return kinetics_data
 
@@ -414,14 +389,25 @@ def import_kinetics(kinetics_path, kinetic_model, models):
                 rmg_reaction = entry.item
                 reaction = get_or_create_reaction(kinetic_model, rmg_reaction, models)
                 kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, models)
-                kinetics_model = models.Kinetics.objects.create(
-                    reaction=reaction, base_data=kinetics_data
+                base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
+
+                kinetics_instance, created = models.Kinetics.objects.get_or_create(
+                    reaction=reaction, raw_data=kinetics_data, defaults=base_fields
                 )
-                kinetics_comment = models.KineticsComment.objects.create(
-                    kinetics=kinetics_model, kinetic_model=kinetic_model, comment=comment
+                if created and kinetics_data.get("type") not in [
+                    "arrhenius",
+                    "arrhenius_ep",
+                    "multi_arrhenius",
+                ]:
+                    create_and_save_efficiencies(
+                        kinetic_model, kinetics_instance, rmg_kinetics_data, models
+                    )
+
+                models.KineticsComment.objects.get_or_create(
+                    kinetics=kinetics_instance,
+                    kinetic_model=kinetic_model,
+                    defaults={"comment": comment},
                 )
-                kinetics_model.save()
-                kinetics_comment.save()
         except Exception:
             logging.exception(f"Failed to import reaction {entry.label}")
 
