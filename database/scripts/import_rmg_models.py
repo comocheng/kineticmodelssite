@@ -392,7 +392,7 @@ def import_kinetics(kinetics_path, kinetic_model, models):
                 base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
 
                 kinetics_instance, created = models.Kinetics.objects.get_or_create(
-                    reaction=reaction, raw_data=kinetics_data, defaults=base_fields
+                    reaction=reaction, data=kinetics_data, defaults=base_fields
                 )
                 if created and kinetics_data.get("type") not in [
                     "arrhenius",
