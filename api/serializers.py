@@ -3,6 +3,7 @@ from drf_writable_nested.serializers import NestedCreateMixin
 
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
+from database.models.kinetic_data import validate_kinetics_data
 
 
 class NestedModelSerializer(NestedCreateMixin, serializers.ModelSerializer):
@@ -88,15 +89,20 @@ class EfficiencySerializer(serializers.ModelSerializer):
 class KineticsSerializer(NestedModelSerializer):
     efficiency_set = EfficiencySerializer(many=True)
     models = [models.Efficiency]
+    data = serializers.JSONField(source="raw_data", validators=[validate_kinetics_data])
 
     class Meta:
         model = models.Kinetics
-        fields = "__all__"
+        exclude = ["species", "raw_data"]
+
 
 class SpeciesNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SpeciesName
         exclude = ["kinetic_model"]
+
+    def validate_data(self, value):
+        return validate_kinetics_data(value)
 
 
 class ThermoCommentSerializer(serializers.ModelSerializer):
