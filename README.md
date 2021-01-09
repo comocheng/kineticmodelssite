@@ -52,7 +52,7 @@ Put these lines in your shell config file (ie. `.bashrc`) so you don't have to t
 
 Now run:
 
-```docker-compose -f docker-compose.debug.yml run db -d```
+```docker-compose -f docker-compose.debug.yml start db```
 
 Then open pgAdmin and setup a connection with the following information:
 
