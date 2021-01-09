@@ -302,8 +302,9 @@ def validate_kinetics_data(data, returns=False):
     valid = False
     for model in models:
         try:
+            obj = model(**data)
             if returns:
-                return model(**data)
+                return obj
             valid = True
         except ValidationError as e:
             locs = [v for error in e.errors() for v in error.get("loc") if error.get("loc")]
@@ -322,7 +323,7 @@ class Kinetics(models.Model):
     reverse = models.BooleanField(
         default=False, help_text="Is this the rate for the reverse reaction?"
     )
-    raw_data = JSONField(validators=[validate_kinetics_data], name="data")
+    raw_data = JSONField(validators=[validate_kinetics_data])
     species = models.ManyToManyField("Species", through="Efficiency", blank=True)
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
@@ -335,7 +336,7 @@ class Kinetics(models.Model):
 
     class Meta:
         verbose_name_plural = "Kinetics"
-        unique_together = ("reaction", "data")
+        unique_together = ("reaction", "raw_data")
 
     def to_rmg(self):
         """
