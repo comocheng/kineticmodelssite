@@ -30,3 +30,4 @@ dependencies:
     - djangorestframework
     - drf-writable-nested
     - python-dotenv
+    - pydantic
