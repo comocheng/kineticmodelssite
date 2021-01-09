@@ -14,7 +14,7 @@ postgres/
 # Misc
 ignore/*
 errors.txt
-import_log.txt
+importer.log
 
 # Deployment files
 .env

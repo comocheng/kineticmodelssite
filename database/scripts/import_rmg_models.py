@@ -47,6 +47,14 @@ Import Flow:
     * Link Species and save
 """  # noqa: E501
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename="importer.log", mode="w")
+handler.setFormatter(
+    logging.Formatter("[%(levelname)s] %(message)s")
+)
+logger.addHandler(handler)
+
 
 def safe_import(func, *args, error_message=None, **kwargs):
     try:
@@ -54,7 +62,7 @@ def safe_import(func, *args, error_message=None, **kwargs):
             func(*args, **kwargs)
     except Exception:
         message = error_message or f"Failed to execute {func.__name__}"
-        logging.exception(message)
+        logger.exception(message)
 
 
 def import_rmg_models(apps, schema_editor):
@@ -77,16 +85,15 @@ def import_rmg_models(apps, schema_editor):
         "Stoichiometry",
     ]
     models = SimpleNamespace()
+    logger.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     for name in model_names:
         setattr(models, name, apps.get_model("database", name))
-    logging.basicConfig(filename="importer.log", level=logging.DEBUG, filemode="w")
-
     path = os.getenv("RMGMODELSPATH", "./rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
     model_paths = get_models(path, skip_list)
 
     for rmg_model_name, thermo_path, kinetics_path, source_path in model_paths:
-        logging.info(f"IMPORTING KINETIC MODEL: {rmg_model_name}")
+        logger.info(f"IMPORTING KINETIC MODEL: {rmg_model_name}")
         safe_import(
             import_kinetic_model, rmg_model_name, thermo_path, kinetics_path, source_path, models
         )
@@ -99,11 +106,11 @@ def import_kinetic_model(rmg_model_name, thermo_path, kinetics_path, source_path
     )
 
     kinetic_model.save()
-    logging.info(f"Importing Source {source_path}")
+    logger.info(f"Importing Source {source_path}")
     safe_import(import_source, source_path, kinetic_model, models)
-    logging.info(f"Importing Thermo Library {thermo_path}")
+    logger.info(f"Importing Thermo Library {thermo_path}")
     safe_import(import_thermo, thermo_path, kinetic_model, models)
-    logging.info(f"Importing Kinetics Library {kinetics_path}")
+    logger.info(f"Importing Kinetics Library {kinetics_path}")
     safe_import(import_kinetics, kinetics_path, kinetic_model, models)
 
 
@@ -112,7 +119,7 @@ def safe_save(instance):
         instance.save()
         return instance
     except Exception:
-        logging.exception(f"Error when saving instance of {instance.__class__.__qualname__}")
+        logger.exception(f"Error when saving instance of {instance.__class__.__qualname__}")
 
 
 def filter_fields(fields, filter_value=None):
@@ -392,7 +399,7 @@ def import_kinetics(kinetics_path, kinetic_model, models):
                 base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
 
                 kinetics_instance, created = models.Kinetics.objects.get_or_create(
-                    reaction=reaction, data=kinetics_data, defaults=base_fields
+                    reaction=reaction, raw_data=kinetics_data, defaults=base_fields
                 )
                 if created and kinetics_data.get("type") not in [
                     "arrhenius",
@@ -409,7 +416,7 @@ def import_kinetics(kinetics_path, kinetic_model, models):
                     defaults={"comment": comment},
                 )
         except Exception:
-            logging.exception(f"Failed to import reaction {entry.label}")
+            logger.exception(f"Failed to import reaction {entry.label}")
 
 
 def import_thermo(thermo_path, kinetic_model, models):
@@ -424,7 +431,7 @@ def import_thermo(thermo_path, kinetic_model, models):
     library.SKIP_DUPLICATES = True
     library.load(thermo_path, local_context=local_context)
     for species_name, entry in library.entries.items():
-        logging.info(f"Importing Thermo entry for {species_name}")
+        logger.info(f"Importing Thermo entry for {species_name}")
         try:
             species = get_or_create_species(kinetic_model, species_name, [entry.item], models)
             thermo_data = entry.data
@@ -445,7 +452,7 @@ def import_thermo(thermo_path, kinetic_model, models):
             thermo.save()
             thermo_comment.save()
         except Exception:
-            logging.exception("Failed to import entry")
+            logger.exception("Failed to import entry")
 
 
 def create_and_save_authorships(source, author_data, models):
@@ -491,9 +498,9 @@ def import_source(source_path, kinetic_model, models):
         if author_data is not None:
             create_and_save_authorships(source, author_data, models)
         else:
-            logging.warning("Could not find author data")
+            logger.warning("Could not find author data")
     except FileNotFoundError:
-        logging.warning("source.txt not found")
+        logger.warning("source.txt not found")
 
 
 def get_doi(source_path):
