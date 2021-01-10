@@ -6,8 +6,8 @@ from django.core.exceptions import ValidationError as DJValidationError
 from django.db import models
 from django.contrib.postgres.fields import JSONField
 from pydantic.typing import Literal
-from pydantic import BaseModel, ValidationError
-from rmgpy.quantity import ScalarQuantity, ArrayQuantity
+from pydantic import BaseModel, ValidationError, validator
+from rmgpy.quantity import ScalarQuantity, ArrayQuantity, RATECOEFFICIENT_COMMON_UNITS, Energy
 
 
 class SimpleRegister(list):
@@ -18,6 +18,21 @@ class SimpleRegister(list):
 
 
 register = SimpleRegister()
+
+
+def validate_rate_constant_units(units):
+    if units not in RATECOEFFICIENT_COMMON_UNITS:
+        raise ValueError(f"a_units must be one of {', '.join(RATECOEFFICIENT_COMMON_UNITS)}.")
+
+    return units
+
+
+def validate_energy_units(units):
+    common_units = Energy.common_units
+    if units not in common_units:
+        raise ValueError(f"e_units must be one of {', '.join(common_units)}.")
+
+    return units
 
 
 @register
@@ -39,6 +54,14 @@ class Arrhenius(BaseModel):
     e_si: float
     e_delta: Optional[float]
     e_units: str
+
+    @validator("a_units")
+    def a_units_common(cls, v):
+        return validate_rate_constant_units(v)
+
+    @validator("e_units")
+    def e_units_common(cls, v):
+        return validate_energy_units(v)
 
     def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
         """
@@ -94,6 +117,14 @@ class ArrheniusEP(BaseModel):
     e0: float
     e0_si: float
     e0_units: str
+
+    @validator("a_units")
+    def a_units_common(self, v):
+        return validate_rate_constant_units(v)
+
+    @validator("e0_units")
+    def e0_units_common(self, v):
+        return validate_energy_units(v)
 
     def to_rmg(self):
         return kinetics.ArrheniusEP(
