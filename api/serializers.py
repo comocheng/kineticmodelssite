@@ -85,12 +85,6 @@ class KineticsDataSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class KineticsDataSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.KineticsData
-        fields = "__all__"
-
-
 class ArrheniusSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Arrhenius
