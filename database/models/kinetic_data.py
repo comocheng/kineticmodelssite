@@ -378,6 +378,10 @@ class Kinetics(models.Model):
         return self.to_rmg().to_chemkin()
 
     @property
+    def type(self):
+        return " ".join(titlecase(s) for s in self.data.type.split("_"))
+
+    @property
     def data(self):
         return validate_kinetics_data(self.raw_data, returns=True)
 
