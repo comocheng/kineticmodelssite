@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import rmgpy.kinetics as kinetics
+from titlecase import titlecase
 from django.core.exceptions import ValidationError as DJValidationError
 from django.db import models
 from django.contrib.postgres.fields import JSONField
@@ -9,12 +10,24 @@ from pydantic import BaseModel, ValidationError
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity
 
 
+class SimpleRegister(list):
+    def __call__(self, cls):
+        self.append(cls)
+
+        return cls
+
+
+register = SimpleRegister()
+
+
+@register
 class KineticsData(BaseModel):
     type: Literal["kinetics_data"]
     temps: List[float]
     rate_coeffs: List[float]
 
 
+@register
 class Arrhenius(BaseModel):
     type: Literal["arrhenius"]
     a: float
@@ -71,6 +84,7 @@ class Arrhenius(BaseModel):
         ]
 
 
+@register
 class ArrheniusEP(BaseModel):
     type: Literal["arrhenius_ep"]
     a: float
@@ -99,11 +113,13 @@ class ArrheniusEP(BaseModel):
         ]
 
 
+@register
 class Pressure(BaseModel):
     arrhenius: Arrhenius
     pressure: float
 
 
+@register
 class PDepArrhenius(BaseModel):
     type: Literal["pdep_arrhenius"]
     pressure_set: List[Pressure]
@@ -131,6 +147,7 @@ class PDepArrhenius(BaseModel):
         return [("", table_heads, table_bodies)]
 
 
+@register
 class MultiArrhenius(BaseModel):
     type: Literal["multi_arrhenius"]
     arrhenius_set: List[Arrhenius]
@@ -154,6 +171,7 @@ class MultiArrhenius(BaseModel):
         return [("", table_heads, table_bodies)]
 
 
+@register
 class MultiPDepArrhenius(BaseModel):
     type: Literal["multi_pdep_arrhenius"]
     pdep_arrhenius_set: List[PDepArrhenius]
@@ -179,6 +197,7 @@ class MultiPDepArrhenius(BaseModel):
         return table_data
 
 
+@register
 class Chebyshev(BaseModel):
     type: Literal["chebyshev"]
     coefficient_matrix: List[List[float]]
@@ -195,6 +214,7 @@ class Chebyshev(BaseModel):
         )
 
 
+@register
 class ThirdBody(BaseModel):
     type: Literal["third_body"]
     low_arrhenius: Arrhenius
@@ -212,6 +232,7 @@ class ThirdBody(BaseModel):
         return self.low_arrhenius.table_data()
 
 
+@register
 class Lindemann(BaseModel):
     type: Literal["lindemann"]
     low_arrhenius: Arrhenius
@@ -236,6 +257,7 @@ class Lindemann(BaseModel):
         return [("Low Pressure", low_heads, low_bodies), ("High Pressure", high_heads, high_bodies)]
 
 
+@register
 class Troe(BaseModel):
     type: Literal["troe"]
     low_arrhenius: Arrhenius
@@ -297,10 +319,9 @@ class Efficiency(models.Model):
 
 
 def validate_kinetics_data(data, returns=False):
-    models = [KineticsData, Arrhenius]
     error = None
     valid = False
-    for model in models:
+    for model in register:
         try:
             obj = model(**data)
             if returns:
