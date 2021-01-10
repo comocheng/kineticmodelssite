@@ -15,5 +15,5 @@ router.register(r"kinetics", views.KineticsViewSet)
 router.register(r"kineticmodel", views.KineticModelViewSet)
 
 urlpatterns = [
-    path("", include(router.urls))
+    path("", include(router.urls)),
 ]

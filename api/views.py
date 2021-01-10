@@ -1,44 +1,54 @@
 from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, BasePermission, SAFE_METHODS
 
 from database import models
 from api import serializers
 
 
-class FormulaViewSet(viewsets.ModelViewSet):
+class ReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS
+
+
+class PermissionsViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAdminUser | (IsAuthenticated & ReadOnly)]
+
+
+class FormulaViewSet(PermissionsViewSet):
     queryset = models.Formula.objects.all()
     serializer_class = serializers.FormulaSerializer
 
 
-class IsomerViewSet(viewsets.ModelViewSet):
+class IsomerViewSet(PermissionsViewSet):
     queryset = models.Isomer.objects.all()
     serializer_class = serializers.IsomerSerializer
 
 
-class SpeciesViewSet(viewsets.ModelViewSet):
+class SpeciesViewSet(PermissionsViewSet):
     queryset = models.Species.objects.all()
     serializer_class = serializers.SpeciesSerializer
 
 
-class ReactionViewSet(viewsets.ModelViewSet):
+class ReactionViewSet(PermissionsViewSet):
     queryset = models.Reaction.objects.all()
     serializer_class = serializers.ReactionSerializer
 
 
-class ThermoViewSet(viewsets.ModelViewSet):
+class ThermoViewSet(PermissionsViewSet):
     queryset = models.Thermo.objects.all()
     serializer_class = serializers.ThermoSerializer
 
 
-class TransportViewSet(viewsets.ModelViewSet):
+class TransportViewSet(PermissionsViewSet):
     queryset = models.Transport.objects.all()
     serializer_class = serializers.TransportSerializer
 
 
-class KineticsViewSet(viewsets.ModelViewSet):
+class KineticsViewSet(PermissionsViewSet):
     queryset = models.Kinetics.objects.all()
     serializer_class = serializers.KineticsSerializer
 
 
-class KineticModelViewSet(viewsets.ModelViewSet):
+class KineticModelViewSet(PermissionsViewSet):
     queryset = models.KineticModel.objects.all()
     serializer_class = serializers.KineticModelSerializer
