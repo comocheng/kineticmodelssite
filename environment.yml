@@ -29,5 +29,6 @@ dependencies:
     - django-autocomplete-light
     - djangorestframework
     - drf-writable-nested
+    - drf-nested-routers
     - python-dotenv
     - pydantic

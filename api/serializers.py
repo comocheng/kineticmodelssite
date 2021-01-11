@@ -1,9 +1,11 @@
 from rest_framework import serializers
 from drf_writable_nested.serializers import NestedCreateMixin
+from django.contrib.contenttypes.models import ContentType
 
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
 from database.models.kinetic_data import validate_kinetics_data
+from api.models import Revision
 
 
 class NestedModelSerializer(NestedCreateMixin, serializers.ModelSerializer):
@@ -147,3 +149,13 @@ class KineticModelSerializer(NestedModelSerializer):
             "thermo",
             "transport",
         ]
+
+
+class RevisionSerializer(serializers.ModelSerializer):
+    content_type = serializers.CharField(source="content_type.model")
+    created_by = serializers.CharField(source="created_by.username")
+    reviewed_by = serializers.CharField(source="reviewed_by.username", default=None)
+
+    class Meta:
+        model = Revision
+        fields = "__all__"
