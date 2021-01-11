@@ -3,8 +3,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, BasePermission, SAFE_METHODS
 from rest_framework.decorators import action
 from django.contrib.contenttypes.models import ContentType
-from django.views.generic import View
-from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpRequest
 
 from database import models
