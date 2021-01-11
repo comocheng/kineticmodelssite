@@ -119,11 +119,11 @@ class ArrheniusEP(BaseModel):
     e0_units: str
 
     @validator("a_units")
-    def a_units_common(self, v):
+    def a_units_common(cls, v):
         return validate_rate_constant_units(v)
 
     @validator("e0_units")
-    def e0_units_common(self, v):
+    def e0_units_common(cls, v):
         return validate_energy_units(v)
 
     def to_rmg(self):
@@ -364,7 +364,8 @@ def validate_kinetics_data(data, returns=False):
                 error = e
 
     if not valid:
-        raise DJValidationError(str(error or f"Invalid type: {data.get('type')}"))
+        error_msgs = [f"{', '.join(e.get('loc'))}: {e.get('msg')}" for e in error.errors()]
+        raise DJValidationError(error_msgs or f"Invalid type: {data.get('type')}")
 
 
 class Kinetics(models.Model):
