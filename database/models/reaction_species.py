@@ -72,8 +72,9 @@ class Species(models.Model):
 
     @property
     def formula(self):
-        if self.isomers.first():
-            return self.isomers.first().formula.formula
+        isomers = Isomer.objects.filter(species=self)
+        if isomers:
+            return isomers.first().formula.formula
 
 
 class Reaction(models.Model):
@@ -225,11 +226,4 @@ class Stoichiometry(models.Model):
         unique_together = ("species", "reaction", "coeff")
 
     def __str__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
-            s=self
-        )
-
-    def __repr__(self):
-        return ("{s.id} species {s.species} in reaction {s.reaction} is {s.coeff}").format(
-            s=self
-        )
+        return f"{self.id} | Species: {self.species.id} | Reaction: {self.reaction.id}"

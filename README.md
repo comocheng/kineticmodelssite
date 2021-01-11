@@ -37,7 +37,7 @@ To run a lightweight, debuggable version of the app, run:
 
 ```docker-compose -f docker-compose.debug.yml up -d```
 
-## Using Docker for Database Only
+### Using Docker for Database Only
 If you want to setup your development environment on your local machine without the docker container, install [pgAdmin4](https://www.pgadmin.org/).
 
 Then clone the [RMG-models](https://github.com/comocheng/RMG-models) repository and set the `RMGMODELSPATH` environment variable to the path where you cloned it:
@@ -84,6 +84,14 @@ Similarly, if you want to nuke your migrations, you can run this in your interac
 
 This is useful if RMG-models gets updated and you want to reset your database and migrate again.
 
+
+## REST API:
+Token authentication is required in order to make non readonly requests to the API (POST, PUT, DELETE, etc.).
+To easily generate a token for development, use the following:
+
+```python manage.py drf_create_token <username>```
+
+Use the `-r` option to regenerate a token for the given user.
 
 ## Contributing:
 
