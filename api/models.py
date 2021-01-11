@@ -23,7 +23,7 @@ class Revision(models.Model):
     diff = JSONField(unique=True)
 
     def __str__(self):
-        return f"{self.content_type}\n{self.diff}"
+        return f"{self.content_type.model.title()} | Status: {self.status} | Data: {self.diff}"
 
     def is_approved(self):
         return self.status == self.APPROVED
