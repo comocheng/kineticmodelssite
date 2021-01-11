@@ -20,10 +20,10 @@ class Revision(models.Model):
     status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=PENDING)
     proposal_comment = models.TextField(blank=True)
     reviewer_comment = models.TextField(blank=True)
-    content = JSONField(unique=True)
+    diff = JSONField(unique=True)
 
     def __str__(self):
-        return f"{self.content_type}\n{self.content}"
+        return f"{self.content_type}\n{self.diff}"
 
     def is_approved(self):
         return self.status == self.APPROVED

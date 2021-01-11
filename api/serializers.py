@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from drf_writable_nested.serializers import NestedCreateMixin
-from django.contrib.contenttypes.models import ContentType
 
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
