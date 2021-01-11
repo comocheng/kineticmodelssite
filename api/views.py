@@ -159,8 +159,3 @@ class KineticsViewSet(DatabaseViewSet):
 class KineticModelViewSet(DatabaseViewSet):
     queryset = models.KineticModel.objects.all()
     serializer_class = serializers.KineticModelSerializer
-
-
-class RevisionApprovalView(UserPassesTestMixin, View):
-    def test_func(self):
-        return self.request.user.is_staff
