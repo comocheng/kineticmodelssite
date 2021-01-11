@@ -3,6 +3,7 @@ from drf_writable_nested.serializers import NestedCreateMixin
 
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
+from database.models.kinetic_data import validate_kinetics_data
 
 
 class NestedModelSerializer(NestedCreateMixin, serializers.ModelSerializer):
@@ -79,111 +80,29 @@ class TransportSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class KineticsDataSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.KineticsData
-        fields = "__all__"
-
-
-class ArrheniusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Arrhenius
-        fields = "__all__"
-
-
-class ArrheniusEPSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.ArrheniusEP
-        fields = "__all__"
-
-
-class MultiArrheniusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.MultiArrhenius
-        fields = "__all__"
-
-
-class PressureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Pressure
-        exclude = ["pdep_arrhenius"]
-
-
-class PDepArrheniusSerializer(serializers.ModelSerializer):
-    pressure_set = PressureSerializer(many=True)
-
-    class Meta:
-        model = models.PDepArrhenius
-        exclude = ["arrhenius"]
-
-
-class MultiPDepArrheniusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.MultiPDepArrhenius
-        fields = "__all__"
-
-
-class ChebyshevSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Chebyshev
-        fields = "__all__"
-
-
-class ThirdBodySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.ThirdBody
-        fields = "__all__"
-
-
-class LindemannSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Lindemann
-        fields = "__all__"
-
-
-class TroeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Troe
-        fields = "__all__"
-
-
 class EfficiencySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Efficiency
-        exclude = ["kinetics_data"]
+        exclude = ["kinetics"]
 
 
-class BaseKineticsDataSerializer(serializers.ModelSerializer):
-    kineticsdata = KineticsDataSerializer()
-    arrhenius = ArrheniusSerializer()
-    arrheniusep = ArrheniusEPSerializer()
-    pdeparrhenius = PDepArrheniusSerializer()
-    multiarrhenius = MultiArrheniusSerializer()
-    multipdeparrhenius = MultiPDepArrheniusSerializer()
-    chebyshev = ChebyshevSerializer()
-    thirdbody = ThirdBodySerializer()
-    lindemann = LindemannSerializer()
-    troe = TroeSerializer()
-
+class KineticsSerializer(NestedModelSerializer):
     efficiency_set = EfficiencySerializer(many=True)
-
-    class Meta:
-        model = models.BaseKineticsData
-        exclude = ["collider_efficiencies"]
-
-
-class KineticsSerializer(serializers.ModelSerializer):
-    data = BaseKineticsDataSerializer()
+    models = [models.Efficiency]
+    data = serializers.JSONField(source="raw_data", validators=[validate_kinetics_data])
 
     class Meta:
         model = models.Kinetics
-        fields = "__all__"
+        exclude = ["species", "raw_data"]
 
 
 class SpeciesNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SpeciesName
         exclude = ["kinetic_model"]
+
+    def validate_data(self, value):
+        return validate_kinetics_data(value)
 
 
 class ThermoCommentSerializer(serializers.ModelSerializer):

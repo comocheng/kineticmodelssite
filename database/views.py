@@ -17,7 +17,6 @@ from rmgpy.molecule.draw import MoleculeDrawer
 
 from database import models
 from .models import (
-    BaseKineticsData,
     Species,
     Structure,
     KineticModel,
@@ -280,9 +279,7 @@ class KineticsDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         kinetics = self.get_object()
-        context["table_data"] = BaseKineticsData.objects.get_subclass(
-            kinetics=kinetics
-        ).table_data()
+        context["table_data"] = kinetics.data.table_data()
         context["efficiencies"] = kinetics.data.efficiency_set.all()
         context["kinetics_comments"] = kinetics.kineticscomment_set.order_by("kinetic_model__id")
 
