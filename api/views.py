@@ -16,7 +16,7 @@ class ReadOnly(BasePermission):
 
 
 class PermissionsMixin:
-    permission_classes = [IsAdminUser | (IsAuthenticated & ReadOnly)]
+    permission_classes = [IsAdminUser | ReadOnly]
 
 
 class RevisionMixin:
