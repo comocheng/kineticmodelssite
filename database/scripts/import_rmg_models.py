@@ -139,7 +139,7 @@ def get_or_create_species(kinetic_model, name, molecules, models):
     for molecule in molecules:
         smiles = molecule.to_smiles()
         augmented_inchi = molecule.to_augmented_inchi()
-        adjacency_list = molecule.to_adjacency_list()
+        adjacency_list = molecule.to_adjacency_list().strip()
         multiplicity = molecule.multiplicity
         isomer, _ = models.Isomer.objects.get_or_create(inchi=augmented_inchi, formula=formula_obj)
         isomers.append(isomer)
