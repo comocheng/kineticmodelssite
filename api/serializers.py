@@ -28,10 +28,56 @@ class FormulaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class IsomerSerializer(serializers.ModelSerializer):
+class StructureSerializer(UniqueFieldsMixin, serializers.ModelSerializer):
+    class Meta:
+        model = models.Structure
+        exclude = ["isomer"]
+
+
+class IsomerSerializer(NestedCreateMixin, serializers.ModelSerializer):
+    structure_set = StructureSerializer(many=True)
+    formula = serializers.CharField(source="formula.formula")
+
     class Meta:
         model = models.Isomer
         fields = "__all__"
+
+    def get_structure_serializer(self, validated_data):
+        structure_serializer = StructureSerializer(
+            many=True, data=validated_data.pop("structure_set")
+        )
+
+        return structure_serializer, validated_data
+
+    def get_formula(self, validated_data):
+        formula_str = validated_data.pop("formula")["formula"]
+        formula = models.Formula.objects.get_or_create(formula=formula_str)[0]
+
+        return formula, validated_data
+
+    def create(self, validated_data):
+        structure_serializer, validated_data = self.get_structure_serializer(validated_data)
+        formula, validated_data = self.get_formula(validated_data)
+
+        instance = models.Isomer.objects.create(formula=formula, **validated_data)
+
+        structure_serializer.is_valid()
+        structure_serializer.save(isomer=instance)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            structure_serializer, validated_data = self.get_structure_serializer(validated_data)
+            formula, validated_data = self.get_formula(validated_data)
+
+            instance.formula = formula
+            instance.save()
+
+            structure_serializer.is_valid()
+            structure_serializer.save(isomer=instance)
+
+            return super().update(instance, validated_data)
 
 
 class SpeciesSerializer(serializers.ModelSerializer):
