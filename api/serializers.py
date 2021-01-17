@@ -81,15 +81,64 @@ class IsomerSerializer(NestedCreateMixin, serializers.ModelSerializer):
 
 
 class SpeciesSerializer(serializers.ModelSerializer):
+    new_isomers = IsomerSerializer(many=True, required=False, write_only=True)
+
     class Meta:
         model = models.Species
         exclude = ["hash"]
+        extra_kwargs = {"isomers": {"required": False}}
+
+    def to_internal_value(self, data):
+        internal_value = super().to_internal_value(data)
+        new_isomers = data.get("new_isomers")
+        if new_isomers:
+            internal_value["new_isomers"] = new_isomers
+
+        return internal_value
+
+    def validate(self, attrs):
+        if not attrs.get("isomers") and not attrs.get("new_isomers"):
+            raise serializers.ValidationError("Must have either 'isomers' or 'new_isomers' field")
+
+        if not attrs.get("new_isomers"):
+            isomers = attrs.get("isomers")
+            existing_species = models.Species.objects.filter(hash=get_species_hash(isomers))
+            if existing_species:
+                raise serializers.ValidationError(
+                    f"Another species already exists with isomers {isomers}"
+                )
+
+        return super().validate(attrs)
+
+    def update_isomers(self, instance, isomers_data, new_isomers_data):
+        with transaction.atomic():
+            instance.isomers.clear()
+            isomers = isomers_data
+            if new_isomers_data:
+                serializer = IsomerSerializer(many=True, data=new_isomers_data)
+                serializer.is_valid()
+                new_isomers = serializer.save()
+                isomers.extend(isomer.id for isomer in new_isomers)
+
+            instance.isomers.add(*isomers)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        instance = self.update_isomers(
+            instance, validated_data.pop("isomers", []), validated_data.pop("new_isomers", None)
+        )
+
+        return super().update(instance, validated_data)
 
     def create(self, validated_data):
-        isomers = models.Isomer.objects.filter(pk__in=validated_data["isomers"])
-        validated_data["hash"] = get_species_hash(isomers)
+        isomers_data = validated_data.pop("isomers", [])
+        new_isomers_data = validated_data.pop("new_isomers", None)
 
-        return super().update(validated_data)
+        with transaction.atomic():
+            instance = super().create(validated_data)
+
+            return self.update_isomers(instance, isomers_data, new_isomers_data)
 
 
 class StoichiometrySerializer(serializers.ModelSerializer):
