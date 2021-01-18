@@ -1,13 +1,14 @@
 from django.dispatch import receiver
-from django.db.models.signals import m2m_changed
-from .models import Reaction, Species
+from django.db.models.signals import m2m_changed, post_save, post_delete
+from .models import Stoichiometry, Species
 from .scripts.import_rmg_models import get_species_hash, get_reaction_hash
 
 
-@receiver(m2m_changed, sender=Reaction.species.through)
+@receiver([post_save, post_delete], sender=Stoichiometry)
 def change_reaction_hash_on_stoichiometry_change(instance, **kwargs):
-    instance.hash = get_reaction_hash(instance.stoich_species())
-    instance.save()
+    reaction = instance.reaction
+    reaction.hash = get_reaction_hash(reaction.stoich_species())
+    reaction.save()
 
 
 @receiver(m2m_changed, sender=Species.isomers.through)
