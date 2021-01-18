@@ -1,25 +1,12 @@
 from rest_framework import serializers
+from django.db import transaction
 from drf_writable_nested.serializers import NestedCreateMixin
+from drf_writable_nested.mixins import UniqueFieldsMixin
 
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
 from database.models.kinetic_data import validate_kinetics_data
 from api.models import Revision
-
-
-class NestedModelSerializer(NestedCreateMixin, serializers.ModelSerializer):
-    def update(self, instance, validated_data):
-        for model in self.models:
-            new_objects = []
-            related_name = f"{model.__name__.lower()}_set"
-            for data in validated_data.pop(related_name):
-                data[self.Meta.model.__name__.lower()] = instance
-                obj, _ = model.objects.get_or_create(**data)
-                new_objects.append(obj.pk)
-
-            getattr(instance, related_name).exclude(pk__in=new_objects).delete()
-
-        return super().update(instance, validated_data)
 
 
 class FormulaSerializer(serializers.ModelSerializer):
@@ -118,7 +105,7 @@ class SpeciesSerializer(serializers.ModelSerializer):
                 serializer = IsomerSerializer(many=True, data=new_isomers_data)
                 serializer.is_valid()
                 new_isomers = serializer.save()
-                isomers.extend(isomer.id for isomer in new_isomers)
+                isomers.extend(new_isomers)
 
             instance.isomers.add(*isomers)
 
@@ -182,10 +169,12 @@ class EfficiencySerializer(serializers.ModelSerializer):
         exclude = ["kinetics"]
 
 
-class KineticsSerializer(NestedModelSerializer):
+class KineticsSerializer(serializers.ModelSerializer):
     efficiency_set = EfficiencySerializer(many=True)
     models = [models.Efficiency]
-    data = serializers.JSONField(source="raw_data", validators=[validate_kinetics_data])
+
+    def validate_diff(self, value):
+        return validate_kinetics_data(value)
 
     class Meta:
         model = models.Kinetics
@@ -196,9 +185,6 @@ class SpeciesNameSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SpeciesName
         exclude = ["kinetic_model"]
-
-    def validate_data(self, value):
-        return validate_kinetics_data(value)
 
 
 class ThermoCommentSerializer(serializers.ModelSerializer):
@@ -219,18 +205,11 @@ class KineticsCommentSerializer(serializers.ModelSerializer):
         exclude = ["kinetic_model"]
 
 
-class KineticModelSerializer(NestedModelSerializer):
+class KineticModelSerializer(serializers.ModelSerializer):
     speciesname_set = SpeciesNameSerializer(many=True)
     thermocomment_set = ThermoCommentSerializer(many=True)
     transportcomment_set = TransportCommentSerializer(many=True)
     kineticscomment_set = KineticsCommentSerializer(many=True)
-
-    models = [
-        models.SpeciesName,
-        models.ThermoComment,
-        models.TransportComment,
-        models.KineticsComment,
-    ]
 
     class Meta:
         model = models.KineticModel
