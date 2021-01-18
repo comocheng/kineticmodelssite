@@ -128,27 +128,118 @@ class SpeciesSerializer(serializers.ModelSerializer):
             return self.update_isomers(instance, isomers_data, new_isomers_data)
 
 
+class StoichiometryListSerializer(serializers.ListSerializer):
+    @classmethod
+    def create_species(cls, validated_data):
+        new_species_data = validated_data.pop("new_species", None)
+        if new_species_data:
+            serializer = SpeciesSerializer(data=new_species_data)
+            serializer.is_valid()
+            validated_data["species"] = serializer.save()
+
+        return validated_data
+
+    def create(self, validated_data):
+        stoichiometries = [
+            models.Stoichiometry(**self.create_species(item)) for item in validated_data
+        ]
+
+        return models.Stoichiometry.objects.bulk_create(stoichiometries)
+
+
 class StoichiometrySerializer(serializers.ModelSerializer):
+    new_species = SpeciesSerializer(write_only=True, required=False)
+
     class Meta:
         model = models.Stoichiometry
         exclude = ["reaction"]
+        extra_kwargs = {"species": {"required": False}}
+        list_serializer_class = StoichiometryListSerializer
+
+    def validate(self, attrs):
+        species = attrs.get("species")
+        new_species = attrs.get("new_species")
+
+        if not species and not new_species:
+            raise serializers.ValidationError("Must have either 'species' or 'new_species' field")
+
+        if species and new_species:
+            raise serializers.ValidationError("Cannot have both 'species' and 'new_species' field")
+
+        return super().validate(attrs)
+
+    def to_internal_value(self, data):
+        internal_value = super().to_internal_value(data)
+        new_species = data.get("new_species")
+        if new_species:
+            internal_value["new_species"] = new_species
+
+        return internal_value
+
+    def update(self, instance, validated_data):
+        validated_data = self.list_serializer_class.create_species(validated_data)
+
+        return super().update(instance, validated_data)
+
+    def create(self, validated_data):
+        validated_data = self.list_serializer_class.create_species(validated_data)
+
+        return super().create(validated_data)
 
 
-class ReactionSerializer(NestedModelSerializer):
+class ReactionSerializer(serializers.ModelSerializer):
     stoichiometry_set = StoichiometrySerializer(many=True)
-    models = [models.Stoichiometry]
 
     class Meta:
         model = models.Reaction
         exclude = ["species", "hash"]
 
-    def create(self, validated_data):
-        stoich_data = [
-            (d.get("coeff"), d.get("species")) for d in validated_data["stoichiometry_set"]
-        ]
-        validated_data["hash"] = get_reaction_hash(stoich_data)
+    def validate(self, attrs):
+        stoich_data = []
+        for data in attrs.get("stoichiometry_set"):
+            if data.get("new_species"):
+                break
+            stoich_data.append((data.get("coeff"), data.get("species")))
+        else:
+            existing_reactions = models.Reaction.objects.filter(hash=get_reaction_hash(stoich_data))
+            if existing_reactions:
+                raise serializers.ValidationError(
+                    f"Another reaction already exists with stoichiometries {stoich_data}"
+                )
 
-        return super().create(validated_data)
+        return super().validate(attrs)
+
+    def clean_stoichiometry_data(self, validated_data):
+        stoichiometry_data = []
+
+        for data in validated_data.pop("stoichiometry_set"):
+            species = data.get("species")
+            if species:
+                data["species"] = species.id
+            stoichiometry_data.append(data)
+
+        return stoichiometry_data, validated_data
+
+    def create_stoichiometries(self, instance, stoichiometry_data):
+        instance.stoichiometry_set.all().delete()
+        serializer = StoichiometrySerializer(many=True, data=stoichiometry_data)
+        serializer.is_valid()
+        serializer.save(reaction=instance)
+
+    def update(self, instance, validated_data):
+        stoichiometry_data, validated_data = self.clean_stoichiometry_data(validated_data)
+
+        self.create_stoichiometries(instance, stoichiometry_data)
+
+        return super().update(instance, validated_data)
+
+    def create(self, validated_data):
+        stoichiometry_data, validated_data = self.clean_stoichiometry_data(validated_data)
+        instance = super().create(validated_data)
+
+        self.create_stoichiometries(instance, stoichiometry_data)
+
+        return instance
 
 
 class ThermoSerializer(serializers.ModelSerializer):
