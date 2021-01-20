@@ -44,9 +44,9 @@ Then clone the [RMG-models](https://github.com/comocheng/RMG-models) repository 
 
 ```export RMGMODELSPATH=/path/to/RMG-models/```
 
-Also set `DBHOST`:
+Also set `DB_HOST`:
 
-```export DBHOST=0.0.0.0```
+```export DB_HOST=0.0.0.0```
 
 Put these lines in your shell config file (ie. `.bashrc`) so you don't have to type it every time.
 
