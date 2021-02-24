@@ -18,9 +18,10 @@ ENV PATH="$POETRY_HOME/bin:$PATH" \
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
+COPY main/pyproject.toml poetry.lock ./
 RUN poetry install --no-dev --no-interaction
 
-COPY . .
+COPY rmg-models/ /rmg-models
+COPY main/ .
 
 CMD [ "./bin/entrypoint.sh" ]

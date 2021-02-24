@@ -88,7 +88,7 @@ def import_rmg_models(apps, schema_editor):
     logger.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     for name in model_names:
         setattr(models, name, apps.get_model("database", name))
-    path = os.getenv("RMGMODELSPATH", "./rmg-models/")
+    path = os.getenv("RMGMODELSPATH", "/rmg-models/")
     skip_list = ["PCI2011/193-Mehl"]
     model_paths = get_models(path, skip_list)
 
