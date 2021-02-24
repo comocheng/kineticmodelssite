@@ -1,0 +1,21 @@
+# Builds RMG-Py from source to /rmg/RMG-Py/rmgpy
+FROM continuumio/miniconda3:latest
+
+RUN apt update && apt -y install \
+  g++ \
+  gcc \
+  git \
+  make
+
+WORKDIR /rmg
+RUN git clone https://github.com/ReactionMechanismGenerator/RMG-Py.git \
+  && git clone https://github.com/ReactionMechanismGenerator/RMG-database.git
+
+WORKDIR /rmg/RMG-Py
+ENV PYTHONUNBUFFERED=1
+
+RUN conda env create -v --file environment.yml
+SHELL ["conda", "run", "-n", "rmg_env", "/bin/bash", "-c"]
+RUN make
+
+WORKDIR /rmg/RMG-Py/rmgpy

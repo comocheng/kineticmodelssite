@@ -1,28 +1,24 @@
-version: "3.8"
+version: "3.7"
 
 services:
   db:
     image: postgres
+    env_file: .env.dev
     ports:
       - "5432:5432"
-    env_file:
-      - ./.env.dev
   debug:
     build: .
     tty: true
-    env_file:
-      - ./.env.dev
+    env_file: .env.dev
     volumes:
       - .:/app
       - rmg-models:/app/rmg-models
-      - conda:/kms_env
     ports:
       - "5678:5678"
       - "8080:8080"
     depends_on:
       - db
+
 volumes:
   rmg-models:
-    external: true
-  conda:
     external: true

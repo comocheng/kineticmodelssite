@@ -1,26 +1,17 @@
-version: "3.8"
+version: "3.7"
 
 services:
   db:
     image: postgres
-    expose:
-      - 5432
-    env_file:
-      - ./.env
+    env_file: .env
   web:
-    build: .
-    command: ./bin/entrypoint.sh
+    build: comocheng/kms
+    env_file: .env
     volumes:
-      - .:/app
       - static:/app/static
       - media:/app/media
-      - rmg-models:/app/rmg-models
-    expose:
-      - 8000
     depends_on:
       - db
-    env_file:
-      - ./.env
   nginx:
     build: ./nginx
     volumes:
@@ -30,8 +21,7 @@ services:
       - "8000:80"
     depends_on:
       - web
+
 volumes:
   static:
   media:
-  rmg-models:
-    external: true
