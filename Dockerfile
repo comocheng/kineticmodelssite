@@ -1,5 +1,5 @@
 # Fetch RMG-Py build
-FROM comocheng/kms-rmgpy:latest as rmgpy
+FROM comocheng/kms-rmg:latest as rmg
 
 # Application
 FROM python:3.9-alpine
@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
   POETRY_HOME="/opt/poetry" \
   POETRY_NO_INTERACTION=1
 
-COPY --from=rmgpy /rmg/RMG-Py/rmgpy /rmgpy
+COPY --from=rmg /rmg/RMG-Py/rmgpy /rmgpy
 
 RUN apk add --no-cache curl \
   && (curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -)
