@@ -1,5 +1,3 @@
 #!/bin/bash
-
-python manage.py collectstatic --noinput
-python manage.py migrate --noinput
-gunicorn kms.wsgi --bind 0.0.0.0:8000
+poetry run python manage.py migrate --noinput
+poetry run gunicorn kms.wsgi --bind 0.0.0.0:8000
