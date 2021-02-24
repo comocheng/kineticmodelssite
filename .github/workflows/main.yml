@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 on:
   push:
     branches: [ master ]
@@ -6,16 +6,11 @@ on:
     branches: [ master ]
     types: [ opened, synchronize, ready_for_review ]
 jobs:
-  testing:
-    name: Testing
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
-      - name: Run Tests
-        run: |
-          echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-          docker pull ghcr.io/comocheng/kineticmodelssite/kms-build:latest
-          cp .env.dev .env
-          docker volume create rmg-models
-          docker-compose run web ./bin/test.sh --rm
+      - name: Tests
+        run: docker-compose run web ./bin/test.sh --rm
