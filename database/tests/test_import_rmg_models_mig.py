@@ -1,4 +1,5 @@
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
+from database.templatetags.utils import fields
 from database.scripts.import_rmg_models import (
     get_reaction_hash,
     get_species_hash,
@@ -28,3 +29,89 @@ class TestImportRmgModelsIntegration(MigratorTestCase):
                 get_reaction_hash(stoich_species) == reaction.hash,
                 f"Reaction {reaction} has inconsistent hash with its stoich-species pairs",
             )
+
+    def _find_kinetics_data(self, kinetics):
+        for model_name in [
+            "Arrhenius",
+            "ArrheniusEP",
+            "Chebyshev",
+            "KineticsData",
+            "Lindemann",
+            "MultiArrhenius",
+            "PDepArrhenius",
+            "MultiPDepArrhenius",
+            "Troe",
+            "ThirdBody",
+        ]:
+            model = self.model(model_name)
+            try:
+                return model.objects.get(kinetics=kinetics)
+            except model.DoesNotExist:
+                continue
+
+    def _get_kinetics_hash(self, kinetics):
+        source_id = kinetics.source.id if kinetics.source else ""
+        bd = kinetics.base_data
+        data = "".join(x[1] for x in fields(self._find_kinetics_data(kinetics))) if bd else ""
+        base_data_signature = (
+            "".join(
+                str(x)
+                for x in [
+                    bd.order,
+                    bd.min_temp,
+                    bd.max_temp,
+                    bd.min_pressure,
+                    bd.max_pressure,
+                    *bd.collider_efficiencies.values_list("id", flat=True),
+                ]
+            )
+            if bd
+            else ""
+        )
+        signature = "".join(
+            str(x)
+            for x in [
+                kinetics.prime_id,
+                kinetics.reaction.id,
+                source_id,
+                kinetics.reverse,
+                base_data_signature,
+                data,
+            ]
+        )
+
+        return hash(signature)
+
+    def test_unique_kinetics(self):
+        Kinetics = self.model("Kinetics")
+        hashes = [self._get_kinetics_hash(k) for k in Kinetics.objects.all()]
+
+        self.assertEqual(len(hashes), len(set(hashes)))
+
+    def _get_thermo_hash(self, thermo):
+        signature = "".join(
+            str(x)
+            for x in [
+                thermo.coeffs_poly1,
+                thermo.coeffs_poly2,
+                thermo.enthalpy_formation,
+                thermo.preferred_key,
+                thermo.prime_id,
+                thermo.reference_pressure,
+                thermo.reference_temp,
+                thermo.source,
+                thermo.species,
+                thermo.temp_max_1,
+                thermo.temp_max_2,
+                thermo.temp_min_1,
+                thermo.temp_min_2,
+            ]
+        )
+
+        return hash(signature)
+
+    def test_unique_thermo(self):
+        Thermo = self.model("Thermo")
+        hashes = [self._get_thermo_hash(t) for t in Thermo.objects.all()]
+
+        self.assertEqual(len(hashes), len(set(hashes)))
