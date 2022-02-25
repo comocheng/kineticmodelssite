@@ -1,22 +1,3 @@
 # Python files
 *.py[cod]
-**/__pycache__/
-
-# SQLite database files
-*.sqlite3
-postgres/
-
-# IDE settings
-.vscode/settings.json
-.pydevproject
-.settings/*
-
-# Misc
-ignore/*
-errors.txt
-importer.log
-
-# Deployment files
-.env
-/static/
-media/
+**/__pycache__
