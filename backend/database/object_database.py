@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Set
 
+from backend.database import Database
 from backend.models.kinetic_model import KineticModel
 from backend.models.kinetics import Kinetics
 from backend.models.reaction import Reaction
@@ -11,7 +12,7 @@ from backend.models.transport import Transport
 
 
 @dataclass
-class Database:
+class ObjectDatabase(Database):
     structures: Set[Structure] = field(default_factory=set)
     isomers: Set[Isomer] = field(default_factory=set)
     species: Set[Species] = field(default_factory=set)

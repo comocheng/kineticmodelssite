@@ -2,7 +2,7 @@ import unittest
 
 from hypothesis import given, settings, strategies
 
-from backend.database import Database
+from backend.database import Database, ObjectDatabase
 from backend.models.kinetic_model import KineticModel
 
 
@@ -19,14 +19,14 @@ class DatabaseTest(unittest.TestCase):
     @given(strategies.builds(KineticModel))
     @settings(max_examples=10)
     def test_import_kinetic_model(self, kinetic_model: KineticModel):
-        database = Database()
+        database = ObjectDatabase()
         database.import_kinetic_model(kinetic_model)
         self._test_import_kinetic_model(database, kinetic_model)
 
     @given(strategies.builds(KineticModel))
     @settings(max_examples=10)
     def test_idempotency(self, kinetic_model: KineticModel):
-        database = Database()
+        database = ObjectDatabase()
         database.import_kinetic_model(kinetic_model)
         database.import_kinetic_model(kinetic_model)
         self._test_import_kinetic_model(database, kinetic_model)
