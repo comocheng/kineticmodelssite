@@ -1,3 +1,4 @@
 # Python files
 *.py[cod]
 **/__pycache__
+.hypothesis
