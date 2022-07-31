@@ -1,9 +1,10 @@
-from typing import List
+from typing import FrozenSet
 
-from pydantic import BaseModel
+from .utils import frozen_dataclass
 
 
-class Structure(BaseModel):
+@frozen_dataclass
+class Structure:
     """An unambiguous representation of an atom or molecule"""
 
     adjlist: str
@@ -11,19 +12,21 @@ class Structure(BaseModel):
     multiplicity: int
 
 
-class Isomer(BaseModel):
+@frozen_dataclass
+class Isomer:
     """A molecule with a particular bonding structure"""
 
     formula: str
     inchi: str
-    structures: List[Structure]
+    structures: FrozenSet[Structure]
 
 
-class Species(BaseModel):
+@frozen_dataclass
+class Species:
     """A generalized chemical species consisting of a unique subset of isomers
     with the same chemical formula
     """
 
     prime_id: str
     cas_number: str
-    isomers: List[Isomer]
+    isomers: FrozenSet[Isomer]

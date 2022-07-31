@@ -1,13 +1,13 @@
-from typing import List
+from typing import FrozenSet, Union
 
-from pydantic import BaseModel
+from .utils import frozen_dataclass
 
 from .species import Species
 from .reaction import Reaction
 from .source import Source
 
-
-class Arrhenius(BaseModel):
+@frozen_dataclass
+class Arrhenius:
     a: float
     a_si: float
     a_delta: float | None
@@ -18,8 +18,8 @@ class Arrhenius(BaseModel):
     e_delta: float | None
     e_units: str
 
-
-class ArrheniusEP(BaseModel):
+@frozen_dataclass
+class ArrheniusEP:
     a: float
     a_si: float
     a_units: float
@@ -29,20 +29,22 @@ class ArrheniusEP(BaseModel):
     e0_units: str
 
 
-class ColliderSpecies(BaseModel):
+@frozen_dataclass
+class ColliderSpecies:
     species: Species
     efficiency: float
 
 
-class Kinetics(BaseModel):
+@frozen_dataclass
+class Kinetics:
     prime_id: str
     reaction: Reaction
-    data: Arrhenius | ArrheniusEP
+    data: Union[Arrhenius, ArrheniusEP]
     for_reverse: bool
     uncertainty: float
     min_temp: float
     max_temp: float
     min_pressure: float
     max_pressure: float
-    collider_species: List[ColliderSpecies]
+    collider_species: FrozenSet[ColliderSpecies]
     source: Source

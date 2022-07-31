@@ -1,14 +1,16 @@
-from typing import List
+from typing import FrozenSet
 
-from pydantic import BaseModel
+from .utils import frozen_dataclass
 
 
-class Author(BaseModel):
+@frozen_dataclass
+class Author:
     firstname: str
     lastname: str
 
 
-class Source(BaseModel):
+@frozen_dataclass
+class Source:
     doi: str
     prime_id: str
     publication_year: int
@@ -16,4 +18,4 @@ class Source(BaseModel):
     journal_name: str
     journal_volume: str
     page_numbers: str
-    authors: List[Author]
+    authors: FrozenSet[Author]

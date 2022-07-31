@@ -1,6 +1,6 @@
-from typing import List
+from typing import FrozenSet
 
-from pydantic import BaseModel
+from .utils import frozen_dataclass
 
 from .species import Species
 from .kinetics import Kinetics
@@ -8,16 +8,18 @@ from .thermo import Thermo
 from .transport import Transport
 from .source import Source
 
-class NamedSpecies(BaseModel):
+@frozen_dataclass
+class NamedSpecies:
     name: str
     species: Species
 
 
-class KineticModel(BaseModel):
+@frozen_dataclass
+class KineticModel:
     name: str
     prime_id: str
-    named_species: List[NamedSpecies]
-    kinetics: List[Kinetics]
-    thermo: List[Thermo]
-    transport: List[Transport]
+    named_species: FrozenSet[NamedSpecies]
+    kinetics: FrozenSet[Kinetics]
+    thermo: FrozenSet[Thermo]
+    transport: FrozenSet[Transport]
     source: Source

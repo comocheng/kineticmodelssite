@@ -1,11 +1,11 @@
-from typing import List
+from typing import FrozenSet
 
-from pydantic import BaseModel
-
+from .utils import frozen_dataclass
 from .species import Species
 
 
-class ReactionSpecies(BaseModel):
+@frozen_dataclass
+class ReactionSpecies:
     """A species and its stoichiometric coefficient
 
     The coefficient can be positive to represent a product,
@@ -16,7 +16,8 @@ class ReactionSpecies(BaseModel):
     species: Species
 
 
-class Reaction(BaseModel):
+@frozen_dataclass
+class Reaction:
     prime_id: str
-    reaction_species: List[ReactionSpecies]
+    reaction_species: FrozenSet[ReactionSpecies]
     reversible: bool

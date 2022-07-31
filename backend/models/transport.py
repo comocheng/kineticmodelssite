@@ -1,10 +1,11 @@
-from pydantic import BaseModel
 
+from .utils import frozen_dataclass
 from .species import Species
 from .source import Source
 
 
-class Transport(BaseModel):
+@frozen_dataclass
+class Transport:
     prime_id: str
     species: Species
     geometry: float
