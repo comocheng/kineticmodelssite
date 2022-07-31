@@ -1,10 +1,9 @@
 from typing import FrozenSet
 
-from backend.models.utils import frozen_dataclass
+from backend.models.utils import Model
 
 
-@frozen_dataclass
-class Structure:
+class Structure(Model):
     """An unambiguous representation of an atom or molecule"""
 
     adjlist: str
@@ -12,8 +11,7 @@ class Structure:
     multiplicity: int
 
 
-@frozen_dataclass
-class Isomer:
+class Isomer(Model):
     """A molecule with a particular bonding structure"""
 
     formula: str
@@ -21,8 +19,7 @@ class Isomer:
     structures: FrozenSet[Structure]
 
 
-@frozen_dataclass
-class Species:
+class Species(Model):
     """A generalized chemical species consisting of a unique subset of isomers
     with the same chemical formula
     """

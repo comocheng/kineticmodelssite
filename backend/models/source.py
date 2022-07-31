@@ -1,16 +1,14 @@
 from typing import FrozenSet
 
-from backend.models.utils import frozen_dataclass
+from backend.models.utils import Model
 
 
-@frozen_dataclass
-class Author:
+class Author(Model):
     firstname: str
     lastname: str
 
 
-@frozen_dataclass
-class Source:
+class Source(Model):
     doi: str
     prime_id: str
     publication_year: int

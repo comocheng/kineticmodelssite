@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Set
+
+from sortedcontainers import SortedSet
 
 from backend.database import Database
 from backend.models.kinetic_model import KineticModel
@@ -13,15 +14,15 @@ from backend.models.transport import Transport
 
 @dataclass
 class ObjectDatabase(Database):
-    structures: Set[Structure] = field(default_factory=set)
-    isomers: Set[Isomer] = field(default_factory=set)
-    species: Set[Species] = field(default_factory=set)
-    reactions: Set[Reaction] = field(default_factory=set)
-    kinetics: Set[Kinetics] = field(default_factory=set)
-    thermo: Set[Thermo] = field(default_factory=set)
-    transport: Set[Transport] = field(default_factory=set)
-    kinetic_models: Set[KineticModel] = field(default_factory=set)
-    sources: Set[Source] = field(default_factory=set)
+    structures: SortedSet[Structure] = field(default_factory=SortedSet)
+    isomers: SortedSet[Isomer] = field(default_factory=SortedSet)
+    species: SortedSet[Species] = field(default_factory=SortedSet)
+    reactions: SortedSet[Reaction] = field(default_factory=SortedSet)
+    kinetics: SortedSet[Kinetics] = field(default_factory=SortedSet)
+    thermo: SortedSet[Thermo] = field(default_factory=SortedSet)
+    transport: SortedSet[Transport] = field(default_factory=SortedSet)
+    kinetic_models: SortedSet[KineticModel] = field(default_factory=SortedSet)
+    sources: SortedSet[Source] = field(default_factory=SortedSet)
 
     def import_kinetic_model(self, kinetic_model: KineticModel) -> None:
         self.kinetic_models.add(kinetic_model)

@@ -1,5 +1,10 @@
+from pydantic import BaseModel
 from pydantic.dataclasses import dataclass
 
 
-def frozen_dataclass(*args, **kwargs):
+def model(*args, **kwargs):
     return dataclass(*args, frozen=True, **kwargs)
+
+class Model(BaseModel):
+    class Config:
+        frozen = True
