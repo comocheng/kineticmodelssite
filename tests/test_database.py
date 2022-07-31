@@ -8,7 +8,7 @@ from backend.models.kinetic_model import KineticModel
 
 class DatabaseTest(unittest.TestCase):
     def _test_import_kinetic_model(self, database: Database, kinetic_model: KineticModel):
-        self.assertIn(kinetic_model, database.kinetic_models)
+        self.assertCountEqual([kinetic_model], database.kinetic_models)
         self.assertCountEqual(kinetic_model.kinetics, database.kinetics)
         self.assertCountEqual(kinetic_model.thermo, database.thermo)
         self.assertCountEqual(kinetic_model.transport, database.transport)
