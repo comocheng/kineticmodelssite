@@ -8,12 +8,10 @@ from backend.api import app, get_db
 from fastapi.encoders import jsonable_encoder
 
 
-
 class ApiTest(unittest.TestCase):
     @given(strategies.builds(KineticModel))
     @settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
     def test_api(self, kinetic_model: KineticModel):
-        print(kinetic_model)
         database = ObjectDatabase()
         app.dependency_overrides[get_db] = lambda: database
         client = TestClient(app)
