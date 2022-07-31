@@ -1,10 +1,10 @@
 from typing import FrozenSet, Union
 
-from .utils import frozen_dataclass
+from backend.models.reaction import Reaction
+from backend.models.source import Source
+from backend.models.species import Species
+from backend.models.utils import frozen_dataclass
 
-from .species import Species
-from .reaction import Reaction
-from .source import Source
 
 @frozen_dataclass
 class Arrhenius:

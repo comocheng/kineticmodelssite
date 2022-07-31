@@ -1,7 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Set
 
-from .models import Isomer, KineticModel, Kinetics, Reaction, Source, Species, Structure, Thermo, Transport
+from backend.models.kinetic_model import KineticModel
+from backend.models.kinetics import Kinetics
+from backend.models.reaction import Reaction
+from backend.models.source import Source
+from backend.models.species import Isomer, Species, Structure
+from backend.models.thermo import Thermo
+from backend.models.transport import Transport
 
 
 @dataclass

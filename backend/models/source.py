@@ -1,6 +1,6 @@
 from typing import FrozenSet
 
-from .utils import frozen_dataclass
+from backend.models.utils import frozen_dataclass
 
 
 @frozen_dataclass

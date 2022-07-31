@@ -1,7 +1,7 @@
 from typing import FrozenSet
 
-from .utils import frozen_dataclass
-from .species import Species
+from backend.models.species import Species
+from backend.models.utils import frozen_dataclass
 
 
 @frozen_dataclass

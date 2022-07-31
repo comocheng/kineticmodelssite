@@ -1,12 +1,12 @@
 from typing import FrozenSet
 
-from .utils import frozen_dataclass
+from backend.models.kinetics import Kinetics
+from backend.models.source import Source
+from backend.models.species import Species
+from backend.models.thermo import Thermo
+from backend.models.transport import Transport
+from backend.models.utils import frozen_dataclass
 
-from .species import Species
-from .kinetics import Kinetics
-from .thermo import Thermo
-from .transport import Transport
-from .source import Source
 
 @frozen_dataclass
 class NamedSpecies:
