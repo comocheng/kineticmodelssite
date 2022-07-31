@@ -2,3 +2,4 @@
 *.py[cod]
 **/__pycache__
 .hypothesis
+.mypy_cache
