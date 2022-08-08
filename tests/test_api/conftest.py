@@ -24,5 +24,5 @@ def client():
 
 @pytest.fixture
 def kinetic_model() -> KineticModel:
-    with open("tests/km.json", "r") as f:
+    with open("tests/kinetic_model.json", "r") as f:
         return deserialize(KineticModel, json.load(f))
