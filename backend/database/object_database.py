@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
-
+import json
+from typing import Iterable, Iterator, Type, TypeVar, Generic
 from sortedcontainers import SortedSet
+from apischema import serialize, deserialize
 
 from backend.database import Database
 from backend.models.kinetic_model import KineticModel
@@ -10,19 +12,51 @@ from backend.models.source import Source
 from backend.models.species import Isomer, Species, Structure
 from backend.models.thermo import Thermo
 from backend.models.transport import Transport
+from backend.models.utils import Model
+
+T = TypeVar("T", bound=Model)
+
+@dataclass
+class EncodedSet(Generic[T]):
+    factory: Type[T]
+    encoded: SortedSet[str] = field(default_factory=SortedSet)
+
+    def __post_init__(self, items: Iterable[T] = []):
+        for item in items:
+            self.add(item)
+
+    def encode(self, value: T) -> str:
+        return json.dumps(serialize(value))
+
+    def decode(self, encoded: str) -> T:
+        return deserialize(self.factory, json.loads(encoded))
+
+    def add(self, value: T) -> None:
+        encoded_value = self.encode(value)
+        self.encoded.add(encoded_value)
+
+    def __len__(self) -> int:
+        return self.encoded.__len__()
+
+    def __iter__(self) -> Iterator[T]:
+        return (self.decode(e) for e in self.encoded.__iter__())
+
+    def __getitem__(self, index: int) -> T:
+        encoded_value = self.encoded[index]
+        return self.decode(encoded_value)
 
 
 @dataclass
 class ObjectDatabase(Database):
-    structures: SortedSet[Structure] = field(default_factory=SortedSet)
-    isomers: SortedSet[Isomer] = field(default_factory=SortedSet)
-    species: SortedSet[Species] = field(default_factory=SortedSet)
-    reactions: SortedSet[Reaction] = field(default_factory=SortedSet)
-    kinetics: SortedSet[Kinetics] = field(default_factory=SortedSet)
-    thermo: SortedSet[Thermo] = field(default_factory=SortedSet)
-    transport: SortedSet[Transport] = field(default_factory=SortedSet)
-    kinetic_models: SortedSet[KineticModel] = field(default_factory=SortedSet)
-    sources: SortedSet[Source] = field(default_factory=SortedSet)
+    structures: EncodedSet[Structure] = EncodedSet(factory=Structure)
+    isomers: EncodedSet[Isomer] = EncodedSet(factory=Isomer)
+    species: EncodedSet[Species] = EncodedSet(factory=Species)
+    reactions: EncodedSet[Reaction] = EncodedSet(factory=Reaction)
+    kinetics: EncodedSet[Kinetics] = EncodedSet(factory=Kinetics)
+    thermo: EncodedSet[Thermo] = EncodedSet(factory=Thermo)
+    transport: EncodedSet[Transport] = EncodedSet(factory=Transport)
+    kinetic_models: EncodedSet[KineticModel] = EncodedSet(factory=KineticModel)
+    sources: EncodedSet[Source] = EncodedSet(factory=Source)
 
     def import_kinetic_model(self, kinetic_model: KineticModel) -> None:
         self.kinetic_models.add(kinetic_model)
