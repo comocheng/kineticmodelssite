@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from pydantic.dataclasses import dataclass
 from typing import FrozenSet, Union
 
 from backend.models.reaction import Reaction
