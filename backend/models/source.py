@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import FrozenSet
 
-from backend.models.utils import Model
 
 
 @dataclass(frozen=True)

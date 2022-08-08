@@ -12,9 +12,8 @@ from backend.models.source import Source
 from backend.models.species import Isomer, Species, Structure
 from backend.models.thermo import Thermo
 from backend.models.transport import Transport
-from backend.models.utils import Model
 
-T = TypeVar("T", bound=Model)
+T = TypeVar("T")
 
 @dataclass
 class EncodedSet(Generic[T]):
@@ -44,6 +43,9 @@ class EncodedSet(Generic[T]):
     def __getitem__(self, index: int) -> T:
         encoded_value = self.encoded[index]
         return self.decode(encoded_value)
+
+    def __contains__(self, item: T) -> bool:
+        return any(item == self.decode(e) for e in self.encoded)
 
 
 @dataclass
