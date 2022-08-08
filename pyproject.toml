@@ -36,13 +36,12 @@ uvicorn = {extras = ["standard"], version = "^0.18.2"}
 apischema = "^0.17.5"
 
 [tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
 black = "^22.1.0"
 flake8 = "^4.0.1"
 mypy = "^0.931"
 hypothesis = "^6.53.0"
 isort = "^5.10.1"
-chardet = "^5.0.0"
-certifi = "^2022.6.15"
 schemathesis = "^3.16.1"
 
 [build-system]

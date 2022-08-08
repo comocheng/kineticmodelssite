@@ -1,32 +1,16 @@
-import unittest
-
-from hypothesis import given, settings, strategies
-
-from backend.database import Database, ObjectDatabase
+from hypothesis import given, settings, HealthCheck
+from hypothesis.strategies import builds
+from backend.database import ObjectDatabase
 from backend.models.kinetic_model import KineticModel
 
 
-class DatabaseTest(unittest.TestCase):
-    def _test_import_kinetic_model(self, database: Database, kinetic_model: KineticModel):
-        self.assertCountEqual([kinetic_model], database.kinetic_models)
-        self.assertCountEqual(kinetic_model.kinetics, database.kinetics)
-        self.assertCountEqual(kinetic_model.thermo, database.thermo)
-        self.assertCountEqual(kinetic_model.transport, database.transport)
-        species = [ns.species for ns in kinetic_model.named_species]
-        self.assertCountEqual(species, database.species)
-        self.assertIn(kinetic_model.source, database.sources)
-
-    @given(strategies.builds(KineticModel))
-    @settings(max_examples=10)
-    def test_import_kinetic_model(self, kinetic_model: KineticModel):
-        database = ObjectDatabase()
-        database.import_kinetic_model(kinetic_model)
-        self._test_import_kinetic_model(database, kinetic_model)
-
-    @given(strategies.builds(KineticModel))
-    @settings(max_examples=10)
-    def test_idempotency(self, kinetic_model: KineticModel):
-        database = ObjectDatabase()
-        database.import_kinetic_model(kinetic_model)
-        database.import_kinetic_model(kinetic_model)
-        self._test_import_kinetic_model(database, kinetic_model)
+@given(kinetic_model=builds(KineticModel))
+@settings(max_examples=5, suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_import_kinetic_models(kinetic_model: KineticModel, database: ObjectDatabase):
+    database.import_kinetic_model(kinetic_model)
+    assert kinetic_model in database.kinetic_models
+    assert kinetic_model.source in database.sources
+    assert all(kinetics in database.kinetics for kinetics in kinetic_model.kinetics)
+    assert all(thermo in database.thermo for thermo in kinetic_model.thermo)
+    assert all(transport in database.transport for transport in kinetic_model.transport)
+    assert all(ns.species in database.species for ns in kinetic_model.named_species)
