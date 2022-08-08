@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import FrozenSet, Protocol, Set, runtime_checkable
+from typing import Iterable, Protocol, runtime_checkable
 
 from backend.models.kinetic_model import KineticModel
 from backend.models.kinetics import Kinetics
@@ -12,15 +12,15 @@ from backend.models.transport import Transport
 
 @runtime_checkable
 class Database(Protocol):
-    structures: FrozenSet[Structure]
-    isomers: FrozenSet[Isomer]
-    species: FrozenSet[Species]
-    reactions: FrozenSet[Reaction]
-    kinetics: FrozenSet[Kinetics]
-    thermo: FrozenSet[Thermo]
-    transport: FrozenSet[Transport]
-    kinetic_models: FrozenSet[KineticModel]
-    sources: FrozenSet[Source]
+    structures: Iterable[Structure]
+    isomers: Iterable[Isomer]
+    species: Iterable[Species]
+    reactions: Iterable[Reaction]
+    kinetics: Iterable[Kinetics]
+    thermo: Iterable[Thermo]
+    transport: Iterable[Transport]
+    kinetic_models: Iterable[KineticModel]
+    sources: Iterable[Source]
 
     @abstractmethod
     def import_kinetic_model(self, kinetic_model: KineticModel) -> None:
