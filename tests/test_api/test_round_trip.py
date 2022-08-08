@@ -1,6 +1,6 @@
 from apischema import deserialize, serialize
-
 from fastapi.testclient import TestClient
+
 from backend.models.kinetic_model import KineticModel
 
 

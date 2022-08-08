@@ -1,5 +1,6 @@
-from hypothesis import given, settings, HealthCheck
+from hypothesis import HealthCheck, given, settings
 from hypothesis.strategies import builds
+
 from backend.database import ObjectDatabase
 from backend.models.kinetic_model import KineticModel
 

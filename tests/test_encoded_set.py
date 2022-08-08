@@ -1,8 +1,8 @@
 from typing import List
-import unittest
-from hypothesis import given, settings, strategies
-from backend.database.object_database import EncodedSet
 
+from hypothesis import given, settings, strategies
+
+from backend.database.object_database import EncodedSet
 from backend.models.kinetic_model import KineticModel
 
 
@@ -13,6 +13,7 @@ def test_encoded_set(kinetic_model: KineticModel):
     encoded_set.add(kinetic_model)
     assert 1 == len(encoded_set)
     assert kinetic_model in encoded_set
+
 
 @given(strategies.lists(strategies.builds(KineticModel)))
 @settings(max_examples=10)

@@ -1,10 +1,11 @@
 import functools
 from typing import Any, Callable, Dict, Iterable
+
 from apischema import serialize
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from backend.api.db import get_db
 
+from backend.api.db import get_db
 from backend.database import Database
 from backend.models.kinetic_model import KineticModel
 
@@ -17,13 +18,17 @@ def serializer(serializer: Callable[[Any], Dict]):
         def wrapper(*args, **kwargs) -> JSONResponse:
             result = func(*args, **kwargs)
             return serializer(result)
+
         return wrapper
+
     return decorator
 
 
 @router.post("/kinetic_model")
 @serializer(serializer=serialize)
-def create_kinetic_model(kinetic_model: KineticModel, db: Database = Depends(get_db)) -> KineticModel:
+def create_kinetic_model(
+    kinetic_model: KineticModel, db: Database = Depends(get_db)
+) -> KineticModel:
     db.import_kinetic_model(kinetic_model)
     return kinetic_model
 

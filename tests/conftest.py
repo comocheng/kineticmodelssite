@@ -1,6 +1,6 @@
 import pytest
-from backend.database import ObjectDatabase
 
+from backend.database import ObjectDatabase
 
 
 @pytest.fixture

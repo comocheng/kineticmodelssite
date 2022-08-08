@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
 import json
-from typing import Iterable, Iterator, Type, TypeVar, Generic
+from dataclasses import dataclass, field
+from typing import Generic, Iterable, Iterator, Type, TypeVar
+
+from apischema import deserialize, serialize
 from sortedcontainers import SortedSet
-from apischema import serialize, deserialize
 
 from backend.database import Database
 from backend.models.kinetic_model import KineticModel
@@ -14,6 +15,7 @@ from backend.models.thermo import Thermo
 from backend.models.transport import Transport
 
 T = TypeVar("T")
+
 
 @dataclass
 class EncodedSet(Generic[T]):

@@ -1,8 +1,7 @@
-from backend.database import ObjectDatabase
-from backend.database import Database
-
+from backend.database import Database, ObjectDatabase
 
 database = ObjectDatabase()
+
 
 def get_db() -> Database:
     return database
