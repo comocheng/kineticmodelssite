@@ -1,10 +1,11 @@
+from dataclasses import dataclass
 from typing import FrozenSet
 
 from backend.models.species import Species
-from backend.models.utils import Model
 
 
-class ReactionSpecies(Model):
+@dataclass(frozen=True)
+class ReactionSpecies:
     """A species and its stoichiometric coefficient
 
     The coefficient can be positive to represent a product,
@@ -15,7 +16,8 @@ class ReactionSpecies(Model):
     species: Species
 
 
-class Reaction(Model):
+@dataclass(frozen=True)
+class Reaction:
     prime_id: str
     reaction_species: FrozenSet[ReactionSpecies]
     reversible: bool

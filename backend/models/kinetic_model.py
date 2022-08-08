@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import FrozenSet
 
 from backend.models.kinetics import Kinetics
@@ -8,12 +9,14 @@ from backend.models.transport import Transport
 from backend.models.utils import Model
 
 
-class NamedSpecies(Model):
+@dataclass(frozen=True)
+class NamedSpecies:
     name: str
     species: Species
 
 
-class KineticModel(Model):
+@dataclass(frozen=True)
+class KineticModel:
     name: str
     prime_id: str
     named_species: FrozenSet[NamedSpecies]

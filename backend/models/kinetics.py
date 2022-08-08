@@ -1,12 +1,13 @@
+from dataclasses import dataclass
 from typing import FrozenSet, Union
 
 from backend.models.reaction import Reaction
 from backend.models.source import Source
 from backend.models.species import Species
-from backend.models.utils import Model
 
 
-class Arrhenius(Model):
+@dataclass(frozen=True)
+class Arrhenius:
     a: float
     a_si: float
     a_delta: float | None
@@ -16,8 +17,11 @@ class Arrhenius(Model):
     e_si: float
     e_delta: float | None
     e_units: str
+    s: str
 
-class ArrheniusEP(Model):
+
+@dataclass(frozen=True)
+class ArrheniusEP:
     a: float
     a_si: float
     a_units: float
@@ -27,12 +31,14 @@ class ArrheniusEP(Model):
     e0_units: str
 
 
-class ColliderSpecies(Model):
+@dataclass(frozen=True)
+class ColliderSpecies:
     species: Species
     efficiency: float
 
 
-class Kinetics(Model):
+@dataclass(frozen=True)
+class Kinetics:
     prime_id: str
     reaction: Reaction
     data: Union[Arrhenius, ArrheniusEP]

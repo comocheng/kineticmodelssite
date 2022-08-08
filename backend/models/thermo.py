@@ -1,11 +1,12 @@
+from dataclasses import dataclass
 from typing import FrozenSet
 
 from backend.models.source import Source
 from backend.models.species import Species
-from backend.models.utils import Model
 
 
-class Thermo(Model):
+@dataclass(frozen=True)
+class Thermo:
     prime_id: str
     preferred_key: str
     species: Species

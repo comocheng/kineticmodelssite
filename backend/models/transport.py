@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from backend.models.source import Source
 from backend.models.species import Species
-from backend.models.utils import Model
 
-
-class Transport(Model):
+@dataclass(frozen=True)
+class Transport:
     prime_id: str
     species: Species
     geometry: float
