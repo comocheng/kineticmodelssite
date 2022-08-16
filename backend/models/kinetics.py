@@ -1,5 +1,9 @@
+from dataclasses import field
+from typing import Union
+from uuid import UUID, uuid4
+
+from pydantic import conlist
 from pydantic.dataclasses import dataclass
-from typing import FrozenSet, Union
 
 from backend.models.reaction import Reaction
 from backend.models.source import Source
@@ -48,5 +52,6 @@ class Kinetics:
     max_temp: float
     min_pressure: float
     max_pressure: float
-    collider_species: FrozenSet[ColliderSpecies]
+    collider_species: conlist(ColliderSpecies, unique_items=True)
     source: Source
+    id: UUID = field(default_factory=uuid4, compare=False)

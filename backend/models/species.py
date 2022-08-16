@@ -1,5 +1,8 @@
+from dataclasses import field
+from uuid import UUID, uuid4
+
+from pydantic import conlist
 from pydantic.dataclasses import dataclass
-from typing import FrozenSet
 
 
 @dataclass(frozen=True)
@@ -9,6 +12,7 @@ class Structure:
     adjlist: str
     smiles: str
     multiplicity: int
+    id: UUID = field(default_factory=uuid4, compare=False)
 
 
 @dataclass(frozen=True)
@@ -17,7 +21,8 @@ class Isomer:
 
     formula: str
     inchi: str
-    structures: FrozenSet[Structure]
+    structures: conlist(Structure, min_items=0, unique_items=True)
+    id: UUID = field(default_factory=uuid4, compare=False)
 
 
 @dataclass(frozen=True)
@@ -28,4 +33,5 @@ class Species:
 
     prime_id: str
     cas_number: str
-    isomers: FrozenSet[Isomer]
+    isomers: conlist(Isomer, min_items=0, unique_items=True)
+    id: UUID = field(default_factory=uuid4, compare=False)

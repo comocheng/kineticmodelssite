@@ -1,3 +1,6 @@
+from dataclasses import field
+from uuid import UUID, uuid4
+
 from pydantic.dataclasses import dataclass
 
 from backend.models.source import Source
@@ -15,3 +18,4 @@ class Transport:
     polarizability: float
     rotational_relaxation: float
     source: Source
+    id: UUID = field(default_factory=uuid4, compare=False)

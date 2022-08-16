@@ -1,5 +1,8 @@
+from dataclasses import field
+from uuid import UUID, uuid4
+
+from pydantic import conlist
 from pydantic.dataclasses import dataclass
-from typing import FrozenSet
 
 
 @dataclass(frozen=True)
@@ -17,4 +20,5 @@ class Source:
     journal_name: str
     journal_volume: str
     page_numbers: str
-    authors: FrozenSet[Author]
+    authors: conlist(Author, min_items=0, unique_items=True)
+    id: UUID = field(default_factory=uuid4, compare=False)

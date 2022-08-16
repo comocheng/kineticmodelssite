@@ -1,5 +1,8 @@
+from dataclasses import field
+from uuid import UUID, uuid4
+
+from pydantic import conlist
 from pydantic.dataclasses import dataclass
-from typing import FrozenSet
 
 from backend.models.source import Source
 from backend.models.species import Species
@@ -13,10 +16,11 @@ class Thermo:
     reference_temp: float
     reference_pressure: float
     enthalpy_formation: float
-    polynomial1: FrozenSet[float]
-    polynomial2: FrozenSet[float]
+    polynomial1: conlist(float, min_items=0, max_items=7)
+    polynomial2: conlist(float, min_items=0, max_items=7)
     min_temp1: float
     max_temp1: float
     min_temp2: float
     max_temp2: float
     source: Source
+    id: UUID = field(default_factory=uuid4, compare=False)
