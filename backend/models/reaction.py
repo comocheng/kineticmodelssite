@@ -1,9 +1,10 @@
 from dataclasses import field
 from uuid import UUID, uuid4
 
-from backend.models.species import Species
 from pydantic import conlist
 from pydantic.dataclasses import dataclass
+
+from backend.models.species import Species
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Dict
 from uuid import UUID
 
-
 from backend.database import Database
 from backend.models.kinetic_model import KineticModel
 from backend.models.kinetics import Kinetics
