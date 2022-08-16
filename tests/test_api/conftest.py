@@ -7,6 +7,7 @@ from backend.main import app
 
 db = ObjectDatabase()
 
+
 def get_test_db() -> Database:
     return db
 

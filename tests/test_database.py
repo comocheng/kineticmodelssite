@@ -13,5 +13,7 @@ def test_import_kinetic_models(kinetic_model: KineticModel, database: ObjectData
     assert kinetic_model.source == database.sources[kinetic_model.source.id]
     assert all(kinetics == database.kinetics[kinetics.id] for kinetics in kinetic_model.kinetics)
     assert all(thermo == database.thermo[thermo.id] for thermo in kinetic_model.thermo)
-    assert all(transport == database.transport[transport.id] for transport in kinetic_model.transport)
+    assert all(
+        transport == database.transport[transport.id] for transport in kinetic_model.transport
+    )
     assert all(ns.species == database.species[ns.species.id] for ns in kinetic_model.named_species)
