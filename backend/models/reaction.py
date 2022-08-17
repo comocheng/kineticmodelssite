@@ -1,14 +1,14 @@
 from dataclasses import field
 from uuid import UUID, uuid4
 
-from pydantic import conlist
+from pydantic import confrozenset
 from pydantic.dataclasses import dataclass
+from backend.models.model import Model
 
 from backend.models.species import Species
 
 
-@dataclass(frozen=True)
-class ReactionSpecies:
+class ReactionSpecies(Model):
     """A species and its stoichiometric coefficient
 
     The coefficient can be positive to represent a product,
@@ -19,9 +19,7 @@ class ReactionSpecies:
     species: Species
 
 
-@dataclass(frozen=True)
-class Reaction:
+class Reaction(Model):
     prime_id: str
-    reaction_species: conlist(ReactionSpecies, min_items=0, unique_items=True)
+    reaction_species: confrozenset(ReactionSpecies, min_items=0)
     reversible: bool
-    id: UUID = field(default_factory=uuid4, compare=False)

@@ -1,18 +1,18 @@
 from dataclasses import field
 from uuid import UUID, uuid4
 
-from pydantic import conlist
+from pydantic import confrozenset
 from pydantic.dataclasses import dataclass
 
+from backend.models.model import Model
 
-@dataclass(frozen=True)
-class Author:
+
+class Author(Model):
     firstname: str
     lastname: str
 
 
-@dataclass(frozen=True)
-class Source:
+class Source(Model):
     doi: str
     prime_id: str
     publication_year: int
@@ -20,5 +20,4 @@ class Source:
     journal_name: str
     journal_volume: str
     page_numbers: str
-    authors: conlist(Author, min_items=0, unique_items=True)
-    id: UUID = field(default_factory=uuid4, compare=False)
+    authors: confrozenset(Author, min_items=0)

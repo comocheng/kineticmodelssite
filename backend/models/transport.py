@@ -1,14 +1,15 @@
 from dataclasses import field
 from uuid import UUID, uuid4
 
+from pydantic import Field
 from pydantic.dataclasses import dataclass
+from backend.models.model import Model
 
 from backend.models.source import Source
 from backend.models.species import Species
 
 
-@dataclass(frozen=True)
-class Transport:
+class Transport(Model):
     prime_id: str
     species: Species
     geometry: float
@@ -18,4 +19,3 @@ class Transport:
     polarizability: float
     rotational_relaxation: float
     source: Source
-    id: UUID = field(default_factory=uuid4, compare=False)

@@ -32,6 +32,7 @@ fastapi = "^0.74.1"
 PyYAML = "^6.0"
 pydantic = "^1.9.1"
 uvicorn = {extras = ["standard"], version = "^0.18.2"}
+frozendict = "^2.3.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
