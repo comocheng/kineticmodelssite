@@ -50,6 +50,10 @@ class Database(Protocol):
         ...
 
     @abstractmethod
+    def get_all_sources(self) -> Iterable[Source]:
+        ...
+
+    @abstractmethod
     def get_all_kinetics(self) -> Iterable[Kinetics]:
         ...
 

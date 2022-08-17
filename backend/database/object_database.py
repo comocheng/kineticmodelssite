@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Iterable
 from uuid import UUID
 
 from backend.database import Database
@@ -23,6 +23,33 @@ class ObjectDatabase(Database):
     transport: Dict[UUID, Transport] = field(default_factory=dict)
     kinetic_models: Dict[UUID, KineticModel] = field(default_factory=dict)
     sources: Dict[UUID, Source] = field(default_factory=dict)
+
+    def get_all_kinetic_models(self) -> Iterable[KineticModel]:
+        return self.kinetic_models.values()
+
+    def get_all_sources(self) -> Iterable[Source]:
+        return self.sources.values()
+
+    def get_all_kinetics(self) -> Iterable[Kinetics]:
+        return self.kinetics.values()
+
+    def get_all_thermo(self) -> Iterable[Thermo]:
+        return self.thermo.values()
+
+    def get_all_transport(self) -> Iterable[Transport]:
+        return self.transport.values()
+
+    def get_all_reactions(self) -> Iterable[Reaction]:
+        return self.reactions.values()
+
+    def get_all_species(self) -> Iterable[Species]:
+        return self.species.values()
+
+    def get_all_isomers(self) -> Iterable[Isomer]:
+        return self.isomers.values()
+
+    def get_all_structures(self) -> Iterable[Structure]:
+        return self.structures.values()
 
     def get_kinetic_model(self, uuid: UUID) -> KineticModel:
         return self.kinetic_models[uuid]
