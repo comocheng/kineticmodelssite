@@ -5,25 +5,27 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.db import get_db
 from backend.database import Database
-from backend.models.thermo import Thermo
+from backend.models.kinetic_model import KineticModel
 
 router = APIRouter()
 
 
-@router.post("/thermo", response_model=Thermo)
-def create_thermo(thermo: Thermo, db: Database = Depends(get_db)) -> Thermo:
-    db.import_thermo(thermo)
-    return thermo
+@router.post("/kinetic_model", response_model=KineticModel)
+def create_kinetic_model(
+    kinetic_model: KineticModel, db: Database = Depends(get_db)
+) -> KineticModel:
+    db.import_kinetic_model(kinetic_model)
+    return kinetic_model
 
 
-@router.get("/thermo/{thermo_id}", response_model=Thermo)
-def get_thermo(thermo_id: UUID, db: Database = Depends(get_db)) -> Thermo:
+@router.get("/kinetic_model/{kinetic_model_id}", response_model=KineticModel)
+def get_kinetic_model(kinetic_model_id: UUID, db: Database = Depends(get_db)) -> KineticModel:
     try:
-        return db.get_thermo(thermo_id)
+        return db.get_kinetic_model(kinetic_model_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="Model not found")
 
 
-@router.get("/thermo", response_model=Iterable[Thermo])
-def get_thermos(db: Database = Depends(get_db)) -> Iterable[Thermo]:
-    return db.get_all_thermo()
+@router.get("/kinetic_model", response_model=Iterable[KineticModel])
+def get_kinetic_models(db: Database = Depends(get_db)) -> Iterable[KineticModel]:
+    return db.get_all_kinetic_models()
