@@ -1,8 +1,4 @@
-from dataclasses import Field
-from uuid import UUID, uuid4
-
-from pydantic import confrozenset
-from pydantic.dataclasses import dataclass
+from pydantic import Field, validator
 
 from backend.models.model import Model
 
@@ -15,14 +11,12 @@ class Structure(Model):
     multiplicity: int
 
 
-
 class Isomer(Model):
     """A molecule with a particular bonding structure"""
 
     formula: str
     inchi: str
-    structures: confrozenset(Structure, min_items=0)
-
+    structures: list[Structure] = Field(min_items=1)
 
 
 class Species(Model):
@@ -30,6 +24,16 @@ class Species(Model):
     with the same chemical formula
     """
 
-    prime_id: str
+    isomers: list[Isomer] = Field(min_items=1)
     cas_number: str
-    isomers: confrozenset(Isomer, min_items=0)
+    prime_id: str | None = None
+
+    @validator("isomers")
+    def check_isomers_same_formula(cls, isomers: list[Isomer]):
+        assert len(set(i.formula for i in isomers)) <= 1, "Isomers found with different formulas"
+        return isomers
+
+    @validator("isomers")
+    def check_isomers_different_inchis(cls, isomers: list[Isomer]):
+        assert len(set(i.inchi for i in isomers)) == len(isomers), "Duplicate isomers found"
+        return isomers

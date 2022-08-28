@@ -1,10 +1,6 @@
-from dataclasses import field
-from uuid import UUID, uuid4
+from pydantic import Field
 
-from pydantic import confrozenset
-from pydantic.dataclasses import dataclass
 from backend.models.model import Model
-
 from backend.models.species import Species
 
 
@@ -20,6 +16,6 @@ class ReactionSpecies(Model):
 
 
 class Reaction(Model):
-    prime_id: str
-    reaction_species: confrozenset(ReactionSpecies, min_items=0)
+    reaction_species: list[ReactionSpecies] = Field(min_items=1)
     reversible: bool
+    prime_id: str | None = None

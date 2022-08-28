@@ -1,8 +1,5 @@
-from dataclasses import field
-from uuid import UUID, uuid4
 
-from pydantic import confrozenset
-from pydantic.dataclasses import dataclass
+from pydantic import Field
 
 from backend.models.model import Model
 
@@ -14,10 +11,10 @@ class Author(Model):
 
 class Source(Model):
     doi: str
-    prime_id: str
     publication_year: int
     title: str
     journal_name: str
     journal_volume: str
     page_numbers: str
-    authors: confrozenset(Author, min_items=0)
+    authors: list[Author] = Field(min_items=1)
+    prime_id: str | None = None
