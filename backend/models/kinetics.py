@@ -1,10 +1,5 @@
-from dataclasses import field
-from typing import Optional, Union
-from uuid import UUID, uuid4
 
-from pydantic.dataclasses import dataclass
 from backend.models.model import Model
-
 from backend.models.reaction import Reaction
 from backend.models.source import Source
 from backend.models.species import Species
@@ -13,12 +8,12 @@ from backend.models.species import Species
 class Arrhenius(Model):
     a: float
     a_si: float
-    a_delta: Optional[float]
+    a_delta: float | None
     a_units: str
     n: float
     e: float
     e_si: float
-    e_delta: Optional[float]
+    e_delta: float | None
     e_units: str
     s: str
 
@@ -38,17 +33,17 @@ class ColliderSpecies(Model):
     efficiency: float
 
 
-KineticsData = Union[Arrhenius, ArrheniusEP]
+KineticsData = Arrhenius | ArrheniusEP
 
 
 class Kinetics(Model):
-    prime_id: str
     reaction: Reaction
     data: KineticsData
-    for_reverse: bool
-    uncertainty: Optional[float]
-    min_temp: Optional[float]
-    max_temp: Optional[float]
-    min_pressure: Optional[float]
-    max_pressure: Optional[float]
     source: Source
+    for_reverse: bool
+    uncertainty: float | None
+    min_temp: float | None
+    max_temp: float | None
+    min_pressure: float | None
+    max_pressure: float | None
+    prime_id: str | None = None
