@@ -1,6 +1,4 @@
-from typing import Iterable
 from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.db import get_db
@@ -24,6 +22,6 @@ def get_structure(structure_id: UUID, db: Database = Depends(get_db)) -> Structu
         raise HTTPException(status_code=404, detail="Model not found")
 
 
-@router.get("/structure", response_model=Iterable[Structure])
-def get_structures(db: Database = Depends(get_db)) -> Iterable[Structure]:
-    return db.get_all_structures()
+@router.get("/structure", response_model=list[Structure])
+def get_structures(db: Database = Depends(get_db)) -> list[Structure]:
+    return list(db.get_all_structures())

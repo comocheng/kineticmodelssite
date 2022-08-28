@@ -1,4 +1,3 @@
-from typing import Iterable
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +23,6 @@ def get_isomer(isomer_id: UUID, db: Database = Depends(get_db)) -> Isomer:
         raise HTTPException(status_code=404, detail="Model not found")
 
 
-@router.get("/isomer", response_model=Iterable[Isomer])
-def get_isomers(db: Database = Depends(get_db)) -> Iterable[Isomer]:
-    return db.get_all_isomers()
+@router.get("/isomer", response_model=list[Isomer])
+def get_isomers(db: Database = Depends(get_db)) -> list[Isomer]:
+    return list(db.get_all_isomers())

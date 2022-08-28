@@ -1,6 +1,5 @@
-from typing import Iterable
-from uuid import UUID
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.db import get_db
@@ -24,6 +23,6 @@ def get_species(species_id: UUID, db: Database = Depends(get_db)) -> Species:
         raise HTTPException(status_code=404, detail="Model not found")
 
 
-@router.get("/species", response_model=Iterable[Species])
-def get_speciess(db: Database = Depends(get_db)) -> Iterable[Species]:
-    return db.get_all_speciess()
+@router.get("/species", response_model=list[Species])
+def get_all_species(db: Database = Depends(get_db)) -> list[Species]:
+    return list(db.get_all_species())

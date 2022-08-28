@@ -1,6 +1,5 @@
-from typing import Iterable
-from uuid import UUID
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.db import get_db
@@ -26,6 +25,6 @@ def get_kinetic_model(kinetic_model_id: UUID, db: Database = Depends(get_db)) ->
         raise HTTPException(status_code=404, detail="Model not found")
 
 
-@router.get("/kinetic_model", response_model=Iterable[KineticModel])
-def get_kinetic_models(db: Database = Depends(get_db)) -> Iterable[KineticModel]:
-    return db.get_all_kinetic_models()
+@router.get("/kinetic_model", response_model=list[KineticModel])
+def get_kinetic_models(db: Database = Depends(get_db)) -> list[KineticModel]:
+    return list(db.get_all_kinetic_models())
