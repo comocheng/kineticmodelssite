@@ -1,4 +1,3 @@
-
 from pydantic import Field
 
 from backend.models.model import Model
