@@ -25,7 +25,7 @@ class Species(Model):
     """
 
     isomers: list[Isomer] = Field(min_items=1)
-    cas_number: str
+    cas_number: str | None = None
     prime_id: str | None = None
 
     @validator("isomers")
