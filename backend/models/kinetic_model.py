@@ -16,9 +16,9 @@ class NamedSpecies(Model):
 class KineticModel(Model):
     name: str
     named_species: list[NamedSpecies] = Field(min_items=1)
-    kinetics: list[Kinetics]
-    thermo: list[Thermo]
-    transport: list[Transport]
+    kinetics: list[Kinetics] = []
+    thermo: list[Thermo] = []
+    transport: list[Transport] = []
     source: Source
     prime_id: str | None = None
 

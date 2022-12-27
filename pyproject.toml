@@ -29,10 +29,8 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.10"
 fastapi = "^0.74.1"
-PyYAML = "^6.0"
 pydantic = "^1.9.1"
 uvicorn = {extras = ["standard"], version = "^0.18.2"}
-frozendict = "^2.3.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
@@ -41,6 +39,7 @@ flake8 = "^4.0.1"
 mypy = "^0.931"
 hypothesis = "^6.53.0"
 isort = "^5.10.1"
+requests = "^2.28.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
