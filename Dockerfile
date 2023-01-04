@@ -1,11 +1,13 @@
-FROM ghcr.io/comocheng/kineticmodelssite/kms-build:latest
+FROM tiangolo/uvicorn-gunicorn-fastapi:latest
 
-COPY environment.yml /app/
-RUN conda config --set channel_priority strict
-RUN conda env update --prefix $ENV_PREFIX --file environment.yml
-RUN conda clean -afy
-ENV PATH /kms_env/bin:$PATH
-ENV CONDA_DEFAULT_ENV /kms_env
-RUN source activate /kms_env
+RUN pip install poetry
 
-COPY . /app/
+WORKDIR /app
+COPY pyproject.toml poetry.lock /app/
+
+RUN poetry install --no-interaction --no-ansi
+
+COPY backend /app/backend
+WORKDIR /app/backend
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
