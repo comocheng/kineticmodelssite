@@ -79,6 +79,26 @@ def species_key(structure_keys):
     return "|".join(sorted(set(key for key in structure_keys if key)))
 
 
+def inchikey_of(key):
+    """The standard InChIKey in a structure_key ("<InChIKey>-<multiplicity>")."""
+    return key.rsplit("-", 1)[0] if key else ""
+
+
+def inchikey_species_map():
+    """Standard InChIKey -> species id, read from Structure.structure_key, which is the
+    source of truth for species identifiers. The lowest species id wins a shared key."""
+    from database.models import Structure
+
+    mapping = {}
+    rows = (Structure.objects.exclude(structure_key="").exclude(isomer__species=None)
+            .order_by("isomer__species").values_list("structure_key", "isomer__species"))
+    for key, species_id in rows:
+        inchikey = inchikey_of(key)
+        if inchikey:
+            mapping.setdefault(inchikey, species_id)
+    return mapping
+
+
 def reaction_key(reactant_keys, product_keys):
     """A direction-insensitive reaction key and the stored direction relative to it.
 

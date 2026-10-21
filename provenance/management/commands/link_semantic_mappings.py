@@ -5,8 +5,8 @@ command resolves the subject to the matching local record and sets the
 appropriate foreign key so the mappings are queryable per entity:
 
   * chemical rows (``prom:`` subject) -> ``database.Species`` via the InChI in
-    ``subject_match_field`` (RDKit InChIKey fallback against the InChIKey
-    ``ExternalIdentifier`` rows).
+    ``subject_match_field`` (RDKit InChIKey fallback against
+    ``Structure.structure_key``).
   * reference rows (``promref:`` subject, ``doi:`` object) -> the curated
     ``chemked_database.ExperimentDataset`` (matched on the reference/file DOI)
     and/or the kinetic-model ``database.Source`` carrying that DOI.
@@ -26,9 +26,8 @@ from django.core.management.base import BaseCommand
 
 from chemked_database.models import ExperimentDataset
 from database.models import KineticModel, Source, Species
+from database.services.chemical_identity import inchikey_species_map
 from provenance.models import (
-    ExternalIdentifier,
-    IdentifierScheme,
     Institution,
     Person,
     SemanticMapping,
@@ -81,11 +80,7 @@ class Command(BaseCommand):
             for iso in sp.isomers.all():
                 if iso.inchi:
                     inchi_map.setdefault(iso.inchi, sp.pk)
-        inchikey_map = dict(
-            ExternalIdentifier.objects.filter(
-                scheme=IdentifierScheme.INCHIKEY, content_type__model="species"
-            ).values_list("value", "object_id")
-        )
+        inchikey_map = inchikey_species_map()
 
         linked = unresolved = 0
         for m in SemanticMapping.objects.filter(subject_match_field__startswith="InChI"):

@@ -11,14 +11,16 @@ species of the selected model(s) it:
 
   1. reads the structure already stored in the database (SMILES / Augmented
      InChI) -- no structures are invented;
-  2. regenerates a **standard** InChIKey with RMG (the Augmented/RMG InChI in
-     the database carries ``/u`` unpaired-electron and ``/lp`` lone-pair layers
-     that external authorities do not accept, and naive stripping collapses a
-     radical onto its closed-shell parent -- e.g. CH3 -> methane -- so RMG is
-     used to obtain a faithful standard InChIKey that keeps the radical
-     distinct); and
-  3. resolves that **exact** InChIKey against PubChem (PUG REST) and EBI
-     UniChem (ChEBI / ChEMBL / DrugBank / HMDB).
+  2. takes the **standard** InChIKey from ``Structure.structure_key``, which RMG
+     computes when the structure is saved and which is the source of truth for
+     species identifiers. Only a structure without a key has its InChIKey
+     regenerated with RMG here (the Augmented/RMG InChI in the database carries
+     ``/u`` unpaired-electron and ``/lp`` lone-pair layers that external
+     authorities do not accept, and naive stripping collapses a radical onto its
+     closed-shell parent -- e.g. CH3 -> methane); and
+  3. uses ``Structure.pubchem_cid`` when the structure has one, and otherwise
+     resolves the **exact** InChIKey against PubChem (PUG REST); EBI UniChem
+     (ChEBI / ChEMBL / DrugBank / HMDB) is always queried online.
 
 Emitted rows use ``prom:<species-name>`` subjects and store the database
 **Augmented InChI** in ``subject_match_field`` so that ``link_semantic_mappings``
@@ -59,6 +61,7 @@ from django.core.management.base import BaseCommand
 from database.models import KineticModel
 from database.models.kinetic_model import SpeciesName
 from database.models.reaction_species import Isomer, Structure
+from database.services.chemical_identity import inchikey_of
 
 DEFAULT = Path(__file__).resolve().parents[4] / "mappings" / "sssom" / "prometheus.sssom.tsv"
 AUTHOR_ID = "orcid:0000-0001-7137-5721"
@@ -237,12 +240,15 @@ class Command(BaseCommand):
 
     @staticmethod
     def _structure_for(species_id):
-        """Return (augmented_inchi, smiles) from the species' first isomer."""
+        """Return (augmented_inchi, smiles, structure_key, pubchem_cid, iupac_name) from the
+        species' first isomer and its first structure."""
         iso = Isomer.objects.filter(species=species_id).order_by("id").first()
         if not iso:
-            return "", ""
+            return "", "", "", None, ""
         st = Structure.objects.filter(isomer=iso).order_by("id").first()
-        return iso.inchi or "", (st.smiles if st else "") or ""
+        if not st:
+            return iso.inchi or "", "", "", None, ""
+        return iso.inchi or "", st.smiles or "", st.structure_key or "", st.pubchem_cid, st.iupac_name or ""
 
     def _standard_key(self, Molecule, smiles, augmented_inchi):
         """Standard (InChI, InChIKey) via RMG, preferring SMILES then InChI."""
@@ -318,12 +324,15 @@ class Command(BaseCommand):
 
         for idx, sid in enumerate(species_ids, 1):
             name = self._representative_name(sid)
-            augmented_inchi, smiles = self._structure_for(sid)
+            augmented_inchi, smiles, key, stored_cid, iupac_name = self._structure_for(sid)
             if not name or not (augmented_inchi or smiles):
                 skipped += 1
                 continue
 
-            _, inchikey = self._standard_key(Molecule, smiles, augmented_inchi)
+            inchikey = inchikey_of(key)
+            key_from_structure = bool(inchikey)
+            if not inchikey:
+                _, inchikey = self._standard_key(Molecule, smiles, augmented_inchi)
             if not inchikey:
                 unresolved += 1
                 continue
@@ -365,16 +374,29 @@ class Command(BaseCommand):
                     name,
                     "1.0",
                     "semapv:CompositionBasedMatch",
-                    "generate_species_sssom (RMG)",
-                    "Standard InChIKey regenerated from the database structure; "
-                    "deterministic. Standard InChI does not encode spin state.",
+                    "generate_species_sssom (Structure)" if key_from_structure
+                    else "generate_species_sssom (RMG)",
+                    ("Standard InChIKey from Structure.structure_key; "
+                     if key_from_structure
+                     else "Standard InChIKey regenerated from the database structure; ")
+                    + "deterministic. Standard InChI does not encode spin state.",
+                )
+
+            if stored_cid:
+                add(
+                    f"pubchem.compound:{stored_cid}",
+                    iupac_name or name,
+                    "0.95",
+                    "semapv:CompositionBasedMatch",
+                    "generate_species_sssom (Structure)",
+                    "PubChem CID stored on the structure; VERIFY before publish.",
                 )
 
             if offline:
                 resolved += 1
                 continue
 
-            pc = _pubchem_by_inchikey(inchikey)
+            pc = {} if stored_cid else _pubchem_by_inchikey(inchikey)
             if pc.get("cid"):
                 add(
                     f"pubchem.compound:{pc['cid']}",

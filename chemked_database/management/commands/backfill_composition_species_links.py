@@ -8,7 +8,7 @@ though the matchable value (InChI) is present in the row.
 
 This command closes that gap with the SAME matcher ``link_semantic_mappings``
 uses for ``prom:`` species rows: exact InChI against ``Isomer.inchi``, then an
-RDKit InChIKey fallback against the InChIKey ``ExternalIdentifier`` rows. Note
+RDKit InChIKey fallback against ``Structure.structure_key``. Note
 ``CompositionSpecies.inchi`` is stored WITHOUT the ``InChI=`` prefix (e.g.
 ``1S/N2/c1-2``) while ``Isomer.inchi`` includes it, so we normalize first.
 
@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand
 
 from chemked_database.models import CompositionSpecies
 from database.models import Species
-from provenance.models import ExternalIdentifier, IdentifierScheme
+from database.services.chemical_identity import inchikey_species_map
 
 try:
     from rdkit import Chem
@@ -59,11 +59,7 @@ class Command(BaseCommand):
                 if iso.inchi:
                     inchi_map.setdefault(iso.inchi, sp.pk)
 
-        inchikey_map = dict(
-            ExternalIdentifier.objects.filter(
-                scheme=IdentifierScheme.INCHIKEY, content_type__model="species"
-            ).values_list("value", "object_id")
-        )
+        inchikey_map = inchikey_species_map()
 
         valid_species = set(Species.objects.values_list("id", flat=True))
 

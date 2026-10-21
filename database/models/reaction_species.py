@@ -159,8 +159,12 @@ class Species(models.Model):
 
     @property
     def inchikey(self):
-        ident = self.external_identifiers.filter(scheme="inchikey").first()
-        return ident.value if ident else ""
+        """Standard InChIKey of this species' structures, from Structure.structure_key."""
+        from database.services.chemical_identity import inchikey_of
+
+        keys = {inchikey_of(key) for key in self.structures.values_list("structure_key", flat=True)}
+        keys.discard("")
+        return sorted(keys)[0] if keys else ""
 
     @property
     def enthalpy_formation(self):
