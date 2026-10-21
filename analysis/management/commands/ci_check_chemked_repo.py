@@ -10,10 +10,16 @@ files are compared with the local ChemKED-database clone
 web upload uses:
 
 * failure: a file holds the same data as a committed file (in any folder,
-  under any name) or as another file of the pull request;
+  under any name) or as another file of the pull request. For ignition delays
+  and laminar burning velocities this includes the same fuels and measured
+  values in other units or another file layout;
+* warning: a file shares at least half of its datapoints with a committed
+  file;
 * warning: a new file is not in the folder that the existing layout gives
   (folder of files with the same fuels, then of the same paper, then
-  ``Author_Year``). A file with the same name in another folder is fine.
+  ``Author_Year``), or a file is in a folder that takes no new files
+  (repo_check.RETIRED_FOLDERS, e.g. ``butanol/``). A file with the same name
+  in another folder is fine.
 
 Usage::
 
@@ -38,7 +44,7 @@ from analysis.management.commands.ci_validate_chemked import (
     _create_check_run,
     _update_check_run,
 )
-from chemked_database.repo_check import data_key, load_chemked, load_index
+from chemked_database.repo_check import RETIRED_FOLDERS, data_key, load_chemked, load_index
 
 CHECK_RUN_NAME = "ChemKED Duplicate and Folder Check"
 ICONS = {"failure": "❌", "warning": "⚠️", "notice": "✅"}
@@ -64,7 +70,11 @@ def check_files(index, files):
         is_new = path not in index.files
         match = index.find_duplicate(content, exclude_path=path)
         if match:
-            same = "Identical to" if match.kind == "exact" else "Same data as"
+            same = {
+                "exact": "Identical to",
+                "same-data": "Same data as",
+                "same-measurements": "Same fuels and measured values (after unit conversion) as",
+            }[match.kind]
             hint = (
                 " Update that file instead of adding a copy (if this pull request "
                 "moves that file, this is expected)." if is_new else ""
@@ -72,17 +82,36 @@ def check_files(index, files):
             results.append((path, "failure", f"{same} `{match.path}`.{hint}"))
             continue
 
-        if not is_new:
+        overlap = index.find_overlap(content, exclude_path=path)
+        if overlap:
+            other, shared, total = overlap
+            results.append((
+                path, "warning",
+                f"Shares {shared} of {total} datapoints with `{other}` (same fuels and "
+                "measured values); check that this is not the same experiment.",
+            ))
+
+        top = path.split("/", 1)[0] if "/" in path else ""
+        retired = (
+            f"`{top}/` takes no new files ({RETIRED_FOLDERS[top]}). "
+            if top in RETIRED_FOLDERS else ""
+        )
+        if not is_new and not retired:
             results.append((path, "notice", "Update of a committed file; no duplicate data."))
             continue
-        suggestion = index.suggest_folder(content)
+        suggestion = index.suggest_folder(content, exclude_path=path)
         directory = os.path.dirname(path)
-        if directory == suggestion.directory:
+        if not is_new:
+            results.append((
+                path, "warning",
+                f"{retired}This file belongs in `{suggestion.directory}/`: {suggestion.reason}.",
+            ))
+        elif directory == suggestion.directory:
             results.append((path, "notice", f"New file in the expected folder `{directory}/`."))
         else:
             results.append((
                 path, "warning",
-                f"Expected folder `{suggestion.directory}/`, not `{directory or '.'}/`: "
+                f"{retired}Expected folder `{suggestion.directory}/`, not `{directory or '.'}/`: "
                 f"{suggestion.reason}.",
             ))
 
@@ -99,7 +128,7 @@ def _summary(results, index):
         f"## {CHECK_RUN_NAME}\n",
         f"Compared with ChemKED-database commit `{index.commit[:12]}` "
         f"({len(index.files)} files).\n",
-        f"**{counts['failure']}** duplicate(s), **{counts['warning']}** folder warning(s)\n",
+        f"**{counts['failure']}** duplicate(s), **{counts['warning']}** warning(s)\n",
         "| Result | File | Details |",
         "|--------|------|---------|",
     ]
@@ -175,7 +204,7 @@ class Command(BaseCommand):
         failures = sum(1 for _, level, _ in results if level == "failure")
         warnings = sum(1 for _, level, _ in results if level == "warning")
         conclusion = "failure" if failures else ("neutral" if warnings else "success")
-        title = f"{failures} duplicate(s), {warnings} folder warning(s) in {len(files)} file(s)"
+        title = f"{failures} duplicate(s), {warnings} warning(s) in {len(files)} file(s)"
         self.stdout.write(f"\n{conclusion}: {title}")
         if options["no_check_run"]:
             return

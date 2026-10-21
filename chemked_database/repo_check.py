@@ -7,10 +7,15 @@ and answers two questions for a new or changed YAML file:
 * Does a committed file already hold the same data? The file can be in any
   folder and have any name: the comparison uses the experiment type,
   apparatus kind, reactions and every datapoint (common properties merged in),
-  not the file name or the formatting.
+  not the file name or the formatting. For ignition delays and laminar burning
+  velocities, a file with the same fuels and the same measured values after
+  unit conversion (e.g. a hand-made file and a ReSpecTh conversion of the same
+  experiment) also counts, and files that share some datapoints are reported.
 * Which folder does the file belong in? The answer follows the current layout:
   the fuel folder that holds files with the same fuel species, then the
-  folder of files from the same paper, then ``Author_Year``.
+  folder of files from the same paper, then ``Author_Year``. Conventions that
+  the layout alone does not show are in RETIRED_FOLDERS (e.g. ``butanol/``
+  takes no new files) and FUEL_FOLDERS (one folder per butanol isomer).
 
 A file with the same name in another folder is not a duplicate. One paper often
 gives a separate file for each fuel, for example
@@ -134,6 +139,78 @@ def blob_sha(content) -> str:
     return hashlib.sha1(f"blob {len(content)}\0".encode() + content).hexdigest()
 
 
+# Measured quantities compared, by experiment type (with the datapoint's
+# temperature and pressure). Other experiment types use data_key only.
+_MEASURED = {
+    "ignition delay": ("temperature", "pressure", "ignition-delay"),
+    "laminar burning velocity measurement": (
+        "temperature", "pressure", "equivalence-ratio", "laminar-burning-velocity",
+    ),
+}
+_UNIT_CONVERTERS: Dict[str, object] = {}
+_UREG = None
+
+
+def _unit_converter(unit: str):
+    """Function: value in *unit* -> value in SI base units (None if unknown)."""
+    global _UREG
+    try:
+        import pint
+        if _UREG is None:
+            _UREG = pint.UnitRegistry()
+        one = _UREG.Quantity(1.0, unit).to_base_units().magnitude
+        two = _UREG.Quantity(2.0, unit).to_base_units().magnitude
+    except Exception:  # pint missing, unknown unit
+        return None
+    if abs(two - 2 * one) <= 1e-9 * abs(two):
+        return lambda value: value * one
+    # Offset units (degC, degF)
+    return lambda value: _UREG.Quantity(value, unit).to_base_units().magnitude
+
+
+def si_value(raw) -> Optional[float]:
+    """A ChemKED quantity ('829 K', ['12 ms', {uncertainty}], 3.3) in SI base units."""
+    if isinstance(raw, list):
+        raw = raw[0] if raw else None
+    if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    match = _VALUE_UNIT.match(str(raw))
+    if not match:
+        return None
+    value, unit = float(match.group(1)), match.group(2)
+    if not unit or unit == "dimensionless":
+        return value
+    if unit not in _UNIT_CONVERTERS:
+        _UNIT_CONVERTERS[unit] = _unit_converter(unit)
+    convert = _UNIT_CONVERTERS[unit]
+    return convert(value) if convert else None
+
+
+def measurement_points(data: dict) -> frozenset:
+    """Datapoints as (T, P, measured values) in SI units, 4 significant figures.
+
+    Empty for experiment types not in _MEASURED or without measured values.
+    """
+    fields = _MEASURED.get(str(data.get("experiment-type") or "").strip().lower())
+    points = data.get("datapoints") or []
+    if not fields or not isinstance(points, list):
+        return frozenset()
+    common = data.get("common-properties")
+    common = common if isinstance(common, dict) else {}
+    out = set()
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        merged = {**common, **point}
+        values = tuple(si_value(merged.get(name)) for name in fields)
+        if values[-1] is None:
+            continue
+        out.add(tuple(None if v is None else float(f"{v:.4g}") for v in values))
+    return frozenset(out)
+
+
 # ---------------------------------------------------------------------------
 # Mixture species
 # ---------------------------------------------------------------------------
@@ -149,6 +226,34 @@ _BATH_NAMES = {
 }
 _NOX_INCHI = {"1S/NO/c1-2", "1S/NO2/c2-1-3", "1S/N2O/c1-2-3"}
 _NOX_NAMES = {"no", "no2", "n2o", "nitric oxide", "nitrogen dioxide", "nitrous oxide"}
+
+# Folders that hold files but take no new ones; their files should move.
+RETIRED_FOLDERS = {
+    "butanol": "butanol isomers go to n-butanol/, 2-butanol/, i-butanol/ or t-butanol/",
+}
+
+_N_BUTANOL = "1S/C4H10O/c1-2-3-4-5/h5H,2-4H2,1H3"
+_2_BUTANOL = "1S/C4H10O/c1-3-4(2)5/h4-5H,3H2,1-2H3"
+_I_BUTANOL = "1S/C4H10O/c1-4(2)3-5/h4-5H,3H2,1-2H3"
+_T_BUTANOL = "1S/C4H10O/c1-4(2,3)5/h5H,1-3H3"
+
+# Folder for a main fuel (InChI) by convention. It comes before the folder
+# where most files with that main fuel are.
+FUEL_FOLDERS = {
+    _N_BUTANOL: "n-butanol",
+    _2_BUTANOL: "2-butanol",
+    _I_BUTANOL: "i-butanol",
+    _T_BUTANOL: "t-butanol",
+}
+
+# InChI for species names (lowercase) that files give without an InChI.
+KNOWN_INCHI = {
+    "n-butanol": _N_BUTANOL, "1-butanol": _N_BUTANOL, "nc4h9oh": _N_BUTANOL,
+    "2-butanol": _2_BUTANOL, "sec-butanol": _2_BUTANOL, "sc4h9oh": _2_BUTANOL,
+    "i-butanol": _I_BUTANOL, "iso-butanol": _I_BUTANOL, "isobutanol": _I_BUTANOL,
+    "ic4h9oh": _I_BUTANOL,
+    "t-butanol": _T_BUTANOL, "tert-butanol": _T_BUTANOL, "tc4h9oh": _T_BUTANOL,
+}
 
 
 def _inchi(raw) -> str:
@@ -227,6 +332,7 @@ class IndexedFile:
     data_key: Optional[str]
     doi: str
     species: Tuple[Tuple[str, str, float], ...]
+    points: frozenset = frozenset()
 
     @property
     def folder(self) -> str:
@@ -241,7 +347,7 @@ class IndexedFile:
 
 @dataclass
 class Match:
-    kind: str  # 'exact' (same bytes) or 'same-data'
+    kind: str  # 'exact' (same bytes), 'same-data' or 'same-measurements'
     path: str
 
 
@@ -256,12 +362,16 @@ class FolderSuggestion:
         return "/".join(part for part in (self.folder, self.subdir) if part)
 
 
-def _summarise(content) -> Optional[Tuple[Optional[str], str, tuple]]:
+_EMPTY_SUMMARY = (None, "", (), frozenset())
+
+
+def _summarise(content) -> Optional[tuple]:
+    """(data_key, DOI, mixture species, measurement points), or None."""
     data = load_chemked(content)
     if data is None:
         return None
     doi = str(_reference(data).get("doi") or "").strip().lower()
-    return data_key(data), doi, mixture_species(data)
+    return data_key(data), doi, mixture_species(data), measurement_points(data)
 
 
 # Parsed summaries by blob SHA, shared by every index built in this process.
@@ -290,6 +400,7 @@ class RepoIndex:
             if f.data_key:
                 self.by_data[f.data_key].append(f.path)
         self.folders = {f.folder for f in files if f.folder}
+        self.open_folders = self.folders - set(RETIRED_FOLDERS)
         self.subdirs = defaultdict(set)
         for f in files:
             if f.subdir:
@@ -302,11 +413,20 @@ class RepoIndex:
                 if name and inchi:
                     names[name.lower()][inchi] += 1
         self._name_inchi = {name: c.most_common(1)[0][0] for name, c in names.items()}
+        # Same fuels and same measured values, by set and by single datapoint
+        self.by_measure = defaultdict(list)
+        self.by_point = defaultdict(set)
+        for f in files:
+            if f.points:
+                fuels = self._fuels(f.species)[0]
+                self.by_measure[(fuels, f.points)].append(f.path)
+                for point in f.points:
+                    self.by_point[(fuels, point)].add(f.path)
         self._by_mixture = defaultdict(Counter)
         self._by_fuels = defaultdict(Counter)
         self._by_primary = defaultdict(Counter)
         for f in files:
-            if not f.folder:
+            if not f.folder or f.folder in RETIRED_FOLDERS:
                 continue
             for counter, key in self._keys(f.species):
                 counter[key][f.folder] += 1
@@ -320,7 +440,7 @@ class RepoIndex:
         for path, content in contents.items():
             if not _is_data_path(path):
                 continue
-            summary = _summarise(content) or (None, "", ())
+            summary = _summarise(content) or _EMPTY_SUMMARY
             files.append(IndexedFile(path, blob_sha(content), *summary))
         return cls(files, reader=lambda p: contents.get(p))
 
@@ -348,7 +468,7 @@ class RepoIndex:
                 _BLOB_CACHE[sha] = _summarise(content)
 
         files = [
-            IndexedFile(path, sha, *(_BLOB_CACHE.get(sha) or (None, "", ())))
+            IndexedFile(path, sha, *(_BLOB_CACHE.get(sha) or _EMPTY_SUMMARY))
             for path, sha in entries
         ]
 
@@ -370,11 +490,36 @@ class RepoIndex:
         for path in self.by_blob.get(blob_sha(content), []):
             if path != exclude_path:
                 return Match("exact", path)
-        summary = _summarise(content)
-        key = summary[0] if summary else None
+        summary = _summarise(content) or _EMPTY_SUMMARY
+        key, _, species, points = summary
         for path in self.by_data.get(key, []) if key else []:
             if path != exclude_path:
                 return Match("same-data", path)
+        if points:
+            fuels = self._fuels(species)[0]
+            for path in self.by_measure.get((fuels, points), []):
+                if path != exclude_path:
+                    return Match("same-measurements", path)
+        return None
+
+    def find_overlap(self, content, exclude_path: Optional[str] = None):
+        """(path, shared, total) of the committed file that shares the most
+        datapoints (same fuels and measured values), if it shares at least
+        half of them and two or more; else None.
+        """
+        _, _, species, points = _summarise(content) or _EMPTY_SUMMARY
+        if not points:
+            return None
+        fuels = self._fuels(species)[0]
+        shared = Counter()
+        for point in points:
+            shared.update(self.by_point.get((fuels, point), ()))
+        shared.pop(exclude_path, None)
+        if not shared:
+            return None
+        path, n = shared.most_common(1)[0]
+        if n >= 2 and 2 * n >= len(points):
+            return path, n, len(points)
         return None
 
     def suggest_folder(self, content, exclude_path: Optional[str] = None) -> FolderSuggestion:
@@ -388,8 +533,12 @@ class RepoIndex:
         own = self.files.get(exclude_path) if exclude_path else None
 
         folder, reason = None, ""
+        convention = self._convention_folder(species)
         labels = ("same fuels and NOx", "same fuels", "same main fuel")
         for (counter, key), label in zip(self._keys(species), labels):
+            if label == "same main fuel" and convention:
+                folder, reason = convention
+                break
             counts = Counter(counter.get(key, {}))
             if own and own.folder:
                 for own_counter, own_key in self._keys(own.species):
@@ -404,7 +553,7 @@ class RepoIndex:
             # No usable mixture (e.g. only concentration profiles): same paper
             counts = Counter(
                 f.folder for f in self.files.values()
-                if f.folder and f.doi == doi and f.path != exclude_path
+                if f.folder in self.open_folders and f.doi == doi and f.path != exclude_path
             )
             if counts:
                 folder, n = counts.most_common(1)[0]
@@ -452,16 +601,21 @@ class RepoIndex:
 
     # -- helpers ------------------------------------------------------------
 
+    def _resolve_inchi(self, name: str, inchi: str) -> str:
+        """The file's InChI, else the one other files or KNOWN_INCHI give for the name."""
+        key = name.lower()
+        return inchi or self._name_inchi.get(key) or KNOWN_INCHI.get(key, "")
+
     def _species_id(self, name: str, inchi: str) -> str:
-        inchi = inchi or self._name_inchi.get(name.lower(), "")
+        inchi = self._resolve_inchi(name, inchi)
         return f"inchi:{inchi}" if inchi else f"name:{name.lower()}"
 
     def _is_bath(self, name: str, inchi: str) -> bool:
-        inchi = inchi or self._name_inchi.get(name.lower(), "")
+        inchi = self._resolve_inchi(name, inchi)
         return inchi in _BATH_INCHI or name.lower() in _BATH_NAMES
 
     def _is_nox(self, name: str, inchi: str) -> bool:
-        inchi = inchi or self._name_inchi.get(name.lower(), "")
+        inchi = self._resolve_inchi(name, inchi)
         return inchi in _NOX_INCHI or name.lower() in _NOX_NAMES
 
     def _fuels(self, species):
@@ -487,6 +641,22 @@ class RepoIndex:
             (self._by_primary, main),
         ]
 
+    def _convention_folder(self, species):
+        """(folder, reason) from FUEL_FOLDERS for the mixture, or None.
+
+        Any fuel of the mixture counts, not only the main one: an acetylene +
+        n-butanol mixture is a butanol study and goes to n-butanol/ (as the
+        acetylene + ethanol files of the same paper are in ethanol/).
+        """
+        best = None
+        for name, inchi, amount in species:
+            folder = FUEL_FOLDERS.get(self._resolve_inchi(name, inchi))
+            if folder and (best is None or amount > best[0]):
+                best = (amount, folder, name)
+        if best is None:
+            return None
+        return best[1], f"{best[2]} goes to {best[1]}/ by convention"
+
     def _folder_from_name(self, species, data):
         """Folder from the main fuel's name (as GitHubPRService did), for new fuels."""
         from .github_pr_service import FUEL_ALIAS_MAP, GitHubPRService, _infer_fuel_from_reactions
@@ -499,7 +669,7 @@ class RepoIndex:
                 name = None
         if not name:
             return "contrib", "no fuel in the mixture or reaction"
-        existing = GitHubPRService._match_name_to_dirs(name, self.folders)
+        existing = GitHubPRService._match_name_to_dirs(name, self.open_folders)
         if existing:
             return existing, f"folder name matches the main fuel {name}"
         canonical = FUEL_ALIAS_MAP.get(name.lower(), name)
@@ -509,9 +679,9 @@ class RepoIndex:
     def _nox_variant(self, folder, species):
         """Use the ``_NOx`` sibling folder when the mixture has (or lacks) NOx."""
         nox = self._fuels(species)[3]
-        if nox and not folder.endswith("_NOx") and f"{folder}_NOx" in self.folders:
+        if nox and not folder.endswith("_NOx") and f"{folder}_NOx" in self.open_folders:
             return f"{folder}_NOx"
-        if not nox and folder.endswith("_NOx") and folder[:-len("_NOx")] in self.folders:
+        if not nox and folder.endswith("_NOx") and folder[:-len("_NOx")] in self.open_folders:
             return folder[:-len("_NOx")]
         return folder
 

@@ -63,6 +63,13 @@ FILES = {
         [METHANOL, O2, AR], [800], doi="10.1000/c", author="M. Alzueta", year=2001),
     "methanol_NOx/Alzueta_2001/Alzueta_2001_fr.yaml": chemked(
         [METHANOL, NO, O2, AR], [800], doi="10.1000/c", author="M. Alzueta", year=2001),
+    # butanol/ is retired: more n-butanol files there than in n-butanol/
+    "butanol/Bec_2014/x1.yaml": chemked(
+        [BUTANOL, O2, AR], [1000], doi="10.1000/bec", author="I. BEC", year=2014),
+    "butanol/Bec_2014/x2.yaml": chemked(
+        [BUTANOL, O2, AR], [1050], doi="10.1000/bec", author="I. BEC", year=2014),
+    "n-butanol/Bec_2014_n-b_phi_1.yaml": chemked(
+        [BUTANOL, O2, AR], [1100], doi="10.1000/bec", author="I. BEC", year=2014),
     "n-heptane/Gauthier 2004/st_gauthier_2004-1.yaml": chemked(
         [HEPTANE, O2, AR], [700], doi="10.1000/g", author="B. M. Gauthier", year=2004),
     ".github/workflows/ci.yml": "name: ci\n",
@@ -122,6 +129,31 @@ class RepoCheckTests(RepoFixture):
 
         self.assertEqual((match.kind, match.path), ("same-data", "methane/Aul_2013/Aul_2013_st.yaml"))
 
+    def test_same_measurements_in_other_units_and_layout(self):
+        data = yaml.safe_load(FILES["methane/Aul_2013/Aul_2013_st.yaml"])
+        composition = data["common-properties"].pop("composition")
+        for point in data["datapoints"]:
+            kelvin = float(point["temperature"][0].split()[0])
+            point["temperature"] = [kelvin, {"uncertainty-type": "absolute", "uncertainty": 5}]
+            point["temperature"][0] = f"{kelvin - 273.15:.2f} degC"
+            point["pressure"] = ["151987.5 Pa"]
+            point["ignition-delay"] = [f"{float(point['ignition-delay'][0].split()[0]) / 1000:.6g} ms"]
+            point["composition"] = composition
+        text = yaml.safe_dump(data)
+
+        match = self.index.find_duplicate(text)
+
+        self.assertEqual((match.kind, match.path), ("same-measurements", "methane/Aul_2013/Aul_2013_st.yaml"))
+
+    def test_same_values_other_fuel_is_not_a_duplicate(self):
+        self.assertIsNone(self.index.find_duplicate(chemked([ETHANOL, O2, AR], [1200, 1300])))
+
+    def test_partial_overlap(self):
+        text = chemked([CH4, O2, AR], [1200, 1300, 1700])
+        self.assertIsNone(self.index.find_duplicate(text))
+        self.assertEqual(self.index.find_overlap(text), ("methane/Aul_2013/Aul_2013_st.yaml", 2, 3))
+        self.assertIsNone(self.index.find_overlap(chemked([CH4, O2, AR], [1200, 1700, 1800])))
+
     def test_changed_value_is_not_a_duplicate(self):
         self.assertIsNone(self.index.find_duplicate(chemked([CH4, O2, AR], [1200, 1301])))
 
@@ -159,6 +191,29 @@ class RepoCheckTests(RepoFixture):
         text = chemked([("CH4", "", 0.02), ("O2", "", 0.1), ("Ar", "", 0.88)], [1600],
                        doi="10.1000/x", author="A. B", year=1999)
         self.assertEqual(self.index.suggest_folder(text).folder, "methane")
+
+    def test_retired_folder_gets_no_new_files(self):
+        text = chemked([BUTANOL, O2, AR], [1200], doi="10.1000/bec", author="I. BEC", year=2014)
+        self.assertEqual(self.index.suggest_folder(text).directory, "n-butanol")
+        text = chemked([BUTANOL, O2, AR], [1200], doi="10.1000/z", author="Z. Zed", year=2019)
+        self.assertEqual(self.index.suggest_folder(text).directory, "n-butanol/Zed_2019")
+
+    def test_retired_folder_file_belongs_in_isomer_folder(self):
+        path = "butanol/Bec_2014/x1.yaml"
+        suggestion = self.index.suggest_folder(FILES[path], exclude_path=path)
+        self.assertEqual(suggestion.directory, "n-butanol")
+
+    def test_isomer_without_inchi_goes_to_its_folder(self):
+        text = chemked([("iC4H9OH", "", 0.02), O2, AR], [1000], doi="10.1000/i", author="A. B", year=2012)
+        suggestion = self.index.suggest_folder(text)
+        self.assertEqual(suggestion.directory, "i-butanol/B_2012")
+        self.assertIn("by convention", suggestion.reason)
+
+    def test_isomer_blend_goes_to_isomer_folder(self):
+        c2h2 = ("C2H2", "1S/C2H2/c1-2/h1-2H", 0.006)
+        text = chemked([c2h2, ("nC4H9OH", "", 0.004), O2, AR], [900],
+                       doi="10.1000/e", author="C. Esarte", year=2012)
+        self.assertEqual(self.index.suggest_folder(text).folder, "n-butanol")
 
     def test_new_fuel_gets_new_folder(self):
         toluene = ("toluene", "1S/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3", 0.01)
@@ -206,9 +261,16 @@ class CICheckTests(RepoFixture):
             # The same new data twice in one pull request
             "methane/Pair_2021/a.yaml": new_pair,
             "methane/Pair_2021/b.yaml": new_pair,
+            # Shares two of three datapoints with a committed file
+            "methane/Aul_2013/overlap.yaml": chemked([CH4, O2, AR], [1400, 1500, 1750]),
             # Update of a committed file
             "methane/Smith_2010/Smith_2010_st.yaml": chemked(
                 [CH4, O2, AR], [1150], doi="10.1000/s", author="A. Smith", year=2010),
+            # New file and update in the retired butanol/ folder
+            "butanol/Bec_2014/x3.yaml": chemked(
+                [BUTANOL, O2, AR], [1150], doi="10.1000/bec", author="I. BEC", year=2014),
+            "butanol/Bec_2014/x2.yaml": chemked(
+                [BUTANOL, O2, AR], [1060], doi="10.1000/bec", author="I. BEC", year=2014),
         }
 
     def test_check_files(self):
@@ -225,6 +287,13 @@ class CICheckTests(RepoFixture):
         self.assertIn("in this pull request", results["methane/Pair_2021/b.yaml"][1])
         self.assertIn("`methane/Pair_2021/b.yaml`", results["methane/Pair_2021/a.yaml"][1])
         self.assertEqual(results["methane/Smith_2010/Smith_2010_st.yaml"][0], "notice")
+        self.assertIn("Shares 2 of 3 datapoints with `methane/Aul_2013/Aul_2013_st_2.yaml`",
+                      [m for p, _, m in check_files(self.index, self._pr()) if p == "methane/Aul_2013/overlap.yaml"][0])
+        for path in ("butanol/Bec_2014/x3.yaml", "butanol/Bec_2014/x2.yaml"):
+            level, message = results[path]
+            self.assertEqual(level, "warning")
+            self.assertIn("`butanol/` takes no new files", message)
+            self.assertIn("`n-butanol/`", message)
 
     def test_command_prints_without_check_run(self):
         from io import StringIO
@@ -242,7 +311,7 @@ class CICheckTests(RepoFixture):
         call_command("ci_check_chemked_repo", files_dir=files_dir, clone=self.clone,
                      no_check_run=True, stdout=out)
 
-        self.assertIn("failure: 3 duplicate(s), 1 folder warning(s) in 6 file(s)", out.getvalue())
+        self.assertIn("failure: 3 duplicate(s), 4 warning(s) in 9 file(s)", out.getvalue())
 
 
 class UploadPreviewTests(TestCase):

@@ -60,19 +60,30 @@ The web upload, the REST API (`/api/contribute/`) and git pull requests use it:
 - **Duplicate:** a file whose experiment type, apparatus kind, reactions and datapoints
   (common properties merged in) equal those of a committed file, in any folder and under
   any name. File authors, file version, reference metadata, comments and formatting do not
-  count. A file with the same *name* in another folder is not a duplicate: one paper
+  count. For ignition delays and laminar burning velocities, the same fuels with the same
+  temperatures, pressures (and equivalence ratios) and measured values, converted to SI
+  units and compared to 4 significant figures, also count, whatever the units,
+  uncertainties or file layout (a hand-made file and a ReSpecTh conversion of one
+  experiment). A file that shares at least half of its datapoints with another gets a
+  warning. A file with the same *name* in another folder is not a duplicate: one paper
   often gives one file per fuel (for example `butanol/Beeckmann_2014/…` and
   `ethanol/Beeckmann_2014/…`).
 - **Target folder:** the fuel folder that holds files with the same fuel species (and the
   same NOx content, for the `*_NOx` folders), else the folder for the same main fuel, else
   a folder named after the fuel. Below it: the subfolder of files from the same paper
   (same DOI), else an existing or new `Author_Year` subfolder.
+- **Conventions** in `repo_check.py`: `RETIRED_FOLDERS` take no new files (`butanol/`; its
+  files go to the isomer folders), and `FUEL_FOLDERS` sends each butanol isomer to
+  `n-butanol/`, `2-butanol/`, `i-butanol/` or `t-butanol/`, also when the isomer is not the
+  main fuel of a blend. `KNOWN_INCHI` identifies names such as `iC4H9OH` that files give
+  without an InChI.
 
 The web upload preview shows the folder and any matching file with a diff; the pull
 request then updates the matching file instead of adding a copy. For git pull requests,
 the `pyked-ci-validate` workflow on the runner runs `manage.py ci_check_chemked_repo`,
 which posts the check-run *ChemKED Duplicate and Folder Check*: duplicate data is a
-failure, a new file outside the expected folder is a warning. Without a clone, the web
+failure; a new file outside the expected folder, a file in a retired folder and a
+partial datapoint overlap are warnings. Without a clone, the web
 upload falls back to the GitHub API and only matches exact bytes or a file name that is
 used once in the repository.
 
