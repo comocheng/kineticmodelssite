@@ -1,6 +1,8 @@
 # Triggered by ChemKED-database CI via repository_dispatch.
-# Runs PyKED schema validation on a self-hosted runner (PyKED already installed)
-# and posts results back to the originating PR as a check-run.
+# Runs PyKED schema validation on a self-hosted runner (PyKED already installed),
+# then checks the files for duplicate data and folder placement against the
+# runner's ChemKED-database clone (CHEMKED_DATABASE_PATH), and posts both results
+# back to the originating PR as check-runs.
 
 name: PyKED CI Validation
 
@@ -30,6 +32,7 @@ jobs:
       - name: Decode ChemKED files from payload
         id: decode
         run: |
+          rm -rf /tmp/pyked_ci_files
           mkdir -p /tmp/pyked_ci_files
           # Payload: { files: [{filename, repo_path, content_base64}], pr_repo, pr_number, commit_sha }
           PAYLOAD='${{ toJson(github.event.client_payload) }}'
@@ -42,7 +45,12 @@ jobs:
           import sys, json, base64, os
           payload = json.load(sys.stdin)
           for f in payload.get('files', []):
-              path = os.path.join('/tmp/pyked_ci_files', f['filename'])
+              # Keep the repo path: one PR can add the same file name in two folders
+              rel = os.path.normpath(f.get('repo_path') or f['filename'])
+              if os.path.isabs(rel) or rel.split(os.sep)[0] == '..':
+                  sys.exit(f'Refusing a path outside the files directory: {rel}')
+              path = os.path.join('/tmp/pyked_ci_files', rel)
+              os.makedirs(os.path.dirname(path), exist_ok=True)
               content = base64.b64decode(f['content_base64'])
               with open(path, 'wb') as fh:
                   fh.write(content)
@@ -74,6 +82,22 @@ jobs:
           cd ${{ github.workspace }}
           python manage.py ci_validate_chemked \
             --files-dir /tmp/pyked_ci_files \
+            --pr-repo "${{ steps.decode.outputs.pr_repo }}" \
+            --pr-number "${{ steps.decode.outputs.pr_number }}" \
+            --commit-sha "${{ steps.decode.outputs.commit_sha }}" \
+            --github-token "$GITHUB_TOKEN"
+
+      - name: Check duplicates and folders and post check-run
+        if: always() && steps.decode.outcome == 'success' && steps.app-token.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda activate kms
+          cd ${{ github.workspace }}
+          python manage.py ci_check_chemked_repo \
+            --files-dir /tmp/pyked_ci_files \
+            --pull \
             --pr-repo "${{ steps.decode.outputs.pr_repo }}" \
             --pr-number "${{ steps.decode.outputs.pr_number }}" \
             --commit-sha "${{ steps.decode.outputs.commit_sha }}" \

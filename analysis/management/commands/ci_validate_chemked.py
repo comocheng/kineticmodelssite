@@ -65,14 +65,14 @@ def _api(method, url, token, body=None):
         return None
 
 
-def _create_check_run(pr_repo, commit_sha, token, pr_number=None):
+def _create_check_run(pr_repo, commit_sha, token, pr_number=None, name=CHECK_RUN_NAME):
     details_url = (
         f"https://github.com/{pr_repo}/pull/{pr_number}"
         if pr_number else f"https://github.com/{pr_repo}"
     )
     url = f"{GITHUB_API}/repos/{pr_repo}/check-runs"
     result = _api("POST", url, token, {
-        "name": CHECK_RUN_NAME,
+        "name": name,
         "head_sha": commit_sha,
         "status": "in_progress",
         "started_at": _now(),
@@ -180,7 +180,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--files-dir",
             required=True,
-            help="Directory containing decoded YAML files (and .repo_path sidecars).",
+            help="Directory containing decoded YAML files at their repo paths (and .repo_path sidecars).",
         )
         parser.add_argument(
             "--pr-repo",
@@ -225,8 +225,8 @@ class Command(BaseCommand):
 
         yaml_files = sorted(
             f for f in
-            glob.glob(os.path.join(files_dir, "*.yaml")) +
-            glob.glob(os.path.join(files_dir, "*.yml"))
+            glob.glob(os.path.join(files_dir, "**", "*.yaml"), recursive=True) +
+            glob.glob(os.path.join(files_dir, "**", "*.yml"), recursive=True)
             if not f.endswith(".repo_path")
         )
 
@@ -239,7 +239,7 @@ class Command(BaseCommand):
         results = []
         any_failure = False
         for filepath in yaml_files:
-            filename = os.path.basename(filepath)
+            filename = os.path.relpath(filepath, files_dir)
             ok, msg = _validate_file(filepath)
             results.append((filename, ok, msg))
             if ok:

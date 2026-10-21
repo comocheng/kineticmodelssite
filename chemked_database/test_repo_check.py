@@ -188,6 +188,63 @@ class RepoCheckTests(RepoFixture):
         )
 
 
+class CICheckTests(RepoFixture):
+    """ci_check_chemked_repo on the files of a git pull request."""
+
+    def _pr(self):
+        new_methane = chemked([CH4, O2, AR], [1800])
+        new_pair = chemked([CH4, O2, AR], [1900], doi="10.1000/p", author="C. Pair", year=2021)
+        return {
+            # Same name as the ethanol and butanol files, other fuel: fine
+            "methanol/Beeckmann_2014/Beeckmann_2014_opf_p10bar.yaml": chemked(
+                [METHANOL, O2, AR], [950], doi="10.1000/b", author="J. Beeckmann", year=2014),
+            # Copy of committed data under another name and folder
+            "methane/Copy_2020/copy.yaml": yaml.safe_dump(
+                yaml.safe_load(FILES["methane/Aul_2013/Aul_2013_st.yaml"]), sort_keys=True),
+            # New methane data in the ethanol folder
+            "ethanol/Aul_2013/new.yaml": new_methane,
+            # The same new data twice in one pull request
+            "methane/Pair_2021/a.yaml": new_pair,
+            "methane/Pair_2021/b.yaml": new_pair,
+            # Update of a committed file
+            "methane/Smith_2010/Smith_2010_st.yaml": chemked(
+                [CH4, O2, AR], [1150], doi="10.1000/s", author="A. Smith", year=2010),
+        }
+
+    def test_check_files(self):
+        from analysis.management.commands.ci_check_chemked_repo import check_files
+
+        results = {path: (level, msg) for path, level, msg in check_files(self.index, self._pr())}
+
+        self.assertEqual(results["methanol/Beeckmann_2014/Beeckmann_2014_opf_p10bar.yaml"][0], "notice")
+        self.assertEqual(results["methane/Copy_2020/copy.yaml"][0], "failure")
+        self.assertIn("methane/Aul_2013/Aul_2013_st.yaml", results["methane/Copy_2020/copy.yaml"][1])
+        self.assertEqual(results["ethanol/Aul_2013/new.yaml"][0], "warning")
+        self.assertIn("`methane/Aul_2013/`", results["ethanol/Aul_2013/new.yaml"][1])
+        self.assertEqual(results["methane/Pair_2021/b.yaml"][0], "failure")
+        self.assertIn("in this pull request", results["methane/Pair_2021/b.yaml"][1])
+        self.assertIn("`methane/Pair_2021/b.yaml`", results["methane/Pair_2021/a.yaml"][1])
+        self.assertEqual(results["methane/Smith_2010/Smith_2010_st.yaml"][0], "notice")
+
+    def test_command_prints_without_check_run(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        files_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, files_dir)
+        for path, text in self._pr().items():
+            target = Path(files_dir, path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
+        out = StringIO()
+
+        call_command("ci_check_chemked_repo", files_dir=files_dir, clone=self.clone,
+                     no_check_run=True, stdout=out)
+
+        self.assertIn("failure: 3 duplicate(s), 1 folder warning(s) in 6 file(s)", out.getvalue())
+
+
 class UploadPreviewTests(TestCase):
     """The web upload preview names the folder and the matching file."""
 
