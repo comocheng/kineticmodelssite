@@ -51,6 +51,31 @@ Options:
 The command exits with an error if any file is missing or fails to import. Importing a
 file again replaces its datapoints.
 
+### Duplicate data and target folder
+
+`chemked_database/repo_check.py` indexes the committed YAML files of the
+`CHEMKED_DATABASE_PATH` clone (cached by git blob, so only new files are read again).
+The web upload, the REST API (`/api/contribute/`) and git pull requests use it:
+
+- **Duplicate:** a file whose experiment type, apparatus kind, reactions and datapoints
+  (common properties merged in) equal those of a committed file, in any folder and under
+  any name. File authors, file version, reference metadata, comments and formatting do not
+  count. A file with the same *name* in another folder is not a duplicate: one paper
+  often gives one file per fuel (for example `butanol/Beeckmann_2014/…` and
+  `ethanol/Beeckmann_2014/…`).
+- **Target folder:** the fuel folder that holds files with the same fuel species (and the
+  same NOx content, for the `*_NOx` folders), else the folder for the same main fuel, else
+  a folder named after the fuel. Below it: the subfolder of files from the same paper
+  (same DOI), else an existing or new `Author_Year` subfolder.
+
+The web upload preview shows the folder and any matching file with a diff; the pull
+request then updates the matching file instead of adding a copy. For git pull requests,
+the `pyked-ci-validate` workflow on the runner runs `manage.py ci_check_chemked_repo`,
+which posts the check-run *ChemKED Duplicate and Folder Check*: duplicate data is a
+failure, a new file outside the expected folder is a warning. Without a clone, the web
+upload falls back to the GitHub API and only matches exact bytes or a file name that is
+used once in the repository.
+
 ### Ingest after merge
 
 When a pull request that changes YAML files is merged into ChemKED-database `master`,

@@ -1537,6 +1537,22 @@ def _normalize_yaml(content):
     return content
 
 
+def _repo_folder(gh, filename, content, dup, allow_api=True):
+    """Repository folder a contribution goes to, and why, for the upload preview.
+
+    Returns {'dir': str, 'reason': str}, or None when it is not known (no local
+    ChemKED-database clone and *allow_api* is False).
+    """
+    if dup:
+        return {'dir': os.path.dirname(dup['path']), 'reason': 'The matching file is in this folder.'}
+    suggestion = gh.suggest_folder(content)
+    if suggestion is not None:
+        return {'dir': suggestion.directory, 'reason': suggestion.reason}
+    if not allow_api:
+        return None
+    return {'dir': os.path.dirname(gh.determine_repo_path(filename, content)), 'reason': ''}
+
+
 def _compute_diff(existing_content, new_content, from_path, to_path, max_lines=None):
     """Compute a classified diff between two YAML strings.
 
@@ -1972,6 +1988,9 @@ class DatasetUploadView(FormView):
                         check_filename = tf['original_name']
 
                     dup = gh.check_for_duplicates(check_filename, check_content)
+                    file_info['repo_folder'] = _repo_folder(
+                        gh, check_filename, check_content, dup, allow_api=False,
+                    )
                     if dup:
                         classified, truncated, total_lines = _compute_diff(
                             dup['existing_content'], check_content,
@@ -2833,6 +2852,7 @@ class DatasetUploadView(FormView):
                 )
                 yaml_filename = os.path.splitext(original_filename)[0] + '.yaml'
                 dup = gh.check_for_duplicates(yaml_filename, raw_content)
+                preview_info['repo_folder'] = _repo_folder(gh, yaml_filename, raw_content, dup)
                 if dup:
                     classified, _, _ = _compute_diff(
                         dup['existing_content'], raw_content,
@@ -2957,6 +2977,7 @@ class DatasetUploadView(FormView):
                     repo=getattr(settings, 'GITHUB_REPO_NAME', 'ChemKED-database'),
                 )
                 dup = gh.check_for_duplicates(yaml_filename, yaml_content)
+                preview_info['repo_folder'] = _repo_folder(gh, yaml_filename, yaml_content, dup)
                 if dup:
                     classified, _, _ = _compute_diff(
                         dup['existing_content'], yaml_content,

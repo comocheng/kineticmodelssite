@@ -204,6 +204,16 @@
                     </div>
                     {% endif %}
 
+                    {% if preview_data.repo_folder %}
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">Repository folder (if contributed to GitHub)</label>
+                        <div class="bg-light p-2 rounded">
+                            <code>{{ preview_data.repo_folder.dir|default:"(repository root)" }}/</code>
+                            {% if preview_data.repo_folder.reason %}<div class="small text-muted">{{ preview_data.repo_folder.reason }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
                     {% if preview_data.duplicate_match %}
                     <div class="mb-4">
                         <div class="alert {% if preview_data.duplicate_match.match_type == 'exact' or not preview_data.duplicate_match.has_diff %}alert-warning{% else %}alert-info{% endif %} d-flex align-items-start py-2" role="alert">
@@ -223,10 +233,11 @@
                                     already exists in the repository. Your submission will update it — review the diff below.
                                 </div>
                                 {% else %}
-                                <strong>Similar dataset detected ({{ preview_data.duplicate_match.similarity }}% match)</strong>
+                                <strong>Same data already in repository</strong>
                                 <div class="small">
-                                    Your data matches <code>{{ preview_data.duplicate_match.path }}</code>
-                                    in the repository (same reference DOI and experiment). Your submission will update it — review the diff below.
+                                    Your datapoints match <code>{{ preview_data.duplicate_match.path }}</code>
+                                    (same experiment and values; other file name, folder, formatting or metadata).
+                                    Your submission will update it — review the diff below.
                                 </div>
                                 {% endif %}
                             </div>
@@ -796,7 +807,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (d.match_type === 'filename') {
             badge = '<span class="badge bg-info text-dark ms-2">Name match</span>';
         } else {
-            badge = `<span class="badge bg-info text-dark ms-2">${d.similarity}% similar</span>`;
+            badge = '<span class="badge bg-info text-dark ms-2">Same data</span>';
         }
 
         if (d) {
@@ -923,7 +934,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const item = document.createElement('div');
                     item.className = 'd-flex align-items-center py-1 border-bottom small';
                     const typeIcon = file.type === 'xml' ? 'bi-filetype-xml' : 'bi-filetype-yml';
-                    item.innerHTML = `<i class="bi ${typeIcon} me-2 text-muted"></i><span>${escapeHtml(file.filename)}</span>`
+                    const folder = file.repo_folder
+                        ? `<span class="text-muted ms-2" title="${escapeHtml(file.repo_folder.reason)}">&rarr; <code>${escapeHtml(file.repo_folder.dir)}/</code></span>`
+                        : '';
+                    item.innerHTML = `<i class="bi ${typeIcon} me-2 text-muted"></i><span>${escapeHtml(file.filename)}</span>${folder}`
                         + `<span class="badge bg-secondary ms-auto">${file.type.toUpperCase()}</span>`;
                     listContainer.appendChild(item);
                 });

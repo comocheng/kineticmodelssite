@@ -13,6 +13,7 @@ FIXTURE = (
     Path(__file__).resolve().parent.parent
     / "chemked_database" / "testdata" / "Test_2020_ST_7.yaml"
 )
+REPO_PATH = "hydrogen/Tester_2020/Test_2020_ST_7.yaml"
 PR_RESULT = {
     "pr_url": "https://github.com/example/ChemKED-database/pull/5",
     "pr_number": 5,
@@ -41,17 +42,19 @@ class ContributeFilesViewTests(TestCase):
     @mock.patch("chemked_database.github_pr_service.GitHubPRService")
     def test_valid_file_opens_pr(self, service_cls):
         service_cls.return_value.contribute_files.return_value = PR_RESULT
+        service_cls.return_value.determine_repo_path.return_value = REPO_PATH
 
         response = self._post()
 
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.data["pr_url"], PR_RESULT["pr_url"])
         self.assertTrue(response.data["validation"][0]["valid"])
-        kwargs = service_cls.return_value.contribute_files.call_args.kwargs
-        self.assertEqual(
-            kwargs["files"],
-            [{"path": "contributions/chemked/Test_2020_ST_7.yaml", "content": self.content}],
+        service_cls.return_value.determine_repo_path.assert_called_once_with(
+            "Test_2020_ST_7.yaml", self.content
         )
+        kwargs = service_cls.return_value.contribute_files.call_args.kwargs
+        self.assertEqual(kwargs["files"], [{"path": REPO_PATH, "content": self.content}])
+        self.assertEqual(response.data["paths"], [REPO_PATH])
         self.assertEqual(kwargs["contributor_orcid"], "0000-0002-1825-0097")
         self.assertEqual(response.data["import_results"], [])
         self.assertFalse(ExperimentDataset.objects.exists())
@@ -59,6 +62,7 @@ class ContributeFilesViewTests(TestCase):
     @mock.patch("chemked_database.github_pr_service.GitHubPRService")
     def test_import_to_db_uses_web_importer(self, service_cls):
         service_cls.return_value.contribute_files.return_value = PR_RESULT
+        service_cls.return_value.determine_repo_path.return_value = REPO_PATH
 
         response = self._post(import_to_db="true")
 

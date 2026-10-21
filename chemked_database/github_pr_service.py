@@ -7,6 +7,10 @@ on the target repository with ORCID metadata and validation status.
 Requires a GitHub Personal Access Token with `repo` scope set as:
   - Environment variable: GITHUB_TOKEN
   - Django setting: GITHUB_TOKEN
+
+Duplicate detection and the target folder come from chemked_database.repo_check,
+which indexes the local ChemKED-database clone (CHEMKED_DATABASE_PATH). Without
+a clone, a reduced check through the GitHub API is used.
 """
 
 import base64
@@ -15,11 +19,12 @@ import json
 import logging
 import re
 import os
-import yaml
 from datetime import datetime
 from urllib.parse import quote
 
 import requests
+
+from .repo_check import load_chemked, load_index
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +123,7 @@ def infer_fuel_from_yaml(content):
         Lowercase fuel species name, or None if it cannot be determined.
     """
     try:
-        if isinstance(content, bytes):
-            content = content.decode('utf-8', errors='replace')
-        data = yaml.safe_load(content)
+        data = load_chemked(content)
         if not isinstance(data, dict):
             return None
     except Exception:
@@ -169,9 +172,7 @@ def infer_author_year_from_yaml(content):
     tuple (str, str) or (None, None)
     """
     try:
-        if isinstance(content, bytes):
-            content = content.decode('utf-8', errors='replace')
-        data = yaml.safe_load(content)
+        data = load_chemked(content)
         if not isinstance(data, dict):
             return None, None
     except Exception:
@@ -197,130 +198,17 @@ def infer_author_year_from_yaml(content):
     return surname or None, year or None
 
 
-def compute_content_fingerprint(content):
-    """Extract normalized identifying fields from ChemKED YAML content.
+# Clone paths already reported as missing (warn once per process).
+_WARNED_NO_CLONE = set()
 
-    The fingerprint captures the scientific identity of a dataset —
-    independent of filename, formatting, or metadata ordering — so that
-    the same experimental data can be recognised even when contributed
-    under a different name.
 
-    Returns
-    -------
-    dict or None
-        Keys: ``reference_doi``, ``experiment_type``, ``apparatus_kind``,
-        ``species`` (sorted tuple of (name, amount) pairs),
-        ``datapoint_count``.  ``None`` if the content cannot be parsed.
-    """
+def _default_clone_path():
+    """settings.CHEMKED_DATABASE_PATH, or the environment variable outside Django."""
     try:
-        if isinstance(content, bytes):
-            content = content.decode('utf-8', errors='replace')
-        data = yaml.safe_load(content)
-        if not isinstance(data, dict):
-            return None
+        from django.conf import settings
+        return getattr(settings, "CHEMKED_DATABASE_PATH", None)
     except Exception:
-        return None
-
-    fp = {}
-
-    # Reference DOI — strongest single identifier
-    ref = data.get('reference', {}) or {}
-    fp['reference_doi'] = (ref.get('doi') or '').strip().lower()
-
-    # Experiment type
-    fp['experiment_type'] = (data.get('experiment-type') or '').strip().lower()
-
-    # Apparatus kind
-    apparatus = data.get('apparatus', {}) or {}
-    fp['apparatus_kind'] = (apparatus.get('kind') or '').strip().lower()
-
-    # Species composition — normalise and sort for order-independence
-    composition = None
-    cp = data.get('common-properties', {}) or {}
-    if isinstance(cp, dict) and 'composition' in cp:
-        composition = cp['composition']
-    if composition is None:
-        dps = data.get('datapoints', []) or []
-        if dps and isinstance(dps[0], dict) and 'composition' in dps[0]:
-            composition = dps[0]['composition']
-
-    species_list = []
-    if composition and isinstance(composition, dict) and 'species' in composition:
-        for sp in composition['species']:
-            name = (sp.get('species-name') or '').strip().lower()
-            amount_raw = sp.get('amount', [0])
-            try:
-                if isinstance(amount_raw, list):
-                    amount = float(amount_raw[0]) if amount_raw else 0.0
-                else:
-                    amount = float(amount_raw)
-            except (ValueError, TypeError):
-                amount = 0.0
-            species_list.append((name, round(amount, 6)))
-    fp['species'] = tuple(sorted(species_list))
-
-    # Datapoint count
-    dps = data.get('datapoints', []) or []
-    fp['datapoint_count'] = len(dps)
-
-    return fp
-
-
-def fingerprint_similarity(fp1, fp2):
-    """Compute weighted similarity between two content fingerprints.
-
-    Weights reflect how strongly each field identifies a unique dataset:
-
-    * Reference DOI (40) — papers have unique DOIs
-    * Species composition (25) — very distinctive per experiment
-    * Experiment type (15) — narrows category
-    * Apparatus kind (10) — further narrows category
-    * Datapoint count (10) — weak but useful tie-breaker
-
-    Only fields present in *both* fingerprints contribute to the score.
-
-    Returns
-    -------
-    float
-        Similarity between 0.0 and 1.0.
-    """
-    if not fp1 or not fp2:
-        return 0.0
-
-    score = 0.0
-    total_weight = 0.0
-
-    # Reference DOI (weight 40)
-    if fp1.get('reference_doi') and fp2.get('reference_doi'):
-        total_weight += 40
-        if fp1['reference_doi'] == fp2['reference_doi']:
-            score += 40
-
-    # Species composition (weight 25)
-    if fp1.get('species') and fp2.get('species'):
-        total_weight += 25
-        if fp1['species'] == fp2['species']:
-            score += 25
-
-    # Experiment type (weight 15)
-    if fp1.get('experiment_type') and fp2.get('experiment_type'):
-        total_weight += 15
-        if fp1['experiment_type'] == fp2['experiment_type']:
-            score += 15
-
-    # Apparatus kind (weight 10)
-    if fp1.get('apparatus_kind') and fp2.get('apparatus_kind'):
-        total_weight += 10
-        if fp1['apparatus_kind'] == fp2['apparatus_kind']:
-            score += 10
-
-    # Datapoint count (weight 10)
-    if fp1.get('datapoint_count') is not None and fp2.get('datapoint_count') is not None:
-        total_weight += 10
-        if fp1['datapoint_count'] == fp2['datapoint_count']:
-            score += 10
-
-    return score / total_weight if total_weight > 0 else 0.0
+        return os.environ.get("CHEMKED_DATABASE_PATH")
 
 
 class GitHubContributionError(Exception):
@@ -406,8 +294,9 @@ def _extract_orcid_name(record):
 class GitHubPRService:
     """Service for creating contribution pull requests on GitHub."""
 
-    def __init__(self, token=None, owner=None, repo=None):
+    def __init__(self, token=None, owner=None, repo=None, local_clone=None):
         self.token = token or os.environ.get("GITHUB_TOKEN", "")
+        self.local_clone = local_clone if local_clone is not None else _default_clone_path()
         self.owner = owner or os.environ.get("GITHUB_REPO_OWNER", "")
         self.repo = repo or os.environ.get("GITHUB_REPO_NAME", "ChemKED-database")
         self.pyteck_owner = os.environ.get("PYTECK_REPO_OWNER", self.owner)
@@ -468,10 +357,12 @@ class GitHubPRService:
         return self.get_directory_listing(ref=ref)['dirs']
 
     def find_existing_file(self, filename, ref=None):
-        """Search the repo tree for an existing file with the given name.
+        """Search the repo tree for the one existing file with the given name.
 
         Uses the Git Trees API with ``recursive=1`` so a single call
-        traverses the entire repository.
+        traverses the entire repository. A name that is used in more than
+        one folder (e.g. one file per fuel from the same paper) does not
+        identify a file, so no match is returned for it.
 
         Parameters
         ----------
@@ -483,7 +374,7 @@ class GitHubPRService:
         Returns
         -------
         str or None
-            Repo-relative path of the first match, or ``None``.
+            Repo-relative path of the only match, or ``None``.
         """
         if ref is None:
             ref = self.get_default_branch()
@@ -492,12 +383,26 @@ class GitHubPRService:
                 "get", f"/git/trees/{quote(ref, safe='')}",
                 params={"recursive": "1"},
             )
-            for item in tree.get("tree", []):
-                if item["type"] == "blob" and item["path"].rsplit("/", 1)[-1] == filename:
-                    return item["path"]
+            matches = [
+                item["path"] for item in tree.get("tree", [])
+                if item["type"] == "blob" and item["path"].rsplit("/", 1)[-1] == filename
+            ]
+            if len(matches) == 1:
+                return matches[0]
         except GitHubContributionError:
             pass
         return None
+
+    def _local_index(self):
+        """repo_check.RepoIndex of the local ChemKED-database clone, or None."""
+        index = load_index(self.local_clone)
+        if index is None and self.local_clone not in _WARNED_NO_CLONE:
+            _WARNED_NO_CLONE.add(self.local_clone)
+            logger.warning(
+                "No ChemKED-database clone at %r; duplicate detection uses the "
+                "GitHub API (file name and exact bytes only)", self.local_clone,
+            )
+        return index
 
     def find_exact_duplicate(self, content, ref=None):
         """Check if byte-identical content already exists in the repo.
@@ -537,40 +442,6 @@ class GitHubPRService:
             pass
         return None
 
-    def _search_code(self, query):
-        """Search for code in the repository via the GitHub code-search API.
-
-        Parameters
-        ----------
-        query : str
-            Free-text code-search query (DOI string, keyword, etc.).
-            ``repo:{owner}/{repo}`` is appended automatically.
-
-        Returns
-        -------
-        list[str]
-            Repo-relative paths of matching files (max 10).
-        """
-        url = f"{GITHUB_API}/search/code"
-        params = {
-            "q": f'{query} repo:{self.owner}/{self.repo} extension:yaml',
-            "per_page": 10,
-        }
-        try:
-            resp = self.session.get(url, params=params)
-            if resp.status_code != 200:
-                logger.warning(
-                    "GitHub code search returned %d: %s",
-                    resp.status_code,
-                    resp.text[:200],
-                )
-                return []
-            data = resp.json()
-            return [item['path'] for item in data.get('items', [])]
-        except Exception as exc:
-            logger.warning("GitHub code search failed: %s", exc)
-            return []
-
     def _get_file_content(self, path, ref=None):
         """Download raw file content from the repository.
 
@@ -592,70 +463,18 @@ class GitHubPRService:
         except GitHubContributionError:
             return None
 
-    def find_content_duplicates(self, content, ref=None):
-        """Search the repo for files whose *content* matches the upload.
-
-        Two-stage strategy:
-
-        1. **Reference DOI search** — uses the GitHub code-search API to
-           find YAML files in the repo that mention the same DOI.  This is
-           fast (one API call) and covers the vast majority of scientific
-           datasets.
-        2. **Fingerprint comparison** — downloads each candidate and
-           compares normalised experiment metadata (species, apparatus,
-           datapoint count, …) via :func:`fingerprint_similarity`.
-
-        Parameters
-        ----------
-        content : bytes or str
-            Uploaded file content.
-        ref : str, optional
-            Branch/tag/SHA.  Defaults to the default branch.
-
-        Returns
-        -------
-        list[dict]
-            ``[{'path': str, 'similarity': float}, ...]`` sorted by
-            similarity descending.  Empty list if nothing found.
-        """
-        fp = compute_content_fingerprint(content)
-        if not fp:
-            return []
-
-        if ref is None:
-            ref = self.get_default_branch()
-
-        candidates = []
-
-        # Stage 1: Search by reference DOI
-        doi = fp.get('reference_doi')
-        if doi:
-            # Quote the DOI so GitHub searches for the exact string
-            paths = self._search_code(f'"{doi}"')
-            candidates.extend(paths)
-
-        # Stage 2: Compare fingerprints of candidates
-        if not candidates:
-            return []
-
-        matches = []
-        for path in candidates:
-            existing_content = self._get_file_content(path, ref=ref)
-            if existing_content is None:
-                continue
-            existing_fp = compute_content_fingerprint(existing_content)
-            sim = fingerprint_similarity(fp, existing_fp)
-            if sim >= 0.5:
-                matches.append({'path': path, 'similarity': sim})
-
-        matches.sort(key=lambda m: m['similarity'], reverse=True)
-        return matches
+    def suggest_folder(self, content):
+        """repo_check.FolderSuggestion for the content, or None without a local clone."""
+        index = self._local_index()
+        return index.suggest_folder(content) if index is not None else None
 
     def check_for_duplicates(self, filename, content):
-        """Run all duplicate-detection tiers and return a summary.
+        """Find a committed file that the upload duplicates or would update.
 
         Intended to be called from the preview step so users can see
-        matches *before* they submit.
+        matches *before* they submit. With the local clone, matches are by
+        data in any folder (see repo_check); without it, by unique file
+        name or exact bytes through the GitHub API.
 
         Parameters
         ----------
@@ -674,6 +493,10 @@ class GitHubPRService:
             ``match_type`` is one of ``'filename'``, ``'exact'``, or
             ``'content'``.
         """
+        index = self._local_index()
+        if index is not None:
+            return index.check_upload(filename, content)
+
         if isinstance(content, str):
             content_bytes = content.encode('utf-8')
         else:
@@ -700,18 +523,6 @@ class GitHubPRService:
                 'match_type': 'exact',
                 'path': exact_path,
                 'similarity': 1.0,
-                'existing_content': existing_content.decode('utf-8', errors='replace') if existing_content else '',
-            }
-
-        # Tier 3: content fingerprint
-        content_matches = self.find_content_duplicates(content_bytes, ref=ref)
-        if content_matches and content_matches[0]['similarity'] >= 0.8:
-            best = content_matches[0]
-            existing_content = self._get_file_content(best['path'], ref=ref)
-            return {
-                'match_type': 'content',
-                'path': best['path'],
-                'similarity': best['similarity'],
                 'existing_content': existing_content.decode('utf-8', errors='replace') if existing_content else '',
             }
 
@@ -758,12 +569,12 @@ class GitHubPRService:
 
             {fuel_dir}/{Author_Year}/{filename}
 
-        If a file with the same name already exists anywhere in the repo
-        the existing path is returned so that the PR creates a diff
-        (update) rather than a duplicate.
+        If a committed file holds the same data (any folder, any name), its
+        path is returned so that the PR creates a diff (update) rather than
+        a duplicate. Otherwise the folder follows the existing layout: see
+        repo_check.RepoIndex.suggest_folder.
 
-        The method discovers the repository's branch structure at runtime
-        so that:
+        Without a local clone, the GitHub API fallback works so that:
 
         * If the file already exists, its current path is reused.
         * If a fuel directory already exists it is reused (case-preserved).
@@ -774,6 +585,10 @@ class GitHubPRService:
         * Falls back to bare ``{filename}`` only when the fuel cannot be
           inferred at all.
         """
+        index = self._local_index()
+        if index is not None:
+            return index.determine_path(filename, content)
+
         # Query the default branch so we see all existing directories
         default_branch = self.get_default_branch()
 
@@ -794,19 +609,6 @@ class GitHubPRService:
                 filename, exact_path,
             )
             return exact_path
-
-        # --- Content-based duplicate detection (reference DOI + fingerprint)
-        content_matches = self.find_content_duplicates(
-            content, ref=default_branch,
-        )
-        if content_matches and content_matches[0]['similarity'] >= 0.8:
-            best = content_matches[0]
-            logger.info(
-                "Content match: uploaded '%s' matches existing '%s' "
-                "(%.0f%% similar); PR will show diff",
-                filename, best['path'], best['similarity'] * 100,
-            )
-            return best['path']
 
         fuel = infer_fuel_from_yaml(content)
         if not fuel:
