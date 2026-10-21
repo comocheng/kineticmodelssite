@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework import routers
 
-from api import views, chemked_views, analysis_views
+from api import views, chemked_views, analysis_views, metadata_views, provenance_views
 from api.contribution_views import ContributeFilesView, ContributionStatusView
 
 
@@ -47,7 +47,19 @@ router.register(r"fuel-group", analysis_views.FuelGroupViewSet, basename="api-fu
 router.register(r"fuel-species", analysis_views.FuelSpeciesViewSet, basename="api-fuel-species")
 router.register(r"fuel-model-compatibility", analysis_views.FuelModelCompatibilityViewSet, basename="api-fuel-model-compatibility")
 
+# provenance: FAIR identity, licensing, and semantic mappings (read-only)
+router.register(r"institution", provenance_views.InstitutionViewSet, basename="api-institution")
+router.register(r"person", provenance_views.PersonViewSet, basename="api-person")
+router.register(r"license", provenance_views.LicenseViewSet, basename="api-license")
+router.register(r"external-identifier", provenance_views.ExternalIdentifierViewSet, basename="api-external-identifier")
+router.register(r"semantic-mapping", provenance_views.SemanticMappingViewSet, basename="api-semantic-mapping")
+
 urlpatterns = router.urls + [
     path("contribute/", ContributeFilesView.as_view(), name="api-contribute"),
     path("contribute/status/<int:pr_number>/", ContributionStatusView.as_view(), name="api-contribute-status"),
+    # FAIR JSON-LD metadata endpoints
+    path("metadata/", metadata_views.catalog_metadata, name="api-fair-metadata"),
+    path("source/<int:pk>/metadata/", metadata_views.source_metadata, name="api-source-metadata"),
+    path("kineticmodel/<int:pk>/metadata/", metadata_views.kinetic_model_metadata, name="api-kineticmodel-metadata"),
+    path("experiment-dataset/<int:pk>/metadata/", metadata_views.experiment_dataset_metadata, name="api-experiment-dataset-metadata"),
 ]

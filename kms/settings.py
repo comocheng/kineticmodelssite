@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "importer_dashboard.apps.ImporterDashboardConfig",
     # "import_voting.apps.ImportVotingConfig",  # REMOVED: Duplicate of importer_dashboard functionality
     "database.apps.DatabaseConfig",
+    "provenance.apps.ProvenanceConfig",
     "api.apps.ApiConfig",
     "dal",
     "dal_select2",
@@ -209,6 +210,10 @@ SPECTACULAR_SETTINGS = {
         "name": "Prometheus Cyberinfrastructure",
         "url": "https://dev.omethe.us",
     },
+    "LICENSE": {
+        "name": "MIT License",
+        "url": "https://spdx.org/licenses/MIT",
+    },
     "EXTERNAL_DOCS": {
         "description": "Platform & API documentation",
         "url": "https://dev.omethe.us/docs/",
@@ -221,6 +226,7 @@ SPECTACULAR_SETTINGS = {
         "api.schema_hooks.add_response_examples",
         "api.schema_hooks.add_flex_params",
         "api.schema_hooks.add_code_samples",
+        "api.schema_hooks.add_ontology_context",
     ],
     "SWAGGER_UI_SETTINGS": {
         "persistAuthorization": True,

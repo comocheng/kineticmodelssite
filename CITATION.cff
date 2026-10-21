@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "Pr.omethe.us Kinetic Models Database"
+message: "If you use this software or data service, please cite it using this metadata."
+type: software
+authors:
+  - family-names: "Lekia"
+    given-names: "Prosper"
+    orcid: "https://orcid.org/0009-0007-2428-0755"
+repository-code: "https://github.com/LekiaAnonim/kineticmodelssite"
+url: "https://dev.omethe.us"
+license: "MIT"
+keywords:
+  - combustion kinetics
+  - FAIR data
+  - chemical kinetics
+  - Django
+  - REST API

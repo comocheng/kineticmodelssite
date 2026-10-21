@@ -541,8 +541,10 @@ def create_and_save_authorships(source, author_data, models):
         firstname = author_datum.get("given")
         lastname = author_datum.get("family")
         author_fields = filter_fields({"firstname": firstname, "lastname": lastname})
-        author = models.Author.objects.create(**author_fields)
-        authorship = models.Authorship.objects.create(source=source, author=author, order=order)
+        author, _ = models.Author.objects.get_or_create(**author_fields)
+        authorship, _ = models.Authorship.objects.get_or_create(
+            source=source, author=author, defaults={"order": order}
+        )
         safe_save(author)
         safe_save(authorship)
 
@@ -576,9 +578,11 @@ def import_source(source_path, kinetic_model, models):
 
         source.kineticmodel_set.add(kinetic_model)
         source.save()
-        if author_data is not None:
+        # Only populate authorships for a freshly created source; an existing
+        # source already has them, and re-adding would duplicate Authorship rows.
+        if created and author_data is not None:
             create_and_save_authorships(source, author_data, models)
-        else:
+        elif author_data is None:
             logger.warning("Could not find author data")
     except FileNotFoundError:
         logger.warning("source.txt not found")

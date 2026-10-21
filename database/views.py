@@ -38,6 +38,7 @@ from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm, SourceForm, AuthorshipFormSet, KineticModelForm, AuthorForm
 from database.templatetags import renders
 from database.services import exports
+from provenance import resolver
 
 
 class SidebarLookup:
@@ -258,6 +259,13 @@ class ThermoDetail(DetailView):
     model = Thermo
     context_object_name = "thermo"
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        rdf = resolver.negotiate_record(request, "thermo", self.object)
+        if rdf is not None:
+            return rdf
+        return self.render_to_response(self.get_context_data(object=self.object))
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         thermo = self.get_object()
@@ -270,6 +278,13 @@ class ThermoDetail(DetailView):
 @SidebarLookup
 class TransportDetail(DetailView):
     model = Transport
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        rdf = resolver.negotiate_record(request, "transport", self.object)
+        if rdf is not None:
+            return rdf
+        return self.render_to_response(self.get_context_data(object=self.object))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -426,6 +441,13 @@ class KineticModelDownloadView(View):
 class KineticsDetail(DetailView):
     model = Kinetics
     context_object_name = "kinetics"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        rdf = resolver.negotiate_record(request, "kinetics", self.object)
+        if rdf is not None:
+            return rdf
+        return self.render_to_response(self.get_context_data(object=self.object))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

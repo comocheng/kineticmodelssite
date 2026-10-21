@@ -27,6 +27,9 @@ from drf_spectacular.views import (
 
 urlpatterns = [
     path("", include("database.urls")),
+    # Dereferenceable FAIR identifiers (slug IRIs fall through after the
+    # integer detail routes in database.urls).
+    path("", include("provenance.resolver_urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),

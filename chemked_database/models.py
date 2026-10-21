@@ -10,6 +10,7 @@ Schema: https://github.com/pr-omethe-us/PyKED
 
 from django.db import models
 from django.core.validators import MinValueValidator
+import re
 
 
 class ApparatusKind(models.TextChoices):
@@ -226,6 +227,13 @@ class FileAuthor(models.Model):
         db_index=True,
         help_text="ORCID identifier (e.g., 0000-0003-4425-7097)"
     )
+    person = models.ForeignKey(
+        "provenance.Person",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
     
     class Meta:
         db_table = 'chemked_file_authors'
@@ -249,6 +257,13 @@ class ReferenceAuthor(models.Model):
         blank=True,
         db_index=True,
         help_text="ORCID identifier (if available)"
+    )
+    person = models.ForeignKey(
+        "provenance.Person",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
     )
 
     class Meta:
@@ -279,6 +294,13 @@ class Apparatus(models.Model):
         help_text="Operating mode (e.g., 'reflected shock', 'premixed')"
     )
     institution = models.CharField(max_length=255, blank=True)
+    institution_ref = models.ForeignKey(
+        "provenance.Institution",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="apparatus",
+    )
     facility = models.CharField(
         max_length=255, 
         blank=True,
@@ -297,6 +319,21 @@ class Apparatus(models.Model):
         if self.facility:
             parts.append(f"({self.facility})")
         return ' '.join(parts)
+
+    @property
+    def sssom_slug(self):
+        """Deterministic slug for the minted ``promapp:`` node identity.
+
+        Built from the unique_together basis (kind, institution, facility),
+        falling back to the linked institution's name when the free-text
+        institution is blank, so the generator and linker agree on one slug.
+        """
+        institution = self.institution or (
+            self.institution_ref.name if self.institution_ref else ""
+        )
+        parts = [self.kind, institution, self.facility]
+        joined = "-".join(p for p in parts if p).lower()
+        return re.sub(r"[^a-z0-9]+", "-", joined).strip("-")
 
 
 class ExperimentDataset(models.Model):
@@ -411,6 +448,16 @@ class ExperimentDataset(models.Model):
     # Validation
     is_valid = models.BooleanField(default=True)
     validation_errors = models.JSONField(default=list, blank=True)
+    
+    # FAIR metadata
+    license = models.ForeignKey(
+        "provenance.License",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="datasets",
+    )
+    data_repository_url = models.URLField(blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

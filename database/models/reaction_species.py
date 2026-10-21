@@ -2,6 +2,7 @@ from functools import lru_cache
 import math
 
 import rmgpy
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models, transaction
 from rmgpy.molecule import Molecule
 from . import KineticModel, Kinetics
@@ -126,6 +127,7 @@ class Species(models.Model):
     prime_id = models.CharField("PrIMe ID", blank=True, max_length=9)
     cas_number = models.CharField("CAS Registry Number", blank=True, max_length=400)
     isomers = models.ManyToManyField("Isomer")
+    external_identifiers = GenericRelation("provenance.ExternalIdentifier")
 
     def __str__(self):
         return f"{self.id} Formula: {self.formula or None}"
@@ -154,6 +156,11 @@ class Species(models.Model):
         isomers = Isomer.objects.filter(species=self)
         if isomers:
             return isomers.first().formula.formula
+
+    @property
+    def inchikey(self):
+        ident = self.external_identifiers.filter(scheme="inchikey").first()
+        return ident.value if ident else ""
 
     @property
     def enthalpy_formation(self):

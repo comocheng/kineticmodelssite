@@ -1,0 +1,61 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ kind_label }} namespace — Prometheus</title>
+  <style>
+    body { font: 15px/1.5 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           color: #1f2937; max-width: 920px; margin: 2rem auto; padding: 0 1.2rem; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .kind { color: #6b7280; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+    h1 { margin: .2rem 0 .1rem; font-size: 1.8rem; }
+    code { background: #f3f4f6; padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+    .iri { color: #6b7280; word-break: break-all; }
+    .pill { display: inline-block; background: #ecfeff; color: #0e7490; border-radius: 999px;
+            padding: .05rem .55rem; font-size: .8rem; }
+    .formats a { margin-right: .8rem; }
+    .muted { color: #9ca3af; }
+    section { margin-top: 1.8rem; }
+    ul.members { columns: 2; -webkit-columns: 2; gap: 2rem; padding-left: 1.1rem; }
+    ul.members li { break-inside: avoid; margin: .12rem 0; }
+  </style>
+</head>
+<body>
+  <div class="kind">Namespace</div>
+  <h1>{{ kind_label }} <span class="pill">{{ count }}</span></h1>
+  <p class="iri"><a href="{{ base_iri }}">{{ base_iri }}</a></p>
+
+  <p class="formats muted">
+    RDF:
+    <a href="?format=ttl">Turtle</a>
+    <a href="?format=jsonld">JSON-LD</a>
+    <a href="?format=xml">RDF/XML</a>
+    <a href="?format=nt">N-Triples</a>
+  </p>
+
+  <section>
+    {% if members %}
+    <ul class="members">
+      {% for m in members %}
+      <li><a href="{{ m.url }}">{{ m.slug }}</a></li>
+      {% endfor %}
+    </ul>
+    {% if truncated %}
+    <p class="muted">Showing the first {{ shown }} of {{ count }} members. Request
+    RDF (<code>?format=ttl</code>) for the complete list.</p>
+    {% endif %}
+    {% else %}
+    <p class="muted">No minted members in this namespace yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="muted">
+    <p>This is a Prometheus FAIR namespace base. Each member below is itself a
+    dereferenceable identifier; machines that request RDF
+    (<code>Accept: text/turtle</code>) receive this collection as a
+    <code>skos:Collection</code> with <code>skos:member</code> links.</p>
+  </section>
+</body>
+</html>

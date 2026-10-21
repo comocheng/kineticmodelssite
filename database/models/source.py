@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from titlecase import titlecase
 
@@ -9,6 +10,14 @@ class Author(models.Model):
 
     firstname = models.CharField(max_length=80)
     lastname = models.CharField(max_length=80)
+    # Canonical cross-app identity (ORCID/affiliation live on provenance.Person).
+    person = models.ForeignKey(
+        "provenance.Person",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="author_records",
+    )
 
     class Meta:
         unique_together = ['firstname', 'lastname']
@@ -33,6 +42,18 @@ class Source(models.Model):
         "Page Numbers", blank=True, help_text="[page #]-[page #]", max_length=100
     )
     authors = models.ManyToManyField(Author, blank=True, through="Authorship")
+    # FAIR metadata.
+    url = models.URLField(blank=True)
+    license = models.ForeignKey(
+        "provenance.License",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sources",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    external_identifiers = GenericRelation("provenance.ExternalIdentifier")
 
     @property
     def pub_info(self):

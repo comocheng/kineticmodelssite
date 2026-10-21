@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prometheus vocabulary</title>
+  <style>
+    body { font: 15px/1.5 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           color: #1f2937; max-width: 920px; margin: 2rem auto; padding: 0 1.2rem; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 { margin: .2rem 0 .4rem; font-size: 1.8rem; }
+    h2.section { margin: 2.2rem 0 .3rem; font-size: 1.3rem; border-bottom: 2px solid #e5e7eb; padding-bottom: .3rem; }
+    code { background: #f3f4f6; padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+    .iri { color: #6b7280; word-break: break-all; }
+    .term { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem 1.1rem; margin: 1rem 0; }
+    .term.focus { border-color: #0e7490; background: #ecfeff; }
+    .term h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+    .muted { color: #9ca3af; }
+    .formats a { margin-right: .8rem; }
+    .lead { color: #4b5563; }
+    .tag { display: inline-block; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+           background: #f3f4f6; color: #6b7280; border-radius: 4px; padding: .08rem .4rem; margin-left: .4rem; vertical-align: middle; }
+    .meta { font-size: .85rem; color: #6b7280; margin: .35rem 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Prometheus vocabulary</h1>
+  <p class="lead">The terms Prometheus uses to describe kinetic models, experiments,
+     and species — its own provenance predicates, its experimental-extension
+     ontology, and the OntoKin, OntoChemExp, and OntoSpecies terms it reuses.</p>
+
+  <h2 class="section">Provenance predicates <span class="tag">promv:</span></h2>
+  <p class="iri"><a href="{{ vocab_iri }}">{{ vocab_iri }}</a></p>
+  <p>Domain predicates that connect Prometheus SSSOM nodes — kinetic models,
+     datasets, and species — in the knowledge graph. Minted and owned by Prometheus.</p>
+  <p class="formats muted">
+    RDF:
+    <a href="?format=ttl">Turtle</a>
+    <a href="?format=jsonld">JSON-LD</a>
+    <a href="?format=xml">RDF/XML</a>
+  </p>
+  {% for t in terms %}
+  <div class="term {% if focus == t.name %}focus{% endif %}" id="{{ t.name }}">
+    <h3><code>promv:{{ t.name }}</code></h3>
+    <p class="iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+    <p><strong>{{ t.label }}</strong></p>
+    <p class="muted">{{ t.comment }}</p>
+  </div>
+  {% endfor %}
+
+  {% if pmtx and pmtx.terms %}
+  <h2 class="section">Experimental extension <span class="tag">pmtx:</span></h2>
+  <p class="iri"><a href="{{ pmtx.iri }}">{{ pmtx.iri }}</a></p>
+  <p>Combustion experimental-measurement concepts that OntoKin does not cover
+     (ignition delay, apparatus, datapoints, conditions). Defined by Prometheus.</p>
+  {% for t in pmtx.terms %}
+  <div class="term" id="{{ t.name }}">
+    <h3><code>{{ t.curie }}</code>{% if t.kind %}<span class="tag">{{ t.kind }}</span>{% endif %}</h3>
+    <p class="iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+    {% if t.label %}<p><strong>{{ t.label }}</strong></p>{% endif %}
+    {% if t.comment %}<p class="muted">{{ t.comment }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if ontokin and ontokin.terms %}
+  <h2 class="section">Reused from OntoKin <span class="tag">ontokin:</span></h2>
+  <p class="iri"><a href="{{ ontokin.iri }}">{{ ontokin.iri }}</a></p>
+  <p>Mechanism, species, reaction, and publication-provenance terms Prometheus
+     reuses from <a href="http://www.theworldavatar.com/ontology/ontokin/">OntoKin 1.0</a>
+     rather than re-minting. Terms OntoKin defines but Prometheus does not use are omitted.</p>
+  {% for t in ontokin.terms %}
+  <div class="term" id="ontokin-{{ t.name }}">
+    <h3><code>{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="tag">{{ t.kind }}</span>{% endif %}</h3>
+    <p class="iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+    {% if t.definition %}<p class="muted">{{ t.definition }}</p>{% endif %}
+    <p class="meta">
+      {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+      {% if t.mapping %} &nbsp;·&nbsp; <strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+    </p>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if ontochemexp and ontochemexp.terms %}
+  <h2 class="section">Reused from OntoChemExp <span class="tag">ontochemexp:</span></h2>
+  <p class="iri"><a href="{{ ontochemexp.iri }}">{{ ontochemexp.iri }}</a></p>
+  <p>Experimental concepts (apparatus, conditions, composition, measured quantities)
+     Prometheus aligns to <a href="http://www.theworldavatar.com/ontology/ontochemexp/">OntoChemExp</a>
+     rather than re-minting. Definitions are curated by Prometheus where the source ontology omits them.</p>
+  {% for t in ontochemexp.terms %}
+  <div class="term" id="ontochemexp-{{ t.name }}">
+    <h3><code>{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="tag">{{ t.kind }}</span>{% endif %}</h3>
+    <p class="iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+    {% if t.definition %}<p class="muted">{{ t.definition }}</p>{% endif %}
+    <p class="meta">
+      {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+      {% if t.mapping %} &nbsp;·&nbsp; <strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+    </p>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if ontospecies and ontospecies.terms %}
+  <h2 class="section">Reused from OntoSpecies <span class="tag">ontospecies:</span></h2>
+  <p class="iri"><a href="{{ ontospecies.iri }}">{{ ontospecies.iri }}</a></p>
+  <p>Species and chemical-identifier concepts Prometheus aligns to
+     <a href="http://www.theworldavatar.com/ontology/ontospecies/">OntoSpecies</a>
+     rather than re-minting. Definitions are reused from the source ontology.</p>
+  {% for t in ontospecies.terms %}
+  <div class="term" id="ontospecies-{{ t.name }}">
+    <h3><code>{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="tag">{{ t.kind }}</span>{% endif %}</h3>
+    <p class="iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+    {% if t.definition %}<p class="muted">{{ t.definition }}</p>{% endif %}
+    <p class="meta">
+      {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+      {% if t.mapping %} &nbsp;·&nbsp; <strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+    </p>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if semapv %}
+  <h2 class="section">Mapping justifications <span class="tag">semapv:</span></h2>
+  <p>The SSSOM mapping set records why each cross-reference was asserted using the
+     <a href="{{ semapv.docs }}">Semantic Mapping Vocabulary (SEMAPV)</a> —
+     e.g. <code>semapv:LexicalMatching</code>, <code>semapv:ManualMappingCuration</code>.
+     The namespace base <span class="iri">{{ semapv.iri }}</span> is not a web page,
+     but each term IRI resolves to its definition in the docs above.</p>
+  {% endif %}
+</body>
+</html>
