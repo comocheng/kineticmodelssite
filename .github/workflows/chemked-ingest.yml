@@ -28,6 +28,8 @@ jobs:
           fi
 
       - name: Pull latest ChemKED-database
+        env:
+          COMMIT_SHA: ${{ github.event.client_payload.commit_sha }}
         run: |
           eval "$(conda shell.bash hook)"
           conda activate kms
@@ -49,6 +51,11 @@ jobs:
           fi
           echo "CHEMKED_PATH=$CHEMKED_PATH" >> "$GITHUB_ENV"
           git -C "$CHEMKED_PATH" pull --ff-only
+          # The clone must be on the branch that was merged into (master)
+          if [ -n "$COMMIT_SHA" ] && ! git -C "$CHEMKED_PATH" merge-base --is-ancestor "$COMMIT_SHA" HEAD; then
+            echo "::error::$CHEMKED_PATH does not contain merged commit $COMMIT_SHA; check out master there"
+            exit 1
+          fi
 
       - name: Sync merged files to database
         env:
