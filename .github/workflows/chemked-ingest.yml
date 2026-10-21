@@ -32,10 +32,10 @@ jobs:
           eval "$(conda shell.bash hook)"
           conda activate kms
           cd ${{ github.workspace }}
-          # Resolve CHEMKED_DATABASE_PATH from Django settings
+          # Resolve CHEMKED_DATABASE_PATH from Django settings (set it in the runner's kms.env)
           CHEMKED_PATH=$(python -c "
           import django, os, sys
-          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kineticmodelssite.settings')
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'kms.settings')
           django.setup()
           from django.conf import settings
           path = getattr(settings, 'CHEMKED_DATABASE_PATH', None)
@@ -43,30 +43,38 @@ jobs:
               sys.exit('CHEMKED_DATABASE_PATH not set in Django settings')
           print(path)
           ")
+          if [ ! -e "$CHEMKED_PATH/.git" ]; then
+            echo "::error::CHEMKED_DATABASE_PATH=$CHEMKED_PATH is not a ChemKED-database clone; set it in kms.env"
+            exit 1
+          fi
           echo "CHEMKED_PATH=$CHEMKED_PATH" >> "$GITHUB_ENV"
           git -C "$CHEMKED_PATH" pull --ff-only
 
       - name: Sync merged files to database
+        env:
+          FILES: ${{ toJson(github.event.client_payload.files) }}
         run: |
           eval "$(conda shell.bash hook)"
           conda activate kms
           cd ${{ github.workspace }}
 
-          FILES='${{ toJson(github.event.client_payload.files) }}'
           echo "Files to ingest: $FILES"
 
-          # Build --files arguments from the JSON array
-          FILE_ARGS=$(echo "$FILES" | python3 -c "
+          # One --files argument per path (paths may contain spaces)
+          FILE_ARGS=()
+          while IFS= read -r f; do
+            if [ -n "$f" ]; then FILE_ARGS+=("$f"); fi
+          done < <(echo "$FILES" | python3 -c "
           import sys, json
-          files = json.load(sys.stdin)
-          print(' '.join(files))
+          for f in json.load(sys.stdin) or []:
+              print(f)
           ")
 
-          if [ -z "$FILE_ARGS" ]; then
+          if [ "${#FILE_ARGS[@]}" -eq 0 ]; then
             echo "No files to ingest."
             exit 0
           fi
 
           python manage.py sync_chemked \
             --path "$CHEMKED_PATH" \
-            --files $FILE_ARGS
+            --files "${FILE_ARGS[@]}"

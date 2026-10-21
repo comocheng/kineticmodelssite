@@ -390,6 +390,14 @@ GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
 GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', '')
 GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'ChemKED-database')
 
+# Local git clone of the ChemKED-database repository. sync_chemked reads it, and the
+# chemked-ingest workflow pulls it before it syncs merged files. Default: a sibling of
+# this project directory.
+CHEMKED_DATABASE_PATH = os.getenv(
+    'CHEMKED_DATABASE_PATH',
+    os.path.join(os.path.dirname(BASE_DIR), 'ChemKED-database'),
+)
+
 # Silence noisy RDKit warnings during imports/tests (e.g., unusual valence warnings)
 try:
     from rdkit import RDLogger
