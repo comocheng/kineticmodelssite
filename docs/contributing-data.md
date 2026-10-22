@@ -31,6 +31,11 @@ Fields:
 ChemKED files are validated locally with PyKED before the PR is opened; invalid files are
 rejected with per-file messages.
 
+Each ChemKED file is placed where the repository layout puts files like it (fuel folder,
+then the paper's `Author_Year` folder); the response lists the chosen `paths`. If the
+repository already holds the same data under another name or folder, the pull request
+updates that file instead of adding a copy.
+
 ## Check contribution status
 
 ```bash

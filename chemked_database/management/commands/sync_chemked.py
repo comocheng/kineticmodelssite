@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import yaml
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from chemked_database.import_dispatcher import create_experiment_extension
@@ -300,6 +300,7 @@ class Command(BaseCommand):
         if not base_path:
             raise ValueError("Provide --path or set CHEMKED_DATABASE_PATH in settings.")
 
+        failed = 0
         if options["files"]:
             yaml_files = []
             for rel in options["files"]:
@@ -308,6 +309,7 @@ class Command(BaseCommand):
                     yaml_files.append(p)
                 else:
                     self.stderr.write(f"File not found, skipping: {p}")
+                    failed += 1
         else:
             yaml_files = sorted(Path(base_path).rglob("*.yaml"))
 
@@ -323,6 +325,11 @@ class Command(BaseCommand):
                 self._import_file(yaml_path, base_path)
             except Exception as exc:
                 self.stderr.write(f"Failed to import {yaml_path}: {exc}")
+                failed += 1
+
+        # Non-zero exit so the chemked-ingest workflow reports failed files
+        if failed:
+            raise CommandError(f"{failed} file(s) were not imported")
 
     def _import_file(self, yaml_path: Path, base_path: str):
         with open(yaml_path, "r", encoding="utf-8") as handle:
@@ -331,7 +338,7 @@ class Command(BaseCommand):
         rel_path = str(yaml_path.relative_to(base_path))
 
         with transaction.atomic():
-            dataset, _ = ExperimentDataset.objects.get_or_create(
+            dataset, created = ExperimentDataset.objects.get_or_create(
                 chemked_file_path=rel_path,
                 defaults={
                     "file_version": data.get("file-version", 0),
@@ -339,6 +346,10 @@ class Command(BaseCommand):
                     "experiment_type": data.get("experiment-type", ExperimentType.IGNITION_DELAY),
                 },
             )
+            # Re-ingesting an updated file replaces its datapoints instead of
+            # appending a second copy.
+            if not created:
+                dataset.datapoints.all().delete()
 
             apparatus_data = data.get("apparatus") or {}
             if apparatus_data:

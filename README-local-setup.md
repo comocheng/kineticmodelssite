@@ -96,6 +96,10 @@ ALLOWED_HOSTS=*
 
 # RMG-models path (for importing kinetic models)
 RMGMODELSPATH=/path/to/RMG-models
+
+# ChemKED-database clone (for sync_chemked and the chemked-ingest workflow).
+# Default: ../ChemKED-database next to this project.
+CHEMKED_DATABASE_PATH=/path/to/ChemKED-database
 ```
 
 ---

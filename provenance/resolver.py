@@ -105,7 +105,7 @@ DETAIL_VIEW = {
     "species": "species-detail",
     "source": "source-detail",
     "kinetic_model": "kinetic-model-detail",
-    "experiment_dataset": "dataset-detail",
+    "experiment_dataset": "chemked_database:dataset-detail",
     "reaction": "reaction-detail",
 }
 

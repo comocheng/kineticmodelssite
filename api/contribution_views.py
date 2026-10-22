@@ -89,7 +89,6 @@ class ContributeFilesView(APIView):
 
         for uf in uploaded_files:
             content = uf.read()
-            repo_path = self._determine_repo_path(uf.name, data["file_type"])
 
             if data["file_type"] == "chemked":
                 ok, msg = self._validate_chemked(content, uf.name)
@@ -101,7 +100,7 @@ class ContributeFilesView(APIView):
                 if not ok:
                     continue
 
-            files_for_pr.append({"path": repo_path, "content": content})
+            files_for_pr.append({"name": uf.name, "content": content})
 
         if not files_for_pr:
             return Response({
@@ -111,13 +110,17 @@ class ContributeFilesView(APIView):
 
         # ---- Step 2: Create GitHub PR ----
         try:
-            from .github_pr_service import GitHubPRService
+            from chemked_database.github_pr_service import GitHubPRService
 
             gh = GitHubPRService(
                 token=getattr(settings, "GITHUB_TOKEN", None),
                 owner=getattr(settings, "GITHUB_REPO_OWNER", None),
                 repo=getattr(settings, "GITHUB_REPO_NAME", "ChemKED-database"),
             )
+            for f in files_for_pr:
+                f["path"] = self._determine_repo_path(
+                    gh, f.pop("name"), f["content"], data["file_type"]
+                )
             pr_result = gh.contribute_files(
                 files=files_for_pr,
                 contributor_name=data["contributor_name"],
@@ -137,7 +140,9 @@ class ContributeFilesView(APIView):
         import_results = []
         if data["import_to_db"] and data["file_type"] == "chemked":
             for f in files_for_pr:
-                ok, msg = self._import_to_database(f["content"], f["path"])
+                ok, msg = self._import_to_database(
+                    f["content"], f["path"], data["contributor_name"]
+                )
                 import_results.append({"file": f["path"], "imported": ok, "message": msg})
 
         return Response({
@@ -147,16 +152,19 @@ class ContributeFilesView(APIView):
             "validation": validation_results,
             "import_results": import_results,
             "files_contributed": len(files_for_pr),
+            "paths": [f["path"] for f in files_for_pr],
         }, status=status.HTTP_201_CREATED)
 
-    def _determine_repo_path(self, filename, file_type):
-        """Determine the repository-relative path for a contributed file."""
-        # For ChemKED files, try to parse the YAML to determine fuel category
-        # Fall back to a contributions/ directory
-        name = os.path.splitext(filename)[0]
+    def _determine_repo_path(self, gh, filename, content, file_type):
+        """Repository path for a contributed file.
+
+        ChemKED files go where the web upload puts them: the path of the
+        committed file with the same data, else the folder that matches the
+        existing layout (GitHubPRService.determine_repo_path).
+        """
         if file_type == "chemkin":
             return f"contributions/chemkin/{filename}"
-        return f"contributions/chemked/{filename}"
+        return gh.determine_repo_path(filename, content)
 
     def _validate_chemked(self, content_bytes, filename):
         """Validate ChemKED YAML content using PyKED.
@@ -186,28 +194,20 @@ class ContributeFilesView(APIView):
         except Exception as e:
             return (False, f"Validation failed: {e}")
 
-    def _import_to_database(self, content_bytes, filepath):
-        """Import a validated ChemKED file into the local database."""
-        import tempfile
+    def _import_to_database(self, content_bytes, filepath, contributor_name=""):
+        """Import a validated ChemKED file into the local database.
+
+        Uses the same importer as the web upload form.
+        """
         try:
-            from pyked.chemked import ChemKED
-            from .views import DatasetUploadView
+            from chemked_database.import_dispatcher import import_chemked_to_db
 
-            with tempfile.NamedTemporaryFile(
-                suffix=".yaml", delete=False, mode="wb"
-            ) as tmp:
-                tmp.write(content_bytes)
-                tmp.flush()
-                tmp_path = tmp.name
-
-            try:
-                ck = ChemKED(tmp_path)
-                # Use the existing importer infrastructure
-                from .import_dispatcher import import_chemked_to_db
-                dataset = import_chemked_to_db(ck, filepath)
-                return (True, f"Imported as dataset #{dataset.pk}")
-            finally:
-                os.unlink(tmp_path)
+            dataset = import_chemked_to_db(
+                content_bytes,
+                os.path.basename(filepath),
+                file_author=contributor_name,
+            )
+            return (True, f"Imported as dataset #{dataset.pk}")
 
         except Exception as e:
             logger.exception("Database import failed for %s", filepath)
@@ -230,7 +230,7 @@ class ContributionStatusView(APIView):
     )
     def get(self, request, pr_number):
         try:
-            from .github_pr_service import GitHubPRService
+            from chemked_database.github_pr_service import GitHubPRService
 
             gh = GitHubPRService(
                 token=getattr(settings, "GITHUB_TOKEN", None),
