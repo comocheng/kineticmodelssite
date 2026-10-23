@@ -27,9 +27,11 @@ from chemked_database.models import (
     ValueWithUnit,
     VolumeHistory,
 )
+from chemked_database.units import UnitConversionError, quantity_to_si
 from chemked_database.utils.chemistry import infer_smiles_and_atomic_composition
 
-VALUE_UNIT_RE = re.compile(r"^\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*(.*)$")
+# A number may end in a decimal point ("660. K").
+VALUE_UNIT_RE = re.compile(r"^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*)$")
 COMPOSITION_KINDS = {"mass fraction", "mole fraction", "mole percent"}
 
 
@@ -136,6 +138,19 @@ def create_value_with_unit(raw: Any):
         evaluated_standard_deviation_sourcetype=extra.get("evaluated_standard_deviation_sourcetype", ""),
         evaluated_standard_deviation_method=extra.get("evaluated_standard_deviation_method", ""),
     )
+
+
+def si_value(quantity, kind: str, report: Callable[[str], None], context: str):
+    """Value of *quantity* in the SI unit of *kind*, for a numeric field next to it.
+
+    The quantity keeps the value and unit of the file. If the unit cannot be converted, the
+    numeric field is left empty and the problem is reported.
+    """
+    try:
+        return quantity_to_si(quantity, kind)
+    except UnitConversionError as exc:
+        report(f"{context}: {exc}; numeric value left empty")
+        return None
 
 
 def create_composition(
@@ -424,20 +439,26 @@ class Command(BaseCommand):
                 common_obj.ignition_target = ignition_type.get("target", "")
                 common_obj.ignition_type = ignition_type.get("type", "")
 
+                context = f"{rel_path} common-properties"
+
                 pressure_raw = common_props.get("pressure")
                 pressure_quantity = create_value_with_unit(pressure_raw)
                 common_obj.pressure_quantity = pressure_quantity
-                common_obj.pressure = pressure_quantity.value if pressure_quantity else None
+                common_obj.pressure = si_value(pressure_quantity, "pressure", self.stderr.write, context)
 
                 pressure_rise_raw = common_props.get("pressure-rise")
                 pressure_rise_quantity = create_value_with_unit(pressure_rise_raw)
                 common_obj.pressure_rise_quantity = pressure_rise_quantity
-                common_obj.pressure_rise = pressure_rise_quantity.value if pressure_rise_quantity else None
+                common_obj.pressure_rise = si_value(
+                    pressure_rise_quantity, "rate", self.stderr.write, context
+                )
 
                 temperature_raw = common_props.get("temperature")
                 temperature_quantity = create_value_with_unit(temperature_raw)
                 common_obj.temperature_quantity = temperature_quantity
-                common_obj.temperature = temperature_quantity.value if temperature_quantity else None
+                common_obj.temperature = si_value(
+                    temperature_quantity, "temperature", self.stderr.write, context
+                )
 
                 equiv_raw = common_props.get("equivalence-ratio")
                 equiv_quantity = create_value_with_unit(equiv_raw)
@@ -448,20 +469,24 @@ class Command(BaseCommand):
                 reactor_vol_quantity = create_value_with_unit(reactor_vol_raw)
                 common_obj.reactor_volume_quantity = reactor_vol_quantity
                 if reactor_vol_quantity:
-                    common_obj.reactor_volume = reactor_vol_quantity.value
-                    common_obj.reactor_volume_units = reactor_vol_quantity.units
+                    common_obj.reactor_volume = si_value(
+                        reactor_vol_quantity, "volume", self.stderr.write, context
+                    )
+                    common_obj.reactor_volume_units = "m3"
 
                 residence_time_raw = common_props.get("residence-time")
                 residence_time_quantity = create_value_with_unit(residence_time_raw)
                 common_obj.residence_time_quantity = residence_time_quantity
                 if residence_time_quantity:
-                    common_obj.residence_time = residence_time_quantity.value
-                    common_obj.residence_time_units = residence_time_quantity.units
+                    common_obj.residence_time = si_value(
+                        residence_time_quantity, "time", self.stderr.write, context
+                    )
+                    common_obj.residence_time_units = "s"
 
                 flow_rate_raw = common_props.get("flow-rate")
                 flow_rate_quantity = create_value_with_unit(flow_rate_raw)
                 common_obj.flow_rate_quantity = flow_rate_quantity
-                common_obj.flow_rate = flow_rate_quantity.value if flow_rate_quantity else None
+                common_obj.flow_rate = si_value(flow_rate_quantity, "mass_flux", self.stderr.write, context)
 
                 common_obj.save()
 
@@ -501,16 +526,26 @@ class Command(BaseCommand):
                 # Parse per-datapoint residence time
                 res_quantity = create_value_with_unit(datapoint_data.get("residence-time"))
 
+                # Temperature and pressure are required numbers, so a datapoint whose unit
+                # cannot be converted is skipped rather than stored in the wrong unit.
+                try:
+                    temperature = quantity_to_si(temperature_quantity, "temperature")
+                    pressure = quantity_to_si(pressure_quantity, "pressure")
+                except UnitConversionError as exc:
+                    self.stderr.write(f"Skipping datapoint in {rel_path}: {exc}")
+                    continue
+                context = f"{rel_path} datapoint"
+
                 datapoint = ExperimentDatapoint.objects.create(
                     dataset=dataset,
-                    temperature=temperature_quantity.value if temperature_quantity else 0.0,
-                    pressure=pressure_quantity.value if pressure_quantity else 0.0,
+                    temperature=temperature if temperature is not None else 0.0,
+                    pressure=pressure if pressure is not None else 0.0,
                     temperature_quantity=temperature_quantity,
                     pressure_quantity=pressure_quantity,
                     equivalence_ratio=equiv_value,
                     equivalence_ratio_quantity=equiv_quantity,
-                    residence_time=res_quantity.value if res_quantity else None,
-                    residence_time_units=res_quantity.units if res_quantity else 's',
+                    residence_time=si_value(res_quantity, "time", self.stderr.write, context),
+                    residence_time_units="s",
                     composition=create_composition(
                         datapoint_data.get("composition"),
                         reporter=self.stderr.write,
@@ -530,25 +565,27 @@ class Command(BaseCommand):
                         "pressure_rise": None,
                         "pressure_rise_quantity": create_value_with_unit(pressure_rise_raw),
                     }
-                    if ignition_payload["ignition_delay_quantity"]:
-                        ignition_payload["ignition_delay"] = ignition_payload["ignition_delay_quantity"].value
-                    if ignition_payload["first_stage_ignition_delay_quantity"]:
-                        ignition_payload["first_stage_ignition_delay"] = ignition_payload[
-                            "first_stage_ignition_delay_quantity"
-                        ].value
-                    if ignition_payload["pressure_rise_quantity"]:
-                        ignition_payload["pressure_rise"] = ignition_payload["pressure_rise_quantity"].value
+                    for field, kind in (
+                        ("ignition_delay", "time"),
+                        ("first_stage_ignition_delay", "time"),
+                        ("pressure_rise", "rate"),
+                    ):
+                        ignition_payload[field] = si_value(
+                            ignition_payload[f"{field}_quantity"], kind, self.stderr.write, context
+                        )
                     create_experiment_extension(datapoint, dataset.experiment_type, ignition_payload)
 
                 elif dataset.experiment_type == ExperimentType.LAMINAR_BURNING_VELOCITY:
                     lbv_quantity = create_value_with_unit(datapoint_data.get("laminar-burning-velocity"))
                     lbv_payload = {
-                        "laminar_burning_velocity": lbv_quantity.value if lbv_quantity else None,
+                        "laminar_burning_velocity": si_value(
+                            lbv_quantity, "velocity", self.stderr.write, context
+                        ),
                         "laminar_burning_velocity_quantity": lbv_quantity,
                     }
                     pr_quantity = create_value_with_unit(pressure_rise_raw)
                     if pr_quantity:
-                        lbv_payload["pressure_rise"] = pr_quantity.value
+                        lbv_payload["pressure_rise"] = si_value(pr_quantity, "rate", self.stderr.write, context)
                         lbv_payload["pressure_rise_quantity"] = pr_quantity
                     create_experiment_extension(datapoint, dataset.experiment_type, lbv_payload)
 
@@ -570,7 +607,9 @@ class Command(BaseCommand):
                     ocm_payload = {"measured_composition": measured_comp}
                     ocm_res_quantity = create_value_with_unit(datapoint_data.get("residence-time"))
                     if ocm_res_quantity:
-                        ocm_payload["residence_time"] = ocm_res_quantity.value
+                        ocm_payload["residence_time"] = si_value(
+                            ocm_res_quantity, "time", self.stderr.write, context
+                        )
                         ocm_payload["residence_time_quantity"] = ocm_res_quantity
                     create_experiment_extension(datapoint, dataset.experiment_type, ocm_payload)
 
@@ -584,9 +623,9 @@ class Command(BaseCommand):
                     flow_rate_quantity = create_value_with_unit(datapoint_data.get("flow-rate"))
                     bsfs_payload = {
                         "measured_composition": measured_comp,
-                        "distance": distance_quantity.value if distance_quantity else None,
+                        "distance": si_value(distance_quantity, "length", self.stderr.write, context),
                         "distance_quantity": distance_quantity,
-                        "flow_rate": flow_rate_quantity.value if flow_rate_quantity else None,
+                        "flow_rate": si_value(flow_rate_quantity, "mass_flux", self.stderr.write, context),
                         "flow_rate_quantity": flow_rate_quantity,
                     }
                     create_experiment_extension(datapoint, dataset.experiment_type, bsfs_payload)
@@ -605,16 +644,16 @@ class Command(BaseCommand):
                         clearance_quantity=create_value_with_unit(rcm_data.get("clearance")),
                         compression_ratio_quantity=create_value_with_unit(rcm_data.get("compression-ratio")),
                     )
-                    if rcm.compressed_temperature_quantity:
-                        rcm.compressed_temperature = rcm.compressed_temperature_quantity.value
-                    if rcm.compressed_pressure_quantity:
-                        rcm.compressed_pressure = rcm.compressed_pressure_quantity.value
-                    if rcm.compression_time_quantity:
-                        rcm.compression_time = rcm.compression_time_quantity.value
-                    if rcm.stroke_quantity:
-                        rcm.stroke = rcm.stroke_quantity.value
-                    if rcm.clearance_quantity:
-                        rcm.clearance = rcm.clearance_quantity.value
+                    for field, kind in (
+                        ("compressed_temperature", "temperature"),
+                        ("compressed_pressure", "pressure"),
+                        ("compression_time", "time"),
+                        ("stroke", "length"),
+                        ("clearance", "length"),
+                    ):
+                        quantity = getattr(rcm, f"{field}_quantity")
+                        if quantity:
+                            setattr(rcm, field, si_value(quantity, kind, self.stderr.write, f"{context} rcm-data"))
                     if rcm.compression_ratio_quantity:
                         rcm.compression_ratio = rcm.compression_ratio_quantity.value
                     rcm.save()

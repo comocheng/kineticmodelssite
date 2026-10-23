@@ -574,7 +574,7 @@ class ExperimentDatapoint(models.Model):
         max_length=20,
         blank=True,
         default='s',
-        help_text="Original units for residence time"
+        help_text="Units of residence_time: s (values are converted on import)"
     )
     
     composition = models.ForeignKey(
