@@ -6,3 +6,5 @@ from .source import *
 from .kinetic_model import *
 from .kinetic_data import *
 from .reaction_species import *
+from .external_kinetics import *
+from .shared_chemistry import *

@@ -1,0 +1,1128 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load math_filters %}
+
+{% block extra_css %}
+<style>
+    .wizard-tabs .nav-link {
+        border-radius: 0;
+        border: 1px solid #dee2e6;
+        border-bottom: none;
+        margin-right: 2px;
+        color: #495057;
+    }
+    .wizard-tabs .nav-link.active {
+        background-color: var(--color-primary, #0d6efd);
+        color: #ffffff !important;
+        border-color: var(--color-primary, #0d6efd);
+    }
+    .wizard-tabs .nav-link.active i {
+        color: #ffffff !important;
+    }
+    .wizard-tabs .nav-link:not(.active):hover {
+        background-color: #f8f9fa;
+    }
+    .form-section {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .form-section-header {
+        font-weight: 600;
+        color: var(--color-primary);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--color-primary);
+    }
+    .formset-row {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        position: relative;
+    }
+    .formset-row:nth-child(odd) {
+        background: #fff;
+        border: 1px solid #e9ecef;
+    }
+    .btn-add-row {
+        border-style: dashed;
+    }
+    .tab-pane {
+        padding-top: 1.5rem;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .datapoint-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .datapoint-card-header {
+        background: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+    }
+    .datapoint-card-body {
+        padding: 1rem;
+    }
+    .parameter-group h6 {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+    }
+    .parameter-group .form-label {
+        margin-bottom: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item active">Create Dataset</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0">
+                <i class="bi bi-plus-circle me-2 text-success"></i>Create ChemKED Dataset
+            </h1>
+            <p class="text-muted mb-0 mt-1">Enter experimental combustion data in ChemKED format</p>
+        </div>
+        <div>
+            <a href="{% url 'chemked_database:dataset-upload' %}" class="btn btn-outline-primary">
+                <i class="bi bi-upload me-1"></i>Upload YAML Instead
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" id="wizard-form">
+    {% csrf_token %}
+    
+    <!-- Wizard Tabs -->
+    <ul class="nav nav-tabs wizard-tabs mb-0" id="wizardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'metadata' %}active{% endif %}" 
+                    id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" 
+                    type="button" role="tab" aria-controls="metadata" 
+                    aria-selected="{% if active_tab == 'metadata' %}true{% else %}false{% endif %}">
+                <i class="bi bi-file-earmark-text me-1"></i>1. File Metadata
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'reference' %}active{% endif %}" 
+                    id="reference-tab" data-bs-toggle="tab" data-bs-target="#reference" 
+                    type="button" role="tab" aria-controls="reference" 
+                    aria-selected="{% if active_tab == 'reference' %}true{% else %}false{% endif %}">
+                <i class="bi bi-journal-text me-1"></i>2. Reference
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'experiment' %}active{% endif %}" 
+                    id="experiment-tab" data-bs-toggle="tab" data-bs-target="#experiment" 
+                    type="button" role="tab" aria-controls="experiment" 
+                    aria-selected="{% if active_tab == 'experiment' %}true{% else %}false{% endif %}">
+                <i class="bi bi-gear me-1"></i>3. Experiment
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'composition' %}active{% endif %}" 
+                    id="composition-tab" data-bs-toggle="tab" data-bs-target="#composition" 
+                    type="button" role="tab" aria-controls="composition" 
+                    aria-selected="{% if active_tab == 'composition' %}true{% else %}false{% endif %}">
+                <i class="bi bi-droplet me-1"></i>4. Composition
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'datapoints' %}active{% endif %}" 
+                    id="datapoints-tab" data-bs-toggle="tab" data-bs-target="#datapoints" 
+                    type="button" role="tab" aria-controls="datapoints" 
+                    aria-selected="{% if active_tab == 'datapoints' %}true{% else %}false{% endif %}">
+                <i class="bi bi-clipboard-data me-1"></i>5. Datapoints
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content border border-top-0 p-4 bg-light" id="wizardTabContent">
+        
+        <!-- Tab 1: File Metadata -->
+        <div class="tab-pane fade {% if active_tab == 'metadata' %}show active{% endif %}" 
+             id="metadata" role="tabpanel" aria-labelledby="metadata-tab">
+            
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-info-circle me-2"></i>File Information
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">File Version</label>
+                                {{ file_metadata_form.file_version }}
+                                <div class="help-text">Integer version number (start with 0)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ChemKED Version</label>
+                                {{ file_metadata_form.chemked_version }}
+                                <div class="help-text">Schema version (e.g., 0.4.1)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-person me-2"></i>File Authors
+                        </h6>
+                        <p class="help-text mb-3">Person(s) who created this data file (not the paper authors)</p>
+                        
+                        {{ file_author_formset.management_form }}
+                        <div id="file-authors-container">
+                            {% for form in file_author_formset %}
+                            <div class="formset-row">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Name</label>
+                                        {{ form.name }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">ORCID</label>
+                                        {{ form.orcid }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-row mt-2" 
+                                onclick="addFormsetRow('file-authors', 'file_authors')">
+                            <i class="bi bi-plus me-1"></i>Add Author
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" class="btn btn-primary" onclick="nextTab('reference-tab')">
+                    Next: Reference <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tab 2: Reference -->
+        <div class="tab-pane fade {% if active_tab == 'reference' %}show active{% endif %}" 
+             id="reference" role="tabpanel" aria-labelledby="reference-tab">
+            
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-journal me-2"></i>Publication Details
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">DOI</label>
+                                {{ reference_form.doi }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Journal</label>
+                                {{ reference_form.journal }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Year</label>
+                                {{ reference_form.year }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Volume</label>
+                                {{ reference_form.volume }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Pages</label>
+                                {{ reference_form.pages }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Detail</label>
+                                {{ reference_form.detail }}
+                                <div class="help-text">Additional source details (e.g., "Table 2")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-people me-2"></i>Paper Authors
+                        </h6>
+                        
+                        {{ reference_author_formset.management_form }}
+                        <div id="ref-authors-container">
+                            {% for form in reference_author_formset %}
+                            <div class="formset-row">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Name</label>
+                                        {{ form.name }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">ORCID</label>
+                                        {{ form.orcid }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-row mt-2" 
+                                onclick="addFormsetRow('ref-authors', 'ref_authors')">
+                            <i class="bi bi-plus me-1"></i>Add Author
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-3">
+                <button type="button" class="btn btn-outline-secondary" onclick="prevTab('metadata-tab')">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-primary" onclick="nextTab('experiment-tab')">
+                    Next: Experiment <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tab 3: Experiment & Apparatus -->
+        <div class="tab-pane fade {% if active_tab == 'experiment' %}show active{% endif %}" 
+             id="experiment" role="tabpanel" aria-labelledby="experiment-tab">
+            
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-lightning me-2"></i>Experiment Type
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Type of Experiment</label>
+                            {{ experiment_form.experiment_type }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-section experiment-type-section" data-experiment-types="ignition delay">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-fire me-2"></i>Ignition Information
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Target</label>
+                                {{ ignition_info_form.ignition_target }}
+                                <div class="help-text">What is measured for ignition</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                {{ ignition_info_form.ignition_type }}
+                                <div class="help-text">Detection method</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-gear me-2"></i>Apparatus
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Kind</label>
+                                {{ experiment_form.apparatus_kind }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Mode</label>
+                                {{ experiment_form.apparatus_mode }}
+                                <div class="help-text">Operating mode (e.g., reflected shock, laminar)</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Institution</label>
+                                {{ experiment_form.apparatus_institution }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Facility</label>
+                                {{ experiment_form.apparatus_facility }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-3">
+                <button type="button" class="btn btn-outline-secondary" onclick="prevTab('reference-tab')">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-primary" onclick="nextTab('composition-tab')">
+                    Next: Composition <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tab 4: Common Properties & Composition -->
+        <div class="tab-pane fade {% if active_tab == 'composition' %}show active{% endif %}" 
+             id="composition" role="tabpanel" aria-labelledby="composition-tab">
+            
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-sliders me-2"></i>Composition Settings
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Composition Kind</label>
+                            {{ common_properties_form.composition_kind }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Pressure (optional)</label>
+                            {{ common_properties_form.pressure }}
+                            <div class="help-text">If all datapoints have same pressure</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Temperature (optional)</label>
+                            {{ common_properties_form.temperature }}
+                            <div class="help-text">If all datapoints have same temperature</div>
+                        </div>
+                        <div class="mb-3 experiment-type-section" data-experiment-types="ignition delay">
+                            <label class="form-label">Pressure Rise Rate (optional)</label>
+                            {{ common_properties_form.pressure_rise }}
+                            <div class="help-text">For shock tube experiments</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Equivalence Ratio (optional)</label>
+                            {{ common_properties_form.equivalence_ratio }}
+                            <div class="help-text">If all datapoints have same equivalence ratio</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section experiment-type-section" data-experiment-types="jet stirred reactor measurement,outlet concentration measurement">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-box me-2"></i>Reactor Properties
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Reactor Volume</label>
+                            {{ common_properties_form.reactor_volume }}
+                            <div class="help-text">Volume with units (e.g., 85 cm3)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Residence Time</label>
+                            {{ common_properties_form.residence_time }}
+                            <div class="help-text">Common residence time with units</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section experiment-type-section" data-experiment-types="burner stabilized flame speciation measurement">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-wind me-2"></i>Flow Properties
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Flow Rate</label>
+                            {{ common_properties_form.flow_rate }}
+                            <div class="help-text">Common mass flow rate with units</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-8">
+                    <div class="form-section">
+                        <h6 class="form-section-header">
+                            <i class="bi bi-droplet me-2"></i>Species Composition
+                        </h6>
+                        <p class="help-text mb-3">
+                            Define the initial mixture composition. Values should sum to 1.0 for mole/mass fractions 
+                            or 100 for mole percent.
+                        </p>
+                        
+                        {{ composition_species_formset.management_form }}
+                        <div id="species-container">
+                            {% for form in composition_species_formset %}
+                            <div class="formset-row species-row">
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="text-muted species-label">Species {{ forloop.counter }}</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-auto btn-remove-species" 
+                                            onclick="removeSpeciesRow(this)"
+                                            {% if forloop.first %}style="display: none;"{% endif %}>
+                                        <i class="bi bi-trash"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Name</label>
+                                        {{ form.species_name }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">InChI</label>
+                                        {{ form.inchi }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">SMILES</label>
+                                        {{ form.smiles }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Amount</label>
+                                        {{ form.amount }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-row mt-2" 
+                                onclick="addSpeciesRow()">
+                            <i class="bi bi-plus me-1"></i>Add Species
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-3">
+                <button type="button" class="btn btn-outline-secondary" onclick="prevTab('experiment-tab')">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-primary" onclick="nextTab('datapoints-tab')">
+                    Next: Datapoints <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tab 5: Datapoints -->
+        <div class="tab-pane fade {% if active_tab == 'datapoints' %}show active{% endif %}" 
+             id="datapoints" role="tabpanel" aria-labelledby="datapoints-tab">
+            
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Format:</strong> Enter values with units, e.g., <code>1249 K</code>, <code>1.97 bar</code>, 
+                <code>529 us</code>. The system will convert to SI units automatically.
+            </div>
+            
+            {{ datapoint_formset.management_form }}
+            {{ ignition_delay_formset.management_form }}
+            {{ lbv_formset.management_form }}
+            {{ rate_coefficient_formset.management_form }}
+            {{ jsr_formset.management_form }}
+            {{ outlet_concentration_formset.management_form }}
+            {{ ctp_formset.management_form }}
+            {{ bsfs_formset.management_form }}
+            
+            <div id="datapoints-container">
+                {% for dp_form in datapoint_formset %}
+                <div class="datapoint-card">
+                    <div class="datapoint-card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clipboard-data me-2"></i>Datapoint {{ forloop.counter }}</span>
+                        {% if forloop.counter > 1 %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                onclick="removeDatapoint(this)">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="datapoint-card-body">
+                        <!-- Temperature Section -->
+                        <div class="parameter-group mb-3 p-3 bg-light rounded">
+                            <h6 class="text-primary mb-2"><i class="bi bi-thermometer-half me-1"></i> Temperature</h6>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small">Value with units</label>
+                                    {{ dp_form.temperature }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">± Uncertainty</label>
+                                    {{ dp_form.temperature_uncertainty }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Uncertainty Type</label>
+                                    {{ dp_form.temperature_uncertainty_type }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pressure Section -->
+                        <div class="parameter-group mb-3 p-3 bg-light rounded">
+                            <h6 class="text-success mb-2"><i class="bi bi-speedometer me-1"></i> Pressure</h6>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small">Value with units</label>
+                                    {{ dp_form.pressure }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">± Uncertainty</label>
+                                    {{ dp_form.pressure_uncertainty }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Uncertainty Type</label>
+                                    {{ dp_form.pressure_uncertainty_type }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Equivalence Ratio -->
+                        <div class="parameter-group mb-3 p-3 bg-light rounded">
+                            <h6 class="text-secondary mb-2"><i class="bi bi-pie-chart me-1"></i> Equivalence Ratio (φ)</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Value</label>
+                                    {{ dp_form.equivalence_ratio }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Ignition Delay Section -->
+                        {% with ign_form=ignition_delay_formset|get_form:forloop.counter0 %}
+                        {% if ign_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="ignition delay">
+                            <h6 class="text-warning mb-2"><i class="bi bi-stopwatch me-1"></i> Ignition Delay</h6>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Value with units</label>
+                                    {{ ign_form.ignition_delay }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">± Uncertainty</label>
+                                    {{ ign_form.ignition_delay_uncertainty }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Uncert. Type</label>
+                                    {{ ign_form.ignition_delay_uncertainty_type }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Target Override</label>
+                                    {{ ign_form.ignition_target_override }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Type Override</label>
+                                    {{ ign_form.ignition_type_override }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- Laminar Burning Velocity Section -->
+                        {% with lbv_form=lbv_formset|get_form:forloop.counter0 %}
+                        {% if lbv_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="laminar burning velocity measurement">
+                            <h6 class="text-info mb-2"><i class="bi bi-flame me-1"></i> Laminar Burning Velocity</h6>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5">
+                                    <label class="form-label small">Value with units</label>
+                                    {{ lbv_form.laminar_burning_velocity }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">± Uncertainty</label>
+                                    {{ lbv_form.laminar_burning_velocity_uncertainty }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Uncertainty Type</label>
+                                    {{ lbv_form.laminar_burning_velocity_uncertainty_type }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- Rate Coefficient Section -->
+                        {% with rc_form=rate_coefficient_formset|get_form:forloop.counter0 %}
+                        {% if rc_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="rate coefficient">
+                            <h6 class="text-danger mb-2"><i class="bi bi-graph-up me-1"></i> Rate Coefficient</h6>
+                            <div class="row g-2 align-items-end mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small">Measurement Type</label>
+                                    {{ rc_form.measurement_type }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Value with units</label>
+                                    {{ rc_form.rate_coefficient }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">± Uncertainty</label>
+                                    {{ rc_form.rate_coefficient_uncertainty }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Uncert. Type</label>
+                                    {{ rc_form.rate_coefficient_uncertainty_type }}
+                                </div>
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Reaction</label>
+                                    {{ rc_form.reaction }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small">Order</label>
+                                    {{ rc_form.reaction_order }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Bulk Gas</label>
+                                    {{ rc_form.bulk_gas }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Method</label>
+                                    {{ rc_form.method }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- JSR Section -->
+                        {% with jsr_form=jsr_formset|get_form:forloop.counter0 %}
+                        {% if jsr_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="jet stirred reactor measurement">
+                            <h6 class="text-success mb-2"><i class="bi bi-arrow-repeat me-1"></i> JSR Measurement</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Environment Temperature</label>
+                                    {{ jsr_form.environment_temperature }}
+                                    <div class="help-text">Optional per-datapoint environment temperature</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- Outlet Concentration Section -->
+                        {% with oc_form=outlet_concentration_formset|get_form:forloop.counter0 %}
+                        {% if oc_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="outlet concentration measurement">
+                            <h6 class="text-primary mb-2"><i class="bi bi-box-arrow-right me-1"></i> Outlet Concentration</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Residence Time (override)</label>
+                                    {{ oc_form.residence_time }}
+                                    <div class="help-text">Per-datapoint override of common residence time</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">Volumetric Flow (ref. state)</label>
+                                    {{ oc_form.volumetric_flow }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- Concentration Time Profile Section -->
+                        {% with ctp_form=ctp_formset|get_form:forloop.counter0 %}
+                        {% if ctp_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="concentration time profile measurement">
+                            <h6 class="text-dark mb-2"><i class="bi bi-clock-history me-1"></i> Concentration Time Profile</h6>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Tracked Species</label>
+                                    {{ ctp_form.tracked_species_name }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Quantity Units</label>
+                                    {{ ctp_form.quantity_units }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Time Units</label>
+                                    {{ ctp_form.time_units }}
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label small">Time-Value Data</label>
+                                    {{ ctp_form.values_text }}
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Uncertainty Type</label>
+                                    {{ ctp_form.uncertainty_type }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Uncertainty Value</label>
+                                    {{ ctp_form.uncertainty_value }}
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Time Shift Target</label>
+                                    {{ ctp_form.timeshift_target }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Time Shift Type</label>
+                                    {{ ctp_form.timeshift_type }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Time Shift Amount</label>
+                                    {{ ctp_form.timeshift_amount }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        
+                        <!-- BSFS Section -->
+                        {% with bsfs_form=bsfs_formset|get_form:forloop.counter0 %}
+                        {% if bsfs_form %}
+                        <div class="parameter-group p-3 bg-light rounded experiment-type-section" data-experiment-types="burner stabilized flame speciation measurement">
+                            <h6 class="text-secondary mb-2"><i class="bi bi-rulers me-1"></i> Burner Stabilized Flame Speciation</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Distance from Burner</label>
+                                    {{ bsfs_form.distance }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">Flow Rate</label>
+                                    {{ bsfs_form.flow_rate }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="datapoint-card">
+                    <div class="datapoint-card-header">
+                        <i class="bi bi-clipboard-data me-2"></i>Datapoint 1
+                    </div>
+                    <div class="datapoint-card-body">
+                        <p class="text-muted">No datapoints added yet.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <button type="button" class="btn btn-outline-secondary btn-add-row mt-3" 
+                    onclick="addDatapoint()">
+                <i class="bi bi-plus me-1"></i>Add Datapoint
+            </button>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <button type="button" class="btn btn-outline-secondary" onclick="prevTab('composition-tab')">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="card mt-4">
+        <div class="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div>
+                <button type="submit" name="action" value="save_draft" class="btn btn-outline-secondary">
+                    <i class="bi bi-save me-1"></i>Save Draft
+                </button>
+                <button type="submit" name="action" value="export_yaml" class="btn btn-outline-info">
+                    <i class="bi bi-download me-1"></i>Export YAML
+                </button>
+            </div>
+            <div>
+                <a href="{% url 'chemked_database:dataset-clear-wizard' %}" 
+                   class="btn btn-outline-danger"
+                   onclick="return confirm('Clear all form data?');">
+                    <i class="bi bi-x-circle me-1"></i>Clear Form
+                </a>
+                <button type="submit" name="action" value="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>Create Dataset
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// =========================================================================
+// Experiment type show/hide logic
+// =========================================================================
+const EXPERIMENT_TYPE_PREFIXES = [
+    'ignition_delays', 'lbv', 'rate_coefficients', 'jsr', 'outlet_conc', 'ctp', 'bsfs'
+];
+
+function updateExperimentTypeSections() {
+    const selectedType = document.getElementById('id_experiment_type').value;
+    document.querySelectorAll('.experiment-type-section').forEach(section => {
+        const types = section.dataset.experimentTypes.split(',').map(t => t.trim());
+        section.style.display = types.includes(selectedType) ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const experimentTypeSelect = document.getElementById('id_experiment_type');
+    if (experimentTypeSelect) {
+        experimentTypeSelect.addEventListener('change', updateExperimentTypeSections);
+        updateExperimentTypeSections();
+    }
+});
+
+// Tab navigation helpers
+function nextTab(tabId) {
+    const tab = document.getElementById(tabId);
+    if (tab) {
+        const bsTab = new bootstrap.Tab(tab);
+        bsTab.show();
+    }
+}
+
+function prevTab(tabId) {
+    nextTab(tabId);
+}
+
+// Formset management for authors
+function addFormsetRow(containerId, prefix) {
+    const container = document.getElementById(containerId + '-container');
+    const totalForms = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+    const formNum = parseInt(totalForms.value);
+    
+    // Clone the first row and update indices
+    const firstRow = container.querySelector('.formset-row');
+    const newRow = firstRow.cloneNode(true);
+    
+    // Update all input names and ids
+    newRow.querySelectorAll('input, select, textarea').forEach(input => {
+        const name = input.getAttribute('name');
+        if (name) {
+            input.setAttribute('name', name.replace(/-\d+-/, `-${formNum}-`));
+            input.setAttribute('id', input.getAttribute('id').replace(/-\d+-/, `-${formNum}-`));
+            input.value = '';
+        }
+    });
+    
+    container.appendChild(newRow);
+    totalForms.value = formNum + 1;
+}
+
+function removeFormsetRow(button) {
+    const row = button.closest('.formset-row');
+    const container = row.parentElement;
+    const prefix = container.id.replace('-container', '').replace(/-/g, '_');
+    const totalForms = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+    
+    if (container.querySelectorAll('.formset-row').length > 1) {
+        row.remove();
+        totalForms.value = parseInt(totalForms.value) - 1;
+        
+        // Re-index remaining forms
+        container.querySelectorAll('.formset-row').forEach((r, idx) => {
+            r.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    input.setAttribute('name', name.replace(/-\d+-/, `-${idx}-`));
+                    input.setAttribute('id', input.getAttribute('id').replace(/-\d+-/, `-${idx}-`));
+                }
+            });
+        });
+    }
+}
+
+// Species composition management
+function addSpeciesRow() {
+    const container = document.getElementById('species-container');
+    const totalForms = document.querySelector('input[name="species-TOTAL_FORMS"]');
+    const formNum = parseInt(totalForms.value);
+    
+    // Clone the first row
+    const firstRow = container.querySelector('.species-row');
+    const newRow = firstRow.cloneNode(true);
+    
+    // Update species label
+    const label = newRow.querySelector('.species-label');
+    if (label) {
+        label.textContent = `Species ${formNum + 1}`;
+    }
+    
+    // Show the remove button
+    const removeBtn = newRow.querySelector('.btn-remove-species');
+    if (removeBtn) {
+        removeBtn.style.display = '';
+    }
+    
+    // Update all input names and ids, clear values
+    newRow.querySelectorAll('input, select, textarea').forEach(input => {
+        const name = input.getAttribute('name');
+        if (name) {
+            input.setAttribute('name', name.replace(/species-\d+-/, `species-${formNum}-`));
+            const id = input.getAttribute('id');
+            if (id) {
+                input.setAttribute('id', id.replace(/species-\d+-/, `species-${formNum}-`));
+            }
+            input.value = '';
+        }
+    });
+    
+    container.appendChild(newRow);
+    totalForms.value = formNum + 1;
+}
+
+function removeSpeciesRow(button) {
+    const row = button.closest('.species-row');
+    const container = document.getElementById('species-container');
+    const totalForms = document.querySelector('input[name="species-TOTAL_FORMS"]');
+    
+    const rows = container.querySelectorAll('.species-row');
+    if (rows.length > 1) {
+        row.remove();
+        totalForms.value = parseInt(totalForms.value) - 1;
+        
+        // Re-index remaining forms and update labels
+        container.querySelectorAll('.species-row').forEach((r, idx) => {
+            // Update label
+            const label = r.querySelector('.species-label');
+            if (label) {
+                label.textContent = `Species ${idx + 1}`;
+            }
+            
+            // Show/hide remove button (hide for first row only)
+            const removeBtn = r.querySelector('.btn-remove-species');
+            if (removeBtn) {
+                removeBtn.style.display = idx === 0 ? 'none' : '';
+            }
+            
+            // Update input names and ids
+            r.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    input.setAttribute('name', name.replace(/species-\d+-/, `species-${idx}-`));
+                    const id = input.getAttribute('id');
+                    if (id) {
+                        input.setAttribute('id', id.replace(/species-\d+-/, `species-${idx}-`));
+                    }
+                }
+            });
+        });
+    }
+}
+
+function _updateFormsetInput(input, prefix, oldIdx, newIdx) {
+    const name = input.getAttribute('name');
+    if (name && name.startsWith(prefix + '-')) {
+        const re = new RegExp(`^${prefix}-\\d+-`);
+        input.setAttribute('name', name.replace(re, `${prefix}-${newIdx}-`));
+        const id = input.getAttribute('id');
+        if (id) {
+            input.setAttribute('id', id.replace(re, `${prefix}-${newIdx}-`));
+        }
+    }
+}
+
+function addDatapoint() {
+    const container = document.getElementById('datapoints-container');
+    const dpTotalForms = document.querySelector('input[name="datapoints-TOTAL_FORMS"]');
+    const dpNum = parseInt(dpTotalForms.value);
+    const cards = container.querySelectorAll('.datapoint-card');
+    
+    if (cards.length > 0) {
+        const newCard = cards[0].cloneNode(true);
+        
+        // Update header
+        newCard.querySelector('.datapoint-card-header span').innerHTML = 
+            `<i class="bi bi-clipboard-data me-2"></i>Datapoint ${dpNum + 1}`;
+        
+        // Add remove button if not present
+        const header = newCard.querySelector('.datapoint-card-header');
+        if (!header.querySelector('.btn-outline-danger')) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-outline-danger';
+            removeBtn.onclick = function() { removeDatapoint(this); };
+            removeBtn.innerHTML = '<i class="bi bi-trash"></i> Remove';
+            header.appendChild(removeBtn);
+        }
+        
+        // Update input names/ids and clear values for all formset prefixes
+        const allPrefixes = ['datapoints'].concat(EXPERIMENT_TYPE_PREFIXES);
+        newCard.querySelectorAll('input, select, textarea').forEach(input => {
+            const name = input.getAttribute('name');
+            if (name) {
+                for (const prefix of allPrefixes) {
+                    if (name.startsWith(prefix + '-')) {
+                        _updateFormsetInput(input, prefix, 0, dpNum);
+                        break;
+                    }
+                }
+                if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            }
+        });
+        
+        container.appendChild(newCard);
+        dpTotalForms.value = dpNum + 1;
+        
+        // Update all experiment-type formset totals to match
+        EXPERIMENT_TYPE_PREFIXES.forEach(prefix => {
+            const total = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+            if (total) {
+                total.value = dpNum + 1;
+            }
+        });
+        
+        // Reapply experiment type visibility
+        updateExperimentTypeSections();
+    }
+}
+
+function removeDatapoint(button) {
+    const card = button.closest('.datapoint-card');
+    const container = document.getElementById('datapoints-container');
+    const dpTotalForms = document.querySelector('input[name="datapoints-TOTAL_FORMS"]');
+    
+    if (container.querySelectorAll('.datapoint-card').length > 1) {
+        card.remove();
+        const newCount = parseInt(dpTotalForms.value) - 1;
+        dpTotalForms.value = newCount;
+        
+        // Update all experiment-type formset totals
+        EXPERIMENT_TYPE_PREFIXES.forEach(prefix => {
+            const total = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+            if (total) {
+                total.value = newCount;
+            }
+        });
+        
+        // Re-index and update headers
+        const allPrefixes = ['datapoints'].concat(EXPERIMENT_TYPE_PREFIXES);
+        container.querySelectorAll('.datapoint-card').forEach((c, idx) => {
+            c.querySelector('.datapoint-card-header span').innerHTML = 
+                `<i class="bi bi-clipboard-data me-2"></i>Datapoint ${idx + 1}`;
+            
+            c.querySelectorAll('input, select, textarea').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    for (const prefix of allPrefixes) {
+                        if (name.startsWith(prefix + '-')) {
+                            _updateFormsetInput(input, prefix, -1, idx);
+                            break;
+                        }
+                    }
+                }
+            });
+        });
+    }
+}
+</script>
+{% endblock %}

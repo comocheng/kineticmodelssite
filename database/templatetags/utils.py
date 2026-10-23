@@ -47,6 +47,14 @@ def fields(obj):
 
 
 @register.filter
+def to_list(value):
+    """Convert a set or other iterable to a list for template use."""
+    if value is None:
+        return []
+    return list(value)
+
+
+@register.filter
 def pluralize(num, singular_word):
     word = singular_word if num == 1 else mark_safe(f"{singular_word}s")
     return f"{num} {word}"

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'rmg-family-list' %}">RMG reaction families</a></li>
+            <li class="breadcrumb-item active">{{ name }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-1">{{ name }}</h1>
+    <p class="small text-muted mb-0">RMG reaction family · {{ total }} reactions on this site ·
+        <a href="{{ links.website }}" target="_blank" rel="noopener noreferrer">RMG website <i class="bi bi-box-arrow-up-right"></i></a> ·
+        <a href="{{ links.github }}" target="_blank" rel="noopener noreferrer">Source files <i class="bi bi-box-arrow-up-right"></i></a></p>
+</div>
+
+<div class="data-section">
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Reaction</th><th>Layer</th><th>Template</th><th class="text-end">Models</th></tr></thead>
+            <tbody>
+            {% for reaction in rows %}
+            <tr>
+                <td><a href="{% url 'reaction-detail' reaction.pk %}">{{ reaction.equation_text }}</a></td>
+                <td><a href="{% url 'sub-mechanism-list' %}?layer={{ reaction.layer|urlencode }}">{{ reaction.layer }}</a></td>
+                <td class="font-monospace">{{ reaction.rmg_template }}</td>
+                <td class="text-end">{{ reaction.model_count }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% include "database/pager.html" %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1063 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ job.name }} - Job Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
+<style>
+/* Job Detail Page - NSF Scientific Standard */
+.job-detail-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.25rem 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--color-gray-200, #e5e7eb);
+}
+
+.page-header-left h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.page-header-left .page-subtitle {
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-running {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-awaiting_input {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.status-completed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-failed, .status-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-idle {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+/* Statistics Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+    transition: box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-primary, #2563eb);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500, #6b7280);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.stat-card.success .stat-value { color: #059669; }
+.stat-card.warning .stat-value { color: #d97706; }
+.stat-card.danger .stat-value { color: #dc2626; }
+.stat-card.info .stat-value { color: #0891b2; }
+
+/* Data Sections */
+.data-section {
+    background: white;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+    cursor: pointer;
+}
+
+.section-header h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-800, #1f2937);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-header .badge {
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+}
+
+.section-body {
+    padding: 1rem;
+}
+
+.section-body.p-0 {
+    padding: 0;
+}
+
+/* Details Grid */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.75rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500, #6b7280);
+    font-weight: 500;
+}
+
+.detail-value {
+    font-size: 0.8125rem;
+    color: var(--color-gray-900, #111827);
+    font-weight: 500;
+    text-align: right;
+}
+
+.detail-value code {
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* Scientific Data Tables */
+.scientific-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.scientific-table thead {
+    background: var(--color-gray-50, #f9fafb);
+    border-bottom: 2px solid var(--color-gray-200, #e5e7eb);
+}
+
+.scientific-table th {
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+}
+
+.scientific-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
+    vertical-align: middle;
+}
+
+.scientific-table tbody tr:hover {
+    background: var(--color-gray-50, #f9fafb);
+}
+
+.scientific-table code {
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', 'Monaco', monospace;
+}
+
+.scientific-table .numeric {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    font-family: 'JetBrains Mono', 'Monaco', monospace;
+}
+
+/* Row States */
+.scientific-table tr.confirmed {
+    background: #ecfdf5;
+}
+
+.scientific-table tr.blocked {
+    background: #fef2f2;
+}
+
+/* Species Accordion */
+.species-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.species-item {
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: white;
+}
+
+.species-header {
+    padding: 0.875rem 1rem;
+    background: var(--color-gray-50, #f9fafb);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.species-header:hover {
+    background: var(--color-gray-100, #e5e7eb);
+}
+
+.species-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.species-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.species-label {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    font-size: 0.875rem;
+}
+
+.species-formula {
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.8125rem;
+}
+
+.species-smiles {
+    font-family: 'JetBrains Mono', 'Monaco', monospace;
+    font-size: 0.75rem;
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    color: var(--color-gray-700, #374151);
+}
+
+.species-badges {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+.species-details {
+    padding: 1rem;
+    border-top: 1px solid var(--color-gray-200, #e5e7eb);
+    background: white;
+}
+
+.detail-subsection {
+    margin-bottom: 1.25rem;
+}
+
+.detail-subsection:last-child {
+    margin-bottom: 0;
+}
+
+.detail-subsection h5 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    margin: 0 0 0.75rem 0;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--color-primary, #2563eb);
+}
+
+/* Mini Info Grid - Table-like Layout */
+.mini-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--color-gray-200, #e5e7eb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.mini-info-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0.625rem 0.75rem;
+    background: white;
+    font-size: 0.8125rem;
+}
+
+.mini-info-label {
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.mini-info-value {
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    word-break: break-word;
+}
+
+.mini-info-value code {
+    background: var(--color-gray-100, #f3f4f6);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', 'Monaco', monospace;
+    word-break: break-all;
+}
+
+/* Responsive: 2 columns on smaller screens */
+@media (max-width: 992px) {
+    .mini-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .mini-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-primary {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-success, .badge-confirmed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-danger, .badge-unidentified {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-warning, .badge-tentative {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-info, .badge-processed {
+    background: #cffafe;
+    color: #0e7490;
+}
+
+.badge-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-gray-500, #6b7280);
+}
+
+.empty-state i {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Alert */
+.alert {
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+}
+
+.alert-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.alert-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+.btn-primary {
+    background: var(--color-primary, #2563eb);
+    color: white;
+    border-color: var(--color-primary, #2563eb);
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--color-gray-700, #374151);
+    border-color: var(--color-gray-300, #d1d5db);
+}
+
+.btn-secondary:hover {
+    background: var(--color-gray-50, #f9fafb);
+    border-color: var(--color-gray-400, #9ca3af);
+}
+
+.btn-success {
+    background: #059669;
+    color: white;
+    border-color: #059669;
+}
+
+.btn-success:hover {
+    background: #047857;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="job-detail-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <nav aria-label="breadcrumb" class="small mb-2">
+                <ol class="breadcrumb mb-0" style="font-size: 0.8125rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'importer_dashboard:index' %}">Importer</a></li>
+                    <li class="breadcrumb-item active">Job {{ job.id }}</li>
+                </ol>
+            </nav>
+            <h1>
+                {{ job.name }}
+                <span class="status-badge status-{{ job.status|lower }}">{{ job.get_status_display }}</span>
+            </h1>
+            <p class="page-subtitle">
+                <i class="bi bi-clock me-1"></i>Created {{ job.created_at|date:"M d, Y H:i" }}
+                {% if job.slurm_job_id %}<span class="ms-3"><i class="bi bi-cpu me-1"></i>SLURM #{{ job.slurm_job_id }}</span>{% endif %}
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'importer_dashboard:index' %}" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+            <a href="{% url 'importer_dashboard:job_log' job.id %}" class="btn btn-secondary btn-sm">
+                <i class="bi bi-file-text"></i> Logs
+            </a>
+            <a href="{% url 'importer_dashboard:job_error_log' job.id %}" class="btn btn-secondary btn-sm">
+                <i class="bi bi-exclamation-triangle"></i> Errors
+            </a>
+            {% if job.port and job.status == 'running' or job.port and job.status == 'awaiting_input' %}
+            <a href="/importer/{{ job.port }}/" target="_blank" class="btn btn-primary btn-sm">
+                <i class="bi bi-box-arrow-up-right"></i> Open importer
+            </a>
+            {% if copied_proposals %}
+            <a href="/importer/{{ job.port }}/copied.html" target="_blank" class="btn btn-success btn-sm"
+               title="Species whose chemistry this mechanism copied from earlier imports or RMG libraries, to confirm a source at a time">
+                <i class="bi bi-check2-all"></i> Confirm copied chemistry ({{ copied_proposals }})
+            </a>
+            {% endif %}
+            {% endif %}
+            {% if job.status == 'running' or job.status == 'pending' or job.status == 'awaiting_input' %}
+            <form method="post" action="{% url 'importer_dashboard:job_kill' job.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Kill this job?')">
+                    <i class="bi bi-stop-circle"></i> Kill
+                </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'importer_dashboard:job_start' job.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-play-circle"></i> Start
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if progress_status %}
+    <div class="alert alert-{{ progress_status.type }}">
+        <i class="bi bi-info-circle me-2"></i>{{ progress_status.message }}
+    </div>
+    {% endif %}
+
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ job.total_species|default:stats.total_species|default:0 }}</div>
+            <div class="stat-label">Total Species</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value">{{ job.confirmed_species|default:stats.identified_species|default:0 }}</div>
+            <div class="stat-label">Confirmed</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-value">{{ job.tentative_species|default:0 }}</div>
+            <div class="stat-label">Tentative</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-value">{{ job.unidentified_species|default:stats.unidentified_species|default:0 }}</div>
+            <div class="stat-label">Unidentified</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-value">{{ stats.total_candidates|default:0 }}</div>
+            <div class="stat-label">Candidates</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_votes|default:0 }}</div>
+            <div class="stat-label">Votes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.blocked_matches|default:0 }}</div>
+            <div class="stat-label">Blocked</div>
+        </div>
+    </div>
+
+    <!-- Job Details Section -->
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#jobDetailsSection">
+            <h3><i class="bi bi-info-circle me-2"></i>Job Configuration</h3>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="jobDetailsSection">
+            <div class="section-body">
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Job Name</span>
+                        <span class="detail-value">{{ job.name }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Port</span>
+                        <span class="detail-value">{{ job.port|default:"Not assigned" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">SLURM Job ID</span>
+                        <span class="detail-value">{{ job.slurm_job_id|default:"N/A" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Host</span>
+                        <span class="detail-value"><code>{{ job.host|default:"Pending..." }}</code></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value">
+                            <span class="status-badge status-{{ job.status|lower }}">{{ job.get_status_display }}</span>
+                        </span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Created</span>
+                        <span class="detail-value">{{ job.created_at|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Started By</span>
+                        <span class="detail-value">{{ job.started_by|default:"N/A" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Started At</span>
+                        <span class="detail-value">{{ job.started_at|default:"Not started" }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Updated</span>
+                        <span class="detail-value">{{ job.updated_at|date:"Y-m-d H:i:s" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Species List Section -->
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#speciesSection">
+            <h3>
+                <i class="bi bi-droplet me-2"></i>Species
+                <span class="badge badge-secondary ms-2">{{ species_list.count|default:0 }}</span>
+            </h3>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="speciesSection">
+            <div class="section-body p-0">
+                {% if species_list %}
+                <div class="species-accordion" style="padding: 1rem;">
+                    {% for species in species_list %}
+                    <div class="species-item">
+                        <div class="species-header" onclick="toggleSpecies({{ species.id }})">
+                            <div class="species-header-content">
+                                <div class="species-info">
+                                    <span class="species-label">{{ species.chemkin_label }}</span>
+                                    <span class="species-formula">{{ species.formula }}</span>
+                                    {% if species.smiles %}
+                                    <span class="species-smiles">{{ species.smiles|truncatechars:30 }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="species-badges">
+                                    <span class="badge badge-{{ species.identification_status }}">
+                                        {{ species.get_identification_status_display }}
+                                    </span>
+                                    <span class="badge badge-secondary">{{ species.candidates.count }} candidates</span>
+                                    <span class="badge badge-info">{{ species.vote_candidates.count }} votes</span>
+                                    <i class="bi bi-chevron-down ms-2" style="font-size: 0.75rem; color: #6b7280;"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="species-{{ species.id }}" class="species-details" style="display: none;">
+                            <!-- Species Info -->
+                            <div class="detail-subsection">
+                                <h5>Species Information</h5>
+                                <div class="mini-info-grid">
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">RMG Label</span>
+                                        <span class="mini-info-value">{% if species.rmg_label and species.rmg_label == species.chemkin_label %}<em>Same as Chemkin label</em>{% else %}{{ species.rmg_label|default:"N/A" }}{% endif %}</span>
+                                    </div>
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">RMG Index</span>
+                                        <span class="mini-info-value">{{ species.rmg_index|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">SMILES</span>
+                                        <span class="mini-info-value"><code>{{ species.smiles|default:"N/A" }}</code></span>
+                                    </div>
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">ΔH Discrepancy</span>
+                                        <span class="mini-info-value">
+                                            {% if species.enthalpy_discrepancy %}
+                                                {{ species.enthalpy_discrepancy|floatformat:4 }} kJ/mol
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">Method</span>
+                                        <span class="mini-info-value">{{ species.identification_method|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="mini-info-item">
+                                        <span class="mini-info-label">Identified By</span>
+                                        <span class="mini-info-value">{{ species.identified_by_name|default:species.identified_by|default:"Auto" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Candidates Table -->
+                            {% if species.candidates.count > 0 %}
+                            <div class="detail-subsection">
+                                <h5>Candidate Species ({{ species.candidates.count }})</h5>
+                                <div class="table-responsive">
+                                    <table class="scientific-table">
+                                        <thead>
+                                            <tr>
+                                                <th>RMG Label</th>
+                                                <th>SMILES</th>
+                                                <th>ΔH (kJ/mol)</th>
+                                                <th class="numeric">Votes</th>
+                                                <th class="numeric">Unique</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for candidate in species.candidates.all %}
+                                            <tr class="{% if candidate.is_confirmed %}confirmed{% elif candidate.is_blocked %}blocked{% endif %}">
+                                                <td><strong>{{ candidate.rmg_label }}</strong></td>
+                                                <td><code>{{ candidate.smiles }}</code></td>
+                                                <td class="numeric">{{ candidate.enthalpy_discrepancy|floatformat:2|default:"—" }}</td>
+                                                <td class="numeric">{{ candidate.vote_count }}</td>
+                                                <td class="numeric">{{ candidate.unique_vote_count }}</td>
+                                                <td>
+                                                    {% if candidate.is_confirmed %}
+                                                    <span class="badge badge-success">✓ Confirmed</span>
+                                                    {% elif candidate.is_blocked %}
+                                                    <span class="badge badge-danger">✗ Blocked</span>
+                                                    {% else %}
+                                                    <span class="badge badge-secondary">Pending</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Vote Candidates -->
+                            {% if species.vote_candidates.count > 0 %}
+                            <div class="detail-subsection">
+                                <h5>Vote Candidates ({{ species.vote_candidates.count }})</h5>
+                                <div class="table-responsive">
+                                    <table class="scientific-table">
+                                        <thead>
+                                            <tr>
+                                                <th>RMG Index</th>
+                                                <th>SMILES</th>
+                                                <th class="numeric">Votes</th>
+                                                <th>Reactions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for vc in species.vote_candidates.all %}
+                                            <tr>
+                                                <td>{{ vc.rmg_index }}</td>
+                                                <td><code>{{ vc.smiles }}</code></td>
+                                                <td class="numeric">{{ vc.vote_count }}</td>
+                                                <td style="font-size: 0.75rem;">
+                                                    {% for reaction in vc.voting_reactions.all|slice:":2" %}
+                                                    <div class="mb-1">{{ reaction.chemkin_reaction|truncatechars:45 }}</div>
+                                                    {% endfor %}
+                                                    {% if vc.voting_reactions.count > 2 %}
+                                                    <span class="text-muted">+{{ vc.voting_reactions.count|add:"-2" }} more</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Thermo Matches -->
+                            {% if species.thermo_matches.count > 0 %}
+                            <div class="detail-subsection">
+                                <h5>Thermo Library Matches ({{ species.thermo_matches.count }})</h5>
+                                <div class="table-responsive">
+                                    <table class="scientific-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Library</th>
+                                                <th>Species Name</th>
+                                                <th>Name Match</th>
+                                                <th>Candidate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for tm in species.thermo_matches.all %}
+                                            <tr>
+                                                <td>{{ tm.library_name }}</td>
+                                                <td>{{ tm.library_species_name }}</td>
+                                                <td>{% if tm.name_matches %}<span class="badge badge-success">✓</span>{% else %}<span class="badge badge-secondary">✗</span>{% endif %}</td>
+                                                <td>{{ tm.candidate.rmg_label }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Votes -->
+                            {% if species.votes.count > 0 %}
+                            <div class="detail-subsection">
+                                <h5>Reaction Votes ({{ species.votes.count }})</h5>
+                                <div class="table-responsive">
+                                    <table class="scientific-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Candidate</th>
+                                                <th>Chemkin Reaction</th>
+                                                <th>RMG Reaction</th>
+                                                <th>Family</th>
+                                                <th>Unique</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for vote in species.votes.all|slice:":10" %}
+                                            <tr>
+                                                <td>{{ vote.candidate.rmg_label }}</td>
+                                                <td style="font-size: 0.75rem;">{{ vote.chemkin_reaction|truncatechars:35 }}</td>
+                                                <td style="font-size: 0.75rem;">{{ vote.rmg_reaction|truncatechars:35 }}</td>
+                                                <td><span class="badge badge-secondary">{{ vote.rmg_reaction_family }}</span></td>
+                                                <td>{% if vote.is_unique %}<span class="badge badge-success">✓</span>{% else %}<span class="badge badge-secondary">✗</span>{% endif %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% if species.votes.count > 10 %}
+                                <p class="text-muted small mt-2 mb-0"><em>Showing 10 of {{ species.votes.count }} votes</em></p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-droplet"></i>
+                    <p>No species data yet. Data will appear once RMG starts processing.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Identified Species Section -->
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#identifiedSection">
+            <h3>
+                <i class="bi bi-check-circle me-2"></i>Species Identifications
+                <span class="badge badge-success ms-2">{{ identified_species_list.count|default:0 }}</span>
+            </h3>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="identifiedSection">
+            <div class="section-body p-0">
+                {% if identified_species_list %}
+                <div class="table-responsive">
+                    <table class="scientific-table">
+                        <thead>
+                            <tr>
+                                <th>Chemkin Label</th>
+                                <th>SMILES</th>
+                                <th>RMG Label</th>
+                                <th>RMG Index</th>
+                                <th>ΔH (kJ/mol)</th>
+                                <th>Method</th>
+                                <th>Identified By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for species in identified_species_list %}
+                            <tr>
+                                <td><strong>{{ species.chemkin_label }}</strong></td>
+                                <td><code>{{ species.smiles }}</code></td>
+                                <td>{% if species.rmg_label and species.rmg_label == species.chemkin_label %}<em>Same as Chemkin label</em>{% else %}{{ species.rmg_label|default:"—" }}{% endif %}</td>
+                                <td class="numeric">{{ species.rmg_index|default:"—" }}</td>
+                                <td class="numeric">{{ species.enthalpy_discrepancy|floatformat:2|default:"—" }}</td>
+                                <td><span class="badge badge-secondary">{{ species.identification_method|default:"auto" }}</span></td>
+                                <td>{{ species.identified_by_name|default:species.identified_by|default:"Auto" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-check-circle"></i>
+                    <p>No species identifications recorded yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked Matches Section -->
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#blockedSection">
+            <h3>
+                <i class="bi bi-x-circle me-2"></i>Blocked Matches
+                <span class="badge badge-danger ms-2">{{ blocked_matches.count|default:0 }}</span>
+            </h3>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse" id="blockedSection">
+            <div class="section-body p-0">
+                {% if blocked_matches %}
+                <div class="table-responsive">
+                    <table class="scientific-table">
+                        <thead>
+                            <tr>
+                                <th>Chemkin Label</th>
+                                <th>SMILES</th>
+                                <th>RMG Label</th>
+                                <th>Blocked By</th>
+                                <th>Reason</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bm in blocked_matches %}
+                            <tr>
+                                <td><strong>{{ bm.chemkin_label }}</strong></td>
+                                <td><code>{{ bm.smiles }}</code></td>
+                                <td>{{ bm.rmg_label|default:"—" }}</td>
+                                <td>{{ bm.blocked_by|default:"Unknown" }}</td>
+                                <td>{{ bm.reason|default:"No reason given" }}</td>
+                                <td>{{ bm.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-x-circle"></i>
+                    <p>No blocked matches.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSpecies(speciesId) {
+    const details = document.getElementById('species-' + speciesId);
+    const isVisible = details.style.display !== 'none';
+    details.style.display = isVisible ? 'none' : 'block';
+}
+</script>
+{% endblock %}

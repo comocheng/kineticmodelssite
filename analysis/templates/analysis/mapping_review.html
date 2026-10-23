@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Review Species Mapping — Run #{{ run.id }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:run-list' %}">Runs</a></li>
+            <li class="breadcrumb-item active">Mapping Review — Run #{{ run.id }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0">
+        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Review Species Mapping
+    </h1>
+    <p class="text-muted mb-0 mt-1">
+        <strong>{{ run.kinetic_model.model_name }}</strong> ×
+        <strong>{{ run.dataset.short_name }}</strong>
+    </p>
+</div>
+
+<!-- Info Banner -->
+<div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+    <i class="bi bi-info-circle-fill me-2 fs-5 mt-1"></i>
+    <div>
+        <strong>How this works:</strong> The table below shows the auto-generated mapping
+        between species names in the experiment dataset and the kinetic model.
+        Review each row — if a mapping is wrong (marked with a low confidence or
+        <span class="badge bg-danger-subtle text-danger">✗</span>), edit the
+        <em>Model Species</em> column.
+        Once you're satisfied, click <strong>Confirm &amp; Run</strong>.
+    </div>
+</div>
+
+<form method="post" id="mapping-review-form">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    <input type="hidden" name="next_runs" value="{{ next_runs }}">
+
+    <div class="data-section mb-4">
+        <div class="section-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-table me-2"></i>Species Mapping
+                <span class="badge bg-secondary ms-1">{{ formset.forms|length }} species</span>
+            </h6>
+            <div class="d-flex gap-2">
+                <input type="text" id="mech-species-search" class="form-control form-control-sm"
+                       placeholder="Search mechanism species..." style="width: 250px;">
+            </div>
+        </div>
+        <div class="section-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" id="mapping-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%;" class="text-center">#</th>
+                            <th style="width: 22%;">Dataset Species</th>
+                            <th style="width: 25%;">Model Species</th>
+                            <th style="width: 10%;" class="text-center">Status</th>
+                            <th style="width: 10%;" class="text-center">Confidence</th>
+                            <th style="width: 10%;">Method</th>
+                            <th style="width: 18%;">Override Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr class="mapping-row" data-index="{{ forloop.counter0 }}">
+                            <td class="text-center text-muted small">{{ forloop.counter }}</td>
+
+                            {# Hidden fields #}
+                            {{ form.dataset_species_name }}
+                            {{ form.original_model_species_name }}
+                            {{ form.confidence }}
+                            {{ form.mapping_method }}
+                            {{ form.is_override }}
+
+                            {# Dataset species (read-only display) #}
+                            <td>
+                                <code class="text-dark">{{ form.dataset_species_name.value }}</code>
+                            </td>
+
+                            {# Model species (editable) #}
+                            <td>
+                                {{ form.model_species_name }}
+                                {% if form.model_species_name.errors %}
+                                <div class="text-danger small">{{ form.model_species_name.errors }}</div>
+                                {% endif %}
+                            </td>
+
+                            {# In-mechanism indicator #}
+                            <td class="text-center status-cell">
+                                {% with conf=form.confidence.value %}
+                                {% if conf >= 0.6 %}
+                                    <span class="badge bg-success-subtle text-success" title="Found in mechanism">✓</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger" title="Not verified in mechanism">✗</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+
+                            {# Confidence badge #}
+                            <td class="text-center confidence-cell">
+                                {% with conf=form.confidence.value|floatformat:0 %}
+                                {% if form.confidence.value >= 0.9 %}
+                                    <span class="badge" style="background-color: #28a745; color: white;">{{ conf }}%</span>
+                                {% elif form.confidence.value >= 0.6 %}
+                                    <span class="badge" style="background-color: #ffc107; color: #333;">{{ conf }}%</span>
+                                {% else %}
+                                    <span class="badge" style="background-color: #dc3545; color: white;">{{ conf }}%</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+
+                            {# Method #}
+                            <td>
+                                <span class="small text-muted">{{ form.mapping_method.value|default:"—" }}</span>
+                            </td>
+
+                            {# Override reason (only shown when row is edited) #}
+                            <td class="reason-cell">
+                                {{ form.override_reason }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+            <span id="override-count">0</span> override(s)
+            {% if next_runs %}
+                · <span class="text-info">{{ next_runs|length }} more run(s) to review after this</span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'analysis:run-detail' run.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-lg me-1"></i>Skip (Don't Run)
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i>Confirm &amp; Run Simulation
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Mechanism species palette (hidden, used by JS autocomplete) -->
+<div id="mech-species-data" data-species='{{ mech_species_json }}' style="display:none;"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse mechanism species list for autocomplete / validation
+    const mechData = document.getElementById('mech-species-data');
+    const mechSpecies = new Set(JSON.parse(mechData.dataset.species || '[]'));
+
+    // Track overrides
+    function updateOverrideCount() {
+        let count = 0;
+        document.querySelectorAll('.mapping-row').forEach(row => {
+            const idx = row.dataset.index;
+            const original = document.querySelector(`[name="form-${idx}-original_model_species_name"]`);
+            const current = document.querySelector(`[name="form-${idx}-model_species_name"]`);
+            const overrideField = document.querySelector(`[name="form-${idx}-is_override"]`);
+            if (original && current) {
+                const isOverride = current.value !== original.value;
+                if (overrideField) overrideField.value = isOverride ? 'True' : '';
+                if (isOverride) count++;
+                row.classList.toggle('table-warning', isOverride);
+            }
+        });
+        document.getElementById('override-count').textContent = count;
+    }
+
+    // Validate against mechanism species on input
+    document.querySelectorAll('[name$="-model_species_name"]').forEach(input => {
+        if (input.type === 'hidden') return;
+
+        input.addEventListener('input', function() {
+            const inMech = mechSpecies.has(this.value.trim());
+            this.classList.toggle('is-valid', inMech);
+            this.classList.toggle('is-invalid', !inMech && this.value.trim() !== '');
+
+            // Update status cell
+            const row = this.closest('.mapping-row');
+            if (row) {
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell) {
+                    statusCell.innerHTML = inMech
+                        ? '<span class="badge bg-success-subtle text-success" title="Found in mechanism">✓</span>'
+                        : '<span class="badge bg-danger-subtle text-danger" title="Not in mechanism">✗</span>';
+                }
+            }
+            updateOverrideCount();
+        });
+
+        // Autocomplete dropdown on focus
+        input.addEventListener('focus', function() {
+            showAutoComplete(this);
+        });
+    });
+
+    // Simple autocomplete
+    let activeDropdown = null;
+
+    function showAutoComplete(input) {
+        closeAutoComplete();
+        const wrapper = document.createElement('div');
+        wrapper.className = 'autocomplete-dropdown';
+        wrapper.style.cssText = 'position:absolute;z-index:1050;background:white;border:1px solid #dee2e6;' +
+            'border-radius:4px;max-height:200px;overflow-y:auto;width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);';
+
+        const parent = input.parentElement;
+        parent.style.position = 'relative';
+
+        function renderList(filter) {
+            wrapper.innerHTML = '';
+            const filterLower = (filter || '').toLowerCase();
+            let count = 0;
+            mechSpecies.forEach(sp => {
+                if (filterLower && !sp.toLowerCase().includes(filterLower)) return;
+                if (count++ > 50) return;  // Limit display
+                const item = document.createElement('div');
+                item.className = 'px-2 py-1 small';
+                item.style.cursor = 'pointer';
+                item.textContent = sp;
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    input.value = sp;
+                    input.dispatchEvent(new Event('input'));
+                    closeAutoComplete();
+                });
+                item.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#e9ecef';
+                });
+                item.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '';
+                });
+                wrapper.appendChild(item);
+            });
+            if (count === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'px-2 py-1 small text-muted';
+                empty.textContent = 'No matching species';
+                wrapper.appendChild(empty);
+            }
+        }
+
+        renderList(input.value);
+        parent.appendChild(wrapper);
+        activeDropdown = wrapper;
+
+        input.addEventListener('input', function handler() {
+            renderList(input.value);
+        });
+        input._acHandler = function handler() { renderList(input.value); };
+    }
+
+    function closeAutoComplete() {
+        if (activeDropdown) {
+            activeDropdown.remove();
+            activeDropdown = null;
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.matches('[name$="-model_species_name"]')) {
+            closeAutoComplete();
+        }
+    });
+
+    // Global search filter for mechanism species palette
+    const searchInput = document.getElementById('mech-species-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            // This just highlights rows that DON'T match the current search in the mechanism
+            // Could be extended to a palette UI
+        });
+    }
+
+    // Initial count
+    updateOverrideCount();
+});
+</script>
+{% endblock %}

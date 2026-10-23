@@ -11,9 +11,11 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+import sys
 
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
-root = Path(".")
+root = Path(__file__).resolve().parent.parent
 prod_path = root / ".env"
 dev_path = root / ".env.dev"
 if prod_path.exists():
@@ -41,7 +43,13 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(" ")
 # Application definition
 
 INSTALLED_APPS = [
+    "livequery.apps.LiveQueryConfig",
+    "analysis.apps.AnalysisConfig",
+    "chemked_database.apps.ChemkedDatabaseConfig",
+    "importer_dashboard.apps.ImporterDashboardConfig",
+    # "import_voting.apps.ImportVotingConfig",  # REMOVED: Duplicate of importer_dashboard functionality
     "database.apps.DatabaseConfig",
+    "provenance.apps.ProvenanceConfig",
     "api.apps.ApiConfig",
     "dal",
     "dal_select2",
@@ -54,8 +62,13 @@ INSTALLED_APPS = [
     "django_filters",
     "django_extensions",
     "crispy_forms",
+    "crispy_bootstrap4",
     "rest_framework",
     "rest_framework.authtoken",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    'mathfilters',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -73,7 +86,7 @@ ROOT_URLCONF = "kms.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, 'kms', 'templates')],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -81,6 +94,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "kms.access.site_access",
             ],
         },
     },
@@ -99,9 +113,20 @@ DATABASES = {
         "USER": os.getenv("POSTGRES_USER"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
-        "PORT": 5432,
+        "PORT": int(os.getenv("DB_PORT", 5432)),
+        "OPTIONS": {
+            "options": "-c timezone=utc"
+        }
     }
 }
+
+# DATABASES = {
+#     "default": dj_database_url.config(
+#         default=os.getenv("DATABASE_URL"),
+#         conn_max_age=600,
+#         options={'options': '-c timezone=utc'}
+#     )
+# }
 
 
 # Password validation
@@ -144,12 +169,239 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],
+    # Public read access by default. Write endpoints tighten this explicitly:
+    # data viewsets require IsAdminUser to write, and the contribution endpoints
+    # require IsAuthenticated.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAdminUser",
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    # Paginate list responses so endpoints never return an entire table at once.
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "100/day", "user": "1000/day"},
+    "DEFAULT_THROTTLE_RATES": {"anon": "10000/day", "user": "100000/day"},
 }
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Prometheus Kinetic Models API",
+    "DESCRIPTION": (
+        "FAIR REST API for the Prometheus combustion-kinetics cyberinfrastructure: "
+        "canonical species, isomers, formulae, reactions, thermochemistry, transport, "
+        "kinetics, and kinetic models. Read access is public; contributing data requires "
+        "authentication."
+    ),
+    "VERSION": "1.0.0",
+    # The first SERVERS entry is the base URL used in the generated code samples
+    # and as the Swagger "Servers" default. (Optionally add a LICENSE entry.)
+    "SERVERS": [
+        {"url": "https://dev.omethe.us", "description": "Production"},
+        {"url": "http://localhost:8000", "description": "Local development"},
+    ],
+    "CONTACT": {
+        "name": "Prometheus Cyberinfrastructure",
+        "url": "https://dev.omethe.us",
+    },
+    "LICENSE": {
+        "name": "MIT License",
+        "url": "https://spdx.org/licenses/MIT",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Platform & API documentation",
+        "url": "https://dev.omethe.us/docs/",
+    },
+    "POSTPROCESSING_HOOKS": [
+        # Keep the default enum hook, then append our additions.
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "api.schema_hooks.add_field_examples",
+        "api.schema_hooks.fix_pagination_urls",
+        "api.schema_hooks.add_response_examples",
+        "api.schema_hooks.add_flex_params",
+        "api.schema_hooks.add_code_samples",
+        "api.schema_hooks.add_ontology_context",
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "deepLinking": True,
+        "displayRequestDuration": True,
+        "filter": True,
+        "tryItOutEnabled": True,
+        "requestSnippetsEnabled": True,
+    },
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    # Self-host the Swagger UI and ReDoc assets via drf-spectacular-sidecar
+    # instead of loading them from a public CDN (works offline / behind CSP /
+    # behind the Cloudflare tunnel, with a pinned asset version).
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "MappingMethodEnum": "analysis.models.MappingMethod",
+        "UncertaintyTypeEnum": "chemked_database.models.UncertaintyType",
+        "PropertySourceTypeEnum": "chemked_database.models.PropertySourceType",
+        "EvaluatedStandardDeviationMethodEnum": "chemked_database.models.EvaluatedStandardDeviationMethod",
+    },
+    "TAGS": [
+        {"name": "species", "description": "Canonical species, isomers, formulae, and structures."},
+        {"name": "reactions", "description": "Reactions and their rate coefficients."},
+        {"name": "models", "description": "Kinetic models and their assembled components."},
+        {"name": "thermo-transport", "description": "Thermochemistry and transport properties."},
+        {"name": "bibliography", "description": "Literature sources and authors."},
+        {"name": "experimental-data", "description": "ChemKED experimental datasets and datapoints (read-only)."},
+        {"name": "analysis", "description": "Simulation runs, results, and model-vs-data agreement (read-only)."},
+        {"name": "contribute", "description": "Authenticated data-contribution endpoints."},
+    ],
+}
+
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+SILENCE_RMG_IMPORT_LOGS = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        # Silence RMG import noise during tests/development
+        'database.scripts.import_rmg_models': {
+            'handlers': ['console'],
+            'level': 'CRITICAL',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'CRITICAL' if TESTING else 'WARNING',
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+}
+
+# Allow large batch uploads of ReSpecTh/ChemKED files
+DATA_UPLOAD_MAX_NUMBER_FILES = 5000
+# Increase memory limits for large batch uploads (100 MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
+
+# Authentication URLs
+# Public web access for now; set SITE_REQUIRE_LOGIN=True to restore login gates.
+# Django admin and API write permissions have their own authorization policies.
+SITE_REQUIRE_LOGIN = os.getenv('SITE_REQUIRE_LOGIN', 'False').lower() == 'true'
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # or 'America/New_York'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 4 * 24 * 3600}  # > 3-day time limit
+# Keep task results longer than the 3-day job limit. The default (1 day) lets a running
+# job's result expire, and Celery then reports it as PENDING. Redis drops expired results
+# itself; the database backend relies on Celery Beat's daily cleanup task.
+CELERY_RESULT_EXPIRES = 4 * 24 * 3600
+
+# Long-running import jobs need longer timeouts
+CELERY_TASK_TIME_LIMIT = 3 * 24 * 3600      # Hard limit: 3 days (matches your SLURM --time=3-00:00:00)
+CELERY_TASK_SOFT_TIME_LIMIT = 3 * 24 * 3600 - 300  # Soft limit: 3 days minus 5 min for cleanup
+CELERY_WORKER_CONCURRENCY = 2                # Limit concurrent imports (RMG is memory-heavy ~32GB each)
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 40_000_000  # Kill worker if it exceeds ~40GB (KB)
+
+# RMG/Importer paths on the office server
+RMG_PY_PATH = os.getenv('RMGpy', '/home/prometheus/Importer/RMG-Py')
+RMG_DATABASE_PATH = os.getenv('RMG_DATABASE_PATH', '/home/prometheus/Importer/RMG-database')
+ATCT_API_BASE_URL = os.getenv("ATCT_API_BASE_URL", "https://atct.anl.gov/api/v1")
+ATCT_API_KEY = os.getenv("ATCT_API_KEY", "")
+ATCT_USER_AGENT = os.getenv("ATCT_USER_AGENT", "Mozilla/5.0 (compatible; ATcT-Python/1.0.0)")
+THERMO_RMG_DATABASE_PATH = os.getenv("THERMO_RMG_DATABASE_PATH", "") or None
+THERMO_ATCT_SNAPSHOT_PATH = os.getenv("THERMO_ATCT_SNAPSHOT_PATH", os.path.join(BASE_DIR, "var", "thermo", "atct-catalog.json"))
+THERMO_BURCAT_LIBRARY = os.getenv("THERMO_BURCAT_LIBRARY", "")
+THERMO_ENRICHMENT_BATCH_SIZE = int(os.getenv("THERMO_ENRICHMENT_BATCH_SIZE", "100"))
+THERMO_JOB_TIMEOUT_SECONDS = int(os.getenv("THERMO_JOB_TIMEOUT_SECONDS", "120"))
+CELERY_TASK_ROUTES = {
+    "database.enrich_species_thermo": {"queue": "thermo"},
+    "database.sync_atct_catalog": {"queue": "thermo"},
+}
+RMG_MODELS_PATH = os.getenv('RMGMODELSPATH', '/home/prometheus/Importer/RMG-models')
+CONDA_ENV_NAME = os.getenv('CONDA_ENV_NAME', 'rmg_env')
+CONDA_BASE_PATH = os.getenv('CONDA_BASE_PATH', '/home/prometheus/miniconda3')
+
+# Ports handed out to running importers' web UIs; must match the nginx /importer/ rule
+IMPORTER_PORT_RANGE = (8100, 8999)
+
+# Evidence index (RMG-Py's evidence_index.py): the RMG-database libraries and every earlier import,
+# which importers use as a second source of votes. It sits next to RMG-models, outside that git
+# repository, and is refreshed after each import. Set it to an empty string to turn this off.
+IMPORTER_EVIDENCE_INDEX = os.getenv('IMPORTER_EVIDENCE_INDEX',
+                                    os.path.join(os.path.dirname(RMG_MODELS_PATH), 'evidence_index.sqlite'))
+
+# 'local' = Celery on office server, 'cluster' = SSH/SLURM on Explorer
+IMPORTER_MODE = 'local'
+
+# Celery Beat: periodic tasks (requires running `celery -A kms beat`)
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'sync-atct-thermo': {
+        'task': 'database.sync_atct_catalog',
+        'schedule': crontab(hour=2, minute=15),
+        'options': {'expires': 3600},
+    },
+    'enrich-species-thermo': {
+        'task': 'database.enrich_species_thermo',
+        'schedule': 300.0,
+        'options': {'expires': 300},
+    },
+    'refresh-job-statuses': {
+        'task': 'importer_dashboard.refresh_all_job_statuses',
+        'schedule': 30.0,  # Every 30 seconds
+    },
+    # Imports refresh the evidence index themselves; this picks up RMG-database updates
+    'refresh-evidence-index': {
+        'task': 'importer_dashboard.refresh_evidence_index',
+        'schedule': crontab(hour=3, minute=30),
+    },
+}
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --------------------------------------------------------------------------
+# GitHub Contribution Integration
+# --------------------------------------------------------------------------
+# These are used by the contribution workflow (chemked_database/github_pr_service.py)
+# to create PRs on the ChemKED-database repository.
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+GITHUB_REPO_OWNER = os.getenv('GITHUB_REPO_OWNER', '')
+GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'ChemKED-database')
+
+# Local git clone of the ChemKED-database repository. sync_chemked reads it, and the
+# chemked-ingest workflow pulls it before it syncs merged files. Default: a sibling of
+# this project directory.
+CHEMKED_DATABASE_PATH = os.getenv(
+    'CHEMKED_DATABASE_PATH',
+    os.path.join(os.path.dirname(BASE_DIR), 'ChemKED-database'),
+)
+
+# Silence noisy RDKit warnings during imports/tests (e.g., unusual valence warnings)
+try:
+    from rdkit import RDLogger
+
+    RDLogger.DisableLog('rdApp.warning')
+except Exception:
+    pass

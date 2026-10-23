@@ -1,0 +1,27 @@
+/* Match the main Kinetic Models Database site theme (database/static/database/css/scientific.css).
+   Primary #1a56db, footer slate #1f2937, Inter / JetBrains Mono fonts. */
+
+:root {
+  --md-primary-fg-color:        #1a56db;
+  --md-primary-fg-color--light: #3b82f6;
+  --md-primary-fg-color--dark:  #1e40af;
+  --md-accent-fg-color:         #3b82f6;
+
+  /* Dark slate footer, like the main site footer (--color-gray-800 / -900). */
+  --md-footer-bg-color:         #1f2937;
+  --md-footer-bg-color--dark:   #111827;
+}
+
+/* Keep the brand blue as the link/accent color in dark (slate) mode too. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #1a56db;
+  --md-primary-fg-color--light: #3b82f6;
+  --md-primary-fg-color--dark:  #1e40af;
+  --md-accent-fg-color:         #60a5fa;
+}
+
+/* The flame logo sits on a white header; give it a little breathing room. */
+.md-header__button.md-logo img {
+  height: 1.6rem;
+  width: auto;
+}

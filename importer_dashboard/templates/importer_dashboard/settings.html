@@ -1,0 +1,1114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings - RMG Importer Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="settings-header">
+    <div>
+        <h1 class="page-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="page-title-icon">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6M5.636 5.636l4.243 4.243m4.242 4.242l4.243 4.243M1 12h6m6 0h6M5.636 18.364l4.243-4.243m4.242-4.242l4.243-4.243"/>
+            </svg>
+            Dashboard Settings
+        </h1>
+        <p class="page-subtitle">Configure SLURM cluster connection and job execution parameters</p>
+    </div>
+    <div>
+        <a href="{% url 'importer_dashboard:index' %}" class="btn btn-secondary btn-small btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 4px;">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Settings Form -->
+<div class="settings-container">
+    <form method="post" class="settings-form" id="settingsForm">
+        {% csrf_token %}
+        
+        <!-- SSH Connection Section -->
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        <path d="M3 12h18"/>
+                    </svg>
+                    SSH Connection
+                </h2>
+                <p>Cluster connection and authentication settings</p>
+            </div>
+            
+            <div class="settings-grid">
+                <!-- Configuration Name -->
+                <div class="form-field">
+                    <label for="id_name">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7h16M4 12h16M4 17h16"/>
+                        </svg>
+                        Configuration Name
+                    </label>
+                    <input type="text" 
+                           id="id_name" 
+                           name="name" 
+                           value="{{ config.name }}" 
+                           placeholder="e.g., Production, Development"
+                           required>
+                    <span class="field-hint">A descriptive name for this configuration</span>
+                </div>
+                
+                <!-- SSH Hostname -->
+                <div class="form-field">
+                    <label for="id_ssh_host">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        SSH Hostname
+                    </label>
+                    <input type="text" 
+                           id="id_ssh_host" 
+                           name="ssh_host" 
+                           value="{{ config.ssh_host }}" 
+                           placeholder="explorer.coe.neu.edu"
+                           required>
+                    <span class="field-hint">Cluster hostname or IP address</span>
+                </div>
+                
+                <!-- SSH Port -->
+                <div class="form-field">
+                    <label for="id_ssh_port">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        SSH Port
+                    </label>
+                    <input type="number" 
+                           id="id_ssh_port" 
+                           name="ssh_port" 
+                           value="{{ config.ssh_port }}" 
+                           placeholder="22"
+                           min="1"
+                           max="65535"
+                           required>
+                    <span class="field-hint">SSH port (typically 22)</span>
+                </div>
+                
+                <!-- Current SSH User (Read-only) -->
+                <div class="form-field">
+                    <label>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Current SSH User
+                    </label>
+                    <div class="read-only-field">
+                        <span class="badge badge-info">{{ ssh_username }}</span>
+                    </div>
+                    <span class="field-hint">Authenticated via environment variable (read-only)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cluster Paths Section -->
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Cluster Paths
+                </h2>
+                <p>File system locations on the remote cluster</p>
+            </div>
+            
+            <div class="settings-grid">
+                <!-- Root Path -->
+                <div class="form-field form-field-full">
+                    <label for="id_root_path">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Root Working Directory
+                    </label>
+                    <input type="text" 
+                           id="id_root_path" 
+                           name="root_path" 
+                           value="{{ config.root_path }}" 
+                           placeholder="/work/westgroup/user/rmg"
+                           required>
+                    <span class="field-hint">Base directory for job files and outputs</span>
+                </div>
+                
+                <!-- Conda Environment -->
+                <div class="form-field">
+                    <label for="id_conda_env_name">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        </svg>
+                        Conda Environment
+                    </label>
+                    <input type="text" 
+                           id="id_conda_env_name" 
+                           name="conda_env_name" 
+                           value="{{ config.conda_env_name }}" 
+                           placeholder="rmg_env"
+                           required>
+                    <span class="field-hint">Name of conda environment to activate</span>
+                </div>
+                
+                <!-- RMG Python Path -->
+                <div class="form-field">
+                    <label for="id_rmg_py_path">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        RMG.py Path
+                    </label>
+                    <input type="text" 
+                           id="id_rmg_py_path" 
+                           name="rmg_py_path" 
+                           value="{{ config.rmg_py_path }}" 
+                           placeholder="RMG-Py/rmg.py"
+                           required>
+                    <span class="field-hint">Relative path to RMG.py from root directory</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SLURM Configuration Section -->
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    SLURM Configuration
+                </h2>
+                <p>Job scheduler parameters and resource limits</p>
+            </div>
+            
+            <div class="settings-grid">
+                <!-- SLURM Partition -->
+                <div class="form-field">
+                    <label for="id_slurm_partition">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <line x1="9" y1="3" x2="9" y2="21"/>
+                        </svg>
+                        SLURM Partition
+                    </label>
+                    <input type="text" 
+                           id="id_slurm_partition" 
+                           name="slurm_partition" 
+                           value="{{ config.slurm_partition }}" 
+                           placeholder="west"
+                           required>
+                    <span class="field-hint">Queue partition (e.g., west, short, gpu)</span>
+                </div>
+                
+                <!-- Time Limit -->
+                <div class="form-field">
+                    <label for="id_slurm_time_limit">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        Time Limit
+                    </label>
+                    <input type="text" 
+                           id="id_slurm_time_limit" 
+                           name="slurm_time_limit" 
+                           value="{{ config.slurm_time_limit }}" 
+                           placeholder="3-00:00:00"
+                           required>
+                    <span class="field-hint">Format: D-HH:MM:SS (e.g., 3-00:00:00 for 3 days)</span>
+                </div>
+                
+                <!-- Memory -->
+                <div class="form-field">
+                    <label for="id_slurm_memory">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2"/>
+                            <path d="M6 8h.01M10 8h.01M14 8h.01"/>
+                        </svg>
+                        Memory Allocation
+                    </label>
+                    <input type="text" 
+                           id="id_slurm_memory" 
+                           name="slurm_memory" 
+                           value="{{ config.slurm_memory }}" 
+                           placeholder="32768M"
+                           required>
+                    <span class="field-hint">Format: Memory in MB with 'M' suffix (e.g., 32768M for 32GB)</span>
+                </div>
+                
+                <!-- Additional Args -->
+                <div class="form-field form-field-full">
+                    <label for="id_additional_slurm_args">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6"/>
+                            <polyline points="8 6 2 12 8 18"/>
+                        </svg>
+                        Additional SLURM Arguments <span class="label-optional">(Optional)</span>
+                    </label>
+                    <input type="text" 
+                           id="id_additional_slurm_args" 
+                           name="additional_slurm_args" 
+                           value="{{ config.additional_slurm_args|default:'' }}" 
+                           placeholder="--exclusive --mail-type=ALL">
+                    <span class="field-hint">Extra sbatch parameters (e.g., --exclusive --mail-type=ALL)</span>
+                </div>
+            </div>
+            
+            <!-- Live SLURM Preview -->
+            <div class="slurm-preview">
+                <h4>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 18 22 12 16 6"/>
+                        <polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                    Generated SLURM Command
+                </h4>
+                <pre id="slurmPreview">sbatch --partition={{ config.slurm_partition }} --time={{ config.slurm_time_limit }} --mem={{ config.slurm_memory }}{% if config.additional_slurm_args %} {{ config.additional_slurm_args }}{% endif %}</pre>
+            </div>
+        </div>
+        
+        <!-- Default Configuration -->
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    Configuration Status
+                </h2>
+                <p>Set this configuration as the default for new jobs</p>
+            </div>
+            
+            <div class="checkbox-field">
+                <label class="checkbox-label">
+                    <input type="checkbox" 
+                           id="id_is_default" 
+                           name="is_default" 
+                           {% if config.is_default %}checked{% endif %}>
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">
+                        <strong>Set as Default Configuration</strong>
+                        <small>This configuration will be used for all new import jobs</small>
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large btn-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                </svg>
+                Save Configuration
+            </button>
+            <a href="{% url 'importer_dashboard:index' %}" class="btn btn-secondary btn-large">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Example Configurations -->
+<div class="settings-section examples-section">
+    <div class="section-header">
+        <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <line x1="10" y1="9" x2="8" y2="9"/>
+            </svg>
+            Example Configurations
+        </h2>
+        <p>Pre-configured templates for common use cases</p>
+    </div>
+    
+    <div class="examples-grid">
+        <!-- Standard Configuration -->
+        <div class="example-card">
+            <div class="example-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Standard Configuration
+                </h3>
+                <span class="badge badge-success">Recommended</span>
+            </div>
+            <div class="example-content">
+                <p class="example-description">Balanced settings for typical RMG model runs</p>
+                <ul class="example-specs">
+                    <li><strong>Partition:</strong> west</li>
+                    <li><strong>Time:</strong> 3-00:00:00 (3 days)</li>
+                    <li><strong>Memory:</strong> 32768M (32 GB)</li>
+                </ul>
+                <div class="example-note">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    Suitable for most combustion chemistry models
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Test Configuration -->
+        <div class="example-card">
+            <div class="example-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Quick Test
+                </h3>
+                <span class="badge badge-info">Fast</span>
+            </div>
+            <div class="example-content">
+                <p class="example-description">Minimal resources for testing and debugging</p>
+                <ul class="example-specs">
+                    <li><strong>Partition:</strong> short</li>
+                    <li><strong>Time:</strong> 4:00:00 (4 hours)</li>
+                    <li><strong>Memory:</strong> 8192M (8 GB)</li>
+                </ul>
+                <div class="example-note">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Not recommended for production models
+                </div>
+            </div>
+        </div>
+        
+        <!-- Large Model Configuration -->
+        <div class="example-card">
+            <div class="example-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    Large Model
+                </h3>
+                <span class="badge badge-warning">High Resource</span>
+            </div>
+            <div class="example-content">
+                <p class="example-description">Extended resources for complex mechanisms</p>
+                <ul class="example-specs">
+                    <li><strong>Partition:</strong> west</li>
+                    <li><strong>Time:</strong> 7-00:00:00 (7 days)</li>
+                    <li><strong>Memory:</strong> 65536M (64 GB)</li>
+                </ul>
+                <div class="example-note">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    For large chemical systems or detailed models
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Troubleshooting Section -->
+<div class="settings-section troubleshooting-section">
+    <div class="section-header">
+        <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            Troubleshooting
+        </h2>
+        <p>Common issues and solutions</p>
+    </div>
+    
+    <div class="accordion">
+        <div class="accordion-item">
+            <button class="accordion-header" onclick="toggleAccordion(this)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+                <span>Connection Issues</span>
+                <svg class="accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-content">
+                <p><strong>Problem:</strong> Cannot connect to SSH host</p>
+                <ul>
+                    <li>Verify hostname is correct (e.g., login.explorer.northeastern.edu)</li>
+                    <li>Check that port 22 is accessible from your network</li>
+                    <li>Ensure SSH_USERNAME environment variable is set</li>
+                    <li>Test connection manually: <code>ssh username@hostname</code></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <button class="accordion-header" onclick="toggleAccordion(this)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+                <span>Job Submission Failures</span>
+                <svg class="accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-content">
+                <p><strong>Problem:</strong> Jobs fail to submit to SLURM</p>
+                <ul>
+                    <li>Check partition name is valid (run <code>sinfo</code> on cluster)</li>
+                    <li>Verify time format: D-HH:MM:SS (e.g., 3-00:00:00)</li>
+                    <li>Ensure memory format includes 'M' suffix (e.g., 32768M)</li>
+                    <li>Check that root path exists on the cluster</li>
+                    <li>Verify conda environment name is correct</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <button class="accordion-header" onclick="toggleAccordion(this)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+                <span>Memory and Resource Issues</span>
+                <svg class="accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </button>
+            <div class="accordion-content">
+                <p><strong>Problem:</strong> Jobs are killed due to insufficient resources</p>
+                <ul>
+                    <li><strong>Memory:</strong> RMG database requires 2-4 GB, total workflow needs 10-32 GB</li>
+                    <li><strong>Time:</strong> Most models take 1-3 days, allow extra buffer time</li>
+                    <li>Monitor job efficiency with <code>seff JOBID</code> after completion</li>
+                    <li>Check error logs for "Out of Memory" or "DUE TO TIME LIMIT" messages</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Messages -->
+{% if messages %}
+<div class="messages-container">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            {% if message.tags == 'success' %}
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+            {% else %}
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+            {% endif %}
+        </svg>
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
+<style>
+/* Settings Page Styles */
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.settings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* Section Styles */
+.settings-section {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.section-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-header h2 svg {
+    width: 22px;
+    height: 22px;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-title-icon {
+    width: 28px;
+    height: 28px;
+    color: #2563eb;
+}
+
+.section-header p {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Form Grid */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+/* Form Fields */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-field-full {
+    grid-column: 1 / -1;
+}
+
+.form-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-field label svg {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+}
+
+.label-optional {
+    font-weight: 400;
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+.form-field input[type="text"],
+.form-field input[type="number"] {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #111827;
+    transition: all 0.2s;
+}
+
+.form-field input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.field-hint {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.read-only-field {
+    padding: 10px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
+
+/* SLURM Preview */
+.slurm-preview {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.slurm-preview h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.slurm-preview h4 svg {
+    width: 14px;
+    height: 14px;
+    color: #6b7280;
+}
+
+.slurm-preview pre {
+    margin: 0;
+    padding: 12px;
+    background: #1f2937;
+    color: #10b981;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    overflow-x: auto;
+}
+
+/* Checkbox Field */
+.checkbox-field {
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '✓';
+    color: white;
+    font-size: 14px;
+}
+
+.checkbox-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.checkbox-text strong {
+    color: #111827;
+    font-size: 14px;
+}
+
+.checkbox-text small {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    justify-content: flex-end;
+}
+
+/* Examples Section */
+.examples-section {
+    margin-top: 30px;
+}
+
+.examples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.example-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.2s;
+}
+
+.example-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transform: translateY(-2px);
+}
+
+.example-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.example-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.example-header h3 svg {
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.example-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.example-description {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.example-specs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.example-specs li {
+    font-size: 12px;
+    color: #374151;
+    padding-left: 16px;
+    position: relative;
+}
+
+.example-specs li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #2563eb;
+    font-weight: bold;
+}
+
+.example-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    background: white;
+    border-left: 3px solid #3b82f6;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1f2937;
+    line-height: 1.5;
+}
+
+.example-note svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #3b82f6;
+}
+
+/* Troubleshooting Section */
+.troubleshooting-section {
+    margin-top: 30px;
+}
+
+.accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.accordion-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.accordion-header {
+    width: 100%;
+    padding: 16px 20px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.accordion-header:hover {
+    background: rgba(37, 99, 235, 0.05);
+}
+
+.accordion-header svg:first-child {
+    width: 18px;
+    height: 18px;
+    color: #2563eb;
+}
+
+.accordion-header span {
+    flex: 1;
+}
+
+.accordion-icon {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    transition: transform 0.3s;
+}
+
+.accordion-item.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.accordion-item.active .accordion-content {
+    max-height: 500px;
+    padding: 0 20px 20px 20px;
+}
+
+.accordion-content p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: #374151;
+}
+
+.accordion-content ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.accordion-content li {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.accordion-content code {
+    padding: 2px 6px;
+    background: #1f2937;
+    color: #10b981;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* Messages */
+.messages-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-width: 300px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.alert svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.alert-success {
+    background: #d1fae5;
+    border: 1px solid #10b981;
+    color: #065f46;
+}
+
+.alert-error {
+    background: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .settings-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .examples-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+function toggleAccordion(button) {
+    const item = button.closest('.accordion-item');
+    const wasActive = item.classList.contains('active');
+    
+    // Close all accordion items
+    document.querySelectorAll('.accordion-item').forEach(i => {
+        i.classList.remove('active');
+    });
+    
+    // Open clicked item if it wasn't active
+    if (!wasActive) {
+        item.classList.add('active');
+    }
+}
+
+// Auto-dismiss messages after 5 seconds
+setTimeout(() => {
+    const messages = document.querySelectorAll('.alert');
+    messages.forEach(msg => {
+        msg.style.animation = 'slideOut 0.3s ease-out forwards';
+        setTimeout(() => msg.remove(), 300);
+    });
+}, 5000);
+</script>
+{% endblock %}

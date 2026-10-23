@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+  .schema-sidebar {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+  .schema-table-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .schema-col-list {
+    font-size: 0.75rem;
+    color: #6c757d;
+    padding-left: 1rem;
+  }
+  .results-table-wrapper {
+    overflow-x: auto;
+    max-height: 480px;
+    overflow-y: auto;
+  }
+  .results-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 1;
+  }
+  #sql-textarea {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="row g-3">
+
+    <!-- ── Left: schema sidebar ─────────────────────────────────────── -->
+    <div class="col-md-3 col-lg-2">
+      <div class="card h-100">
+        <div class="card-header py-2">
+          <strong><i class="bi bi-table me-1"></i>Schema</strong>
+        </div>
+        <div class="card-body p-2 schema-sidebar">
+          {% for app, tables in schema.items %}
+          <div class="mb-2">
+            <div class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">{{ app }}</div>
+            {% for table_name, cols in tables.items %}
+            <div class="ms-1 mb-1">
+              <div class="schema-table-name text-primary"
+                   data-bs-toggle="collapse"
+                   data-bs-target="#cols-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                   aria-expanded="false">
+                <i class="bi bi-chevron-right" style="font-size:0.65rem;"></i>
+                {{ table_name }}
+              </div>
+              <div class="collapse schema-col-list" id="cols-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                {% for col in cols %}<div>{{ col }}</div>{% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% empty %}
+          <p class="text-muted small">Schema unavailable</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: query panel ────────────────────────────────────────── -->
+    <div class="col-md-9 col-lg-10">
+
+      <!-- Query form -->
+      <div class="card mb-3">
+        <div class="card-header py-2 d-flex align-items-center gap-2">
+          <strong><i class="bi bi-terminal me-1"></i>SQL Console</strong>
+          <span class="badge bg-secondary ms-auto">read-only · EXPLAIN allowed · max 1 000 rows · 10 s timeout</span>
+        </div>
+        <div class="card-body pb-2">
+          <form method="post" id="query-form">
+            {% csrf_token %}
+
+            {% if form.sql.errors %}
+            <div class="alert alert-danger alert-sm py-2 mb-2">
+              {% for e in form.sql.errors %}<div>{{ e }}</div>{% endfor %}
+            </div>
+            {% endif %}
+
+            <textarea id="sql-textarea" name="sql" class="form-control font-monospace mb-2" rows="8"
+                      placeholder="SELECT * FROM database_kineticmodel LIMIT 10;"
+                      spellcheck="false" autocomplete="off">{% if sql_executed %}{{ sql_executed }}{% elif form.sql.value %}{{ form.sql.value }}{% endif %}</textarea>
+
+            <div class="d-flex align-items-center gap-3">
+              <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 text-nowrap" for="id_row_limit">Row limit</label>
+                {{ form.row_limit }}
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-play-fill me-1"></i>Run Query
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="clear-btn">
+                <i class="bi bi-x-circle me-1"></i>Clear
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Query examples accordion -->
+      <div class="accordion accordion-flush mb-3" id="examplesAccordion">
+        <div class="accordion-item border rounded">
+          <h2 class="accordion-header" id="examplesHeading">
+            <button class="accordion-button collapsed py-2" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#examplesBody"
+                    aria-expanded="false" aria-controls="examplesBody"
+                    style="font-size:0.9rem;">
+              <i class="bi bi-lightbulb me-2 text-warning"></i>
+              <strong>Example Queries</strong>
+              <span class="ms-2 text-muted fw-normal" style="font-size:0.8rem;">— click any query to load it</span>
+            </button>
+          </h2>
+          <div id="examplesBody" class="accordion-collapse collapse">
+            <div class="accordion-body p-2">
+              <!-- Category tabs -->
+              <ul class="nav nav-tabs nav-sm mb-2" id="exampleTabs" role="tablist">
+                {% for category, examples in query_examples.items %}
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link {% if forloop.first %}active{% endif %} py-1 px-3"
+                          style="font-size:0.8rem;"
+                          id="tab-{{ forloop.counter }}"
+                          data-bs-toggle="tab"
+                          data-bs-target="#tabpane-{{ forloop.counter }}"
+                          type="button" role="tab">
+                    {{ category }}
+                  </button>
+                </li>
+                {% endfor %}
+              </ul>
+              <div class="tab-content" id="exampleTabsContent">
+                {% for category, examples in query_examples.items %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="tabpane-{{ forloop.counter }}" role="tabpanel">
+                  <div class="list-group list-group-flush">
+                    {% for ex in examples %}
+                    <button type="button"
+                            class="list-group-item list-group-item-action example-query-btn d-flex align-items-start gap-2 py-2 px-2"
+                            data-sql="{{ ex.sql }}"
+                            title="Click to load into editor">
+                      <i class="bi bi-play-circle text-primary mt-1 flex-shrink-0"></i>
+                      <div>
+                        <div class="fw-semibold" style="font-size:0.82rem;">{{ ex.label }}</div>
+                        <pre class="mb-0 text-muted example-sql-preview" style="font-size:0.72rem;white-space:pre-wrap;max-height:3rem;overflow:hidden;">{{ ex.sql }}</pre>
+                      </div>
+                    </button>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error block -->
+      {% if error %}
+      <div class="card mb-3 border-danger">
+        <div class="card-header py-2 bg-danger text-white">
+          <i class="bi bi-exclamation-triangle me-1"></i>Query Error
+        </div>
+        <div class="card-body p-2">
+          <pre class="mb-0 text-danger" style="white-space:pre-wrap;font-size:0.85rem;">{{ error }}</pre>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Results block -->
+      {% if columns %}
+      <div class="card">
+        <div class="card-header py-2 d-flex gap-3 align-items-center">
+          <strong><i class="bi bi-grid-3x3 me-1"></i>Results</strong>
+          <span class="badge bg-success">{{ row_count }} row{{ row_count|pluralize }}</span>
+          {% if execution_time_ms is not None %}
+          <span class="text-muted small ms-auto">{{ execution_time_ms }} ms</span>
+          {% endif %}
+        </div>
+        <div class="card-body p-0">
+          <div class="results-table-wrapper">
+            <table class="table table-sm table-hover table-bordered results-table mb-0">
+              <thead class="table-light">
+                <tr>
+                  {% for col in columns %}
+                  <th class="text-nowrap">{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                <tr>
+                  {% for cell in row %}
+                  <td>{% if cell is None %}<span class="text-muted fst-italic">NULL</span>{% else %}{{ cell }}{% endif %}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% elif request.method == "POST" and not error and sql_executed %}
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Query executed successfully — no rows returned (e.g. EXPLAIN).
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById("clear-btn").addEventListener("click", function () {
+    document.getElementById("sql-textarea").value = "";
+    document.getElementById("sql-textarea").focus();
+  });
+
+  // Click an example query to load it into the editor
+  document.querySelectorAll(".example-query-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var sql = btn.getAttribute("data-sql");
+      document.getElementById("sql-textarea").value = sql;
+      // Collapse the examples panel after picking
+      var collapseEl = document.getElementById("examplesBody");
+      if (collapseEl && collapseEl.classList.contains("show")) {
+        bootstrap.Collapse.getInstance(collapseEl).hide();
+      }
+      document.getElementById("sql-textarea").focus();
+      // Scroll up so the textarea is visible
+      document.getElementById("sql-textarea").scrollIntoView({behavior: "smooth", block: "center"});
+    });
+  });
+
+  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter submits the form
+  document.getElementById("sql-textarea").addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      document.getElementById("query-form").submit();
+    }
+  });
+
+  // Clicking a table name inserts it into the textarea
+  document.querySelectorAll(".schema-table-name").forEach(function (el) {
+    el.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      var ta = document.getElementById("sql-textarea");
+      var tableName = el.textContent.trim();
+      if (!ta.value.trim()) {
+        ta.value = "SELECT * FROM " + tableName + " LIMIT 100;";
+      } else {
+        var start = ta.selectionStart;
+        ta.value = ta.value.slice(0, start) + tableName + ta.value.slice(ta.selectionEnd);
+        ta.selectionStart = ta.selectionEnd = start + tableName.length;
+      }
+      ta.focus();
+    });
+  });
+</script>
+{% endblock %}

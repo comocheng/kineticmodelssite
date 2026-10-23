@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a></li>
+            <li class="breadcrumb-item active">Compare</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0">Compare two models</h1>
+</div>
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-5"><label for="model-a" class="form-label small mb-0">Model A</label>
+        <select id="model-a" name="a" class="form-select form-select-sm">
+            {% for m in all_models %}<option value="{{ m.pk }}" {% if model_a and m.pk == model_a.pk %}selected{% endif %}>{{ m.model_name }}</option>{% endfor %}
+        </select></div>
+    <div class="col-md-5"><label for="model-b" class="form-label small mb-0">Model B</label>
+        <select id="model-b" name="b" class="form-select form-select-sm">
+            {% for m in all_models %}<option value="{{ m.pk }}" {% if model_b and m.pk == model_b.pk %}selected{% endif %}>{{ m.model_name }}</option>{% endfor %}
+        </select></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">Compare</button></div>
+</form>
+
+{% if model_a and model_b %}
+<p class="small mb-2">A: <a href="{% url 'kinetic-model-detail' model_a.pk %}">{{ model_a.model_name }}</a> · B: <a href="{% url 'kinetic-model-detail' model_b.pk %}">{{ model_b.model_name }}</a></p>
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">By layer</h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Layer</th>
+                <th class="text-end">{{ model_a.model_name }} reactions</th><th class="text-end">identical in {{ model_b.model_name }}</th>
+                <th class="text-end">{{ model_b.model_name }} reactions</th><th class="text-end">identical in {{ model_a.model_name }}</th></tr></thead>
+            <tbody>
+            {% for row in layers %}
+            <tr>
+                <td>{% if row.layer == "all" %}all{% else %}<a href="{% url 'sub-mechanism-list' %}?layer={{ row.layer|urlencode }}">{{ row.layer }}</a>{% endif %}</td>
+                <td class="text-end">{{ row.a.reactions|default:"–" }}</td>
+                <td class="text-end">{% if row.a %}{{ row.a.identical }} ({% widthratio row.a.identical row.a.reactions 100 %}%){% else %}–{% endif %}</td>
+                <td class="text-end">{{ row.b.reactions|default:"–" }}</td>
+                <td class="text-end">{% if row.b %}{{ row.b.identical }} ({% widthratio row.b.identical row.b.reactions 100 %}%){% else %}–{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-muted">These models share no reactions.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="small text-muted px-2 py-1 mb-0">{{ shared_total }} reactions in both; {{ only_a }} only in {{ model_a.model_name }}; {{ only_b }} only in {{ model_b.model_name }}.</p>
+    </div>
+</div>
+
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">Shared reactions with different rates ({{ differing_total }})</h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Reaction</th><th>Layer</th><th class="text-end">{{ model_b.model_name }} / {{ model_a.model_name }} at 1000 K</th></tr></thead>
+            <tbody>
+            {% for row in differing %}
+            <tr>
+                <td><a href="{% url 'reaction-detail' row.reaction_id %}">{{ row.reaction.equation|default:row.reaction_id }}</a></td>
+                <td><a href="{% url 'sub-mechanism-list' %}?layer={{ row.layer|urlencode }}">{{ row.layer }}</a></td>
+                <td class="text-end">{% if row.ratio %}{{ row.ratio_text }}{% else %}written the other way{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted">Every shared reaction has the same rate in both models.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if differing_total > differing|length %}<p class="small text-muted px-2 py-1 mb-0">Largest {{ differing|length }} differences shown.</p>{% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

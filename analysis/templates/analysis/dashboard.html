@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Analysis Dashboard{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item active">Model Analysis</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Model Analysis Dashboard</h1>
+            <p class="text-muted mb-0 mt-1">Validate kinetic models against experimental data</p>
+        </div>
+        <a href="{% url 'analysis:run-create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-play-circle me-1"></i>New Simulation
+        </a>
+    </div>
+</div>
+
+<!-- Quick Actions Section -->
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header">
+            <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+        </div>
+        <div class="section-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <a href="{% url 'analysis:run-create' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-primary-subtle text-primary">
+                                <i class="bi bi-play-circle"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Run Simulation</strong>
+                                <small class="d-block text-muted">Evaluate model against data</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'analysis:fuel-map' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-info-subtle text-info">
+                                <i class="bi bi-fuel-pump"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Fuel-Model Map</strong>
+                                <small class="d-block text-muted">Fuel → model compatibility</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'analysis:coverage-matrix' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-success-subtle text-success">
+                                <i class="bi bi-grid-3x3"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Coverage Matrix</strong>
+                                <small class="d-block text-muted">Model × Dataset heatmap</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'analysis:compare-models' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-warning-subtle text-warning">
+                                <i class="bi bi-bar-chart-line"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Compare Models</strong>
+                                <small class="d-block text-muted">Side-by-side comparison</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Overview -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Analysis Statistics</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Count</th>
+                            <th style="width:150px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-box text-primary me-2"></i>Kinetic Models</td>
+                            <td class="text-end fw-medium">{{ total_models|default:"—" }}</td>
+                            <td><a href="{% url 'kinetic-model-list' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-file-earmark-text text-danger me-2"></i>Experiment Datasets</td>
+                            <td class="text-end fw-medium">{{ total_datasets|default:"—" }}</td>
+                            <td><a href="{% url 'chemked_database:dataset-list' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-check-circle text-success me-2"></i>Successful Runs</td>
+                            <td class="text-end fw-medium">{{ successful_runs|default:"—" }}</td>
+                            <td><a href="{% url 'analysis:run-list' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-grid-3x3 text-info me-2"></i>Coverage</td>
+                            <td class="text-end fw-medium">{{ coverage_percent|default:"0" }}%</td>
+                            <td><span class="small text-muted">{{ coverage_stats.evaluated_pairs|default:0 }} pairs</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Top Models</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for model in top_models %}
+                        <tr>
+                            <td>{{ model.model_name }}</td>
+                            <td class="text-end">
+                                <span class="badge bg-primary-subtle text-primary">{{ model.coverage_count }} datasets</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-muted text-center py-3">No coverage data yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Runs -->
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="data-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Simulation Runs</h6>
+                <a href="{% url 'analysis:run-list' %}" class="small">View All →</a>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Dataset</th>
+                            <th>Status</th>
+                            <th class="text-end">Error</th>
+                            <th class="text-end">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in recent_runs %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'analysis:run-detail' run.pk %}">{{ run.kinetic_model.model_name }}</a>
+                            </td>
+                            <td><small class="text-muted">{{ run.dataset.short_name }}</small></td>
+                            <td>
+                                {% if run.status == 'completed' %}
+                                    <span class="badge bg-success-subtle text-success">Completed</span>
+                                {% elif run.status == 'running' %}
+                                    <span class="badge bg-warning-subtle text-warning">Running</span>
+                                {% elif run.status == 'failed' %}
+                                    <span class="badge bg-danger-subtle text-danger">Failed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary">{{ run.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if run.result and run.result.average_error_function %}
+                                    {{ run.result.average_error_function|floatformat:1 }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="text-end"><small class="text-muted">{{ run.created_at|timesince }} ago</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                No simulation runs yet. <a href="{% url 'analysis:run-create' %}">Create your first run</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Best Performers -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-star me-2"></i>Best Performers</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for cov in best_performers|slice:":5" %}
+                        <tr>
+                            <td>
+                                <small>
+                                    <strong>{{ cov.kinetic_model.model_name }}</strong><br>
+                                    <span class="text-muted">{{ cov.dataset.short_name }}</span>
+                                </small>
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-success-subtle text-success">{{ cov.latest_error_function|floatformat:1 }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-muted text-center py-3">No completed runs yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Needs Attention -->
+        {% if needs_attention %}
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Needs Attention</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for cov in needs_attention|slice:":5" %}
+                        <tr>
+                            <td>
+                                <small>
+                                    {{ cov.kinetic_model.model_name }}<br>
+                                    <span class="text-muted">{{ cov.dataset.short_name }}</span>
+                                </small>
+                            </td>
+                            <td class="text-end">
+                                {% if cov.is_outdated %}
+                                    <span class="badge bg-warning-subtle text-warning">Outdated</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

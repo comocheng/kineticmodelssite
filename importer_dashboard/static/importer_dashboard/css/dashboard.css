@@ -1,0 +1,1350 @@
+/* 
+ * RMG Importer Dashboard Styles
+ * Matches the aesthetic of dashboard_new.py with modern improvements
+ */
+
+/* ==================== Base Styles ==================== */
+:root {
+    /* Color Palette - Clean and Professional */
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-color: #10b981;
+    --success-hover: #059669;
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+    
+    /* Neutral Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --border-color: #e5e7eb;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-light: #9ca3af;
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    /* Border Radius */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Accessibility: Focus visible for keyboard navigation */
+*:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-secondary);
+    line-height: 1.6;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* ==================== Container ==================== */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+/* ==================== Dashboard Header ==================== */
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-header h1 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.dashboard-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+/* ==================== Stats Bar ==================== */
+/* Stats Grid - AWS-Inspired Design */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card::before {
+    content: '';
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background-size: 24px 24px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Total Jobs - Bar Chart Icon */
+.stat-card:nth-child(1)::before {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='20' x2='12' y2='10'/%3E%3Cline x1='18' y1='20' x2='18' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='16'/%3E%3C/svg%3E");
+}
+
+/* Running - Play Icon */
+.stat-card:nth-child(2)::before {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpolygon points='5 3 19 12 5 21 5 3'/%3E%3C/svg%3E");
+}
+
+/* Pending - Clock Icon */
+.stat-card:nth-child(3)::before {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E");
+}
+
+/* Completed - Check Icon */
+.stat-card:nth-child(4)::before {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+}
+
+.stat-card .stat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.stat-card .label {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+}
+
+/* ==================== Card ==================== */
+.card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.card h2 {
+    margin: 0 0 var(--spacing-lg) 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Toolbar - Compact Top Bar */
+.toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.toolbar.compact {
+    padding: 8px 12px;
+    gap: 6px;
+}
+
+/* ==================== Buttons - AWS Style ==================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    gap: 6px;
+    line-height: 1.5;
+}
+
+.btn:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.btn:hover {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Button Icons - Modern SVG */
+.btn-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+.btn-small svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-success {
+    background-color: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: #374151;
+    border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn-small {
+    padding: 4px 10px;
+    font-size: 13px;
+}
+
+/* ==================== Table - Scientific UI ==================== */
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: white;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-variant-numeric: tabular-nums;
+}
+
+thead {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    color: #374151;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+}
+
+th.tooltip {
+    cursor: help;
+    position: relative;
+}
+
+td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+    color: #111827;
+}
+
+tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Job name links */
+.job-name {
+    font-weight: 500;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.job-name:hover {
+    text-decoration: underline;
+}
+
+/* ==================== Job Status Badges ==================== */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-running {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-awaiting_input {
+    background-color: #ede9fe;
+    color: #5b21b6;
+}
+
+.status-idle {
+    background-color: #e5e7eb;
+    color: #6b7280;
+}
+
+.status-completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-failed {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status-cancelled {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+/* ==================== Links - Accessible ==================== */
+a {
+    color: #2563eb;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+a:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+a:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Table action links */
+td a {
+    color: #2563eb;
+    font-weight: 500;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+td a:hover {
+    background-color: #eff6ff;
+    text-decoration: none;
+}
+
+td a:focus-visible {
+    background-color: #dbeafe;
+}
+
+/* Button styled as link (for POST forms in tables) */
+.btn-link {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-weight: 500;
+    padding: 2px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.btn-link:hover {
+    background-color: #eff6ff;
+    text-decoration: none;
+}
+
+.btn-link:focus-visible {
+    background-color: #dbeafe;
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ==================== Progress Bar ==================== */
+.progress-bar {
+    width: 100%;
+    height: 1.5rem;
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: width 0.5s ease;
+}
+
+/* ==================== Tooltips - Accessible ==================== */
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltiptext {
+    visibility: hidden;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1f2937;
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1f2937 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext,
+.tooltip:focus .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* ==================== Alerts ==================== */
+.alert {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    border-left: 4px solid;
+}
+
+.alert-info {
+    background-color: #dbeafe;
+    border-color: var(--info-color);
+    color: #1e40af;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    border-color: var(--success-color);
+    color: #065f46;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    border-color: var(--warning-color);
+    color: #92400e;
+}
+
+.alert-danger {
+    background-color: #fee2e2;
+    border-color: var(--danger-color);
+    color: #991b1b;
+}
+
+/* ==================== Action Buttons Group ==================== */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ==================== Empty State ==================== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-state svg {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+/* ==================== Loading Spinner ==================== */
+.spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== Responsive Design ==================== */
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .table-container {
+        margin: 0 -1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    table {
+        font-size: 13px;
+    }
+    
+    th, td {
+        padding: 10px 12px;
+    }
+    
+    /* Stack cards on mobile */
+    .card {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+}
+
+/* High-resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    table {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ==================== Print Styles ==================== */
+@media print {
+    .toolbar,
+    .btn,
+    .action-buttons {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid var(--border-color);
+    }
+}
+
+/* ==================== Dark Mode Support (Optional) ==================== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1f2937;
+        --bg-secondary: #111827;
+        --bg-tertiary: #374151;
+        --border-color: #4b5563;
+        --text-primary: #f9fafb;
+        --text-secondary: #d1d5db;
+        --text-light: #9ca3af;
+    }
+    
+    .card,
+    table {
+        background: var(--bg-primary);
+    }
+    
+    tbody tr:nth-child(even) {
+        background-color: #1a1f2e;
+    }
+}
+
+/* ==================== Job Detail Page Styles ==================== */
+
+/* Override Bootstrap to make dashboard pages full-width */
+.dashboard-page body {
+    background-color: #f9fafb !important;
+}
+
+.dashboard-page .container-fluid > .row {
+    display: block !important;
+}
+
+.dashboard-page .container-fluid > .row > .col-md-8 {
+    max-width: 100% !important;
+    flex: none !important;
+    padding: 20px !important;
+}
+
+/* Hide the sidebar completely on dashboard pages */
+.dashboard-page .container-fluid > .row > .col-md-4 {
+    display: none !important;
+}
+
+/* Dashboard-specific container */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Job Header */
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.job-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.job-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Detail Grid */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.detail-item {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--primary-color);
+}
+
+.detail-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.detail-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+/* Species Table */
+.species-table {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.species-table table {
+    width: 100%;
+    min-width: 600px;
+}
+
+.stat-card{
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+.stats-grid .stat-card div{
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+/* Log Tabs */
+.log-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.log-tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #718096;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.3s;
+}
+
+.log-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.log-tab:hover {
+    color: #667eea;
+}
+
+.log-content {
+    display: none;
+}
+
+.log-content.active {
+    display: block;
+}
+
+/* Button Enhancements */
+.btn-icon {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* Log Viewer */
+.log-viewer {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 20px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 65vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    margin-top: 15px;
+}
+
+.log-viewer::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.log-viewer::-webkit-scrollbar-track {
+    background: #374151;
+    border-radius: 4px;
+}
+
+.log-viewer::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+}
+
+.log-viewer::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Progress Bar */
+.progress-bar {
+    background: #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 10px;
+    height: 30px;
+}
+
+.progress-fill {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px;
+    text-align: center;
+    font-weight: 600;
+    transition: width 0.3s ease;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Card Spacing */
+.card + .card {
+    margin-top: 20px;
+}
+
+/* Responsive Design for Job Detail */
+@media (max-width: 768px) {
+    .job-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .job-actions {
+        width: 100%;
+    }
+    
+    .job-actions .btn {
+        flex: 1;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .log-tabs {
+        overflow-x: auto;
+    }
+}
+
+/* ========================================================================
+   Real-time Activity Logger Styles
+   ======================================================================== */
+
+.log-viewer {
+    background: #1e1e1e;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+}
+
+.log-messages {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #d4d4d4;
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.log-entry {
+    display: grid;
+    grid-template-columns: 65px minmax(0, auto) 1fr;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin-bottom: 2px;
+    align-items: start;
+}
+
+.log-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.log-time {
+    flex-shrink: 0;
+    color: #858585;
+    font-weight: 500;
+    font-size: 11px;
+    padding-top: 2px;
+}
+
+.log-message {
+    grid-column: 3;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+/* Job context badge */
+.log-job-context {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(37, 99, 235, 0.2);
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #60a5fa;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: help;
+}
+
+/* Details toggle button */
+.log-details-toggle {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    opacity: 0.6;
+    transition: all 0.2s;
+    border-radius: 3px;
+}
+
+.log-details-toggle:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.log-details-toggle svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+}
+
+.log-details-toggle.expanded svg {
+    transform: rotate(180deg);
+}
+
+/* Details content */
+.log-details-content {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 2px solid rgba(37, 99, 235, 0.5);
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.log-details-list {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+}
+
+.log-details-list dt {
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: capitalize;
+}
+
+.log-details-list dd {
+    margin: 0;
+    color: #d4d4d4;
+    word-break: break-word;
+}
+
+/* Log level styles */
+.log-info {
+    border-left: 3px solid #0078d4;
+}
+
+.log-info .log-message {
+    color: #d4d4d4;
+}
+
+.log-success {
+    border-left: 3px solid #107c10;
+    background: rgba(16, 124, 16, 0.05);
+}
+
+.log-success .log-message {
+    color: #4ec9b0;
+}
+
+.log-warning {
+    border-left: 3px solid #ff8c00;
+    background: rgba(255, 140, 0, 0.05);
+}
+
+.log-warning .log-message {
+    color: #dcdcaa;
+}
+
+.log-error {
+    border-left: 3px solid #e51400;
+    background: rgba(229, 20, 0, 0.05);
+}
+
+.log-error .log-message {
+    color: #f48771;
+    font-weight: 500;
+}
+
+.log-debug {
+    border-left: 3px solid #666;
+    opacity: 0.7;
+}
+
+.log-debug .log-message {
+    color: #858585;
+    font-style: italic;
+}
+
+/* Scrollbar styling for log viewer */
+.log-messages::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.log-messages::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.log-messages::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 5px;
+}
+
+.log-messages::-webkit-scrollbar-thumb:hover {
+    background: #505050;
+}
+
+/* Button group for log controls */
+.btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-small:hover {
+    background: #f5f5f5;
+    border-color: #0078d4;
+    color: #374151;
+}
+
+.btn-secondary.btn-small {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+.btn-secondary.btn-small:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+    color: #1f2937;
+}
+
+/* Animation for new log entries */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-entry {
+    animation: slideIn 0.2s ease-out;
+}
+
+/* ========================================================================
+   Fixed Activity Log Panel (Right Side Slide-out)
+   ======================================================================== */
+
+.activity-log-fixed {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 450px;
+    background: white;
+    border-left: 2px solid #e5e7eb;
+    box-shadow: -4px 0 6px -1px rgba(0, 0, 0, 0.1), -2px 0 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-log-fixed.minimized {
+    transform: translateX(calc(100% - 40px));
+}
+
+.activity-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    cursor: default;
+    flex-shrink: 0;
+}
+
+.activity-log-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.log-status-indicator {
+    font-size: 12px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.activity-log-fixed .log-viewer {
+    background: #1e1e1e;
+    border-radius: 0;
+    overflow: hidden;
+    border: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-log-fixed .log-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Minimize state - show only tab */
+.activity-log-fixed.minimized .log-viewer {
+    display: none;
+}
+
+.activity-log-fixed.minimized .activity-log-header {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 16px 8px;
+    cursor: pointer;
+    height: 200px;
+    display: flex;
+    align-items: center;
+}
+
+.activity-log-fixed.minimized .activity-log-header > div:last-child {
+    display: none;
+}
+
+/* Add right padding to main content so it doesn't get hidden behind fixed panel */
+/* Only apply when activity log panel is actually present on the page */
+body:has(.activity-log-fixed) {
+    padding-right: 460px;
+    transition: padding-right 0.3s ease;
+}
+
+body:has(.activity-log-fixed).log-minimized {
+    padding-right: 40px;
+}
+
+/* Floating Toggle Button (appears when panel is minimized) */
+.floating-log-toggle {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(102, 126, 234, 0.1);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.floating-log-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 0 6px rgba(102, 126, 234, 0.15);
+}
+
+.floating-log-toggle:active {
+    transform: scale(0.95);
+}
+
+.floating-status-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    animation: pulse 2s infinite;
+}
+
+/* Show floating button only when panel is minimized */
+.activity-log-fixed.minimized ~ .floating-log-toggle {
+    display: flex !important;
+}
+
+
+
+/* Responsive: On mobile, overlay instead of pushing content */
+@media (max-width: 1024px) {
+    .activity-log-fixed {
+        width: 350px;
+    }
+    
+    body {
+        padding-right: 0;
+    }
+    
+    .activity-log-fixed.minimized {
+        transform: translateX(100%);
+    }
+    
+    .activity-log-fixed:not(.minimized) {
+        box-shadow: -8px 0 16px rgba(0, 0, 0, 0.2);
+    }
+}
+
+@media (max-width: 768px) {
+    .activity-log-fixed {
+        width: 100%;
+    }
+    
+    .floating-log-toggle {
+        width: 60px;
+        height: 60px;
+        font-size: 14px;
+    }
+}
+

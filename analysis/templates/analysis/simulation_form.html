@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}New Simulation Run{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item active">New Simulation</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0"><i class="bi bi-play-circle me-2 text-primary"></i>Run New Simulation</h1>
+    <p class="text-muted mb-0 mt-1">Evaluate a kinetic model against experimental data using PyTeCK</p>
+</div>
+
+{% if fuel_info %}
+<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-fuel-pump me-2 fs-5"></i>
+    <div>
+        <strong>Bulk simulation for {{ fuel_info.name }}</strong> —
+        Model and <strong>{{ fuel_info.dataset_count }}</strong> datasets have been pre-selected.
+        Review the selections below, then click <em>Run Simulation</em>.
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" id="simulation-form"
+              data-preselected-datasets='{{ preselected_dataset_ids }}'
+              data-preselected-model="{{ preselected_model_id }}"
+              >
+            {% csrf_token %}
+
+            <!-- Step 1: Select Kinetic Model -->
+            <div class="data-section mb-3">
+                <div class="section-header">
+                    <h6 class="mb-0"><i class="bi bi-1-circle me-2"></i>Select Kinetic Model</h6>
+                </div>
+                <div class="section-body">
+                    <div class="mb-2">
+                        <input type="text" id="model-search" class="form-control" 
+                               placeholder="Type to search models by name...">
+                    </div>
+                <div id="model-list" class="border rounded" style="max-height: 200px; overflow-y: auto;"
+                    data-api-url="{% url 'analysis:api-models-by-keyword' %}"
+                    data-counts-url="{% url 'analysis:api-model-counts' %}">
+                        <div class="p-3 text-muted text-center">Loading models...</div>
+                    </div>
+                    <div class="form-text mt-2">
+                        <span id="model-count">0</span> models available
+                    </div>
+                    {% if form.kinetic_model.errors %}
+                        <div class="text-danger small mt-1">{{ form.kinetic_model.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Step 2: Select Experiments -->
+            <div class="data-section mb-3">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-2-circle me-2"></i>Select Experiments</h6>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="select-all">Select All</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-all">Clear</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <input type="text" id="dataset-search" class="form-control" 
+                                   placeholder="Search by fuel (e.g., heptane, CH4)...">
+                            <div class="form-text">Search by species name, SMILES, InChI, or common name</div>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="exp-type-filter" class="form-select">
+                                <option value="">All Experiment Types</option>
+                                <option value="ignition delay">Ignition Delay</option>
+                                <option value="laminar flame speed">Laminar Flame Speed</option>
+                                <option value="speciation">Speciation</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="apparatus-filter" class="form-select">
+                                <option value="">All Apparatus</option>
+                                <option value="shock tube">Shock Tube</option>
+                                <option value="rapid compression machine">RCM</option>
+                                <option value="flow reactor">Flow Reactor</option>
+                                <option value="jet stirred reactor">JSR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="target-filter" class="form-select">
+                                <option value="">All Targets</option>
+                                <option value="pressure">Pressure</option>
+                                <option value="temperature">Temperature</option>
+                                <option value="oh">OH</option>
+                                <option value="oh*">OH*</option>
+                                <option value="ch">CH</option>
+                                <option value="ch*">CH*</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="dataset-list" class="border rounded" style="max-height: 350px; overflow-y: auto;"
+                         data-api-url="{% url 'analysis:api-datasets-by-fuel' %}">
+                        <div class="p-3 text-muted text-center">Loading datasets...</div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="form-text"><span id="dataset-count">0</span> datasets shown</span>
+                        <span class="form-text"><span id="selected-count">0</span> selected</span>
+                    </div>
+                    <div class="form-text text-muted" id="dataset-status" style="display: none;"></div>
+                    {% if form.datasets.errors %}
+                        <div class="text-danger small mt-1">{{ form.datasets.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>            <!-- Step 3: Options & Submit -->
+            <div class="data-section">
+                <div class="section-header">
+                    <h6 class="mb-0"><i class="bi bi-3-circle me-2"></i>Options & Run</h6>
+                </div>
+                <div class="section-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="skip_validation" id="skip_validation" checked>
+                        <label class="form-check-label" for="skip_validation">
+                            Skip ChemKED validation (faster, but may miss format issues)
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="auto_execute" id="auto_execute" checked>
+                        <label class="form-check-label" for="auto_execute">
+                            <i class="bi bi-lightning-fill text-warning me-1"></i>Start simulation automatically
+                        </label>
+                        <div class="form-text small">
+                            Uncheck to review &amp; edit species mapping before running
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            <i class="bi bi-play-fill me-1"></i>Run Simulation
+                        </button>
+                        <a href="{% url 'analysis:dashboard' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sidebar Help -->
+    <div class="col-lg-4">
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>About PyTeCK</h6>
+            </div>
+            <div class="section-body">
+                <p class="small text-muted mb-2">
+                    PyTeCK (Python Testing of Chemical Kinetics) evaluates the accuracy of kinetic 
+                    models by comparing predicted behavior against experimental measurements.
+                </p>
+                <p class="small text-muted mb-0">
+                    Lower error function values indicate better agreement between model and experiment.
+                </p>
+            </div>
+        </div>
+
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Experiment Types</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td><span class="badge bg-danger-subtle text-danger">IDT</span></td>
+                            <td class="small">Ignition Delay Time</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-warning-subtle text-warning">LFS</span></td>
+                            <td class="small">Laminar Flame Speed</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-info-subtle text-info">SR</span></td>
+                            <td class="small">Speciation (JSR/Flow Reactor)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips</h6>
+            </div>
+            <div class="section-body">
+                <ul class="small text-muted ps-3 mb-0">
+                    <li class="mb-1">Type fuel names like "heptane", "methane", or chemical formulas</li>
+                    <li class="mb-1">Select multiple experiments to compare across conditions</li>
+                    <li>Simulations typically take 10-60 seconds per dataset</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'analysis/simulation_form.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'source-search' %}">Sources</a></li>
+            {% if object %}
+            <li class="breadcrumb-item"><a href="{% url 'source-detail' object.pk %}">{{ object.source_title|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-text me-2"></i>
+                        {{ form_title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Publication Details Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-file-text me-1"></i>
+                                Publication Details
+                            </h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="id_source_title" class="form-label">Article Title</label>
+                                    {{ form.source_title }}
+                                    {% if form.source_title.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.source_title.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="id_journal_name" class="form-label">Journal</label>
+                                    {{ form.journal_name }}
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="id_publication_year" class="form-label">Year</label>
+                                    {{ form.publication_year }}
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="id_journal_volume_number" class="form-label">Volume</label>
+                                    {{ form.journal_volume_number }}
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="id_page_numbers" class="form-label">Pages</label>
+                                    {{ form.page_numbers }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Identifiers Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-hash me-1"></i>
+                                Identifiers
+                            </h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="id_doi" class="form-label">DOI</label>
+                                    {{ form.doi }}
+                                    <div class="form-text">e.g., 10.1021/acs.jpca.1c00234</div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="id_prime_id" class="form-label">PrIMe ID</label>
+                                    {{ form.prime_id }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Authors Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-people me-1"></i>
+                                Authors
+                                <small class="text-muted fw-normal ms-2">(Select existing or enter new)</small>
+                            </h6>
+                            
+                            {{ authorship_formset.management_form }}
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle" id="authorship-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50px;">Order</th>
+                                            <th>Select Existing Author</th>
+                                            <th>— OR Create New —</th>
+                                            <th style="width: 80px;">Delete</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for authorship_form in authorship_formset %}
+                                        <tr class="authorship-row">
+                                            <td>
+                                                {{ authorship_form.id }}
+                                                {{ authorship_form.order }}
+                                            </td>
+                                            <td>
+                                                {{ authorship_form.author }}
+                                            </td>
+                                            <td>
+                                                <div class="row g-2">
+                                                    <div class="col">
+                                                        {{ authorship_form.author_firstname }}
+                                                    </div>
+                                                    <div class="col">
+                                                        {{ authorship_form.author_lastname }}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if authorship_form.instance.pk %}
+                                                <div class="form-check">
+                                                    {{ authorship_form.DELETE }}
+                                                </div>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Either select an existing author from the dropdown, or enter first and last name to create a new author.
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ submit_text }}
+                            </button>
+                            {% if object %}
+                            <a href="{% url 'source-detail' object.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                Cancel
+                            </a>
+                            <a href="{% url 'source-delete' object.pk %}" class="btn btn-outline-danger ms-auto">
+                                <i class="bi bi-trash me-1"></i>
+                                Delete
+                            </a>
+                            {% else %}
+                            <a href="{% url 'source-search' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                Cancel
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Help -->
+        <div class="col-lg-2">
+            <div class="card bg-light border-0">
+                <div class="card-body small">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        Tips
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-1"></i>
+                            DOI enables automatic citation linking
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-1"></i>
+                            Author order matters - use the Order field
+                        </li>
+                        <li>
+                            <i class="bi bi-check text-success me-1"></i>
+                            You can add more authors after saving
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .authorship-row:hover {
+        background-color: #f8f9fa;
+    }
+    #authorship-table td {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}

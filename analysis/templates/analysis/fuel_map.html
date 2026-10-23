@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fuel-Model Compatibility Map{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item active">Fuel-Model Map</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-fuel-pump me-2 text-primary"></i>Fuel-Model Compatibility Map</h1>
+            <p class="text-muted mb-0 mt-1">Discover which kinetic models can simulate each fuel</p>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'analysis:fuel-map-rebuild' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm"
+                        onclick="return confirm('Rebuild the entire fuel-model map? This may take a minute.')">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Rebuild Map
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="fs-2 fw-bold text-primary">{{ total_fuels }}</div>
+                <small class="text-muted">Fuel Species</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="fs-2 fw-bold text-success">{{ total_compatible_pairs }}</div>
+                <small class="text-muted">Compatible Fuel–Model Pairs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="fs-2 fw-bold text-info">{{ total_models_in_map }}</div>
+                <small class="text-muted">Models with ≥1 Fuel Match</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if total_fuels == 0 %}
+<!-- Empty State -->
+<div class="data-section">
+    <div class="section-body text-center py-5">
+        <i class="bi bi-fuel-pump display-4 text-muted mb-3 d-block"></i>
+        <h5 class="text-muted">No fuel data yet</h5>
+        <p class="text-muted mb-3">
+            Click <strong>Rebuild Map</strong> to scan experiment datasets and build the fuel-model compatibility index.
+        </p>
+        <form method="post" action="{% url 'analysis:fuel-map-rebuild' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i>Build Fuel Map Now
+            </button>
+        </form>
+    </div>
+</div>
+{% else %}
+
+<div class="row g-3">
+    <!-- Sidebar: Groups -->
+    <div class="col-lg-3">
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Fuel Groups</h6>
+            </div>
+            <div class="section-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'analysis:fuel-map' %}{% if search_query %}?q={{ search_query }}{% endif %}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if not active_group_id %} active{% endif %}">
+                        All Fuels
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">{{ total_fuels }}</span>
+                    </a>
+                    {% for group in fuel_groups %}
+                    <a href="{% url 'analysis:fuel-map' %}?group={{ group.pk }}{% if search_query %}&q={{ search_query }}{% endif %}"
+                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if active_group_id == group.pk %} active{% endif %}">
+                        {{ group.name }}
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill">{{ group.fuel_count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-search me-2"></i>Search</h6>
+            </div>
+            <div class="section-body">
+                <form method="get" action="{% url 'analysis:fuel-map' %}">
+                    {% if active_group_id %}
+                    <input type="hidden" name="group" value="{{ active_group_id }}">
+                    {% endif %}
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="q" class="form-control"
+                               placeholder="Name, SMILES, formula…"
+                               value="{{ search_query|default:'' }}">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    {% if search_query %}
+                    <a href="{% url 'analysis:fuel-map' %}{% if active_group_id %}?group={{ active_group_id }}{% endif %}"
+                       class="small text-muted mt-1 d-inline-block">
+                        <i class="bi bi-x-circle me-1"></i>Clear search
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main: Fuel List -->
+    <div class="col-lg-9">
+        <!-- Sort controls -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="text-muted small">
+                Showing <strong>{{ fuels|length }}</strong> fuel{{ fuels|length|pluralize:"s" }}
+                {% if search_query %} matching "<em>{{ search_query }}</em>"{% endif %}
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="?sort=datasets{% if search_query %}&q={{ search_query }}{% endif %}{% if active_group_id %}&group={{ active_group_id }}{% endif %}"
+                   class="btn btn-outline-secondary{% if sort == 'datasets' %} active{% endif %}">
+                    <i class="bi bi-file-earmark-text me-1"></i>By Datasets
+                </a>
+                <a href="?sort=models{% if search_query %}&q={{ search_query }}{% endif %}{% if active_group_id %}&group={{ active_group_id }}{% endif %}"
+                   class="btn btn-outline-secondary{% if sort == 'models' %} active{% endif %}">
+                    <i class="bi bi-box me-1"></i>By Models
+                </a>
+                <a href="?sort=name{% if search_query %}&q={{ search_query }}{% endif %}{% if active_group_id %}&group={{ active_group_id }}{% endif %}"
+                   class="btn btn-outline-secondary{% if sort == 'name' %} active{% endif %}">
+                    <i class="bi bi-sort-alpha-down me-1"></i>A–Z
+                </a>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Fuel</th>
+                            <th>Formula</th>
+                            <th class="text-center">Datasets</th>
+                            <th class="text-center">Compatible Models</th>
+                            <th>Group</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fuel in fuels %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'analysis:fuel-detail' fuel.pk %}" class="fw-medium">
+                                    {{ fuel.common_name|default:fuel.smiles }}
+                                </a>
+                                {% if fuel.smiles %}
+                                <br><code class="small text-muted">{{ fuel.smiles }}</code>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fuel.formula %}
+                                <span class="badge bg-light text-dark border">{{ fuel.formula }}</span>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary">{{ fuel.dataset_count }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if fuel.compatible_model_count > 0 %}
+                                <span class="badge bg-success-subtle text-success">{{ fuel.compatible_model_count }}</span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fuel.group %}
+                                <span class="badge bg-info-subtle text-info">{{ fuel.group.name }}</span>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'analysis:fuel-detail' fuel.pk %}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                {% if search_query %}
+                                No fuels matching "{{ search_query }}"
+                                {% else %}
+                                No fuel species found.
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

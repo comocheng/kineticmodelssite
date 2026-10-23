@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres
+    platform: linux/amd64  # Force x86_64 for compatibility
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./.env.dev
+  debug:
+    build: 
+      context: .
+      dockerfile: Dockerfile.custom
+    platform: linux/amd64  # Force x86_64 for RMG compatibility
+    tty: true
+    env_file:
+      - ./.env.dev
+    volumes:
+      - .:/app
+      - rmg-models:/app/rmg-models
+      - conda:/kms_env
+    ports:
+      - "5678:5678"
+      - "8080:8080"
+    depends_on:
+      - db
+volumes:
+  rmg-models:
+    external: true
+  conda:
+    external: true

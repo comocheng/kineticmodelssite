@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - RMG Importer{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
+<style>
+    /* Auto-refresh animation for updated stats */
+    .job-stat {
+        transition: background-color 0.3s ease;
+    }
+    .stat-updated {
+        background-color: rgba(34, 197, 94, 0.2) !important;
+    }
+    /* Running job indicator */
+    tr[data-status="running"] .job-stat {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block header_subtitle %}Job Management and Monitoring{% endblock %}
+
+{% block content %}
+
+<div id="auto-refresh-enabled"></div>
+
+<div class="toolbar compact">
+    <button class="btn btn-primary btn-small btn-icon" onclick="location.href='{% url 'importer_dashboard:refresh_jobs' %}'">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        Refresh Jobs
+    </button>
+    <button class="btn btn-secondary btn-small btn-icon" onclick="location.href='{% url 'importer_dashboard:refresh_progress' %}'">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        Update Progress
+    </button>
+    <form method="post" action="{% url 'importer_dashboard:reconnect' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-small btn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
+            Reconnect SSH
+        </button>
+    </form>
+    <div style="flex: 1;"></div>
+    <a href="{% url 'importer_dashboard:settings' %}" class="btn btn-secondary btn-small btn-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Settings
+    </a>
+</div>
+
+<div class="card">
+    <h2>Import Jobs</h2>
+    
+    <!-- Search Field -->
+    <div class="search-container" style="margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="position: relative; flex: 1; max-width: 400px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #888;">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="job-search-input" placeholder="Search jobs by name, port, or SLURM ID..." 
+                       style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 2.25rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                <button type="button" id="clear-search-btn" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #888; font-size: 1.2rem; line-height: 1;">&times;</button>
+            </div>
+        </div>
+        <p id="search-results-info" style="margin-top: 0.5rem; color: #666; font-size: 0.85rem; display: none;"></p>
+    </div>
+    
+    {% if jobs %}
+    <div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Mechanism</th>
+                <th>Port</th>
+                <th>Job #</th>
+                <th>Job</th>
+                <th>Host</th>
+                <th>Web</th>
+                <th>Log</th>
+                <th>Errors</th>
+                <th title="Processed Species">Pr.</th>
+                <th title="Identified Species">Id.</th>
+                <th title="Total Species">Tot.</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>
+                    <a href="{% url 'importer_dashboard:job_detail' job.id %}" class="job-name">
+                        {{ job.name }}
+                    </a>
+                    {% if job.status == 'awaiting_input' %}
+                    <span class="status-badge status-awaiting_input" title="Waiting for someone to confirm a match on the importer page">Awaiting input</span>
+                    {% endif %}
+                </td>
+                <td>{{ job.port|default:"-" }}</td>
+                <td>{{ job.slurm_job_id|default:"-" }}</td>
+                <td>
+                    {% if job.slurm_job_id or job.status == 'running' or job.status == 'pending' or job.status == 'awaiting_input' %}
+                        <form method="post" action="{% url 'importer_dashboard:job_kill' job.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-link" onclick="return confirm('Are you sure you want to kill this job?');">kill</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'importer_dashboard:job_start' job.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-link">start</button>
+                        </form>
+                    {% endif %}
+                </td>
+                <td>{{ job.host|default:"-" }}</td>
+                <td>
+                    {% if job.port and job.status == 'running' or job.port and job.status == 'awaiting_input' %}
+                        {% if job.host == 'Pending...' %}
+                            <a href="{% url 'importer_dashboard:refresh_jobs' %}">refresh</a>
+                        {% elif job.host == 'localhost' or job.host == '127.0.0.1' %}
+                            <a href="#" onclick="window.open('http://' + window.location.hostname + '/importer/{{ job.port }}/', '_blank'); return false;">open</a>
+                        {% elif job.ood_url %}
+                            <a href="{{ job.ood_url }}" target="_blank">open</a>
+                        {% elif job.host %}
+                            <a href="http://{{ job.host }}/importer/{{ job.port }}/" target="_blank">open</a>
+                        {% else %}
+                            <span title="Compute node not assigned yet">-</span>
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'importer_dashboard:job_log' job.id %}">log tail</a>
+                </td>
+                <td>
+                    <a href="{% url 'importer_dashboard:job_error_log' job.id %}">errors</a>
+                </td>
+                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="processed">{{ job.processed_species|default:"-" }}</td>
+                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="identified">{{ job.identified_species|default:"-" }}</td>
+                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="total">{{ job.total_species|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <p>No jobs found. Click "Refresh Jobs" to discover import jobs on the cluster.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Real-time Activity Logger - Right Side Panel -->
+<div id="activityLogPanel" class="activity-log-fixed minimized">
+    <div class="activity-log-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; color: #2563eb;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Activity Log</h3>
+            <span id="logStatusIndicator" class="log-status-indicator">●</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="pauseLogBtn" class="btn btn-secondary btn-small" title="Pause log updates">
+                <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                </svg>
+                <span id="pauseText">Pause</span>
+            </button>
+            <button id="minimizeLogBtn" class="btn btn-secondary btn-small" title="Hide log panel">
+                <svg id="minimizeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </button>
+            <form method="post" action="{% url 'importer_dashboard:clear_logs' %}" style="display: inline; margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-small" onclick="return confirm('Clear all logs?')" title="Clear all logs">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+    <div id="logViewer" class="log-viewer" style="display: none;">
+        <div id="logMessages" class="log-messages">
+            <div class="log-entry log-info">
+                <span class="log-time">--:--:--</span>
+                <span class="log-message">Connecting to log stream...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Toggle Button (visible when panel is minimized) -->
+<button id="floatingLogToggle" class="floating-log-toggle" title="Show Activity Log" style="display: flex;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 22px; height: 22px;">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    <span style="font-size: 10px; display: block; margin-top: 4px; font-weight: 600;">Logs</span>
+    <span id="floatingStatusDot" class="floating-status-dot">●</span>
+</button>
+<script>document.body.classList.add('log-minimized');</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Start auto-refresh (uses Dashboard.autoRefresh from dashboard.js)
+    if (typeof Dashboard !== 'undefined' && Dashboard.autoRefresh) {
+        Dashboard.autoRefresh.start();
+    }
+    
+    // Update progress for running jobs using the API
+    const runningJobs = {{ running_job_ids|safe }};
+    const STATS_REFRESH_INTERVAL = 15000; // 15 seconds
+    
+    // Function to update job stats from API
+    async function refreshJobStats() {
+        if (runningJobs.length === 0) return;
+        
+        try {
+            const response = await fetch(`{% url 'importer_dashboard:jobs_stats_api' %}?job_ids=${runningJobs.join(',')}`);
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            
+            // Update each job's stats in the table
+            for (const [jobId, stats] of Object.entries(data.jobs)) {
+                // Update processed column
+                const processedCell = document.querySelector(`td.job-stat[data-job-id="${jobId}"][data-stat="processed"]`);
+                if (processedCell) {
+                    const newValue = stats.processed || '-';
+                    if (processedCell.textContent !== String(newValue)) {
+                        processedCell.textContent = newValue;
+                        processedCell.classList.add('stat-updated');
+                        setTimeout(() => processedCell.classList.remove('stat-updated'), 1000);
+                    }
+                }
+                
+                // Update identified column
+                const identifiedCell = document.querySelector(`td.job-stat[data-job-id="${jobId}"][data-stat="identified"]`);
+                if (identifiedCell) {
+                    const newValue = stats.identified || '-';
+                    if (identifiedCell.textContent !== String(newValue)) {
+                        identifiedCell.textContent = newValue;
+                        identifiedCell.classList.add('stat-updated');
+                        setTimeout(() => identifiedCell.classList.remove('stat-updated'), 1000);
+                    }
+                }
+                
+                // Update total column
+                const totalCell = document.querySelector(`td.job-stat[data-job-id="${jobId}"][data-stat="total"]`);
+                if (totalCell) {
+                    const newValue = stats.total || '-';
+                    if (totalCell.textContent !== String(newValue)) {
+                        totalCell.textContent = newValue;
+                        totalCell.classList.add('stat-updated');
+                        setTimeout(() => totalCell.classList.remove('stat-updated'), 1000);
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to refresh job stats:', error);
+        }
+    }
+    
+    // Start auto-refresh for running jobs
+    if (runningJobs.length > 0) {
+        console.log(`Auto-refresh enabled for ${runningJobs.length} running jobs`);
+        // Initial fetch after 2 seconds
+        setTimeout(refreshJobStats, 2000);
+        // Then every 15 seconds
+        setInterval(refreshJobStats, STATS_REFRESH_INTERVAL);
+    }
+    
+    // Real-time logging - IIFE to avoid pollution but expose needed functions
+    (function() {
+        // Local state
+        let logPaused = false;
+        let maxLogEntries = 100;
+        // The panel polls get_logs for messages newer than the last one shown. It used to
+        // hold a Server-Sent Events connection open, which tied up a server worker per tab.
+        let pollTimer = null;
+        let lastTimestamp = null;
+        const logsUrl = '{% url "importer_dashboard:get_logs" %}';
+    
+        // Toggle pause function
+        function toggleLogPause() {
+            logPaused = !logPaused;
+            const pauseIcon = document.getElementById('pauseIcon');
+            const pauseText = document.getElementById('pauseText');
+            
+            if (pauseIcon && pauseText) {
+                if (logPaused) {
+                    // Change to play icon
+                    pauseIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+                    pauseText.textContent = 'Resume';
+                    console.log('Log viewer paused');
+                } else {
+                    // Change to pause icon
+                    pauseIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+                    pauseText.textContent = 'Pause';
+                    console.log('Log viewer resumed');
+                }
+            }
+        }
+        
+        // Expose to window for button click
+        window.toggleLogPause = toggleLogPause;
+    
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('en-US', { hour12: false });
+        }
+        
+        function getLevelClass(level) {
+            const levelMap = {
+                'INFO': 'log-info',
+                'SUCCESS': 'log-success',
+                'WARNING': 'log-warning',
+                'ERROR': 'log-error',
+                'DEBUG': 'log-debug'
+            };
+            return levelMap[level] || 'log-info';
+        }
+        
+        function addLogEntry(entry) {
+            if (logPaused) return;
+        
+            const logMessages = document.getElementById('logMessages');
+            if (!logMessages) {
+                console.warn('logMessages element not found');
+                return;
+            }
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${getLevelClass(entry.level)}`;
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = formatTime(entry.timestamp);
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.className = 'log-message';
+            messageSpan.textContent = entry.message;
+            
+            logEntry.appendChild(timeSpan);
+            logEntry.appendChild(messageSpan);
+            
+            // Add job context if available
+            if (entry.job_name) {
+                const jobContext = document.createElement('span');
+                jobContext.className = 'log-job-context';
+                jobContext.textContent = `[${entry.job_name}]`;
+                logEntry.insertBefore(jobContext, messageSpan);
+            }
+            
+            // Add expandable details section if details are available
+            if (entry.details && Object.keys(entry.details).length > 0) {
+                const detailsToggle = document.createElement('button');
+                detailsToggle.className = 'log-details-toggle';
+                detailsToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+                detailsToggle.title = 'Show details';
+                
+                const detailsContent = document.createElement('div');
+                detailsContent.className = 'log-details-content';
+                detailsContent.style.display = 'none';
+                
+                // Format details as a nice key-value list
+                const detailsList = document.createElement('dl');
+                detailsList.className = 'log-details-list';
+                
+                for (const [key, value] of Object.entries(entry.details)) {
+                    const dt = document.createElement('dt');
+                    dt.textContent = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    const dd = document.createElement('dd');
+                    dd.textContent = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
+                    
+                    detailsList.appendChild(dt);
+                    detailsList.appendChild(dd);
+                }
+                
+                detailsContent.appendChild(detailsList);
+                
+                detailsToggle.onclick = function(e) {
+                    e.stopPropagation();
+                    const isVisible = detailsContent.style.display !== 'none';
+                    detailsContent.style.display = isVisible ? 'none' : 'block';
+                    detailsToggle.classList.toggle('expanded', !isVisible);
+                };
+                
+                messageSpan.appendChild(detailsToggle);
+                logEntry.appendChild(detailsContent);
+            }
+            
+            logMessages.appendChild(logEntry);
+            
+            // Limit number of log entries
+            while (logMessages.children.length > maxLogEntries) {
+                logMessages.removeChild(logMessages.firstChild);
+            }
+            
+            // Auto-scroll to bottom
+            logMessages.scrollTop = logMessages.scrollHeight;
+        }
+        
+        function pollLogs() {
+            let url = logsUrl + '?count=' + (lastTimestamp ? 100 : 20);
+            if (lastTimestamp) {
+                url += '&after=' + encodeURIComponent(lastTimestamp);
+            }
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    updateStatusIndicator('connected');
+                    (data.messages || []).forEach(msg => {
+                        addLogEntry(msg);
+                        if (!lastTimestamp || msg.timestamp > lastTimestamp) {
+                            lastTimestamp = msg.timestamp;
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Log poll error:', error);
+                    updateStatusIndicator('disconnected');
+                });
+        }
+
+        function startLogPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            updateStatusIndicator('connecting');
+            const logMessages = document.getElementById('logMessages');
+            if (logMessages) {
+                logMessages.innerHTML = '';
+            }
+            pollLogs();
+            pollTimer = setInterval(pollLogs, 3000);  // every 3 seconds
+        }
+
+        // Initialize on DOM ready
+        function init() {
+            console.log('Initializing log stream connection...');
+            
+            // Attach pause button listener
+            const pauseBtn = document.getElementById('pauseLogBtn');
+            if (pauseBtn) {
+                pauseBtn.addEventListener('click', toggleLogPause);
+                console.log('Pause button listener attached');
+            } else {
+                console.warn('Pause button not found');
+            }
+            
+            // Start fetching log messages
+            startLogPolling();
+        }
+        
+        // Minimize/Maximize log viewer
+        function toggleMinimize() {
+            const panel = document.getElementById('activityLogPanel');
+            const viewer = document.getElementById('logViewer');
+            const icon = document.getElementById('minimizeIcon');
+            const floatingBtn = document.getElementById('floatingLogToggle');
+            
+            if (panel.classList.contains('minimized')) {
+                // Show panel
+                panel.classList.remove('minimized');
+                document.body.classList.remove('log-minimized');
+                viewer.style.display = 'flex';
+                // Change to left arrow (hide)
+                icon.innerHTML = '<polyline points="15 18 9 12 15 6"/>';
+                if (floatingBtn) floatingBtn.style.display = 'none';
+            } else {
+                // Hide panel
+                panel.classList.add('minimized');
+                document.body.classList.add('log-minimized');
+                viewer.style.display = 'none';
+                // Change to right arrow (show)
+                icon.innerHTML = '<polyline points="9 18 15 12 9 6"/>';
+                if (floatingBtn) floatingBtn.style.display = 'flex';
+            }
+        }
+        
+        // Update connection status indicator
+        function updateStatusIndicator(status) {
+            const indicator = document.getElementById('logStatusIndicator');
+            const floatingDot = document.getElementById('floatingStatusDot');
+            
+            let color, title;
+            if (status === 'connected') {
+                color = '#10b981';
+                title = 'Connected';
+            } else if (status === 'connecting') {
+                color = '#f59e0b';
+                title = 'Connecting...';
+            } else {
+                color = '#ef4444';
+                title = 'Disconnected';
+            }
+            
+            if (indicator) {
+                indicator.style.color = color;
+                indicator.title = title;
+            }
+            
+            if (floatingDot) {
+                floatingDot.style.color = color;
+                floatingDot.title = title;
+            }
+        }
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+        // Attach minimize button listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const minimizeBtn = document.getElementById('minimizeLogBtn');
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', toggleMinimize);
+                console.log('Minimize button listener attached');
+            }
+            
+            const floatingBtn = document.getElementById('floatingLogToggle');
+            if (floatingBtn) {
+                floatingBtn.addEventListener('click', toggleMinimize);
+                console.log('Floating toggle button listener attached');
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+            }
+        });
+        
+    })(); // End IIFE
+    
+    // ============================================
+    // Async Job Search
+    // ============================================
+    (function() {
+        const searchInput = document.getElementById('job-search-input');
+        const clearBtn = document.getElementById('clear-search-btn');
+        const resultsInfo = document.getElementById('search-results-info');
+        const jobsTable = document.querySelector('.table-container table');
+        
+        if (!searchInput || !jobsTable) return;
+        
+        const tbody = jobsTable.querySelector('tbody');
+        if (!tbody) return;
+        
+        const allRows = Array.from(tbody.querySelectorAll('tr'));
+        const totalJobs = allRows.length;
+        
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+        
+        // Filter rows based on search query
+        function filterJobs(query) {
+            query = query.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            allRows.forEach(row => {
+                if (!query) {
+                    row.style.display = '';
+                    visibleCount++;
+                    return;
+                }
+                
+                // Get searchable text from relevant columns
+                const cells = row.querySelectorAll('td');
+                const jobName = cells[0]?.textContent?.toLowerCase() || '';
+                const port = cells[1]?.textContent?.toLowerCase() || '';
+                const slurmId = cells[2]?.textContent?.toLowerCase() || '';
+                const host = cells[4]?.textContent?.toLowerCase() || '';
+                
+                const matches = jobName.includes(query) || 
+                               port.includes(query) || 
+                               slurmId.includes(query) || 
+                               host.includes(query);
+                
+                if (matches) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Update results info
+            if (query) {
+                resultsInfo.textContent = `Found ${visibleCount} job${visibleCount !== 1 ? 's' : ''} matching "${query}"`;
+                resultsInfo.style.display = 'block';
+                clearBtn.style.display = 'block';
+            } else {
+                resultsInfo.style.display = 'none';
+                clearBtn.style.display = 'none';
+            }
+        }
+        
+        // Attach event listeners
+        searchInput.addEventListener('input', debounce(function(e) {
+            filterJobs(e.target.value);
+        }, 150));
+        
+        // Clear button
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterJobs('');
+            searchInput.focus();
+        });
+        
+        // Support Escape key to clear
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                filterJobs('');
+            }
+        });
+    })();
+</script>
+{% endblock %}

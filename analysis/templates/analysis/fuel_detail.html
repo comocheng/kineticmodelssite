@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ fuel.common_name|default:fuel.smiles }} — Fuel Detail{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:fuel-map' %}">Fuel-Model Map</a></li>
+            <li class="breadcrumb-item active">{{ fuel.common_name|default:fuel.smiles }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0">
+                <i class="bi bi-fuel-pump me-2 text-primary"></i>
+                {{ fuel.common_name|default:fuel.smiles }}
+            </h1>
+            <p class="text-muted mb-0 mt-1">Compatibility details and species mapping preview</p>
+        </div>
+        <a href="{% url 'analysis:fuel-map' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Map
+        </a>
+    </div>
+</div>
+
+<!-- Fuel Info Card -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Fuel Identifiers</h6>
+            </div>
+            <div class="section-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label text-muted small mb-0">Common Name</label>
+                        <div class="fw-medium">{{ fuel.common_name|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label text-muted small mb-0">Formula</label>
+                        <div>
+                            {% if fuel.formula %}
+                            <span class="badge bg-light text-dark border fs-6">{{ fuel.formula }}</span>
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label text-muted small mb-0">SMILES</label>
+                        <div><code>{{ fuel.smiles|default:"—" }}</code></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label text-muted small mb-0">InChI</label>
+                        <div><code class="small" style="word-break: break-all;">{{ fuel.inchi }}</code></div>
+                    </div>
+                    {% if fuel.name_variants %}
+                    <div class="col-12">
+                        <label class="form-label text-muted small mb-0">Known Names</label>
+                        <div>
+                            {% for name in fuel.name_variants %}
+                            <span class="badge bg-secondary-subtle text-secondary me-1">{{ name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if fuel.group %}
+                    <div class="col-12">
+                        <label class="form-label text-muted small mb-0">Group</label>
+                        <div>
+                            <a href="{% url 'analysis:fuel-map' %}?group={{ fuel.group.pk }}">
+                                <span class="badge bg-info-subtle text-info">{{ fuel.group.name }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Summary</h6>
+            </div>
+            <div class="section-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted">Datasets</span>
+                    <span class="badge bg-primary-subtle text-primary fs-6">{{ dataset_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted">Compatible Models</span>
+                    <span class="badge bg-success-subtle text-success fs-6">{{ compatible_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Incompatible Models</span>
+                    <span class="badge bg-danger-subtle text-danger fs-6">{{ incompatible_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compatible Models -->
+<div class="data-section mb-4">
+    <div class="section-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="bi bi-check-circle text-success me-2"></i>
+            Compatible Models
+            <span class="badge bg-success-subtle text-success ms-2">{{ compatible_count }}</span>
+        </h6>
+    </div>
+    <div class="section-body p-0">
+        {% if compatible_models %}
+        <table class="table table-sm table-hover mb-0" id="compatible-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;"></th>
+                    <th>Model Name</th>
+                    <th>Matched As</th>
+                    <th class="text-center">Species</th>
+                    <th class="text-center">Reactions</th>
+                    <th class="text-center">Simulated?</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for compat in compatible_models %}
+                <tr class="model-row" data-fuel-pk="{{ fuel.pk }}" data-model-pk="{{ compat.kinetic_model.pk }}">
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link p-0 toggle-mapping" title="Show species mapping">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <strong>{{ compat.kinetic_model.model_name }}</strong>
+                    </td>
+                    <td>
+                        <code>{{ compat.matched_model_species }}</code>
+                        <span class="badge bg-primary-subtle text-primary ms-1">{{ compat.get_match_method_display }}</span>
+                    </td>
+                    <td class="text-center">{{ compat.model_total_species }}</td>
+                    <td class="text-center">{{ compat.model_total_reactions }}</td>
+                    <td class="text-center">
+                        {% if compat.latest_coverage and compat.latest_coverage.has_successful_run %}
+                        <span class="badge bg-success-subtle text-success" title="Error: {{ compat.latest_coverage.latest_error_function|floatformat:1 }}">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ compat.latest_coverage.latest_error_function|floatformat:1 }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Not yet</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'analysis:run-create' %}?model={{ compat.kinetic_model.pk }}&fuel={{ fuel.pk }}"
+                           class="btn btn-outline-primary btn-sm" title="Run simulation with all datasets for this fuel">
+                            <i class="bi bi-play-circle"></i>
+                        </a>
+                    </td>
+                </tr>
+                <!-- Expandable mapping preview row (hidden by default) -->
+                <tr class="mapping-preview-row d-none" id="mapping-{{ compat.kinetic_model.pk }}">
+                    <td colspan="7" class="bg-light p-3">
+                        <div class="mapping-content">
+                            <div class="text-center text-muted py-2">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading species mapping…
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-x-circle display-6 d-block mb-2"></i>
+            No kinetic models contain this fuel species.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Incompatible Models (collapsed by default) -->
+{% if incompatible_models %}
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0">
+            <button class="btn btn-link text-decoration-none p-0" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#incompatible-section">
+                <i class="bi bi-x-circle text-danger me-2"></i>
+                Incompatible Models
+                <span class="badge bg-danger-subtle text-danger ms-2">{{ incompatible_count }}</span>
+                <i class="bi bi-chevron-down ms-2 small"></i>
+            </button>
+        </h6>
+    </div>
+    <div class="collapse" id="incompatible-section">
+        <div class="section-body p-0">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Model Name</th>
+                        <th class="text-center">Species</th>
+                        <th class="text-center">Reactions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for compat in incompatible_models %}
+                    <tr class="text-muted">
+                        <td>{{ compat.kinetic_model.model_name }}</td>
+                        <td class="text-center">{{ compat.model_total_species }}</td>
+                        <td class="text-center">{{ compat.model_total_reactions }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Datasets using this fuel -->
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+            Experiment Datasets
+            <span class="badge bg-primary-subtle text-primary ms-2">{{ dataset_count }}</span>
+        </h6>
+    </div>
+    <div class="section-body p-0">
+        {% if datasets %}
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Dataset</th>
+                    <th>Type</th>
+                    <th class="text-end">Datapoints</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ds in datasets %}
+                <tr>
+                    <td>
+                        <a href="{% url 'chemked_database:dataset-detail' ds.pk %}">
+                            {{ ds.short_name }}
+                        </a>
+                        <br><small class="text-muted">{{ ds.chemked_file_path }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary-subtle text-secondary">{{ ds.experiment_type }}</span>
+                    </td>
+                    <td class="text-end">{{ ds.datapoints.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted py-4">No datasets found for this fuel.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle species mapping preview on row click
+    document.querySelectorAll('.toggle-mapping').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const row = btn.closest('tr');
+            const fuelPk = row.dataset.fuelPk;
+            const modelPk = row.dataset.modelPk;
+            const previewRow = document.getElementById('mapping-' + modelPk);
+            const icon = btn.querySelector('i');
+
+            if (previewRow.classList.contains('d-none')) {
+                // Show
+                previewRow.classList.remove('d-none');
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-down');
+
+                // Load mapping via AJAX if not already loaded
+                const content = previewRow.querySelector('.mapping-content');
+                if (content.querySelector('.spinner-border')) {
+                    fetch(`/analysis/api/fuel-map/${fuelPk}/model/${modelPk}/mapping/`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.error) {
+                                content.innerHTML = '<div class="text-danger p-2">Error: ' + data.error + '</div>';
+                                return;
+                            }
+                            renderMappingPreview(content, data);
+                        })
+                        .catch(err => {
+                            content.innerHTML = '<div class="text-danger p-2">Failed to load mapping</div>';
+                        });
+                }
+            } else {
+                // Hide
+                previewRow.classList.add('d-none');
+                icon.classList.remove('bi-chevron-down');
+                icon.classList.add('bi-chevron-right');
+            }
+        });
+    });
+
+    function renderMappingPreview(container, data) {
+        const datasets = data.datasets || [];
+        if (datasets.length === 0) {
+            container.innerHTML = '<div class="text-muted p-2">No mapping data available.</div>';
+            return;
+        }
+
+        // Merge all datasets into one distinct species list (keyed by name)
+        const speciesMap = {};   // name → {model_name, method, smiles, matched}
+        let totalDatasets = datasets.length;
+
+        datasets.forEach(function(ds) {
+            ds.species.forEach(function(sp) {
+                // Keep first occurrence, or upgrade to matched if any dataset matched
+                if (!speciesMap[sp.name]) {
+                    speciesMap[sp.name] = {
+                        model_name: sp.model_name || '',
+                        method: sp.method || '',
+                        smiles: sp.smiles || '',
+                        matched: sp.matched,
+                    };
+                } else if (sp.matched && !speciesMap[sp.name].matched) {
+                    // Upgrade: if matched in any dataset, mark as matched
+                    speciesMap[sp.name].model_name = sp.model_name;
+                    speciesMap[sp.name].method = sp.method;
+                    speciesMap[sp.name].matched = true;
+                }
+            });
+        });
+
+        // Sort: matched first, then alphabetical
+        const speciesList = Object.entries(speciesMap)
+            .map(([name, info]) => ({ name, ...info }))
+            .sort((a, b) => {
+                if (a.matched !== b.matched) return a.matched ? -1 : 1;
+                return a.name.localeCompare(b.name);
+            });
+
+        const matchedCount = speciesList.filter(s => s.matched).length;
+        const totalCount = speciesList.length;
+        const pct = totalCount > 0 ? Math.round(matchedCount / totalCount * 100) : 0;
+        const barColor = pct === 100 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger';
+
+        let html = `
+            <div class="small mb-2">
+                <strong>Species Mapping Preview</strong> for
+                <a href="/analysis/run/create/?model=${data.model_pk || ''}&fuel=${data.fuel_pk || ''}"
+                   class="text-primary fw-medium">${data.model}</a>
+                <span class="text-muted ms-2">(${totalDatasets} dataset${totalDatasets > 1 ? 's' : ''})</span>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="small text-muted">
+                    ${matchedCount} of ${totalCount} distinct species matched
+                </span>
+                <span class="badge ${pct === 100 ? 'bg-success-subtle text-success' : pct >= 50 ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'}">
+                    ${pct}%
+                </span>
+            </div>
+            <div class="progress mb-3" style="height: 4px;">
+                <div class="progress-bar ${barColor}" style="width: ${pct}%"></div>
+            </div>
+            <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Dataset Species</th>
+                        <th>Model Species</th>
+                        <th class="text-center">Status</th>
+                        <th>SMILES</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        speciesList.forEach(function(sp) {
+            const statusBadge = sp.matched
+                ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Matched</span>'
+                : '<span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle me-1"></i>Missing</span>';
+
+            html += `
+                <tr>
+                    <td><strong>${sp.name}</strong></td>
+                    <td><code>${sp.model_name || '—'}</code></td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td><code class="text-muted">${sp.smiles || '—'}</code></td>
+                </tr>`;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item active">ChemKED Database</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-fire me-2 text-danger"></i>ChemKED Experimental Database</h1>
+            <p class="text-muted mb-0 mt-1">Curated experimental combustion data for model validation</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'chemked_database:dataset-upload' %}" class="btn btn-outline-primary">
+                <i class="bi bi-upload me-1"></i>Upload Dataset
+            </a>
+            <a href="{% url 'chemked_database:dataset-create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle me-1"></i>Create Dataset
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Search Section -->
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header">
+            <h6 class="mb-0"><i class="bi bi-search me-2"></i>Quick Search</h6>
+        </div>
+        <div class="section-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <a href="{% url 'chemked_database:dataset-list' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-danger-subtle text-danger">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Datasets</strong>
+                                <small class="d-block text-muted">Browse experiment files</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'chemked_database:species-search' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-primary-subtle text-primary">
+                                <i class="bi bi-droplet-half"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Species</strong>
+                                <small class="d-block text-muted">Search by fuel or species</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'chemked_database:apparatus-list' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-warning-subtle text-warning">
+                                <i class="bi bi-gear"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Apparatus</strong>
+                                <small class="d-block text-muted">Shock tubes, RCMs</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Overview -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Database Statistics</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Count</th>
+                            <th style="width:150px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-file-earmark-text text-danger me-2"></i>Datasets</td>
+                            <td class="text-end fw-medium">{{ dataset_count|default:"—" }}</td>
+                            <td><a href="{% url 'chemked_database:dataset-list' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-clipboard-data text-success me-2"></i>Datapoints</td>
+                            <td class="text-end fw-medium">{{ datapoint_count|default:"—" }}</td>
+                            <td><span class="small text-muted">Individual measurements</span></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-droplet text-primary me-2"></i>Unique Species</td>
+                            <td class="text-end fw-medium">{{ species_count|default:"—" }}</td>
+                            <td><a href="{% url 'chemked_database:species-search' %}" class="small">Browse →</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Condition Ranges</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Temperature</td>
+                            <td class="text-end">
+                                {% if temp_stats.min_temp %}
+                                {{ temp_stats.min_temp|floatformat:0 }} – {{ temp_stats.max_temp|floatformat:0 }} K
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pressure</td>
+                            <td class="text-end">
+                                {% if pressure_stats.min_pressure %}
+                                {{ pressure_stats.min_pressure|floatformat:0 }} – {{ pressure_stats.max_pressure|floatformat:0 }} Pa
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Experiment Types & Apparatus -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Experiment Types</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <tbody>
+                        {% for exp in experiment_types %}
+                        <tr>
+                            <td>
+                                {% if exp.experiment_type == 'ignition delay' %}
+                                <i class="bi bi-lightning text-warning me-2"></i>
+                                {% elif exp.experiment_type == 'laminar flame speed' %}
+                                <i class="bi bi-fire text-danger me-2"></i>
+                                {% else %}
+                                <i class="bi bi-graph-up text-info me-2"></i>
+                                {% endif %}
+                                {{ exp.experiment_type|title }}
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-secondary">{{ exp.count }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-muted">No experiments yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Apparatus Types</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <tbody>
+                        {% for app in apparatus_types %}
+                        <tr>
+                            <td>
+                                {% if app.apparatus__kind == 'shock tube' %}
+                                <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+                                {% else %}
+                                <i class="bi bi-box text-success me-2"></i>
+                                {% endif %}
+                                {{ app.apparatus__kind|title }}
+                            </td>
+                            <td class="text-end">
+                                <span class="badge bg-secondary">{{ app.count }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-muted">No apparatus data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Fuels -->
+{% if top_fuels %}
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fuelsSection">
+            <h6 class="mb-0"><i class="bi bi-fuel-pump me-2"></i>Most Studied Fuels</h6>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="fuelsSection">
+            <div class="section-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for fuel in top_fuels %}
+                    <a href="{% url 'chemked_database:species-datapoints' fuel.species_name %}" 
+                       class="btn btn-outline-secondary btn-sm">
+                        {{ fuel.species_name }}
+                        <span class="badge bg-secondary ms-1">{{ fuel.count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Datasets -->
+{% if recent_datasets %}
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#recentSection">
+            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recently Added Datasets</h6>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse show" id="recentSection">
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Type</th>
+                            <th>Year</th>
+                            <th class="text-end">Datapoints</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dataset in recent_datasets %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'chemked_database:dataset-detail' dataset.pk %}">
+                                    {{ dataset.chemked_file_path|truncatechars:50 }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-secondary-subtle text-secondary">{{ dataset.experiment_type }}</span></td>
+                            <td>{{ dataset.reference_year|default:"—" }}</td>
+                            <td class="text-end">{{ dataset.datapoints.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- About ChemKED -->
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#aboutSection">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>About ChemKED</h6>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse" id="aboutSection">
+            <div class="section-body">
+                <p class="mb-2">
+                    <strong>ChemKED</strong> (Chemical Kinetics Experimental Database) is a standardized format for 
+                    storing and sharing experimental combustion data. This database contains curated ignition delay 
+                    measurements from shock tubes and rapid compression machines.
+                </p>
+                <p class="mb-0 small text-muted">
+                    <i class="bi bi-github me-1"></i>
+                    <a href="https://github.com/pr-omethe-us/ChemKED" target="_blank" rel="noopener">ChemKED</a> | 
+                    <a href="https://github.com/pr-omethe-us/PyKED" target="_blank" rel="noopener">PyKED</a> | 
+                    <a href="https://github.com/pr-omethe-us/ChemKED-database" target="_blank" rel="noopener">ChemKED-database</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-link {
+    display: block;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.15s;
+}
+.search-link:hover {
+    background-color: var(--color-gray-100);
+}
+.search-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+</style>
+{% endblock %}

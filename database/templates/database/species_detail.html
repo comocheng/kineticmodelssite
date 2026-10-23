@@ -1,71 +1,279 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load renders %}
 {% load utils %}
 
 {% block content %}
-<h1>Species Detail</h1>
-<h2>ID: {{ species.pk }}</h2>
-{% if names_models %}
-<h2>Names</h2>
-<div class="list-group">
-    {% for name, models in names_models %}
-    <div class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ name }}</h5>
+<!-- Compact Header -->
+<div class="detail-header">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'species-search' %}">Species</a></li>
+            <li class="breadcrumb-item active">{{ species.formula }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3">
+        <h1 class="h4 mb-0 font-monospace">{{ species.formula }}</h1>
+        <span class="badge bg-secondary">ID: {{ species.pk }}</span>
+        {% if species.molecular_weight %}<span class="text-muted small">MW: {{ species.molecular_weight }} g/mol</span>{% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Structure -->
+        {% if structures %}
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#structureSection">
+                <h6 class="mb-0"><i class="bi bi-diagram-2 me-2"></i>Structure ({{ structures|length }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="structureSection">
+                <div class="section-body p-0">
+                    {% for structure in structures %}
+                    <div class="d-flex border-bottom">
+                        <div class="structure-thumb p-2">
+                            <img src="{% url 'draw-structure' structure.pk %}" alt="{{ species.formula }}">
+                        </div>
+                        <div class="flex-grow-1 p-2">
+                            <table class="table table-sm table-borderless mb-0">
+                                {% if structure.iupac_name %}
+                                <tr><td class="text-muted small">IUPAC name</td><td class="small">{{ structure.iupac_name }}</td></tr>
+                                {% endif %}
+                                {% if structure.pubchem_cid %}
+                                <tr><td class="text-muted small">Names source</td><td class="small"><a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{ structure.pubchem_cid }}" target="_blank" rel="noopener noreferrer">PubChem CID {{ structure.pubchem_cid }}<span class="visually-hidden"> (opens in a new tab)</span></a></td></tr>
+                                {% endif %}
+                                {% if structure.isomer.inchi %}
+                                <tr><td class="text-muted small" style="width:80px;">InChI</td><td><code class="small text-break">{{ structure.isomer.inchi }}</code>
+                                    <button class="btn btn-sm btn-link p-0 ms-1 copy-btn" data-copy="{{ structure.isomer.inchi }}"><i class="bi bi-clipboard"></i></button>
+                                </td></tr>
+                                {% endif %}
+                                {% if structure.smiles %}
+                                <tr><td class="text-muted small">SMILES</td><td><code class="small">{{ structure.smiles }}</code></td></tr>
+                                {% endif %}
+                                <tr><td class="text-muted small">Multiplicity</td><td class="small">{{ structure.multiplicity }}</td></tr>
+                                {% if structure.adjacency_list %}
+                                <tr><td class="text-muted small">Adj. List</td><td><details class="small"><summary class="text-primary">View</summary><pre class="mb-0 small">{{ structure.adjacency_list }}</pre></details></td></tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
-        <br />
-        <h6>Models</h6>
-        <div class="list-group">
-            {% for model_name, model_id in models %}
-            <a class="list-group-item list-group-item-action flex-column align-items-start"href="{% url 'kinetic-model-detail' model_id %}">{{ model_name }}</a>
-            {% endfor %}
+        {% endif %}
+
+        <!-- Thermodynamic Data -->
+        <div class="data-section">
+            <div class="section-header"><h6 class="mb-0">Thermochemistry sources</h6></div>
+            <div class="section-body p-0">
+                {% include 'database/thermo_records.html' %}
+            </div>
+        </div>
+        {% include 'database/thermo_plot.html' %}
+        {% if thermo_list %}
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#thermoSection">
+                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Thermodynamic Data</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="thermoSection">
+                <div class="section-body">
+                    {{ thermo_list|render_thermo_list }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Transport Properties -->
+        {% if transport_list %}
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#transportSection">
+                <h6 class="mb-0"><i class="bi bi-arrows-move me-2"></i>Transport Properties</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="transportSection">
+                <div class="section-body">
+                    {{ transport_list|render_transport_list }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reactions -->
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#reactionsSection">
+                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Reactions ({{ reactions.paginator.count|default:0 }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="reactionsSection">
+                <div class="section-body">
+                    {% if reactions %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 small">
+                        <span class="text-muted">{{ reactions.paginator.count }} reactions</span>
+                        {% render_pagination objects=reactions page_name="page" %}
+                    </div>
+                    {{ reactions|render_reaction_list }}
+                    <div class="mt-2">
+                        {% render_pagination objects=reactions page_name="page" %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0 small">No reactions found.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-    {% endfor %}
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Info -->
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Properties</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted">Database ID</td><td class="text-end fw-medium">{{ species.pk }}</td></tr>
+                    <tr><td class="text-muted">Formula</td><td class="text-end font-monospace fw-medium">{{ species.formula }}</td></tr>
+                    {% if species.molecular_weight %}<tr><td class="text-muted">Molecular Weight</td><td class="text-end">{{ species.molecular_weight }} g/mol</td></tr>{% endif %}
+                    {% if sidebar_enthalpy %}
+                    <tr><td class="text-muted">ΔH°f (298.15 K)</td><td class="text-end">{{ sidebar_enthalpy }} J/mol
+                        <div class="small"><a href="{% url 'thermo-detail' sidebar_thermo.pk %}"{% if sidebar_thermo_models %} title="{{ sidebar_thermo_models }}"{% endif %}>{{ sidebar_thermo_source }}</a></div>
+                    </td></tr>
+                    {% endif %}
+                    {% if structures %}<tr><td class="text-muted">Structures</td><td class="text-end">{{ structures|length }}</td></tr>{% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Names -->
+        {% if names_models %}
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#namesSection">
+                <h6 class="mb-0"><i class="bi bi-tags me-2"></i>Known Names ({{ names_models|length }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="namesSection">
+                <div class="section-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        {% for name, models in names_models %}
+                        <tr>
+                            <td>
+                                <details class="name-detail">
+                                    <summary class="d-flex justify-content-between align-items-center">
+                                        <span>{{ name }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary small">{{ models|length }}</span>
+                                    </summary>
+                                    <div class="ps-3 pt-1 small">
+                                        {% for model_name, model_id in models %}
+                                        {% if model_id %}
+                                        <a href="{% url 'kinetic-model-detail' model_id %}" class="d-block text-muted py-1">{{ model_name }}</a>
+                                        {% else %}<span class="text-muted">Species reference name</span>{% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
-<br />
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.section-body {
+    padding: 0.75rem;
+}
+
+.table {
+    font-size: 0.85rem;
+}
+
+.table td {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+}
+
+.structure-thumb {
+    width: 120px;
+    flex-shrink: 0;
+    background: var(--color-gray-50);
+    border-right: 1px solid var(--color-gray-200);
+}
+
+.structure-thumb img {
+    max-width: 100%;
+    max-height: 80px;
+    display: block;
+    margin: 0 auto;
+}
+
+.name-detail summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.name-detail summary::-webkit-details-marker {
+    display: none;
+}
+
+.copy-btn:hover { color: var(--color-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if thermo_plot.curves %}
+{% include 'database/plot_scripts.html' %}
+<script>renderThermoPlot("thermo-plot", "thermo-plot-data", "thermo-plot-controls", "thermo-plot-table");</script>
 {% endif %}
-<h2>Isomer Inchis</h2>
-<ul class="list-group">
-    {% for isomer_inchi in isomer_inchis %}
-    <li class="list-group-item">{{ isomer_inchi }}</li>
-    {% endfor %}
-</ul>
-<br>
-<h2>Structure Info</h2>
-<table class="table table-bordered table-hover">
-    <thead>
-        <th scope="col">Drawing</th>
-        <th scope="col">Adjacency List</th>
-        <th scope="col">SMILEs</th>
-    </thead>
-    <tbody>
-        {% for structure in structures %}
-        <tr>
-            <td><img src="{% url 'draw-structure' structure.pk %}" /></td>
-            <td>
-                <pre>{{ structure.adjacency_list }}</pre>
-            </td>
-            <td>{{ structure.smiles }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<br />
-{% if thermo_list %}
-<h2>Thermo Results</h2>
-{{ thermo_list|render_thermo_list }}
-<br>
-{% endif %}
-{% if transport_list %}
-<h2>Transport Results</h2>
-{{ transport_list|render_transport_list }}
-<br>
-{% endif %}
-<h2>Reactions</h2>
-{% render_pagination objects=reactions page_name="page" %}
-{{ reactions|render_reaction_list }}
-<br>
-{% render_pagination objects=reactions page_name="page" %}
+<script>
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const text = this.dataset.copy;
+        navigator.clipboard.writeText(text).then(() => {
+            const icon = this.querySelector('i');
+            icon.classList.replace('bi-clipboard', 'bi-check');
+            setTimeout(() => icon.classList.replace('bi-check', 'bi-clipboard'), 2000);
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item active">RMG-database libraries</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0">RMG-database libraries</h1>
+</div>
+<p class="small text-muted">Every RMG-database kinetics and thermo library with an entry whose reaction or species is on this site, and the model with the most identical data. <a href="{% url 'rmg-family-list' %}">RMG reaction families</a></p>
+
+<div class="data-section">
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0 align-middle">
+            <thead><tr><th>Library</th><th>Data</th><th class="text-end">Entries on the site</th><th class="text-end">Models with identical data</th><th>Closest model</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr>
+                <td><a href="{% url 'rmg-library-detail' row.kind row.name %}">{{ row.name }}</a></td>
+                <td>{% if row.kind == "kinetics" %}Reactions{% else %}Thermo{% endif %}</td>
+                <td class="text-end">{{ row.entries }}</td>
+                <td class="text-end">{{ row.models }}</td>
+                <td>{% if row.best %}<a href="{% url 'kinetic-model-detail' row.best.kinetic_model_id %}">{{ row.best.kinetic_model.model_name }}</a>
+                    <span class="text-muted">{{ row.best.identical }} of {{ row.best.model_total }}</span>{% else %}–{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-muted">Run match_rmg_libraries to fill this page.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

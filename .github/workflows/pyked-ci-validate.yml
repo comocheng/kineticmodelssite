@@ -1,0 +1,108 @@
+# Triggered by ChemKED-database CI via repository_dispatch.
+# Runs PyKED schema validation on a self-hosted runner (PyKED already installed),
+# then checks the files for duplicate data and folder placement against the
+# runner's ChemKED-database clone (CHEMKED_DATABASE_PATH), and posts both results
+# back to the originating PR as check-runs.
+
+name: PyKED CI Validation
+
+on:
+  repository_dispatch:
+    types: [pyked-validate]
+
+jobs:
+  validate:
+    name: Run PyKED Validation
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout kineticmodelssite
+        uses: actions/checkout@v4
+
+      - name: Restore runner .env
+        run: |
+          ENV_SRC="$HOME/Documents/CoMoChEng/actions-runner/.runner-config/kms.env"
+          if [ -f "$ENV_SRC" ]; then
+            cp "$ENV_SRC" "${{ github.workspace }}/.env"
+          else
+            echo "WARNING: $ENV_SRC not found — DB credentials missing"
+          fi
+
+      - name: Decode ChemKED files from payload
+        id: decode
+        run: |
+          rm -rf /tmp/pyked_ci_files
+          mkdir -p /tmp/pyked_ci_files
+          # Payload: { files: [{filename, repo_path, content_base64}], pr_repo, pr_number, commit_sha }
+          PAYLOAD='${{ toJson(github.event.client_payload) }}'
+
+          PR_REPO=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['pr_repo'])")
+          PR_NUMBER=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['pr_number'])")
+          COMMIT_SHA=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['commit_sha'])")
+
+          echo "$PAYLOAD" | python3 -c "
+          import sys, json, base64, os
+          payload = json.load(sys.stdin)
+          for f in payload.get('files', []):
+              # Keep the repo path: one PR can add the same file name in two folders
+              rel = os.path.normpath(f.get('repo_path') or f['filename'])
+              if os.path.isabs(rel) or rel.split(os.sep)[0] == '..':
+                  sys.exit(f'Refusing a path outside the files directory: {rel}')
+              path = os.path.join('/tmp/pyked_ci_files', rel)
+              os.makedirs(os.path.dirname(path), exist_ok=True)
+              content = base64.b64decode(f['content_base64'])
+              with open(path, 'wb') as fh:
+                  fh.write(content)
+              repo_path = f.get('repo_path', f['filename'])
+              with open(path + '.repo_path', 'w') as rp:
+                  rp.write(repo_path)
+              print(f'Decoded: {path}')
+          "
+
+          echo "pr_repo=$PR_REPO" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Generate GitHub App token for check-runs
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: LekiaAnonim
+          repositories: ChemKED-database
+
+      - name: Run PyKED validation and post check-run
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda activate kms
+          cd ${{ github.workspace }}
+          python manage.py ci_validate_chemked \
+            --files-dir /tmp/pyked_ci_files \
+            --pr-repo "${{ steps.decode.outputs.pr_repo }}" \
+            --pr-number "${{ steps.decode.outputs.pr_number }}" \
+            --commit-sha "${{ steps.decode.outputs.commit_sha }}" \
+            --github-token "$GITHUB_TOKEN"
+
+      - name: Check duplicates and folders and post check-run
+        if: always() && steps.decode.outcome == 'success' && steps.app-token.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda activate kms
+          cd ${{ github.workspace }}
+          python manage.py ci_check_chemked_repo \
+            --files-dir /tmp/pyked_ci_files \
+            --pull \
+            --pr-repo "${{ steps.decode.outputs.pr_repo }}" \
+            --pr-number "${{ steps.decode.outputs.pr_number }}" \
+            --commit-sha "${{ steps.decode.outputs.commit_sha }}" \
+            --github-token "$GITHUB_TOKEN"
+
+      - name: Cleanup temp files
+        if: always()
+        run: rm -rf /tmp/pyked_ci_files

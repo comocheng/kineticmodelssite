@@ -1,0 +1,39 @@
+<div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Source</th><th>ΔfH° (298.15 K)<br><small>J/mol</small></th><th>Thermo model</th></tr></thead>
+        <tbody>
+        {% for record in thermo_records %}
+        <tr>
+            <td>
+                <strong>{{ record.get_provider_display }}{% if record.provider == 'rmg_thermo_library' %}: <a href="{% url 'rmg-library-detail' 'thermo' record.raw_data.library %}">{{ record.raw_data.library }}</a>{% endif %}</strong>
+                {% if record.provider == 'group_additivity' %}<span class="badge bg-warning text-dark">Estimate</span>{% endif %}
+                {% if record.provider == 'atct_constrained' %}<span class="badge bg-info text-dark">Derived</span>{% endif %}
+                <div class="small">{{ record.label }} · {{ record.phase }}</div>
+                {% if record.provider == 'atct_constrained' %}<div class="small text-muted">ΔfH° from ATcT {% if record.enthalpy_source.source_url %}<a href="{{ record.enthalpy_source.source_url }}" target="_blank" rel="noopener noreferrer">{{ record.enthalpy_source.external_id }}</a>{% else %}{{ record.enthalpy_source.external_id }}{% endif %} · Cp and S from {% if record.heat_capacity_source.nasa_thermo_id %}<a href="{% url 'thermo-detail' record.heat_capacity_source.nasa_thermo_id %}">{{ record.heat_capacity_source.get_provider_display }}</a>{% else %}{{ record.heat_capacity_source.get_provider_display }}{% endif %} · its H298 moved {{ record.enthalpy_shift_kj|floatformat:1 }} kJ/mol</div>{% endif %}
+                <details class="small mt-1">
+                    <summary>Source and version</summary>
+                    <div class="text-break">{{ record.external_id }}<br>Version: {{ record.source_version }}</div>
+                    <div>{{ record.electronic_state }}</div>
+                    <div>Structure {{ record.structure_id }} · retrieved {{ record.retrieved_at|date:"Y-m-d" }}</div>
+                    {% if record.source_url %}<a href="{{ record.source_url }}" target="_blank" rel="noopener noreferrer">Source reference</a> · {% endif %}
+                    <a href="{% url 'api-thermo-record-detail' record.pk %}">Full record</a>
+                    <p class="mt-1 text-break" style="white-space: pre-wrap;">{{ record.provenance }}</p>
+                </details>
+            </td>
+            <td>
+                {{ record.enthalpy_298|floatformat:2 }}
+                {% if record.uncertainty_298 != None %}<div class="small">± {{ record.uncertainty_298|floatformat:2 }} <span class="text-muted">(reported)</span></div>{% endif %}
+            </td>
+            <td>
+                {% if record.nasa_thermo_id %}
+                <a href="{% url 'thermo-detail' record.nasa_thermo_id %}">NASA polynomial</a>
+                <div class="small text-muted">{{ record.nasa_thermo.temp_min_1|floatformat:0 }}–{{ record.nasa_thermo.temp_max_2|floatformat:0 }} K</div>
+                {% else %}<span class="text-muted small">Reference enthalpy only</span>{% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">No ATcT, Burcat, or Group Additivity records imported for this structure yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

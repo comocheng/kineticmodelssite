@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Coverage Matrix{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item active">Coverage Matrix</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-grid-3x3 me-2 text-primary"></i>Model-Dataset Coverage Matrix</h1>
+            <p class="text-muted mb-0 mt-1">Model performance across experimental datasets, grouped by fuel</p>
+        </div>
+        <a href="{% url 'analysis:run-create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-play-circle me-1"></i>New Simulation
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="h3 mb-0 text-primary">{{ total_models }}</div>
+                <small class="text-muted">Models</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="h3 mb-0 text-danger">{{ total_datasets }}</div>
+                <small class="text-muted">Datasets</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="h3 mb-0 text-success">{{ evaluated_pairs }}</div>
+                <small class="text-muted">Evaluated Pairs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="data-section h-100">
+            <div class="section-body text-center py-3">
+                <div class="h3 mb-0 text-warning">{{ coverage_percent|floatformat:1 }}%</div>
+                <small class="text-muted">Coverage</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if evaluated_pairs > 0 %}
+
+<!-- SECTION 1: Model x Fuel Heatmap -->
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-grid me-2"></i>Model x Fuel Overview</h6>
+    </div>
+    <div class="section-body">
+        <p class="small text-muted mb-2">
+            Each cell shows the <strong>average error function</strong> across all datasets for that fuel.
+            Click a cell to jump to the per-dataset detail below. Grey = not yet tested.
+        </p>
+        <div id="overview-heatmap" style="min-height: 200px;"></div>
+    </div>
+</div>
+
+<!-- SECTION 2: Model Ranking Table -->
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Model Rankings</h6>
+    </div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th>Model</th>
+                        <th class="text-end">Avg Error</th>
+                        <th class="text-end">Best</th>
+                        <th class="text-center">Datasets</th>
+                        <th>Fuel Breakdown</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ms in model_summaries %}
+                    <tr>
+                        <td class="text-muted fw-medium">{{ forloop.counter }}</td>
+                        <td>
+                            <span class="d-inline-block me-2" style="width:10px;height:10px;border-radius:2px;background:{{ ms.colour }};"></span>
+                            <span class="fw-medium">{{ ms.name }}</span>
+                        </td>
+                        <td class="text-end">
+                            {% if ms.avg_error != None %}
+                            <span class="fw-medium {% if ms.avg_error < 10 %}text-success{% elif ms.avg_error < 100 %}text-warning{% elif ms.avg_error < 1000 %}text-danger{% else %}text-danger{% endif %}">
+                                {{ ms.avg_error|floatformat:1 }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if ms.best_error != None %}
+                            <span class="text-success">{{ ms.best_error|floatformat:2 }}</span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary-subtle text-secondary">{{ ms.total_datasets }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                {% for fb in ms.fuels %}
+                                <span class="badge {% if fb.avg < 10 %}bg-success-subtle text-success{% elif fb.avg < 100 %}bg-warning-subtle text-warning{% elif fb.avg < 1000 %}bg-danger-subtle text-danger{% else %}bg-danger text-white{% endif %}"
+                                      title="{{ fb.fuel }}: avg={{ fb.avg|floatformat:1 }}, best={{ fb.best|floatformat:2 }}, {{ fb.count }}/{{ fb.total }} datasets ({{ fb.pct }}%)">
+                                    {{ fb.fuel }} {{ fb.avg|floatformat:0 }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 3: Per-Fuel Drill-Down -->
+<div class="data-section mb-4" id="fuel-detail-section">
+    <div class="section-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h6 class="mb-0"><i class="bi bi-bar-chart-steps me-2"></i>Per-Dataset Detail</h6>
+        <!-- Fuel selector dropdown (scales to any number of fuels) -->
+        <div class="d-flex align-items-center gap-2">
+            <label for="fuelSelect" class="form-label mb-0 small text-muted text-nowrap">Fuel:</label>
+            <select class="form-select form-select-sm" id="fuelSelect" style="min-width:180px;max-width:280px;">
+                {% for ft in fuel_tabs %}
+                <option value="{{ ft.key }}" {% if forloop.first %}selected{% endif %}>
+                    {{ ft.label }} ({{ ft.count }} datasets)
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="section-body">
+        <p class="small text-muted mb-2">
+            Select a fuel above, then browse or search datasets below.
+            Each bar is one model; hover for details.
+        </p>
+
+        <!-- Dataset search / filter within selected fuel -->
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="position-relative flex-grow-1" style="max-width:360px;">
+                <i class="bi bi-search position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#adb5bd;"></i>
+                <input type="text" class="form-control form-control-sm ps-4"
+                       id="datasetSearchInput"
+                       placeholder="Search datasets by name, author, conditions…">
+            </div>
+            <span class="small text-muted text-nowrap" id="datasetMatchCount"></span>
+        </div>
+
+        <!-- Paginated dataset list for the selected fuel -->
+        <div id="datasetListContainer" class="mb-3" style="max-height:220px;overflow-y:auto;border:1px solid #e9ecef;border-radius:6px;">
+            <!-- Populated dynamically by JS -->
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-3" id="datasetPaginationRow">
+            <button class="btn btn-outline-secondary btn-sm" id="datasetPrevBtn" disabled>
+                <i class="bi bi-chevron-left me-1"></i>Previous
+            </button>
+            <small class="text-muted" id="datasetPageInfo"></small>
+            <button class="btn btn-outline-secondary btn-sm" id="datasetNextBtn" disabled>
+                Next<i class="bi bi-chevron-right ms-1"></i>
+            </button>
+        </div>
+
+        <!-- Chart for selected fuel -->
+        <div style="overflow-x:auto;">
+            <div id="fuelDrillChart" style="min-height:380px;"></div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- No data state -->
+<div class="data-section mb-4">
+    <div class="section-body text-center py-5">
+        <i class="bi bi-inbox d-block mb-2" style="font-size: 2rem;"></i>
+        <p class="mb-2">No coverage data available yet.</p>
+        <p class="small text-muted mb-3">Run simulations to populate the coverage matrix.</p>
+        <a href="{% url 'analysis:run-create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-play-circle me-1"></i>Run Your First Simulation
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Legend & Info -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-palette me-2"></i>Error Scale</h6>
+            </div>
+            <div class="section-body">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#198754;border-radius:3px;"></div>
+                        <small>Excellent (< 1)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#ffc107;border-radius:3px;"></div>
+                        <small>Good (1-10)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#fd7e14;border-radius:3px;"></div>
+                        <small>Fair (10-100)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#dc3545;border-radius:3px;"></div>
+                        <small>Poor (100-1k)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#721c24;border-radius:3px;"></div>
+                        <small>Very Poor (> 1k)</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:18px;height:18px;background:#e9ecef;border:1px solid #dee2e6;border-radius:3px;"></div>
+                        <small>Not Tested</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>About Error Function</h6>
+            </div>
+            <div class="section-body">
+                <p class="small text-muted mb-0">
+                    The error function quantifies the agreement between simulated and experimental
+                    ignition delays. Lower values indicate better model performance. Charts use a
+                    <strong>logarithmic scale</strong> to visualize the wide range of error values.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coverage Table -->
+{% if coverage_data %}
+<div class="data-section">
+    <div class="section-header d-flex align-items-center justify-content-between">
+        <h6 class="mb-0"><i class="bi bi-table me-2"></i>Recent Evaluations</h6>
+        <span class="badge bg-secondary-subtle text-secondary">Latest 50</span>
+    </div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Model</th>
+                        <th>Dataset</th>
+                        <th class="text-end">Error</th>
+                        <th>Status</th>
+                        <th>Last Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cov in coverage_data|slice:":50" %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'kinetic-model-detail' cov.kinetic_model.id %}">
+                                {{ cov.kinetic_model.model_name }}
+                            </a>
+                        </td>
+                        <td><small class="text-muted">{{ cov.dataset.short_name }}</small></td>
+                        <td class="text-end">
+                            {% if cov.latest_error_function %}
+                            <span class="{% if cov.latest_error_function < 1 %}text-success{% elif cov.latest_error_function < 10 %}text-warning{% elif cov.latest_error_function < 100 %}text-warning{% elif cov.latest_error_function < 1000 %}text-danger{% else %}text-danger fw-bold{% endif %}">
+                                {{ cov.latest_error_function|floatformat:1 }}
+                            </span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if cov.is_outdated %}
+                            <span class="badge bg-warning-subtle text-warning">Outdated</span>
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success">Current</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ cov.last_evaluated_at|date:"M d, Y"|default:"-" }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if evaluated_pairs > 0 %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var plotCfg = {responsive: true, displayModeBar: false};
+    var DATASETS_PER_PAGE = 50;  // Show 50 datasets at a time in the chart
+
+    // ── 1. Overview Heatmap ──
+    {% if heatmap_json %}
+    var hmSpec = {{ heatmap_json|safe }};
+    Plotly.newPlot('overview-heatmap', hmSpec.data, hmSpec.layout, plotCfg);
+
+    // Click a heatmap cell → select matching fuel in dropdown & scroll
+    document.getElementById('overview-heatmap').on('plotly_click', function(evtData) {
+        if (!evtData.points || !evtData.points.length) return;
+        var fuelLabel = evtData.points[0].x;
+        var sel = document.getElementById('fuelSelect');
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].text.indexOf(fuelLabel) === 0) {
+                sel.value = sel.options[i].value;
+                sel.dispatchEvent(new Event('change'));
+                setTimeout(function() {
+                    document.getElementById('fuel-detail-section').scrollIntoView({behavior: 'smooth', block: 'start'});
+                }, 100);
+                break;
+            }
+        }
+    });
+    {% endif %}
+
+    // ── 2. Per-Fuel Drill-Down with Search + Pagination ──
+    {% if drill_down_json %}
+    var drillData = {{ drill_down_json|safe }};
+
+    // State
+    var currentFuel = null;
+    var currentPage = 0;
+    var filteredIndices = [];   // indices into the full dataset label list
+
+    var fuelSelect = document.getElementById('fuelSelect');
+    var searchInput = document.getElementById('datasetSearchInput');
+    var matchCount = document.getElementById('datasetMatchCount');
+    var listContainer = document.getElementById('datasetListContainer');
+    var prevBtn = document.getElementById('datasetPrevBtn');
+    var nextBtn = document.getElementById('datasetNextBtn');
+    var pageInfo = document.getElementById('datasetPageInfo');
+    var chartEl = document.getElementById('fuelDrillChart');
+
+    // ── helpers ──
+    function getAllLabels(fuel) {
+        var spec = drillData[fuel];
+        if (!spec || !spec.data || !spec.data.length) return [];
+        return spec.data[0].x || [];
+    }
+
+    function applyFilter(fuel, query) {
+        var labels = getAllLabels(fuel);
+        query = (query || '').trim().toLowerCase();
+        var indices = [];
+        for (var i = 0; i < labels.length; i++) {
+            if (!query || labels[i].toLowerCase().indexOf(query) !== -1) {
+                indices.push(i);
+            }
+        }
+        return indices;
+    }
+
+    function renderDatasetList(fuel, indices, page) {
+        var labels = getAllLabels(fuel);
+        var start = page * DATASETS_PER_PAGE;
+        var end = Math.min(start + DATASETS_PER_PAGE, indices.length);
+        var totalPages = Math.ceil(indices.length / DATASETS_PER_PAGE) || 1;
+
+        // Build compact list
+        var html = '<div class="list-group list-group-flush">';
+        if (indices.length === 0) {
+            html += '<div class="list-group-item text-muted small text-center py-3">No datasets match your search.</div>';
+        } else {
+            for (var i = start; i < end; i++) {
+                var idx = indices[i];
+                // Find best error across models for this dataset
+                var spec = drillData[fuel];
+                var bestErr = null;
+                for (var t = 0; t < spec.data.length; t++) {
+                    var v = spec.data[t].y[idx];
+                    if (v !== null && v !== undefined && (bestErr === null || v < bestErr)) {
+                        bestErr = v;
+                    }
+                }
+                var errBadge = '';
+                if (bestErr !== null) {
+                    var cls = bestErr < 1 ? 'bg-success-subtle text-success'
+                            : bestErr < 10 ? 'bg-warning-subtle text-warning'
+                            : bestErr < 100 ? 'bg-warning-subtle text-warning'
+                            : 'bg-danger-subtle text-danger';
+                    errBadge = '<span class="badge ' + cls + ' ms-auto">' + bestErr.toFixed(1) + '</span>';
+                }
+                html += '<div class="list-group-item d-flex align-items-center py-1 px-3 small">'
+                      + '<span class="text-muted me-2" style="min-width:28px;">' + (i + 1) + '.</span>'
+                      + '<span class="text-truncate">' + labels[idx] + '</span>'
+                      + errBadge
+                      + '</div>';
+            }
+        }
+        html += '</div>';
+        listContainer.innerHTML = html;
+
+        // Pagination controls
+        prevBtn.disabled = (page <= 0);
+        nextBtn.disabled = (end >= indices.length);
+        pageInfo.textContent = indices.length > 0
+            ? 'Showing ' + (start + 1) + '–' + end + ' of ' + indices.length + ' datasets (page ' + (page + 1) + '/' + totalPages + ')'
+            : '';
+        matchCount.textContent = indices.length + ' dataset' + (indices.length !== 1 ? 's' : '');
+
+        // Hide pagination row if only one page
+        document.getElementById('datasetPaginationRow').style.display =
+            (indices.length <= DATASETS_PER_PAGE) ? 'none' : '';
+    }
+
+    function renderChart(fuel, indices, page) {
+        var spec = drillData[fuel];
+        if (!spec) { Plotly.purge(chartEl); return; }
+
+        var start = page * DATASETS_PER_PAGE;
+        var end = Math.min(start + DATASETS_PER_PAGE, indices.length);
+        var pageIndices = indices.slice(start, end);
+
+        var labels = getAllLabels(fuel);
+        var pageLabels = pageIndices.map(function(i) { return labels[i]; });
+
+        // Slice each model trace to only the current page indices
+        var traces = [];
+        for (var t = 0; t < spec.data.length; t++) {
+            var orig = spec.data[t];
+            var ySlice = pageIndices.map(function(i) { return orig.y[i]; });
+            var hSlice = pageIndices.map(function(i) { return orig.text[i]; });
+            traces.push({
+                type: 'bar',
+                name: orig.name,
+                x: pageLabels,
+                y: ySlice,
+                text: hSlice,
+                hoverinfo: 'text',
+                marker: orig.marker,
+            });
+        }
+
+        var nDs = pageLabels.length;
+        var nM = spec.data.length;
+        var chartW = Math.max(400, nDs * nM * 18 + 120);
+
+        var layout = {
+            barmode: 'group',
+            yaxis: {title: 'Error Function', type: 'log', gridcolor: '#eee'},
+            xaxis: {tickangle: -40, tickfont: {size: 9}, type: 'category'},
+            margin: {l: 60, r: 20, t: 10, b: 120},
+            height: 380,
+            width: chartW,
+            legend: {orientation: 'h', y: 1.08, x: 0.5, xanchor: 'center'},
+            plot_bgcolor: '#fff',
+            paper_bgcolor: '#fff',
+        };
+
+        Plotly.newPlot(chartEl, traces, layout, plotCfg);
+    }
+
+    function refresh() {
+        renderDatasetList(currentFuel, filteredIndices, currentPage);
+        renderChart(currentFuel, filteredIndices, currentPage);
+    }
+
+    // ── Events ──
+    fuelSelect.addEventListener('change', function() {
+        currentFuel = this.value;
+        currentPage = 0;
+        searchInput.value = '';
+        filteredIndices = applyFilter(currentFuel, '');
+        refresh();
+    });
+
+    searchInput.addEventListener('input', function() {
+        currentPage = 0;
+        filteredIndices = applyFilter(currentFuel, this.value);
+        refresh();
+    });
+
+    prevBtn.addEventListener('click', function() {
+        if (currentPage > 0) { currentPage--; refresh(); }
+    });
+    nextBtn.addEventListener('click', function() {
+        var totalPages = Math.ceil(filteredIndices.length / DATASETS_PER_PAGE);
+        if (currentPage < totalPages - 1) { currentPage++; refresh(); }
+    });
+
+    // ── Initial render (first fuel) ──
+    currentFuel = fuelSelect.value;
+    filteredIndices = applyFilter(currentFuel, '');
+    refresh();
+    {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

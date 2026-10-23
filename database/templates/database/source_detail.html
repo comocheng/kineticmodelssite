@@ -1,28 +1,188 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load utils %}
+{% load renders %}
 
 {% block content %}
-<h1>{{ source.source_title|titlecase }}</h1>
-
-<ul class="list-group">
-    {% for name, val in source|fields %}
-    {% if val %}
-    <li class="list-group-item"><b>{{ name }}: </b> {{ val }}</li>
-    {% endif %}
-    {% endfor %}
-</ul>
-<br>
-<h2>Kinetic Models</h2>
-<div class="list-group">
-    {% for km in kinetic_models %}
-    <a href="{% url 'kinetic-model-detail' km.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
-      <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">{{km.model_name}}</h5>
-        <small>ID: {{km.pk}}</small>
-    </div>
-    </a>
-    {% endfor %}
+<!-- Compact Header -->
+<div class="detail-header">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'source-search' %}">Sources</a></li>
+            <li class="breadcrumb-item active">{{ source.source_title|truncatewords:5 }}</li>
+        </ol>
+    </nav>
 </div>
 
+<!-- Source Citation -->
+<div class="data-section mb-3">
+    <div class="section-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="badge bg-primary-subtle text-primary small">Publication</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-muted">ID: {{ source.pk }}</span>
+                {% if site_access_allowed %}
+                <a href="{% url 'source-update' source.pk %}" class="btn btn-outline-primary btn-sm" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <h1 class="h5 mb-2">{{ source.source_title|titlecase }}</h1>
+        {% if source.author_line %}<p class="text-muted mb-1 small">{{ source.author_line }}</p>{% endif %}
+        {% if source.pub_info %}<p class="text-muted mb-2 small"><i class="bi bi-book me-1"></i>{{ source.pub_info }}</p>{% endif %}
+        <div class="d-flex gap-2 mt-3">
+            {% if source.doi %}
+            <a href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+                <i class="bi bi-link-45deg me-1"></i>DOI
+            </a>
+            {% endif %}
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#citationPanel">
+                <i class="bi bi-quote me-1"></i>Cite
+            </button>
+        </div>
+        
+        <!-- Collapsible Citation -->
+        <div class="collapse mt-3" id="citationPanel">
+            <div class="p-2 bg-light rounded small">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>BibTeX</strong>
+                    <button class="btn btn-sm btn-link p-0 copy-btn" data-copy="bibtex"><i class="bi bi-clipboard"></i></button>
+                </div>
+                <pre class="mb-0 small" id="bibtex">@article{source{{ source.pk }},
+  title = {% templatetag openbrace %}{{ source.source_title }}{% templatetag closebrace %},
+  author = {% templatetag openbrace %}{{ source.author_line|default:"Unknown" }}{% templatetag closebrace %},
+  journal = {% templatetag openbrace %}{{ source.pub_info|default:"Unknown" }}{% templatetag closebrace %},
+  year = {% templatetag openbrace %}{{ source.pub_year|default:"Unknown" }}{% templatetag closebrace %}
+}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Kinetic Models -->
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#modelsSection">
+                <h6 class="mb-0"><i class="bi bi-box me-2"></i>Kinetic Models ({{ kinetic_models|length }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="modelsSection">
+                <div class="section-body p-0">
+                    {% if kinetic_models %}
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Model Name</th>
+                                <th class="text-center" style="width:80px;">Species</th>
+                                <th class="text-center" style="width:80px;">Reactions</th>
+                                <th style="width:50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for km in kinetic_models %}
+                            <tr class="clickable-row" data-href="{% url 'kinetic-model-detail' km.pk %}">
+                                <td class="fw-medium">{{ km.model_name }}</td>
+                                <td class="text-center text-muted">{{ km.species.count|default:"—" }}</td>
+                                <td class="text-center text-muted">{{ km.kinetics.count|default:"—" }}</td>
+                                <td class="text-end"><i class="bi bi-chevron-right text-muted"></i></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-box me-1"></i>No models associated with this source.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Source Details -->
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Details</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    {% for name, val in source|fields %}
+                    {% if val %}
+                    <tr>
+                        <td class="text-muted small">{{ name }}</td>
+                        <td class="text-end">{{ val }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+
+.section-header h6 { font-size: 0.8rem; font-weight: 600; }
+.section-body { padding: 0.75rem; }
+
+.table td, .table th { padding: 0.4rem 0.75rem; vertical-align: middle; }
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background-color: var(--color-primary-bg) !important; }
+
+.bg-primary-subtle { background-color: #cfe2ff; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function() {
+        window.location.href = this.dataset.href;
+    });
+});
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const target = document.getElementById(this.dataset.copy);
+        if (target) {
+            navigator.clipboard.writeText(target.textContent.trim()).then(() => {
+                const icon = this.querySelector('i');
+                icon.classList.replace('bi-clipboard', 'bi-check');
+                setTimeout(() => icon.classList.replace('bi-check', 'bi-clipboard'), 2000);
+            });
+        }
+    });
+});
+</script>
 {% endblock %}

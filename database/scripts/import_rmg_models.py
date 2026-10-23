@@ -1,6 +1,7 @@
+import logging
+import math
 import os
 import re
-import logging
 import hashlib
 from datetime import datetime
 from pathlib import Path
@@ -10,10 +11,12 @@ import habanero
 from django.db import transaction, IntegrityError
 from dateutil import parser
 from rmgpy import kinetics, constants
-from rmgpy.data.kinetics.library import KineticsLibrary
+from rmgpy.quantity import RateCoefficient
+from database.scripts.rmg_libraries import TolerantKineticsLibrary
 from rmgpy.data.thermo import ThermoLibrary
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
 
+from django.conf import settings
 from database.models import kinetic_data as kd
 
 
@@ -48,12 +51,18 @@ Import Flow:
 """  # noqa: E501
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename="importer.log", mode="w")
-handler.setFormatter(
-    logging.Formatter("[%(levelname)s] %(message)s")
-)
-logger.addHandler(handler)
+
+if getattr(settings, "SILENCE_RMG_IMPORT_LOGS", False):
+    logger.setLevel(logging.CRITICAL)
+    logger.propagate = False
+else:
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(filename="importer.log", mode="w")
+    handler.setFormatter(
+        logging.Formatter("[%(levelname)s] %(message)s")
+    )
+    logger.addHandler(handler)
+    logger.propagate = False
 
 
 def safe_import(func, *args, error_message=None, **kwargs):
@@ -89,6 +98,8 @@ def import_rmg_models(apps, schema_editor):
     for name in model_names:
         setattr(models, name, apps.get_model("database", name))
     path = os.getenv("RMGMODELSPATH", "./rmg-models/")
+
+
     skip_list = ["PCI2011/193-Mehl"]
     model_paths = get_models(path, skip_list)
 
@@ -101,11 +112,14 @@ def import_rmg_models(apps, schema_editor):
 
 def import_kinetic_model(rmg_model_name, thermo_path, kinetics_path, source_path, models):
     now = datetime.now()
-    kinetic_model = models.KineticModel.objects.create(
-        model_name=rmg_model_name, info=f"Imported via RMG-models migration at {now.isoformat()}"
+    kinetic_model, created = models.KineticModel.objects.get_or_create(
+        model_name=rmg_model_name,
+        defaults={"info": f"Imported via RMG-models migration at {now.isoformat()}"},
     )
-
-    kinetic_model.save()
+    if not created:
+        # Keep the import idempotent: update the info timestamp but don't crash.
+        kinetic_model.info = f"Re-imported via RMG-models migration at {now.isoformat()}"
+        kinetic_model.save(update_fields=["info"])
     logger.info(f"Importing Source {source_path}")
     safe_import(import_source, source_path, kinetic_model, models)
     logger.info(f"Importing Thermo Library {thermo_path}")
@@ -143,10 +157,26 @@ def get_or_create_species(kinetic_model, name, molecules, models):
         multiplicity = molecule.multiplicity
         isomer, _ = models.Isomer.objects.get_or_create(inchi=augmented_inchi, formula=formula_obj)
         isomers.append(isomer)
-        models.Structure.objects.get_or_create(
-            adjacency_list=adjacency_list,
-            defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
+
+        # Deduplicate by molecular graph isomorphism, not just adjacency
+        # list text.  Different atom numberings produce different text but
+        # represent the same molecule.
+        existing = models.Structure.objects.filter(
+            isomer=isomer, multiplicity=multiplicity,
         )
+        match = None
+        for candidate in existing:
+            try:
+                if candidate.to_rmg().is_isomorphic(molecule):
+                    match = candidate
+                    break
+            except Exception:
+                continue
+        if match is None:
+            models.Structure.objects.get_or_create(
+                adjacency_list=adjacency_list,
+                defaults={"smiles": smiles, "multiplicity": multiplicity, "isomer": isomer},
+            )
 
     species_hash = get_species_hash(isomers)
     species, species_created = models.Species.objects.get_or_create(hash=species_hash)
@@ -166,6 +196,20 @@ def get_reaction_hash(stoich_data):
     )
 
     return hashlib.md5(bytes(reaction_fingerprint, "UTF-8")).hexdigest()
+
+
+def index_new_rows(models, reaction=None, kinetics=None):
+    """Keep the shared chemical identity current for new rows. Skipped when an old data
+    migration runs this importer with historical models, which lack these fields."""
+    from database.models import Reaction
+    if getattr(models, "Reaction", None) is not Reaction:
+        return
+    from database.services import chemistry_index
+    if reaction is not None:
+        chemistry_index.index_reaction(reaction)
+    if kinetics is not None:
+        kinetics.rate_fingerprint = chemistry_index.kinetics_fingerprint(kinetics)
+        kinetics.save(update_fields=["rate_fingerprint"])
 
 
 def get_or_create_reaction(kinetic_model, rmg_reaction, models):
@@ -213,6 +257,7 @@ def get_or_create_reaction(kinetic_model, rmg_reaction, models):
                 models.Stoichiometry.objects.create(
                     reaction=reaction, species=species, coeff=stoich_coeff
                 )
+            index_new_rows(models, reaction=reaction)
 
         stoich_reactants = reaction.stoichiometry_set.filter(coeff__lte=0)
         stoich_products = reaction.stoichiometry_set.filter(coeff__gte=0)
@@ -263,8 +308,9 @@ def create_pdep_arrhenius(rmg_kinetics_data):
     return kd.PDepArrhenius(
         type="pdep_arrhenius",
         pressure_set=[
-            kd.Pressure(arrhenius=create_arrhenius(a), pressure=p)
-            for a, p in zip(rmg_kinetics_data.pressures.value_si, rmg_kinetics_data.arrhenius)
+            kd.Pressure(arrhenius=create_multi_arrhenius(a) if isinstance(a, kinetics.MultiArrhenius)
+                        else create_arrhenius(a), pressure=p)
+            for p, a in zip(rmg_kinetics_data.pressures.value_si, rmg_kinetics_data.arrhenius)
         ],
     )
 
@@ -277,9 +323,12 @@ def create_multi_pdep_arrhenius(rmg_kinetics_data):
 
 
 def create_chebyshev(rmg_kinetics_data):
+    # RMG adds log10 of the kunits-to-SI factor to coeffs[0, 0]; store them as written, in kunits.
+    coeffs = rmg_kinetics_data.coeffs.value_si.copy()
+    coeffs[0, 0] -= math.log10(RateCoefficient(1.0, rmg_kinetics_data.kunits).value_si)
     return kd.Chebyshev(
         type="chebyshev",
-        coefficient_matrix=rmg_kinetics_data.coeffs.tolist(),
+        coefficient_matrix=coeffs.tolist(),
         units=rmg_kinetics_data.kunits,
     )
 
@@ -371,8 +420,9 @@ def create_kinetics_data(kinetic_model, rmg_kinetics_data, models):
     return kinetics_data
 
 
-def import_kinetics(kinetics_path, kinetic_model, models):
-    local_context = {
+def kinetics_local_context():
+    """The names an RMG-format reactions.py may use for its kinetics."""
+    return {
         "KineticsData": kinetics.KineticsData,
         "Arrhenius": kinetics.Arrhenius,
         "ArrheniusEP": kinetics.ArrheniusEP,
@@ -385,10 +435,24 @@ def import_kinetics(kinetics_path, kinetic_model, models):
         "Troe": kinetics.Troe,
         "R": constants.R,
     }
-    library = KineticsLibrary(label=kinetic_model.model_name)
+
+
+def import_kinetics(kinetics_path, kinetic_model, models, only_types=None):
+    """Import a model's kinetics library; only_types limits it to RMG kinetics class names.
+
+    Returns counts of imported, skipped and failed entries."""
+    local_context = kinetics_local_context()
+    # Older RMG accepted reactions that RMG 4 refuses; skip just those, not the whole library.
+    library = TolerantKineticsLibrary(label=kinetic_model.model_name)
     library.SKIP_DUPLICATES = True
     library.load(kinetics_path, local_context=local_context)
+    counts = {"imported": 0, "skipped": 0, "failed": 0, "rejected": len(library.rejected)}
+    for label, reason in library.rejected:
+        logger.warning(f"RMG cannot load reaction {label} ({reason}); skipped")
     for entry in library.entries.values():
+        if only_types is not None and entry.data.__class__.__name__ not in only_types:
+            counts["skipped"] += 1
+            continue
         try:
             with transaction.atomic():
                 rmg_kinetics_data = entry.data
@@ -401,22 +465,24 @@ def import_kinetics(kinetics_path, kinetic_model, models):
                 kinetics_instance, created = models.Kinetics.objects.get_or_create(
                     reaction=reaction, raw_data=kinetics_data, defaults=base_fields
                 )
-                if created and kinetics_data.get("type") not in [
-                    "arrhenius",
-                    "arrhenius_ep",
-                    "multi_arrhenius",
-                ]:
+                # PLOG and Chebyshev kinetics have no collider efficiencies.
+                if created and getattr(rmg_kinetics_data, "efficiencies", None):
                     create_and_save_efficiencies(
                         kinetic_model, kinetics_instance, rmg_kinetics_data, models
                     )
+                if created:
+                    index_new_rows(models, kinetics=kinetics_instance)
 
                 models.KineticsComment.objects.get_or_create(
                     kinetics=kinetics_instance,
                     kinetic_model=kinetic_model,
                     defaults={"comment": comment},
                 )
+            counts["imported"] += 1
         except Exception:
+            counts["failed"] += 1
             logger.exception(f"Failed to import reaction {entry.label}")
+    return counts
 
 
 def import_thermo(thermo_path, kinetic_model, models):
@@ -436,14 +502,29 @@ def import_thermo(thermo_path, kinetic_model, models):
             species = get_or_create_species(kinetic_model, species_name, [entry.item], models)
             thermo_data = entry.data
             poly1, poly2 = thermo_data.polynomials
+
+            # Sanitise temperature ranges: some RMG entries have 0 K break
+            # temperatures or poly2.Tmin < poly1.Tmax (overlapping ranges).
+            t_min_1 = poly1.Tmin.value_si
+            t_max_1 = poly1.Tmax.value_si
+            t_min_2 = poly2.Tmin.value_si
+            t_max_2 = poly2.Tmax.value_si
+
+            if t_max_1 == 0:
+                t_max_1 = 1000.0
+            if t_min_2 == 0:
+                t_min_2 = 1000.0
+            if t_min_2 < t_max_1:
+                t_min_2 = t_max_1
+
             thermo, _ = models.Thermo.objects.get_or_create(
                 species=species,
                 coeffs_poly1=poly1.coeffs.tolist(),
                 coeffs_poly2=poly2.coeffs.tolist(),
-                temp_min_1=poly1.Tmin.value_si,
-                temp_max_1=poly1.Tmax.value_si,
-                temp_min_2=poly2.Tmin.value_si,
-                temp_max_2=poly2.Tmax.value_si,
+                temp_min_1=t_min_1,
+                temp_max_1=t_max_1,
+                temp_min_2=t_min_2,
+                temp_max_2=t_max_2,
             )
             thermo_comment = models.ThermoComment.objects.create(
                 kinetic_model=kinetic_model, thermo=thermo
@@ -460,8 +541,10 @@ def create_and_save_authorships(source, author_data, models):
         firstname = author_datum.get("given")
         lastname = author_datum.get("family")
         author_fields = filter_fields({"firstname": firstname, "lastname": lastname})
-        author = models.Author.objects.create(**author_fields)
-        authorship = models.Authorship.objects.create(source=source, author=author, order=order)
+        author, _ = models.Author.objects.get_or_create(**author_fields)
+        authorship, _ = models.Authorship.objects.get_or_create(
+            source=source, author=author, defaults={"order": order}
+        )
         safe_save(author)
         safe_save(authorship)
 
@@ -495,9 +578,11 @@ def import_source(source_path, kinetic_model, models):
 
         source.kineticmodel_set.add(kinetic_model)
         source.save()
-        if author_data is not None:
+        # Only populate authorships for a freshly created source; an existing
+        # source already has them, and re-adding would duplicate Authorship rows.
+        if created and author_data is not None:
             create_and_save_authorships(source, author_data, models)
-        else:
+        elif author_data is None:
             logger.warning("Could not find author data")
     except FileNotFoundError:
         logger.warning("source.txt not found")
@@ -538,22 +623,108 @@ def get_doi(source_path):
         return matched_list[0]
 
 
+# def get_models(path, ignore_list=[]):
+#     """
+#     Walk the given `path` looking for libraries and source files.
+#     Skips any paths that end with something in the skip_list
+#     (eg. skip_list=['PCI2011/193-Mehl'])
+#     Returns tuples of the following form:
+#         model_name, thermo_library, kinetics_library, source_file
+#     """
+
+#     ignore_list.extend([".git", "translations", "modelComparer"])
+#     root, dirs, _ = next(os.walk(path))
+#     for dir in dirs:
+#         pdir = Path(dir)
+#         if pdir.name not in ignore_list:
+#             rmg_model_name = pdir.name
+#             thermo_path = root / pdir / "RMG-Py-thermo-library" / "ThermoLibrary.py"
+#             kinetics_path = root / pdir / "RMG-Py-kinetics-library" / "reactions.py"
+#             source_path = root / pdir / "source.txt"
+#             yield rmg_model_name, str(thermo_path), str(kinetics_path), str(source_path)
+
+
 def get_models(path, ignore_list=[]):
     """
     Walk the given `path` looking for libraries and source files.
     Skips any paths that end with something in the skip_list
     (eg. skip_list=['PCI2011/193-Mehl'])
+    
+    Handles both:
+    - Direct models: folder/RMG-Py-thermo-library/ThermoLibrary.py
+    - Nested models: folder/subfolder/RMG-Py-thermo-library/ThermoLibrary.py
+    
+    For nested models, the model_name is "parent/subfolder" (e.g., "CombFlame2013/17-Malewicki")
+    
     Returns tuples of the following form:
         model_name, thermo_library, kinetics_library, source_file
     """
-
+    
+    ignore_list = ignore_list.copy()  # Don't modify the default parameter
     ignore_list.extend([".git", "translations", "modelComparer"])
-    root, dirs, _ = next(os.walk(path))
-    for dir in dirs:
-        pdir = Path(dir)
-        if pdir.name not in ignore_list:
-            rmg_model_name = pdir.name
-            thermo_path = root / pdir / "RMG-Py-thermo-library" / "ThermoLibrary.py"
-            kinetics_path = root / pdir / "RMG-Py-kinetics-library" / "reactions.py"
-            source_path = root / pdir / "source.txt"
-            yield rmg_model_name, str(thermo_path), str(kinetics_path), str(source_path)
+    
+    # Convert to Path object for better handling
+    base_path = Path(path)
+    
+    # Check if path exists
+    if not base_path.exists():
+        logger.error(f"Path does not exist: {path}")
+        return
+    
+    def check_model_dir(model_dir, model_name):
+        """Check if a directory contains RMG libraries and return model info if valid."""
+        thermo_path = model_dir / "RMG-Py-thermo-library" / "ThermoLibrary.py"
+        kinetics_path = model_dir / "RMG-Py-kinetics-library" / "reactions.py"
+        source_path = model_dir / "source.txt"
+        
+        # Check if this directory has the libraries
+        if thermo_path.exists() or kinetics_path.exists():
+            return (
+                model_name,
+                str(thermo_path) if thermo_path.exists() else None,
+                str(kinetics_path) if kinetics_path.exists() else None,
+                str(source_path) if source_path.exists() else None,
+            )
+        return None
+    
+    # Walk through directories
+    try:
+        for item in sorted(base_path.iterdir()):
+            if not item.is_dir():
+                continue
+                
+            if item.name in ignore_list:
+                continue
+            
+            top_level_name = item.name
+            
+            # Check if this is in the ignore list (with path prefix)
+            if any(skip in top_level_name for skip in ignore_list):
+                continue
+            
+            # First, check if this directory itself is a model (has libraries directly)
+            result = check_model_dir(item, top_level_name)
+            if result:
+                yield result
+            else:
+                # No direct libraries - check subdirectories for nested models
+                for sub_dir in sorted(item.iterdir()):
+                    if not sub_dir.is_dir():
+                        continue
+                    if sub_dir.name.startswith('.') or sub_dir.name in ignore_list:
+                        continue
+                    
+                    # Create nested model name
+                    nested_name = f"{top_level_name}/{sub_dir.name}"
+                    
+                    # Check if nested name is in ignore list
+                    if any(skip in nested_name for skip in ignore_list):
+                        logger.info(f"Skipping {nested_name} (in ignore list)")
+                        continue
+                    
+                    result = check_model_dir(sub_dir, nested_name)
+                    if result:
+                        yield result
+                        
+    except Exception as e:
+        logger.error(f"Error walking directory {path}: {e}")

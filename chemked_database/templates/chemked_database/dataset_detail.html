@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+{% load static %}
+{% load math_filters %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:dataset-list' %}">Datasets</a></li>
+            <li class="breadcrumb-item active">{{ dataset.chemked_file_path|truncatechars:30 }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+        <div>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <h1 class="h4 mb-0">{{ dataset.chemked_file_path }}</h1>
+                <span class="badge bg-secondary">ID: {{ dataset.pk }}</span>
+                {% if dataset.experiment_type == 'ignition delay' %}
+                <span class="badge bg-warning-subtle text-warning"><i class="bi bi-lightning me-1"></i>Ignition Delay</span>
+                {% elif dataset.experiment_type == 'laminar flame speed' %}
+                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-fire me-1"></i>Flame Speed</span>
+                {% else %}
+                <span class="badge bg-info-subtle text-info">{{ dataset.experiment_type|title }}</span>
+                {% endif %}
+                <span class="badge bg-success-subtle text-success">{{ dataset.datapoints.count }} datapoints</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=yaml" 
+               class="btn btn-outline-primary btn-sm" title="Export as ChemKED YAML">
+                <i class="bi bi-filetype-yml me-1"></i>YAML
+            </a>
+            <a href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=xml" 
+               class="btn btn-outline-secondary btn-sm" title="Export as ReSpecTh XML">
+                <i class="bi bi-filetype-xml me-1"></i>XML
+            </a>
+            <a href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=csv" 
+               class="btn btn-outline-success btn-sm" title="Export datapoints as CSV">
+                <i class="bi bi-filetype-csv me-1"></i>CSV
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Condition Ranges -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Experimental Conditions</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 180px;">Temperature Range</td>
+                            <td class="fw-medium">
+                                {% if temp_range.min_temp %}
+                                {{ temp_range.min_temp|floatformat:1 }} – {{ temp_range.max_temp|floatformat:1 }} K
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pressure Range</td>
+                            <td class="fw-medium">
+                                {% if pressure_range.min_pressure %}
+                                {{ pressure_range.min_pressure|floatformat:0 }} – {{ pressure_range.max_pressure|floatformat:0 }} Pa
+                                ({{ pressure_range.min_pressure|divide:101325|floatformat:4 }} – {{ pressure_range.max_pressure|divide:101325|floatformat:4 }} atm)
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% if ignition_stats %}
+                        <tr>
+                            <td class="text-muted">Ignition Delay Range</td>
+                            <td class="fw-medium">
+                                {% if ignition_stats.min_delay %}
+                                {{ ignition_stats.min_delay|floatformat:6 }} – {{ ignition_stats.max_delay|floatformat:6 }} s
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Common Composition -->
+        {% if common_species %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#compositionSection">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Common Composition ({{ common_species|length }} species)</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="compositionSection">
+                <div class="section-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Species</th>
+                                <th>InChI / SMILES</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for species in common_species %}
+                            <tr>
+                                <td class="fw-medium">
+                                    <a href="{% url 'chemked_database:species-datapoints' species.species_name %}">
+                                        {{ species.species_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if species.inchi %}
+                                    <code class="small text-break">{{ species.inchi|truncatechars:40 }}</code>
+                                    {% elif species.smiles %}
+                                    <code class="small">{{ species.smiles|truncatechars:30 }}</code>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ species.amount|floatformat:4 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if common_properties.composition.kind %}
+                    <div class="p-2 bg-light border-top small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Composition specified as: <strong>{{ common_properties.composition.kind }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Datapoints Table -->
+        <div class="data-section">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#datapointsSection">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Datapoints ({{ datapoints.paginator.count }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="datapointsSection">
+                <div class="section-body p-0">
+                    {% if datapoints %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>T (K)</th>
+                                    <th>P (Pa)</th>
+                                    {% if dataset.experiment_type == 'jet stirred reactor measurement' or dataset.experiment_type == 'concentration profile' %}
+                                    <th>τ (s)</th>
+                                    {% endif %}
+                                    <th>φ</th>
+                                    {% if dataset.experiment_type == 'ignition delay' %}
+                                    <th>τ<sub>ign</sub> (s)</th>
+                                    <th>Target</th>
+                                    {% endif %}
+                                    {% if has_species_data %}
+                                    <th>Species</th>
+                                    {% endif %}
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dp in datapoints %}
+                                <tr>
+                                    <td class="font-monospace">{{ dp.temperature|floatformat:1 }}</td>
+                                    <td class="font-monospace">{{ dp.pressure|floatformat:0 }}</td>
+                                    {% if dataset.experiment_type == 'jet stirred reactor measurement' or dataset.experiment_type == 'concentration profile' %}
+                                    <td class="font-monospace">{{ dp.residence_time|floatformat:1|default:"—" }}</td>
+                                    {% endif %}
+                                    <td>{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                    {% if dataset.experiment_type == 'ignition delay' %}
+                                    <td class="font-monospace">
+                                        {% if dp.ignition_delay %}
+                                        {{ dp.ignition_delay.ignition_delay|floatformat:6|default:"—" }}
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dp.ignition_delay %}
+                                        <small>{{ dp.ignition_delay.ignition_target|default:"—" }}</small>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    {% endif %}
+                                    {% if has_species_data %}
+                                    <td>
+                                        {% if dp.composition %}
+                                        <span class="badge bg-info-subtle text-info">{{ dp.composition.species.count }}</span>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    {% endif %}
+                                    <td class="text-end">
+                                        <a href="{% url 'chemked_database:datapoint-detail' dp.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" title="View details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if datapoints.has_other_pages %}
+                    <div class="p-3 border-top">
+                        <nav aria-label="Datapoint pagination">
+                            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                {% if datapoints.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1"><i class="bi bi-chevron-double-left"></i></a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ datapoints.previous_page_number }}">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Page {{ datapoints.number }} of {{ datapoints.paginator.num_pages }}</span>
+                                </li>
+                                {% if datapoints.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ datapoints.next_page_number }}">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ datapoints.paginator.num_pages }}">
+                                        <i class="bi bi-chevron-double-right"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No datapoints in this dataset.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Dataset Info -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Dataset Information</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Database ID</td>
+                            <td class="text-end fw-medium">{{ dataset.pk }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">ChemKED Version</td>
+                            <td class="text-end">{{ dataset.chemked_version }}</td>
+                        </tr>
+                        {% if dataset.respecth_version %}
+                        <tr>
+                            <td class="text-muted">ReSpecTh Version</td>
+                            <td class="text-end">{{ dataset.respecth_version }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.file_doi %}
+                        <tr>
+                            <td class="text-muted">File DOI</td>
+                            <td class="text-end">
+                                <a href="https://doi.org/{{ dataset.file_doi }}" target="_blank" rel="noopener">
+                                    {{ dataset.file_doi|truncatechars:20 }}
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">File Version</td>
+                            <td class="text-end">{{ dataset.file_version }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Experiment Type</td>
+                            <td class="text-end">{{ dataset.experiment_type|title }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Datapoints</td>
+                            <td class="text-end fw-medium">{{ dataset.datapoints.count }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Valid</td>
+                            <td class="text-end">
+                                {% if dataset.is_valid %}
+                                <i class="bi bi-check-circle text-success"></i> Yes
+                                {% else %}
+                                <i class="bi bi-x-circle text-danger"></i> No
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if dataset.first_publication_date %}
+                        <tr>
+                            <td class="text-muted">First Published</td>
+                            <td class="text-end">{{ dataset.first_publication_date }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.last_modification_date %}
+                        <tr>
+                            <td class="text-muted">Last Modified</td>
+                            <td class="text-end">{{ dataset.last_modification_date }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reactor Properties (for JSR/Flow Reactor) -->
+        {% if common_properties.reactor_volume or common_properties.residence_time %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-droplet me-2"></i>Reactor Properties</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% if common_properties.reactor_volume %}
+                        <tr>
+                            <td class="text-muted">Volume</td>
+                            <td class="text-end fw-medium">{{ common_properties.reactor_volume|floatformat:6 }} m³</td>
+                        </tr>
+                        {% endif %}
+                        {% if common_properties.residence_time %}
+                        <tr>
+                            <td class="text-muted">Residence Time</td>
+                            <td class="text-end fw-medium">{{ common_properties.residence_time|floatformat:2 }} s</td>
+                        </tr>
+                        {% endif %}
+                        {% if common_properties.equivalence_ratio %}
+                        <tr>
+                            <td class="text-muted">Equivalence Ratio (φ)</td>
+                            <td class="text-end fw-medium">{{ common_properties.equivalence_ratio|floatformat:3 }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Apparatus -->
+        {% if dataset.apparatus %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Apparatus</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Type</td>
+                            <td class="text-end fw-medium">{{ dataset.apparatus.kind|title }}</td>
+                        </tr>
+                        {% if dataset.apparatus.institution %}
+                        <tr>
+                            <td class="text-muted">Institution</td>
+                            <td class="text-end">{{ dataset.apparatus.institution }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.apparatus.facility %}
+                        <tr>
+                            <td class="text-muted">Facility</td>
+                            <td class="text-end">{{ dataset.apparatus.facility }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reference -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Reference</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% if dataset.reference_doi %}
+                        <tr>
+                            <td class="text-muted">DOI</td>
+                            <td class="text-end">
+                                <a href="https://doi.org/{{ dataset.reference_doi }}" target="_blank" rel="noopener">
+                                    {{ dataset.reference_doi|truncatechars:25 }}
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_journal %}
+                        <tr>
+                            <td class="text-muted">Journal</td>
+                            <td class="text-end">{{ dataset.reference_journal|truncatechars:25 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_year %}
+                        <tr>
+                            <td class="text-muted">Year</td>
+                            <td class="text-end fw-medium">{{ dataset.reference_year }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_volume %}
+                        <tr>
+                            <td class="text-muted">Volume</td>
+                            <td class="text-end">{{ dataset.reference_volume }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_pages %}
+                        <tr>
+                            <td class="text-muted">Pages</td>
+                            <td class="text-end">{{ dataset.reference_pages }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_title %}
+                        <tr>
+                            <td class="text-muted">Title</td>
+                            <td class="text-end">{{ dataset.reference_title|truncatechars:40 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_table %}
+                        <tr>
+                            <td class="text-muted">Table</td>
+                            <td class="text-end">{{ dataset.reference_table }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_figure %}
+                        <tr>
+                            <td class="text-muted">Figure</td>
+                            <td class="text-end">{{ dataset.reference_figure }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if dataset.reference_location %}
+                        <tr>
+                            <td class="text-muted">Location</td>
+                            <td class="text-end">{{ dataset.reference_location }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Authors -->
+        {% if dataset.reference_authors.exists %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#authorsSection">
+                <h6 class="mb-0"><i class="bi bi-people me-2"></i>Authors ({{ dataset.reference_authors.count }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="authorsSection">
+                <div class="section-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for author in dataset.reference_authors.all %}
+                        <li class="list-group-item py-2 small">
+                            {{ author.name }}
+                            {% if author.orcid %}
+                            <a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener" 
+                               class="ms-1 text-muted" title="ORCID">
+                                <i class="bi bi-person-badge"></i>
+                            </a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- File Authors -->
+        {% if dataset.file_authors.exists %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fileAuthorsSection">
+                <h6 class="mb-0"><i class="bi bi-file-person me-2"></i>File Authors</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="fileAuthorsSection">
+                <div class="section-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for author in dataset.file_authors.all %}
+                        <li class="list-group-item py-2 small">
+                            {{ author.name }}
+                            {% if author.orcid %}
+                            <a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener" 
+                               class="ms-1 text-muted" title="ORCID">
+                                <i class="bi bi-person-badge"></i>
+                            </a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Common Ignition Type -->
+        {% if common_properties and common_properties.ignition_target %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Ignition Detection</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Target</td>
+                            <td class="text-end fw-medium">{{ common_properties.ignition_target }}</td>
+                        </tr>
+                        {% if common_properties.ignition_type %}
+                        <tr>
+                            <td class="text-muted">Type</td>
+                            <td class="text-end">{{ common_properties.ignition_type }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.section-body {
+    padding: 0.75rem;
+}
+.table {
+    font-size: 0.85rem;
+}
+.table td, .table th {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

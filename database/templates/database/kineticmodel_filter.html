@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% load crispy_forms_tags %}
+{% load utils %}
+{% load renders %}
+
+{% block content %}
+<!-- Compact Page Header -->
+<div class="page-header-compact">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">Kinetic Models</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} models</span>
+            {% if site_access_allowed %}
+            <a href="{% url 'kinetic-model-create' %}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-lg me-1"></i>Add Model
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="table-container">
+    <table class="table table-hover table-sm mb-0">
+        <thead>
+            <tr>
+                <th style="width: 60px;">ID</th>
+                <th>Model Name</th>
+                <th class="text-center" style="width: 100px;">Species</th>
+                <th class="text-center" style="width: 100px;">Kinetics</th>
+                <th style="width: 200px;">Source</th>
+                <th style="width: 40px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for model in object_list %}
+            <tr class="clickable-row" data-href="{% url 'kinetic-model-detail' model.pk %}">
+                <td class="text-muted small">{{ model.pk }}</td>
+                <td><strong>{{ model.model_name }}</strong></td>
+                <td class="text-center text-muted">{{ model.species.count|default:"—" }}</td>
+                <td class="text-center text-muted">{{ model.kinetics.count|default:"—" }}</td>
+                <td class="text-muted small">
+                    {% if model.source %}
+                    <a href="{% url 'source-detail' model.source.pk %}">{{ model.source.source_title|truncatewords:6 }}</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-end"><i class="bi bi-chevron-right text-muted"></i></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="bi bi-box me-1"></i>No kinetic models found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination-compact">
+    {% render_pagination objects=page_obj page_name="page" %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header-compact {
+    padding: 1rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table-container {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.table th {
+    background: var(--color-gray-50);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-gray-600);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+    background-color: var(--color-primary-bg) !important;
+}
+
+.pagination-compact {
+    padding: 0.75rem;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function(event) {
+        if (event.target.closest('a')) return;  // a link inside the row goes to its own page
+        window.location.href = this.dataset.href;
+    });
+});
+</script>
+{% endblock %}

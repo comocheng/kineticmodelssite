@@ -1,0 +1,28 @@
+FROM continuumio/miniconda3:latest
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+SHELL ["/bin/bash", "-c"]
+
+# Update and install packages with retry logic
+RUN apt-get update && \
+    apt-get -y install --fix-missing \
+    gcc \
+    g++ \
+    libxrender-dev \
+    libsm6 \
+    libxext6 || \
+    (apt-get update && apt-get -y install --fix-missing \
+    gcc \
+    g++ \
+    libxrender-dev \
+    libsm6 \
+    libxext6)
+
+RUN mkdir /kms_env
+ENV ENV_PREFIX=/kms_env
+COPY environment.yml /app/
+RUN conda env remove --prefix $ENV_PREFIX -y 2>/dev/null || true && \
+    conda env create --prefix $ENV_PREFIX --file environment.yml
+RUN echo "rmg==3.0" > /kms_env/conda-meta/pinned

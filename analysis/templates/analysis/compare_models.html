@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compare Models{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item active">Compare Models</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0"><i class="bi bi-bar-chart-line me-2 text-primary"></i>Compare Models</h1>
+    <p class="text-muted mb-0 mt-1">Side-by-side comparison of kinetic model performance</p>
+</div>
+
+<!-- Model Selection Form -->
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Select Models and Dataset</h6>
+    </div>
+    <div class="section-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-7">
+                <label class="form-label small fw-medium">Models (select multiple)</label>
+                <select name="models" class="form-select form-select-sm" multiple size="6">
+                    {% for model in all_models %}
+                    <option value="{{ model.id }}" {% if model.id|stringformat:"s" in selected_model_ids %}selected{% endif %}>
+                        {{ model.model_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-medium">Dataset</label>
+                <select name="dataset" class="form-select form-select-sm">
+                    <option value="">Select a dataset...</option>
+                    {% for dataset in all_datasets %}
+                    <option value="{{ dataset.id }}" {% if selected_dataset_id == dataset.id|stringformat:"s" %}selected{% endif %}>
+                        {{ dataset.short_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search me-1"></i>Compare
+                </button>
+                <a href="{% url 'analysis:compare-models' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if comparison_data %}
+<div class="data-section mb-4">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-table me-2"></i>Comparison Summary</h6>
+    </div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th class="text-end">Avg Error</th>
+                        <th class="text-end">Deviation</th>
+                        <th class="text-end">Datapoints</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in comparison_data %}
+                    <tr>
+                        <td>{{ item.model.model_name }}</td>
+                        <td class="text-end">
+                            <span class="{% if item.result.average_error_function < 1 %}text-success{% elif item.result.average_error_function < 2 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ item.result.average_error_function|floatformat:3 }}
+                            </span>
+                        </td>
+                        <td class="text-end">{{ item.result.average_deviation_function|floatformat:3|default:"—" }}</td>
+                        <td class="text-end">{{ item.datapoints|length }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if chart_data %}
+<div class="data-section">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Parity Comparison</h6>
+    </div>
+    <div class="section-body">
+        <div id="comparison-chart" style="height: 400px;"></div>
+    </div>
+</div>
+{% endif %}
+{% else %}
+<div class="data-section">
+    <div class="section-body text-center py-5">
+        <i class="bi bi-bar-chart-line d-block mb-3" style="font-size: 3rem; color: var(--color-gray-400);"></i>
+        <h5 class="text-muted">Select models and a dataset to compare</h5>
+        <p class="text-muted mb-0">Choose at least two models and one dataset above.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_data %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const plotData = {{ chart_data|safe }};
+    const traces = plotData.models.map(model => ({
+        x: model.experimental,
+        y: model.simulated,
+        mode: 'markers',
+        type: 'scatter',
+        name: model.name,
+        text: model.temperatures.map(t => `T=${t} K`)
+    }));
+    Plotly.newPlot('comparison-chart', traces, {
+        xaxis: { title: 'Experimental' },
+        yaxis: { title: 'Simulated' },
+        legend: { orientation: 'h' },
+        margin: { t: 20 }
+    }, {responsive: true});
+});
+</script>
+{% endif %}
+{% endblock %}

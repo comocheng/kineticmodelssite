@@ -1,33 +1,184 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load crispy_forms_tags %}
 {% load utils %}
 {% load renders %}
 
-<h1>Species</h1>
-
 {% block content %}
-    <form action="" method="get">
-        {{ filter.form|crispy }}
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
-    <br>
-    {% render_pagination objects=page_obj page_name="page"%}
-    <div class="list-group">
-        {% for source in object_list %}
-            <a href="{% url 'source-detail' source.pk %}"
-               class="list-group-item list-group-item-action flex-column align-items-start"
-            >
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">{{ source.source_title.title|titlecase }}</h6>
-                    <small>ID: {{ source.id }}</small>
-                </div>
-                <i>{{ source.pub_info }}</i>
-                <br>
-                {{ source.author_line }}
+<!-- Compact Page Header -->
+<div class="page-header-compact">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">Source Search</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} results</span>
+            {% if site_access_allowed %}
+            <a href="{% url 'source-create' %}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-lg me-1"></i>Add Source
             </a>
-        {% endfor %}
+            {% endif %}
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#searchPanel" aria-expanded="false" aria-controls="searchPanel">
+                <i class="bi bi-funnel me-1"></i>Filters
+            </button>
+        </div>
     </div>
-    <br>
-    {% render_pagination objects=page_obj page_name="page"%}
+</div>
+
+<!-- Collapsible Search Panel -->
+<div class="collapse mb-3" id="searchPanel">
+    <div class="search-panel">
+        <form method="get" id="source-search-form">
+            {{ filter.form.media }}
+            <div class="row g-2 align-items-end">
+                {{ filter.form|crispy }}
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <a href="{% url 'source-search' %}" class="btn btn-outline-secondary btn-sm">
+                        Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="table-container">
+    <table class="table table-hover table-sm mb-0">
+        <thead>
+            <tr>
+                <th style="width: 60px;">ID</th>
+                <th>Title</th>
+                <th style="width: 250px;">Authors</th>
+                <th style="width: 180px;">Publication</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for source in object_list %}
+            <tr class="clickable-row" data-href="{% url 'source-detail' source.pk %}">
+                <td class="text-muted small">{{ source.pk }}</td>
+                <td>
+                    <strong class="source-title">{{ source.source_title.title|titlecase|truncatewords:15 }}</strong>
+                </td>
+                <td class="text-muted small">
+                    {{ source.author_line|truncatewords:8|default:"—" }}
+                </td>
+                <td class="small">
+                    <span class="text-muted">{{ source.pub_info|truncatewords:6|default:"—" }}</span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                    <i class="bi bi-search me-1"></i>No sources found. Try adjusting your filters.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination-compact">
+    {% render_pagination objects=page_obj page_name="page" %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header-compact {
+    padding: 1rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.search-panel {
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.table-container {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.table th {
+    background: var(--color-gray-50);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-gray-600);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+    background-color: var(--color-primary-bg) !important;
+}
+
+.source-title {
+    color: var(--color-gray-900);
+    font-weight: 500;
+}
+
+.pagination-compact {
+    padding: 0.75rem;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+
+.search-panel .form-group {
+    margin-bottom: 0;
+}
+
+.search-panel label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.search-panel .form-control {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function() {
+        window.location.href = this.dataset.href;
+    });
+});
+
+{% if request.GET %}
+document.getElementById('searchPanel').classList.add('show');
+{% endif %}
+</script>
 {% endblock %}

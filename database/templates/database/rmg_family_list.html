@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item active">RMG reaction families</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0">RMG reaction families</h1>
+</div>
+<p class="small text-muted">The RMG reaction family that generates each of the site's reactions, in either direction. {{ unclassified }} reactions have no family, and RMG could not handle the species of {{ unsupported }}. <a href="{% url 'rmg-library-list' %}">RMG-database libraries</a></p>
+
+<div class="data-section">
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Family</th><th class="text-end">Reactions</th><th class="text-end">Rate-rule estimates</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr>
+                <td><a href="{% url 'rmg-family-detail' row.name %}">{{ row.name }}</a></td>
+                <td class="text-end">{{ row.reactions }}</td>
+                <td class="text-end">{{ row.estimates }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted">Run classify_reaction_families to fill this page.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

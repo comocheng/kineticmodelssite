@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item active">Species Search</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h1 class="h4 mb-0"><i class="bi bi-droplet-half me-2 text-primary"></i>Species in ChemKED</h1>
+    </div>
+</div>
+
+<!-- Search Form -->
+<div class="data-section mb-4">
+    <div class="section-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label small fw-semibold">Search species by name, InChI, or SMILES</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" 
+                           placeholder="e.g., CH4, methane, InChI=1S/CH4/h1H4" 
+                           value="{{ query }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                    {% if query %}
+                    <a href="{% url 'chemked_database:species-search' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="data-section">
+    <div class="section-header">
+        <h6 class="mb-0">
+            <i class="bi bi-list me-2"></i>
+            {% if query %}Results for "{{ query }}"{% else %}All Species{% endif %}
+        </h6>
+        <span class="badge bg-secondary">{{ page_obj.paginator.count }} species</span>
+    </div>
+    <div class="section-body p-0">
+        {% if species_list %}
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Species Name</th>
+                    <th>InChI</th>
+                    <th>SMILES</th>
+                    <th class="text-end">Occurrences</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for species in species_list %}
+                <tr>
+                    <td class="fw-medium">{{ species.species_name }}</td>
+                    <td>
+                        {% if species.inchi %}
+                        <code class="small text-break">{{ species.inchi|truncatechars:35 }}</code>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if species.smiles %}
+                        <code class="small">{{ species.smiles|truncatechars:20 }}</code>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <span class="badge bg-secondary">{{ species.occurrence_count }}</span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'chemked_database:species-datapoints' species.species_name %}" 
+                           class="btn btn-sm btn-outline-primary" title="View datapoints">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="p-3 border-top">
+            <nav aria-label="Species pagination">
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page=1">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-search fs-1 d-block mb-2"></i>
+            {% if query %}
+            <p class="mb-0">No species found matching "{{ query }}".</p>
+            <a href="{% url 'chemked_database:species-search' %}" class="btn btn-outline-primary btn-sm mt-2">
+                Clear search
+            </a>
+            {% else %}
+            <p class="mb-0">No species in the database yet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0;
+}
+.section-body {
+    padding: 0.75rem;
+}
+.table {
+    font-size: 0.85rem;
+}
+.table td, .table th {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

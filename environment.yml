@@ -1,33 +1,54 @@
-name: kms
+name: kms311
 channels:
   - conda-forge
   - rmg
   - nodefaults
 dependencies:
-  - python>=3.7
-  - nomkl
-  - cairo
-  - cairocffi
-  - xlrd
-  - xlwt
-  - habanero>=0.6,<0.7
-  - rmg==3.0
-  - django==3.0
-  - django-filter
-  - django-extensions
-  - django-model-utils
-  - django-crispy-forms
-  - psycopg2
-  - gunicorn
+  - python=3.11
   - pip
+
+  # Brings rmgdatabase, cantera, rdkit, openbabel, numpy<2, scipy, pandas,
+  # matplotlib, pyyaml, h5py
+  - rmg::rmg=4.0.0
+
+  # Compiled packages kept on conda so pip doesn't install its own HDF5/libpq
+  - pytables
+  - psycopg2
+  - lxml
+  - gunicorn
+
   - pip:
-    - titlecase
-    - black
-    - flake8
-    - flake8-django
-    - django-test-migrations
-    - django-autocomplete-light
-    - djangorestframework
-    - drf-writable-nested
-    - python-dotenv
-    - pydantic
+      # Brings djangorestframework
+      - django==4.2.24
+      - drf-spectacular==0.29.0
+      - drf-spectacular-sidecar
+      - drf-flex-fields==1.0.2
+      - drf-writable-nested==0.7.2
+      - django-filter==25.1
+      - django-extensions==4.1
+      - crispy-bootstrap4==2025.6
+      - django-autocomplete-light==3.9.4
+      - django-mathfilters==1.0.0
+      - dj-database-url==3.0.1
+      - python-dotenv==1.1.1
+
+      # Brings celery
+      - django-celery-results
+      - redis
+
+      # Local checkouts: the PyPI releases (pyked 0.5.0, pyteck 0.2.6) require
+      # numpy>=2, which conflicts with RMG. Brings pint, habanero, uncertainties.
+      - pyked
+      - pyteck
+      - rdflib
+      - pydantic>=2
+      - paramiko
+      - titlecase==2.4.1
+      - requests
+
+      # Brings pytest, flake8
+      - pytest-cov
+      - flake8-django
+      - django-test-migrations==1.4.0
+      - black
+      - mkdocs-material

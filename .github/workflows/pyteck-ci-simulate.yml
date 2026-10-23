@@ -1,0 +1,109 @@
+# Triggered by ChemKED-database CI via repository_dispatch.
+# Runs PyTeCK simulation on a self-hosted runner with DB access
+# and posts results back to the originating PR.
+
+name: PyTeCK CI Simulation
+
+on:
+  repository_dispatch:
+    types: [pyteck-simulate]
+
+jobs:
+  simulate:
+    name: Run PyTeCK Simulation
+    runs-on: self-hosted
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout kineticmodelssite
+        uses: actions/checkout@v4
+
+      - name: Restore runner .env
+        run: |
+          ENV_SRC="$HOME/Documents/CoMoChEng/actions-runner/.runner-config/kms.env"
+          if [ -f "$ENV_SRC" ]; then
+            cp "$ENV_SRC" "${{ github.workspace }}/.env"
+          else
+            echo "WARNING: $ENV_SRC not found — DB credentials missing"
+          fi
+
+      - name: Decode ChemKED files from payload
+        id: decode
+        run: |
+          mkdir -p /tmp/pyteck_ci_files
+          # Payload: { files: [{filename, content_base64}], pr_repo, pr_number, commit_sha, model_id? }
+          PAYLOAD='${{ toJson(github.event.client_payload) }}'
+
+          PR_REPO=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['pr_repo'])")
+          PR_NUMBER=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['pr_number'])")
+          COMMIT_SHA=$(echo "$PAYLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin)['commit_sha'])")
+          MODEL_ID=$(echo "$PAYLOAD" | python3 -c "import sys,json; p=json.load(sys.stdin); print(p.get('model_id',''))")
+
+          # Decode each file and write a sidecar .repo_path file
+          echo "$PAYLOAD" | python3 -c "
+          import sys, json, base64, os
+          payload = json.load(sys.stdin)
+          for f in payload.get('files', []):
+              path = os.path.join('/tmp/pyteck_ci_files', f['filename'])
+              content = base64.b64decode(f['content_base64'])
+              with open(path, 'wb') as fh:
+                  fh.write(content)
+              repo_path = f.get('repo_path', f['filename'])
+              with open(path + '.repo_path', 'w') as rp:
+                  rp.write(repo_path)
+              print(f'Decoded: {path} (repo path: {repo_path})')
+          "
+
+          echo "pr_repo=$PR_REPO" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "model_id=$MODEL_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Generate GitHub App token for check-runs
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: LekiaAnonim
+          repositories: ChemKED-database
+
+      - name: Run ci_simulate for each file
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          # Activate the conda environment with Django, Cantera, PyTeCK
+          eval "$(conda shell.bash hook)"
+          conda activate kms
+          cd ${{ github.workspace }}
+
+          MODEL_FLAG=""
+          if [ -n "${{ steps.decode.outputs.model_id }}" ]; then
+            MODEL_FLAG="--model-id ${{ steps.decode.outputs.model_id }}"
+          fi
+
+          EXIT_CODE=0
+          for YAML_FILE in /tmp/pyteck_ci_files/*.yaml /tmp/pyteck_ci_files/*.yml; do
+            [ -f "$YAML_FILE" ] || continue
+            echo "=== Simulating: $(basename $YAML_FILE) ==="
+            REPO_PATH_FILE="${YAML_FILE}.repo_path"
+            REPO_FILE_PATH=""
+            if [ -f "$REPO_PATH_FILE" ]; then
+              REPO_FILE_PATH=$(cat "$REPO_PATH_FILE")
+            fi
+            python manage.py ci_simulate \
+              --chemked-yaml "$YAML_FILE" \
+              --pr-repo "${{ steps.decode.outputs.pr_repo }}" \
+              --pr-number "${{ steps.decode.outputs.pr_number }}" \
+              --commit-sha "${{ steps.decode.outputs.commit_sha }}" \
+              --github-token "$GITHUB_TOKEN" \
+              ${REPO_FILE_PATH:+--repo-file-path "$REPO_FILE_PATH"} \
+              $MODEL_FLAG \
+              || EXIT_CODE=1
+          done
+
+          exit $EXIT_CODE
+
+      - name: Cleanup temp files
+        if: always()
+        run: rm -rf /tmp/pyteck_ci_files

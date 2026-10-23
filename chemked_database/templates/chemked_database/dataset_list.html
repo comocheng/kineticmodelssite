@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item active">Datasets</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h1 class="h4 mb-0"><i class="bi bi-file-earmark-text me-2 text-danger"></i>Experimental Datasets</h1>
+        <span class="badge bg-secondary">{{ page_obj.paginator.count|default:0 }} datasets</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3">
+        <div class="data-section sticky-lg-top" style="top: 80px;">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h6>
+            </div>
+            <div class="section-body">
+                <form method="get" id="filter-form">
+                    <!-- Experiment Type -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Experiment Type</label>
+                        {{ filter.form.experiment_type }}
+                    </div>
+
+                    <!-- Apparatus -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Apparatus</label>
+                        {{ filter.form.apparatus_kind }}
+                    </div>
+
+                    <!-- Year Range -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Publication Year</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                {{ filter.form.reference_year_min }}
+                            </div>
+                            <div class="col-6">
+                                {{ filter.form.reference_year_max }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Species -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Species / Fuel</label>
+                        {{ filter.form.species }}
+                    </div>
+
+                    <!-- DOI -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">DOI contains</label>
+                        {{ filter.form.reference_doi }}
+                    </div>
+
+                    <!-- Institution -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Institution</label>
+                        {{ filter.form.institution }}
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="filter-loading" class="text-center py-2 d-none">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <small class="text-muted ms-2">Filtering...</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                            <i class="bi bi-x-lg me-1"></i>Clear filters
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset List -->
+    <div class="col-lg-9">
+        <div class="data-section">
+            <div class="section-body p-0" id="dataset-results">
+                {% include "chemked_database/partials/dataset_table.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.section-header {
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0;
+}
+.section-body {
+    padding: 0.75rem;
+}
+.table {
+    font-size: 0.85rem;
+}
+.table td, .table th {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filter-form');
+    const loadingIndicator = document.getElementById('filter-loading');
+    const resultsContainer = document.getElementById('dataset-results');
+    let debounceTimer;
+    let currentRequest = null;
+
+    // AJAX filter function
+    function filterDatasets() {
+        // Cancel any pending request
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+
+        showLoading();
+
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams(formData);
+        
+        // Update URL without reload (for bookmarking/sharing)
+        const newUrl = window.location.pathname + '?' + params.toString();
+        window.history.replaceState({}, '', newUrl);
+
+        // Make AJAX request
+        currentRequest = new XMLHttpRequest();
+        currentRequest.open('GET', newUrl, true);
+        currentRequest.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        
+        currentRequest.onload = function() {
+            hideLoading();
+            if (currentRequest.status >= 200 && currentRequest.status < 400) {
+                resultsContainer.innerHTML = currentRequest.responseText;
+                // Re-attach pagination click handlers
+                attachPaginationHandlers();
+            }
+            currentRequest = null;
+        };
+
+        currentRequest.onerror = function() {
+            hideLoading();
+            currentRequest = null;
+        };
+
+        currentRequest.send();
+    }
+
+    // Auto-submit on change for select elements (immediate)
+    filterForm.querySelectorAll('select.filter-auto-submit').forEach(function(el) {
+        el.addEventListener('change', function() {
+            filterDatasets();
+        });
+    });
+
+    // Debounced auto-submit for text/number inputs (wait 400ms after typing stops)
+    filterForm.querySelectorAll('input.filter-auto-submit').forEach(function(el) {
+        el.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                filterDatasets();
+            }, 400);
+        });
+
+        // Also submit on Enter key
+        el.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                filterDatasets();
+            }
+        });
+    });
+
+    // Handle pagination clicks via AJAX
+    function attachPaginationHandlers() {
+        resultsContainer.querySelectorAll('.ajax-page').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                showLoading();
+                
+                const url = this.getAttribute('href');
+                window.history.replaceState({}, '', url);
+
+                fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    resultsContainer.innerHTML = html;
+                    attachPaginationHandlers();
+                    hideLoading();
+                })
+                .catch(() => hideLoading());
+            });
+        });
+    }
+
+    // Initial attachment
+    attachPaginationHandlers();
+
+    function showLoading() {
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('d-none');
+        }
+        resultsContainer.style.opacity = '0.5';
+    }
+
+    function hideLoading() {
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('d-none');
+        }
+        resultsContainer.style.opacity = '1';
+    }
+});
+</script>
+{% endblock %}

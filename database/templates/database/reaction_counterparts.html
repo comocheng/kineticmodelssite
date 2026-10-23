@@ -1,0 +1,38 @@
+<div class="data-section mb-3">
+    <div class="section-header">
+        <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>RMG-database counterparts</h6>
+    </div>
+    <div class="section-body">
+        {% if rmg_family == "-" %}
+        <p class="small mb-2">No <a href="{% url 'rmg-family-list' %}">RMG reaction family</a> generates this reaction.</p>
+        {% elif rmg_family == "?" %}
+        <p class="small mb-2">RMG's families could not be applied to these species.</p>
+        {% elif rmg_family %}
+        <p class="small mb-2">RMG family <a class="fw-semibold" href="{% url 'rmg-family-detail' rmg_family %}">{{ rmg_family }}</a>{% if reaction.rmg_template %}, template <span class="font-monospace">{{ reaction.rmg_template }}</span>{% endif %}.</p>
+        {% endif %}
+        {% if rmg_records %}
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Source</th><th>Entry</th><th>Type</th><th>Direction</th><th>Same rate as</th></tr></thead>
+            <tbody>
+            {% for item in rmg_records %}
+            <tr>
+                <td>{% if item.record.provider == "rmg_family" %}RMG family rate-rule estimate{% else %}{{ item.record.get_provider_display }}{% endif %}:
+                    {% if item.record.provider == "rmg_library" %}<a href="{% url 'rmg-library-detail' 'kinetics' item.record.library %}">{{ item.record.library }}</a>
+                    {% elif item.record.provider == "rmg_family" %}<a href="{% url 'rmg-family-detail' item.record.library %}">{{ item.record.library }}</a>
+                    {% elif item.record.source_url %}<a href="{{ item.record.source_url }}" target="_blank" rel="noopener noreferrer">{{ item.record.library }}</a>
+                    {% else %}{{ item.record.library }}{% endif %}</td>
+                <td>{% if item.entry_url %}<a href="{{ item.entry_url }}" target="_blank" rel="noopener noreferrer">{{ item.record.label }} <i class="bi bi-box-arrow-up-right"></i></a>{% else %}{{ item.record.label }}{% endif %}</td>
+                <td>{{ item.record.type }}</td>
+                <td>{% if item.same_direction %}as written{% else %}reverse (not plotted){% endif %}</td>
+                <td>{% for m in item.identical_models %}<a href="{% url 'kinetic-model-detail' m.pk %}">{{ m.model_name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}–{% endfor %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% elif not rmg_family %}
+        <p class="small text-muted mb-0">No RMG-database library has this reaction{% if not reaction.canonical_key %} (this reaction is not indexed yet){% endif %}.</p>
+        {% endif %}
+    </div>
+</div>

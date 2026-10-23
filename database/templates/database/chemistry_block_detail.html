@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a></li>
+            <li class="breadcrumb-item active">Copied block {{ chemistry_block.pk }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-1">{{ chemistry_block.size }} identical rates shared by {{ block_models|length }} models</h1>
+    <p class="small text-muted mb-0">Exactly these models use these rates.
+        {% if chemistry_block.origin %}The earliest-published is <a href="{% url 'kinetic-model-detail' chemistry_block.origin_id %}">{{ chemistry_block.origin.model_name }}</a>, the likely source.{% endif %}
+        Layers: {% for layer, count in chemistry_block.layers.items %}<a href="{% url 'sub-mechanism-list' %}?layer={{ layer|urlencode }}">{{ layer }}</a> {{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+</div>
+
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">Models</h6></div>
+    <div class="section-body">
+        <ul class="small mb-0 ps-3">
+            {% for m in block_models %}<li><a href="{% url 'kinetic-model-detail' m.pk %}">{{ m.model_name }}</a> <span class="text-muted">{{ m.source.publication_year|default:"year unknown" }}</span></li>{% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="data-section">
+    <div class="section-header"><h6 class="mb-0">Reactions</h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Reaction</th><th>Layer</th></tr></thead>
+            <tbody>
+            {% for reaction in rows %}
+            <tr>
+                <td><a href="{% url 'reaction-detail' reaction.pk %}">{{ reaction.equation_text }}</a></td>
+                <td><a href="{% url 'sub-mechanism-list' %}?layer={{ reaction.layer|urlencode }}">{{ reaction.layer }}</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% include "database/pager.html" %}
+    </div>
+</div>
+{% endblock %}

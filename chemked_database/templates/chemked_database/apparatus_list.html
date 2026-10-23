@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item active">Apparatus Types</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0"><i class="bi bi-gear me-2 text-primary"></i>Experimental Apparatus</h1>
+    <p class="text-muted small mb-0">Browse experiments by apparatus type</p>
+</div>
+
+<!-- Apparatus Grid -->
+<div class="row g-3">
+    {% for apparatus in apparatus_list %}
+    <div class="col-md-6 col-lg-4">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    {% if apparatus.kind == 'shock tube' %}
+                        Shock Tube
+                    {% elif apparatus.kind == 'rapid compression machine' %}
+                        RCM
+                    {% elif apparatus.kind == 'flow reactor' %}
+                        Flow Reactor
+                    {% elif apparatus.kind == 'jet-stirred reactor' %}
+                        JSR
+                    {% elif apparatus.kind == 'static reactor' %}
+                        Static Reactor
+                    {% elif apparatus.kind == 'flame burner' %}
+                        Burner
+                    {% else %}
+                        {{ apparatus.kind|title }}
+                    {% endif %}
+                </h6>
+            </div>
+            <div class="section-body">
+                {% if apparatus.institution %}
+                <p class="small text-muted mb-2">
+                    <i class="bi bi-building me-1"></i>{{ apparatus.institution }}
+                </p>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-primary">{{ apparatus.dataset_count }} dataset{{ apparatus.dataset_count|pluralize }}</span>
+                    <a href="{% url 'chemked_database:dataset-list' %}?apparatus_kind={{ apparatus.kind|urlencode }}" 
+                       class="btn btn-sm btn-outline-primary">
+                        View Datasets <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="data-section">
+            <div class="section-body text-center py-4">
+                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                <p class="text-muted mb-0">No apparatus records found.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Summary Stats -->
+{% if apparatus_list %}
+<div class="mt-4">
+    <div class="data-section">
+        <div class="section-header">
+            <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Summary</h6>
+        </div>
+        <div class="section-body">
+            <div class="row text-center">
+                <div class="col-sm-4">
+                    <span class="h4 fw-bold text-primary">{{ apparatus_list|length }}</span>
+                    <p class="small text-muted mb-0">Apparatus Types</p>
+                </div>
+                <div class="col-sm-4">
+                    <span class="h4 fw-bold text-success">
+                        {% with total=apparatus_list|length %}
+                        {% widthratio total 1 1 as dummy %}
+                        {% endwith %}
+                        {{ apparatus_list.count }}
+                    </span>
+                    <p class="small text-muted mb-0">Unique Facilities</p>
+                </div>
+                <div class="col-sm-4">
+                    <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-right me-1"></i>Browse All Datasets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: box-shadow 0.15s ease;
+}
+.data-section:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.section-header {
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.section-header h6 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0;
+}
+.section-body {
+    padding: 0.75rem;
+}
+</style>
+{% endblock %}

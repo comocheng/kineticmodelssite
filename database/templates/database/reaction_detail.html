@@ -1,80 +1,198 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load utils %}
 
 {% block content %}
-<h2>{{ reaction.equation }}</h2>
-<h2>ID: {{ reaction.pk }}</h2>
-<br>
-<h3>Reactants</h3>
-<div class="list-group">
-    {% for reactant in reactants %}
-    <a href="{% url 'species-detail' reactant.pk %}" class="list-group-item list-group-item-action">
-        <strong>{{ reactant.formula }}</strong>
-        <ul class="list-group">
-            {% for structure in reactant.structures %}
-            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
-            {% endfor %}
-        </ul>
-    </a>
-    {% endfor %}
+<!-- Compact Header -->
+<div class="detail-header">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'reaction-search' %}">Reactions</a></li>
+            <li class="breadcrumb-item active">Reaction {{ reaction.pk }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3">
+        <h1 class="h4 mb-0">Reaction Detail</h1>
+        <span class="badge bg-secondary">ID: {{ reaction.pk }}</span>
+    </div>
 </div>
-<br>
-<h3>Products</h3>
-<div class="list-group">
-    {% for product in products %}
-    <a href="{% url 'species-detail' product.pk %}" class="list-group-item list-group-item-action">
-        <strong>{{ product.formula }}</strong>
-        <ul class="list-group">
-            {% for structure in product.structures %}
-            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
-            {% endfor %}
-        </ul>
-    </a>
-{% endfor %}
+
+<!-- Reaction Equation -->
+<div class="data-section mb-3">
+    <div class="section-body text-center py-3">
+        <span class="reaction-equation h5 font-monospace">{{ reaction.equation }}</span>
+    </div>
 </div>
-</br>
-<h3>Kinetics</h3>
-{% for k, model_names in kinetics_modelnames %}
-    <div class="card">
-        <div class="list-group-item list-group-item-action flex-column align-items-start">
-            <a class="list-group-item-action" href="{% url 'kinetics-detail' k.pk %}">
-                <div class="d-flex w-100 justify-content-between">
-                  <h5 class="mb-1">{{ k.source.source_title|default:k.type }}</h5>
-                  <small>ID: {{ k.pk }}</small>
-                </div>
-                {% if k.source %}
-                <small>{{ k.type }}</small>
-                {% endif %}
-                {% with k.data.table_data|last as table%}
-                <table class="table table-condensed">
-                    <thead>
-                        {% for head in table.1 %}
-                        <th scope="col">{{ head }}</th>
-                        {% endfor %}
-                    </thead>
-                    {% for row_header, cells in table.2 %}
-                    <tbody>
-                        <tr>
-                            {% if row_header %}
-                            <th scope="row">{{ row_header }}</th>
-                            {% endif %}
-                            {% for cell in cells %}
-                            <td>{{ cell|format_g_or_str }}</td>
-                            {% endfor %}
-                        </tr>
-                    </tbody>
+
+<!-- Reactants & Products -->
+<div class="row g-3 mb-3">
+    <div class="col-md-5">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-arrow-right-circle me-2"></i>Reactants</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    {% for reactant in reactants %}
+                    <tr class="clickable-row" data-href="{% url 'species-detail' reactant.pk %}">
+                        <td style="width: 50px;">
+                            {% if reactant.structures %}
+                            {% with reactant.structures|to_list|first as structure %}
+                            <img src="{% url 'draw-structure' structure.pk %}" alt="" class="species-thumb">
+                            {% endwith %}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="font-monospace fw-medium">{{ reactant.formula }}</td>
+                        <td class="text-muted small text-end">{{ reactant.pk }}</td>
+                    </tr>
                     {% endfor %}
                 </table>
-                {% endwith %}
-                <h6>Models</h6>
-                <div class="list-group">
-                    {% for model_name in model_names %}
-                    <li class="list-group-item">{{ model_name }}</li>
-                    {% endfor %}
-                </div>
             </div>
         </div>
-    </a>
-{% endfor %}
+    </div>
+    <div class="col-md-2 d-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-right-circle-fill text-primary fs-3"></i>
+    </div>
+    <div class="col-md-5">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-arrow-left-circle me-2"></i>Products</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    {% for product in products %}
+                    <tr class="clickable-row" data-href="{% url 'species-detail' product.pk %}">
+                        <td style="width: 50px;">
+                            {% if product.structures %}
+                            {% with product.structures|to_list|first as structure %}
+                            <img src="{% url 'draw-structure' structure.pk %}" alt="" class="species-thumb">
+                            {% endwith %}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="font-monospace fw-medium">{{ product.formula }}</td>
+                        <td class="text-muted small text-end">{{ product.pk }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'database/rate_plot.html' %}
+{% include 'database/reaction_counterparts.html' %}
+
+<!-- Kinetics Data -->
+<div class="data-section">
+    <div class="section-header" data-bs-toggle="collapse" data-bs-target="#kineticsSection">
+        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Kinetics Data ({{ kinetics_modelnames|length }})</h6>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+    <div class="collapse show" id="kineticsSection">
+        <div class="section-body p-0">
+            {% for k, model_names in kinetics_modelnames %}
+            <div class="kinetics-entry {% if not forloop.last %}border-bottom{% endif %}">
+                <div class="d-flex justify-content-between align-items-start p-2 bg-light border-bottom">
+                    <div>
+                        <a href="{% url 'kinetics-detail' k.pk %}" class="fw-medium text-decoration-none">Kinetics #{{ k.pk }}</a>
+                        <span class="badge bg-secondary-subtle text-secondary small ms-2">{{ k.type }}</span>
+                        {% if k.source %}<div class="small">Reference: <a href="{% url 'source-detail' k.source.pk %}">{{ k.source.source_title|truncatewords:12 }}</a></div>{% endif %}
+                    </div>
+                    <span class="small text-muted">ID: {{ k.pk }}</span>
+                </div>
+                
+                <!-- Rate Parameters -->
+                {% with k.data.table_data|last as table %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr class="small">
+                                {% for head in table.1 %}
+                                <th>{{ head }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row_header, cells in table.2 %}
+                            <tr>
+                                {% if row_header %}<th scope="row" class="small">{{ row_header }}</th>{% endif %}
+                                {% for cell in cells %}
+                                <td class="font-monospace small">{{ cell|format_g_or_str }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endwith %}
+                
+                {% if model_names %}
+                <div class="p-2 small">
+                    <span class="text-muted">Models:</span>
+                    {% for model in model_names %}
+                    <a class="badge bg-light text-dark me-1 text-decoration-none" href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-graph-up me-1"></i>No kinetics data available.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+
+.section-header h6 { font-size: 0.8rem; font-weight: 600; }
+.section-body { padding: 0.75rem; }
+
+.table td, .table th { padding: 0.4rem 0.5rem; vertical-align: middle; }
+.species-thumb { width: 40px; height: 30px; object-fit: contain; }
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background-color: var(--color-primary-bg) !important; }
+
+.kinetics-entry .table { font-size: 0.8rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if rate_plot.series %}
+{% include 'database/plot_scripts.html' %}
+<script>renderRatePlot("rate-plot", "rate-plot-data", "rate-plot-pressure", "rate-plot-table");</script>
+{% endif %}
+<script>
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function() {
+        window.location.href = this.dataset.href;
+    });
+});
+</script>
 {% endblock %}

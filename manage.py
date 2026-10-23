@@ -5,6 +5,12 @@ import sys
 
 
 def main():
+    # Ensure we import the intended RMG-Py checkout (especially when multiple exist).
+    # This must happen before Django imports app models (which import rmgpy).
+    rmg_py_path = os.getenv("RMG_PY_PATH") or os.getenv("RMGpy")
+    if rmg_py_path:
+        sys.path.insert(0, rmg_py_path)
+
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "kms.settings")
     try:
         from django.core.management import execute_from_command_line

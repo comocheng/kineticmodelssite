@@ -72,10 +72,27 @@ When you build the docker container, it automatically applies all current migrat
 If you make changes to your code and need to migrate again, either rebuild the image (slow!)
 or attach a shell to your running container and run the migrate command:
 
+For debug configuration:
+```docker-compose exec debug bash```
+
+For production configuration:
 ```docker-compose exec web sh```
 
 Now in your interactive container shell:
 
+For debug configuration (using hybrid ARM64/x86_64 environment):
+```bash
+# Set up environment for RMG + Django compatibility
+export PYTHONPATH=/opt/conda/envs/kms_arm64/lib/python3.9/site-packages:/kms_env/lib/python3.9/site-packages:/app
+export DJANGO_SETTINGS_MODULE=kms.settings
+
+# Run Django commands (note: RMG integration has architecture compatibility issues)
+/opt/conda/envs/kms_arm64/bin/python manage.py migrate
+```
+
+**Note for Apple Silicon (ARM64) users**: Due to architecture compatibility issues between x86_64 RMG libraries and ARM64 containers, you may need to temporarily comment out RMG imports in model files for initial database setup, then use platform emulation for full functionality.
+
+For production configuration:
 ```python manage.py migrate```
 
 Similarly, if you want to nuke your migrations, you can run this in your interactive shell:

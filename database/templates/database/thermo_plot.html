@@ -1,0 +1,19 @@
+{% if thermo_plot.curves %}
+<div class="data-section mb-3" data-plot-section>
+    <div class="section-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Thermo against temperature</h6>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Quantity to plot" id="thermo-plot-controls">
+            <button type="button" class="btn btn-outline-secondary active" data-quantity="Cp" aria-pressed="true">Cₚ</button>
+            <button type="button" class="btn btn-outline-secondary" data-quantity="H" aria-pressed="false">H</button>
+            <button type="button" class="btn btn-outline-secondary" data-quantity="S" aria-pressed="false">S</button>
+            <button type="button" class="btn btn-outline-secondary" data-quantity="G" aria-pressed="false">G</button>
+        </div>
+    </div>
+    <div class="section-body">
+        <div id="thermo-plot" style="height: 470px;" role="img" aria-label="Thermo of each source against temperature"></div>
+        <p class="small text-muted mb-1">Each source over its own temperature range. Identical polynomials used by several models are drawn once; points are ATcT ΔfH°298 and the group-additivity Cp table.</p>
+        <details class="small"><summary>Values table</summary><div id="thermo-plot-table" class="table-responsive mt-2"></div></details>
+    </div>
+</div>
+{{ thermo_plot|json_script:"thermo-plot-data" }}
+{% endif %}

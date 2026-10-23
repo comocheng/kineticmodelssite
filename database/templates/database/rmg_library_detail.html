@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'rmg-library-list' %}">RMG-database libraries</a></li>
+            <li class="breadcrumb-item active">{{ name }}</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-1">{{ name }} <span class="badge bg-secondary align-middle">{{ kind_label }}</span></h1>
+    <p class="small text-muted mb-0">RMG-database {{ kind }} library · {{ version }} ·
+        <a href="{{ links.website }}" target="_blank" rel="noopener noreferrer">RMG website <i class="bi bi-box-arrow-up-right"></i></a> ·
+        <a href="{{ links.github }}" target="_blank" rel="noopener noreferrer">Source file <i class="bi bi-box-arrow-up-right"></i></a></p>
+</div>
+
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">Models sharing its data</h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Model</th><th class="text-end">Identical to the library</th><th class="text-end">Same {% if kind == "kinetics" %}reaction{% else %}species{% endif %}</th></tr></thead>
+            <tbody>
+            {% for overlap in overlaps %}
+            <tr>
+                <td><a href="{% url 'kinetic-model-detail' overlap.kinetic_model_id %}">{{ overlap.kinetic_model.model_name }}</a></td>
+                <td class="text-end">{{ overlap.identical }} of {{ overlap.model_total }} ({% widthratio overlap.identical overlap.model_total 100 %}%)</td>
+                <td class="text-end">{{ overlap.shared }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted">No model has data identical to this library.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if other_models %}<p class="small text-muted px-2 py-1 mb-0">{{ other_models }} more model{{ other_models|pluralize }} {{ other_models|pluralize:"has,have" }} some of its {% if kind == "kinetics" %}reactions{% else %}species{% endif %}, none with identical data.</p>{% endif %}
+    </div>
+</div>
+
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">Entries on this site ({{ page.paginator.count }})</h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            {% if kind == "kinetics" %}
+            <thead><tr><th>Reaction</th><th>Type</th><th class="text-end">Models with this reaction</th><th>RMG entry</th></tr></thead>
+            <tbody>
+            {% for record in rows %}
+            <tr>
+                <td><a href="{% url 'reaction-detail' record.reaction_id %}">{{ record.label }}</a></td>
+                <td>{{ record.type }}</td>
+                <td class="text-end">{{ record.model_count }}</td>
+                <td>{% if record.entry_url %}<a href="{{ record.entry_url }}" target="_blank" rel="noopener noreferrer">{{ record.external_id }} <i class="bi bi-box-arrow-up-right"></i></a>{% else %}{{ record.external_id }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            {% else %}
+            <thead><tr><th>Species</th><th>ΔfH° (298.15 K) <small>J/mol</small></th><th>Polynomial</th></tr></thead>
+            <tbody>
+            {% for record in rows %}
+            <tr>
+                <td>{% if record.species_id %}<a href="{% url 'species-detail' record.species_id %}">{{ record.label }}</a>{% else %}{{ record.label }}{% endif %}</td>
+                <td>{{ record.enthalpy_298|floatformat:2 }}</td>
+                <td>{% if record.nasa_thermo_id %}<a href="{% url 'thermo-detail' record.nasa_thermo_id %}">NASA polynomial</a>{% else %}–{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            {% endif %}
+        </table>
+        </div>
+        {% include "database/pager.html" %}
+    </div>
+</div>
+{% endblock %}

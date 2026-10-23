@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:species-search' %}">Species</a></li>
+            <li class="breadcrumb-item active">{{ species_name }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <h1 class="h4 mb-0"><i class="bi bi-droplet-half me-2 text-primary"></i>{{ species_name }}</h1>
+        <span class="badge bg-secondary">{{ page_obj.paginator.count }} datapoints</span>
+        {% if species_stats.dataset_count %}
+        <span class="badge bg-info-subtle text-info">{{ species_stats.dataset_count }} datasets</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Species Identifiers -->
+        {% if species_info %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-fingerprint me-2"></i>Species Identifiers</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 180px;">Name</td>
+                            <td class="fw-medium">{{ species_name }}</td>
+                        </tr>
+                        {% if species_info.inchi %}
+                        <tr>
+                            <td class="text-muted">InChI</td>
+                            <td><code class="small text-break">{{ species_info.inchi }}</code></td>
+                        </tr>
+                        {% endif %}
+                        {% if species_info.smiles %}
+                        <tr>
+                            <td class="text-muted">SMILES</td>
+                            <td><code class="small">{{ species_info.smiles }}</code></td>
+                        </tr>
+                        {% endif %}
+                        {% if species_info.atomic_composition %}
+                        <tr>
+                            <td class="text-muted">Atomic Composition</td>
+                            <td class="font-monospace">
+                                {% for atom in species_info.atomic_composition %}
+                                <span class="badge bg-light text-dark border me-1">
+                                    {{ atom.element }}<sub>{{ atom.amount }}</sub>
+                                </span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Thermo Data -->
+        {% if thermo_data %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#thermoSection">
+                <h6 class="mb-0"><i class="bi bi-thermometer me-2"></i>Thermodynamic Data (NASA Polynomials)</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="thermoSection">
+                <div class="section-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 180px;">Temperature Ranges</td>
+                                <td class="font-monospace">
+                                    {{ thermo_data.t_range_1 }} – {{ thermo_data.t_range_2 }} – {{ thermo_data.t_range_3 }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Low-T Coefficients</td>
+                                <td class="font-monospace small">
+                                    {% if thermo_data.coeff_1 %}{{ thermo_data.coeff_1|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_2 %}{{ thermo_data.coeff_2|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_3 %}{{ thermo_data.coeff_3|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_4 %}{{ thermo_data.coeff_4|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_5 %}{{ thermo_data.coeff_5|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_6 %}{{ thermo_data.coeff_6|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_7 %}{{ thermo_data.coeff_7|floatformat:6 }}{% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">High-T Coefficients</td>
+                                <td class="font-monospace small">
+                                    {% if thermo_data.coeff_8 %}{{ thermo_data.coeff_8|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_9 %}{{ thermo_data.coeff_9|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_10 %}{{ thermo_data.coeff_10|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_11 %}{{ thermo_data.coeff_11|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_12 %}{{ thermo_data.coeff_12|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_13 %}{{ thermo_data.coeff_13|floatformat:6 }}, {% endif %}
+                                    {% if thermo_data.coeff_14 %}{{ thermo_data.coeff_14|floatformat:6 }}{% endif %}
+                                </td>
+                            </tr>
+                            {% if thermo_data.note %}
+                            <tr>
+                                <td class="text-muted">Note</td>
+                                <td class="small">{{ thermo_data.note }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Datapoints Table -->
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Experimental Datapoints</h6>
+            </div>
+            <div class="section-body p-0">
+                {% if datapoints %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>T (K)</th>
+                                <th>P (Pa)</th>
+                                <th>τ (s)</th>
+                                <th>φ</th>
+                                <th>Dataset</th>
+                                <th>Year</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dp in datapoints %}
+                            <tr>
+                                <td class="font-monospace">{{ dp.temperature|floatformat:1 }}</td>
+                                <td class="font-monospace">{{ dp.pressure|floatformat:0 }}</td>
+                                <td class="font-monospace">
+                                    {% if dp.ignition_delay and dp.ignition_delay.ignition_delay %}
+                                    {{ dp.ignition_delay.ignition_delay|floatformat:6 }}
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td>{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                <td>
+                                    <a href="{% url 'chemked_database:dataset-detail' dp.dataset.pk %}" class="small">
+                                        {{ dp.dataset.chemked_file_path|truncatechars:25 }}
+                                    </a>
+                                </td>
+                                <td>{{ dp.dataset.reference_year|default:"—" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'chemked_database:datapoint-detail' dp.pk %}" 
+                                       class="btn btn-sm btn-outline-primary" title="View details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="p-3 border-top">
+                    <nav aria-label="Datapoints pagination">
+                        <ul class="pagination pagination-sm mb-0 justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1"><i class="bi bi-chevron-double-left"></i></a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <li class="page-item disabled">
+                                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                            </li>
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    <p class="mb-0">No datapoints found for {{ species_name }}.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Condition Ranges -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Condition Ranges</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Temperature</td>
+                            <td class="text-end font-monospace">
+                                {% if temp_range.min_temp %}
+                                {{ temp_range.min_temp|floatformat:0 }} – {{ temp_range.max_temp|floatformat:0 }} K
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pressure</td>
+                            <td class="text-end font-monospace">
+                                {% if pressure_range.min_pressure %}
+                                {{ pressure_range.min_pressure|floatformat:0 }} – {{ pressure_range.max_pressure|floatformat:0 }} Pa
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Statistics</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Total Occurrences</td>
+                            <td class="text-end fw-medium">{{ species_stats.occurrence_count|default:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Datasets</td>
+                            <td class="text-end">{{ species_stats.dataset_count|default:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Amount Range</td>
+                            <td class="text-end font-monospace small">
+                                {% if species_stats.min_amount %}
+                                {{ species_stats.min_amount|floatformat:4 }} – {{ species_stats.max_amount|floatformat:4 }}
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Avg Amount</td>
+                            <td class="text-end font-monospace">
+                                {{ species_stats.avg_amount|floatformat:4|default:"—" }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Experiment Types -->
+        {% if experiment_types %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-flask me-2"></i>Experiment Types</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for exp in experiment_types %}
+                        <tr>
+                            <td>{{ exp.dataset__experiment_type|title }}</td>
+                            <td class="text-end">
+                                <span class="badge bg-secondary">{{ exp.count }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Database Link -->
+        {% if database_species %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Database Link</h6>
+            </div>
+            <div class="section-body">
+                <p class="small mb-2">This species is linked to the kinetics database:</p>
+                <a href="{% url 'species-detail' database_species.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>View in Kinetics DB
+                </a>
+                {% if database_species.formula %}
+                <p class="small text-muted mt-2 mb-0">
+                    Formula: <strong>{{ database_species.formula }}</strong>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Alternative Identifiers -->
+        {% if all_identifiers %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#altIdentifiers">
+                <h6 class="mb-0"><i class="bi bi-tags me-2"></i>Alternative Identifiers ({{ alternative_identifiers|length }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="altIdentifiers">
+                <div class="section-body">
+                    {% if alternative_identifiers %}
+                        {% for ident in alternative_identifiers %}
+                        <div class="small mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}">
+                            {% if ident.inchi %}
+                            <div class="text-muted">InChI:</div>
+                            <code class="text-break" style="font-size: 0.7rem;">{{ ident.inchi }}</code>
+                            {% endif %}
+                            {% if ident.smiles %}
+                            <div class="text-muted mt-1">SMILES:</div>
+                            <code style="font-size: 0.7rem;">{{ ident.smiles }}</code>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="small text-muted mb-0">No alternative identifiers found for this species.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navigation -->
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-signpost me-2"></i>Navigate</h6>
+            </div>
+            <div class="section-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'chemked_database:species-search' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-search me-1"></i>Search Species
+                    </a>
+                    <a href="{% url 'chemked_database:home' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-house me-1"></i>ChemKED Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0;
+}
+.section-body {
+    padding: 0.75rem;
+}
+.table {
+    font-size: 0.85rem;
+}
+.table td, .table th {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

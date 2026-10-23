@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+{% load static %}
+{% load math_filters %}
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}">{{ datapoint.dataset.chemked_file_path|truncatechars:20 }}</a></li>
+            <li class="breadcrumb-item active">Datapoint {{ datapoint.pk }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <h1 class="h4 mb-0">Experimental Datapoint</h1>
+        <span class="badge bg-secondary">ID: {{ datapoint.pk }}</span>
+        <span class="badge bg-primary-subtle text-primary">T = {{ datapoint.temperature }} K</span>
+        <span class="badge bg-success-subtle text-success">P = {{ datapoint.pressure }} Pa</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Primary Conditions -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Experimental Conditions</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 200px;">Temperature</td>
+                            <td class="fw-medium font-monospace">{{ datapoint.temperature }} K</td>
+                            <td>
+                                {% if datapoint.temperature_quantity %}
+                                <small class="text-muted">
+                                    ({{ datapoint.temperature_quantity.value }} {{ datapoint.temperature_quantity.units }}
+                                    {% if datapoint.temperature_quantity.uncertainty %}
+                                    ± {{ datapoint.temperature_quantity.uncertainty }} {{ datapoint.temperature_quantity.uncertainty_type }}
+                                    {% endif %})
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Pressure</td>
+                            <td class="fw-medium font-monospace">{{ datapoint.pressure }} Pa</td>
+                            <td>
+                                {% if datapoint.pressure_quantity %}
+                                <small class="text-muted">
+                                    ({{ datapoint.pressure_quantity.value }} {{ datapoint.pressure_quantity.units }}
+                                    {% if datapoint.pressure_quantity.uncertainty %}
+                                    ± {{ datapoint.pressure_quantity.uncertainty }} {{ datapoint.pressure_quantity.uncertainty_type }}
+                                    {% endif %})
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if datapoint.equivalence_ratio %}
+                        <tr>
+                            <td class="text-muted">Equivalence Ratio (φ)</td>
+                            <td class="fw-medium font-monospace" colspan="2">{{ datapoint.equivalence_ratio }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ignition Delay Data -->
+        {% if ignition_delay %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Ignition Delay Measurement</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 200px;">Ignition Delay (τ)</td>
+                            <td class="fw-medium font-monospace">
+                                {% if ignition_delay.ignition_delay %}
+                                {{ ignition_delay.ignition_delay }} s
+                                <span class="text-muted ms-2">
+                                    ({{ ignition_delay.ignition_delay|multiply:1000 }} ms)
+                                </span>
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% if ignition_delay.first_stage_ignition_delay %}
+                        <tr>
+                            <td class="text-muted">First Stage Delay</td>
+                            <td class="fw-medium font-monospace">
+                                {{ ignition_delay.first_stage_ignition_delay }} s
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">Ignition Target</td>
+                            <td>{{ ignition_delay.get_ignition_target|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Ignition Type</td>
+                            <td>{{ ignition_delay.get_ignition_type|default:"—" }}</td>
+                        </tr>
+                        {% if ignition_delay.pressure_rise %}
+                        <tr>
+                            <td class="text-muted">Pressure Rise</td>
+                            <td class="font-monospace">{{ ignition_delay.pressure_rise }} 1/s</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Flame Speed Data -->
+        {% if flame_speed %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-fire me-2"></i>Flame Speed Measurement</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 200px;">Laminar Flame Speed</td>
+                            <td class="fw-medium font-monospace">
+                                {% if flame_speed.laminar_flame_speed %}
+                                {{ flame_speed.laminar_flame_speed }} m/s
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% if flame_speed.stretch %}
+                        <tr>
+                            <td class="text-muted">Stretch Rate</td>
+                            <td class="font-monospace">{{ flame_speed.stretch }} 1/s</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Composition -->
+        {% if composition and species_list %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#compositionSection">
+                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Composition ({{ species_list|length }} species)</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="compositionSection">
+                <div class="section-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Species</th>
+                                <th>Identifier</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Uncertainty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for species in species_list %}
+                            <tr>
+                                <td class="fw-medium">
+                                    <a href="{% url 'chemked_database:species-datapoints' species.species_name %}">
+                                        {{ species.species_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if species.inchi %}
+                                    <code class="small text-break">{{ species.inchi|truncatechars:35 }}</code>
+                                    {% elif species.smiles %}
+                                    <code class="small">{{ species.smiles|truncatechars:25 }}</code>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">{{ species.amount }}</td>
+                                <td class="text-end">
+                                    {% if species.amount_uncertainty %}
+                                    <small class="text-muted">
+                                        ± {{ species.amount_uncertainty }}
+                                        {% if species.amount_uncertainty_type %}({{ species.amount_uncertainty_type }}){% endif %}
+                                    </small>
+                                    {% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if composition.kind %}
+                    <div class="p-2 bg-light border-top small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Composition specified as: <strong>{{ composition.kind }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- RCM Data -->
+        {% if rcm_data %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#rcmSection">
+                <h6 class="mb-0"><i class="bi bi-box me-2"></i>RCM Data</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse show" id="rcmSection">
+                <div class="section-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            {% if rcm_data.compressed_temperature %}
+                            <tr>
+                                <td class="text-muted" style="width: 200px;">Compressed Temperature</td>
+                                <td class="font-monospace">{{ rcm_data.compressed_temperature }} K</td>
+                            </tr>
+                            {% endif %}
+                            {% if rcm_data.compressed_pressure %}
+                            <tr>
+                                <td class="text-muted">Compressed Pressure</td>
+                                <td class="font-monospace">{{ rcm_data.compressed_pressure }} Pa</td>
+                            </tr>
+                            {% endif %}
+                            {% if rcm_data.compression_time %}
+                            <tr>
+                                <td class="text-muted">Compression Time</td>
+                                <td class="font-monospace">{{ rcm_data.compression_time }} s</td>
+                            </tr>
+                            {% endif %}
+                            {% if rcm_data.compression_ratio %}
+                            <tr>
+                                <td class="text-muted">Compression Ratio</td>
+                                <td class="font-monospace">{{ rcm_data.compression_ratio }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if rcm_data.stroke %}
+                            <tr>
+                                <td class="text-muted">Stroke</td>
+                                <td class="font-monospace">{{ rcm_data.stroke }} m</td>
+                            </tr>
+                            {% endif %}
+                            {% if rcm_data.clearance %}
+                            <tr>
+                                <td class="text-muted">Clearance</td>
+                                <td class="font-monospace">{{ rcm_data.clearance }} m</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Time Histories -->
+        {% if time_histories %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#timeHistorySection">
+                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Time Histories ({{ time_histories|length }})</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="timeHistorySection">
+                <div class="section-body">
+                    {% for history in time_histories %}
+                    <div class="border rounded p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="small">{{ history.get_history_type_display }}</strong>
+                            <span class="badge bg-secondary">{{ history.num_points }} points</span>
+                        </div>
+                        <small class="text-muted">
+                            Time: {{ history.time_units }} | Quantity: {{ history.quantity_units }}
+                        </small>
+                        {% if history.source_filename %}
+                        <br><small class="text-muted">Source: {{ history.source_filename }}</small>
+                        {% endif %}
+
+                        {% if history.values %}
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm mb-0 time-history-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-muted">Time ({{ history.time_units }})</th>
+                                        <th class="text-muted">Value ({{ history.quantity_units }})</th>
+                                        <th class="text-muted">Uncertainty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for point in history.values %}
+                                    <tr class="{% if forloop.counter > 5 %}hidden-row collapse{% endif %}" 
+                                        {% if forloop.counter > 5 %}data-bs-parent="#historyMore{{ forloop.parentloop.counter }}"{% endif %}>
+                                        <td class="font-monospace">{{ point.0 }}</td>
+                                        <td class="font-monospace">{{ point.1 }}</td>
+                                        <td class="font-monospace">
+                                            {% if point|length > 2 %}{{ point.2 }}{% else %}—{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if history.values|length > 5 %}
+                        <div class="mt-2" id="historyMore{{ forloop.counter }}">
+                            <button class="btn btn-outline-secondary btn-sm toggle-rows-btn" type="button"
+                                    data-target-table="{{ forloop.counter }}"
+                                    aria-expanded="false">
+                                <span class="show-text"><i class="bi bi-chevron-down me-1"></i>Show more ({{ history.values|length|add:"-5" }} remaining)</span>
+                                <span class="hide-text"><i class="bi bi-chevron-up me-1"></i>Show less</span>
+                            </button>
+                        </div>
+                        {% endif %}
+                        {% elif history.source_filename %}
+                        <div class="small text-muted mt-2">Inline values not stored; see source file.</div>
+                        {% else %}
+                        <div class="small text-muted mt-2">No time-history values available.</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Volume History -->
+        {% if volume_history %}
+        <div class="data-section mb-3">
+            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#volumeHistorySection">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Volume History</h6>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="collapse" id="volumeHistorySection">
+                <div class="section-body">
+                    <p class="small mb-1">
+                        <strong>{{ volume_history.values|length }}</strong> points
+                    </p>
+                    <small class="text-muted">
+                        Time: {{ volume_history.time_units }} | Volume: {{ volume_history.volume_units }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Dataset Info -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Parent Dataset</h6>
+            </div>
+            <div class="section-body">
+                <a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}" class="d-block mb-2 fw-medium">
+                    {{ datapoint.dataset.chemked_file_path }}
+                </a>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Experiment Type</td>
+                            <td class="text-end">{{ datapoint.dataset.experiment_type|title }}</td>
+                        </tr>
+                        {% if datapoint.dataset.apparatus %}
+                        <tr>
+                            <td class="text-muted">Apparatus</td>
+                            <td class="text-end">{{ datapoint.dataset.apparatus.kind|title }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if datapoint.dataset.reference_year %}
+                        <tr>
+                            <td class="text-muted">Year</td>
+                            <td class="text-end">{{ datapoint.dataset.reference_year }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if datapoint.dataset.reference_doi %}
+                        <tr>
+                            <td class="text-muted">DOI</td>
+                            <td class="text-end">
+                                <a href="https://doi.org/{{ datapoint.dataset.reference_doi }}" target="_blank" rel="noopener">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-signpost me-2"></i>Navigate</h6>
+            </div>
+            <div class="section-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dataset
+                    </a>
+                    <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-list me-1"></i>All Datasets
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datapoint Info -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Datapoint Info</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Database ID</td>
+                            <td class="text-end fw-medium">{{ datapoint.pk }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Has Composition</td>
+                            <td class="text-end">
+                                {% if composition %}
+                                <i class="bi bi-check-circle text-success"></i> Yes
+                                {% else %}
+                                <i class="bi bi-dash-circle text-muted"></i> Inherited
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if time_histories %}
+                        <tr>
+                            <td class="text-muted">Time Histories</td>
+                            <td class="text-end">{{ time_histories|length }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-header {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+.section-header h6 {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.section-body {
+    padding: 0.75rem;
+}
+.table {
+    font-size: 0.85rem;
+}
+.table td, .table th {
+    padding: 0.4rem 0.75rem;
+    vertical-align: middle;
+}
+/* Hidden rows - initially collapsed */
+.time-history-table .hidden-row {
+    display: none;
+}
+.time-history-table .hidden-row.show {
+    display: table-row;
+}
+/* Toggle button states */
+.toggle-rows-btn .hide-text { display: none; }
+.toggle-rows-btn[aria-expanded="true"] .show-text { display: none; }
+.toggle-rows-btn[aria-expanded="true"] .hide-text { display: inline; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle toggle button for showing/hiding extra table rows
+    document.querySelectorAll('.toggle-rows-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            const tableContainer = btn.closest('.border');
+            const hiddenRows = tableContainer.querySelectorAll('.hidden-row');
+            
+            if (isExpanded) {
+                // Collapse - hide rows
+                hiddenRows.forEach(row => row.classList.remove('show'));
+                btn.setAttribute('aria-expanded', 'false');
+            } else {
+                // Expand - show rows
+                hiddenRows.forEach(row => row.classList.add('show'));
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

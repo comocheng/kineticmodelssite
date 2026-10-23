@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Simulation Runs{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item active">Simulation Runs</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Simulation Runs</h1>
+            <p class="text-muted mb-0 mt-1">All PyTeCK simulation runs</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if retryable_failed_count > 0 %}
+            <form method="post" action="{% url 'analysis:retry-failed' %}" class="d-inline"
+                  onsubmit="return confirm('This will re-run {{ retryable_failed_count }} failed simulation(s) that have no completed runs. Continue?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i>Retry Failed ({{ retryable_failed_count }})
+                </button>
+            </form>
+            {% endif %}
+            {% if stale_count > 0 %}
+            <form method="post" action="{% url 'analysis:cleanup-stale' %}" class="d-inline"
+                  onsubmit="return confirm('This will mark {{ stale_count }} stale simulation(s) as failed. Continue?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-trash me-1"></i>Cleanup Stale ({{ stale_count }})
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'analysis:run-create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-play-circle me-1"></i>New Simulation
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filter Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filters</h6>
+            </div>
+            <div class="section-body">
+                <form method="get" id="filter-form">
+                    <!-- Status Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="running" {% if request.GET.status == 'running' %}selected{% endif %}>Running</option>
+                            <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Failed</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+
+                    <!-- Model Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Kinetic Model</label>
+                        <select name="model" class="form-select form-select-sm">
+                            <option value="">All Models</option>
+                            {% for model in models %}
+                            <option value="{{ model.id }}" {% if request.GET.model == model.id|stringformat:"s" %}selected{% endif %}>
+                                {{ model.model_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Experiment Type Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Experiment Type</label>
+                        <select name="experiment_type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            <option value="ignition_delay" {% if request.GET.experiment_type == 'ignition_delay' %}selected{% endif %}>Ignition Delay</option>
+                            <option value="laminar_flame_speed" {% if request.GET.experiment_type == 'laminar_flame_speed' %}selected{% endif %}>Laminar Flame Speed</option>
+                            <option value="speciation" {% if request.GET.experiment_type == 'speciation' %}selected{% endif %}>Speciation</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+                        <a href="{% url 'analysis:run-list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="col-lg-9">
+        <div class="data-section">
+            <div class="section-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-table me-2"></i>Results
+                    <span class="badge bg-secondary-subtle text-secondary ms-2">{{ page_obj.paginator.count }} runs</span>
+                </h6>
+            </div>
+            <div class="section-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kinetic Model</th>
+                                <th>Dataset</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th class="text-end">Error</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for run in runs %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'analysis:run-detail' run.pk %}" class="fw-medium">#{{ run.pk }}</a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'kinetic-model-detail' run.kinetic_model.id %}">
+                                        {{ run.kinetic_model.model_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ run.dataset.short_name }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary">{{ run.experiment_type }}</span>
+                                </td>
+                                <td>
+                                    {% if run.status == 'completed' %}
+                                        <span class="badge bg-success-subtle text-success">Completed</span>
+                                    {% elif run.status == 'running' %}
+                                        <span class="badge bg-warning-subtle text-warning">Running</span>
+                                    {% elif run.status == 'failed' %}
+                                        <span class="badge bg-danger-subtle text-danger">Failed</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary">{{ run.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if run.result and run.result.average_error_function %}
+                                        <span class="{% if run.result.average_error_function < 1 %}text-success{% elif run.result.average_error_function < 2 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ run.result.average_error_function|floatformat:2 }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ run.created_at|date:"M d, Y" }}</small>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    No simulation runs found.
+                                    <a href="{% url 'analysis:run-create' %}">Create your first run</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <div class="section-body border-top">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

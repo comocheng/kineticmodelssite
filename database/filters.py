@@ -1,11 +1,27 @@
 import django_filters
 from dal import autocomplete
+from django import forms
 from django.db.models import Count
 
 from database import models
 
 
 class SpeciesFilter(django_filters.FilterSet):
+    q = django_filters.CharFilter(
+        method="search", label="Search species", max_length=500,
+        widget=forms.TextInput(attrs={
+            "class": "form-control", "type": "search",
+            "placeholder": "Name, formula, CAS, PrIMe ID, SMILES, or InChI",
+            "aria-describedby": "species-search-help", "autocapitalize": "none",
+            "spellcheck": "false",
+        }),
+    )
+
+    def search(self, queryset, name, value):
+        from database.services.species_search import search_species
+
+        return search_species(queryset, value)
+
     speciesname__name = django_filters.CharFilter(
         field_name="speciesname",
         lookup_expr="name",

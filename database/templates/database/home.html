@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<!-- Quick Search Section -->
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header">
+            <h6 class="mb-0"><i class="bi bi-search me-2"></i>Quick Search</h6>
+        </div>
+        <div class="section-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <a href="{% url 'species-search' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-primary-subtle text-primary">
+                                <i class="bi bi-droplet-half"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Species</strong>
+                                <small class="d-block text-muted">Formula, SMILES, structure</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'reaction-search' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-success-subtle text-success">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Reactions</strong>
+                                <small class="d-block text-muted">Reactants, products, kinetics</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'source-search' %}" class="search-link">
+                        <div class="d-flex align-items-center">
+                            <div class="search-icon bg-warning-subtle text-warning">
+                                <i class="bi bi-journal-text"></i>
+                            </div>
+                            <div class="ms-3">
+                                <strong>Sources</strong>
+                                <small class="d-block text-muted">Publications, references</small>
+                            </div>
+                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats & Features -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Database Overview</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Count</th>
+                            <th style="width:150px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-droplet-half text-primary me-2"></i>Species</td>
+                            <td class="text-end fw-medium">{{ species_count|default:"—" }}</td>
+                            <td><a href="{% url 'species-search' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-arrow-left-right text-success me-2"></i>Reactions</td>
+                            <td class="text-end fw-medium">{{ reaction_count|default:"—" }}</td>
+                            <td><a href="{% url 'reaction-search' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-journal-text text-warning me-2"></i>Sources</td>
+                            <td class="text-end fw-medium">{{ source_count|default:"—" }}</td>
+                            <td><a href="{% url 'source-search' %}" class="small">Browse →</a></td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-box text-info me-2"></i>Kinetic Models</td>
+                            <td class="text-end fw-medium">{{ model_count|default:"—" }}</td>
+                            <td><a href="{% url 'kinetic-model-list' %}" class="small">Browse →</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="data-section h-100">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Features</h6>
+            </div>
+            <div class="section-body p-0">
+                <ul class="feature-list">
+                    <li><i class="bi bi-check-circle text-success me-2"></i>Validated kinetic data</li>
+                    <li><i class="bi bi-download text-primary me-2"></i>CHEMKIN export</li>
+                    <li><i class="bi bi-link-45deg text-info me-2"></i>Linked species & reactions</li>
+                    <li><i class="bi bi-code-slash text-secondary me-2"></i>RESTful API access</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How to Cite -->
+<section class="mb-4">
+    <div class="data-section">
+        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#citeSection">
+            <h6 class="mb-0"><i class="bi bi-quote me-2"></i>How to Cite</h6>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <div class="collapse" id="citeSection">
+            <div class="section-body">
+                <p class="small mb-2">When using data from this database, please cite:</p>
+                <div class="p-2 bg-light rounded small">
+                    <strong>Kinetic Modeling Database</strong><br>
+                    <span class="text-muted">CoMoChEng Laboratory, Northeastern University</span><br>
+                    <span class="text-muted">URL: {{ request.get_host }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- NSF Attribution -->
+<section class="mb-4">
+    <div class="alert alert-light border d-flex align-items-center small mb-0">
+        <i class="bi bi-info-circle text-primary me-2"></i>
+        <span>This project is supported by the <strong>National Science Foundation (NSF)</strong>. 
+        Data provided for scientific research use.</span>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.data-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+}
+
+.section-header h6 { font-size: 0.8rem; font-weight: 600; }
+.section-body { padding: 0.75rem; }
+
+.search-link {
+    display: block;
+    padding: 0.75rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-link:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.bg-primary-subtle { background-color: #cfe2ff; }
+.bg-success-subtle { background-color: #d1e7dd; }
+.bg-warning-subtle { background-color: #fff3cd; }
+
+.table td, .table th { padding: 0.5rem 0.75rem; vertical-align: middle; }
+
+.feature-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.feature-list li {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-100);
+    font-size: 0.85rem;
+}
+
+.feature-list li:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ job.name }} - Error Log{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
+<style>
+    .log-viewer::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .log-viewer::-webkit-scrollbar-track {
+        background: #111827;
+        border-radius: 6px;
+    }
+    
+    .log-viewer::-webkit-scrollbar-thumb {
+        background: #4b5563;
+        border-radius: 6px;
+    }
+    
+    .log-viewer::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block header_subtitle %}Live Error and Debug Information{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2>Error Log - {{ job.name }}</h2>
+            {% if error_updated %}
+            <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">
+                <strong>Last Fetched:</strong> {{ error_updated|date:"Y-m-d H:i:s" }} (Live from cluster)
+            </p>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-small btn-icon" onclick="location.reload()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                Refresh
+            </button>
+            <a href="{% url 'importer_dashboard:job_detail' job.id %}" class="btn btn-secondary btn-small">
+                ← Back
+            </a>
+        </div>
+    </div>
+    
+    {% if job.slurm_job_id %}
+    <div style="background: #f9fafb; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
+        <p style="margin: 0; font-size: 14px; color: #374151;">
+            <strong>SLURM Job ID:</strong> {{ job.slurm_job_id }} | 
+            <strong>Status:</strong> <span class="status-badge status-{{ job.status }}">{{ job.status }}</span>
+            {% if job.host %}
+            | <strong>Host:</strong> {{ job.host }}
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+    
+    {% if error_is_stale and job.status == 'running' %}
+    <div class="alert alert-warning" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: start; gap: 12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <div>
+                <strong>⚠️ These errors are from a previous run</strong>
+                <p style="margin: 8px 0 0 0; font-size: 14px;">
+                    Error log was last modified: <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong><br>
+                    Current job started: <strong>{{ job.started_at|date:"Y-m-d H:i:s" }}</strong><br>
+                    <br>
+                    The current job (SLURM ID: {{ job.slurm_job_id }}) is running successfully.
+                    If the current run encounters errors, they will be appended below.
+                    Check the <strong>Console Output</strong> tab to see current job progress.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% elif error_content and job.status == 'running' %}
+    <div class="alert alert-info" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>
+                Job is currently running. New errors (if any) will appear here in real-time. 
+                {% if error_file_mtime %}
+                Error log last modified: <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    {% elif not error_content %}
+    <div class="alert alert-success" style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span><strong>✓ No errors detected</strong> - Job is running cleanly.</span>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="log-viewer" style="background: #1f2937; color: #f9fafb; padding: 20px; border-radius: 6px; font-family: 'Monaco', 'Menlo', 'Courier New', monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; max-height: 80vh; overflow-y: auto;">{{ error_content|default:"No error information available. Click 'Refresh' to fetch live data from cluster." }}</div>
+</div>
+{% endblock %}

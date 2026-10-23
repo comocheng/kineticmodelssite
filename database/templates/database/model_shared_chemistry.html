@@ -1,0 +1,59 @@
+{% if layer_summary or related_models %}
+<div class="data-section mb-3">
+    <div class="section-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-share me-2"></i>Shared chemistry</h6>
+        <span class="small"><a href="{% url 'sub-mechanism-list' %}">Sub-mechanisms</a> · <a href="{% url 'kinetic-model-similarity' %}">Compare all models</a></span>
+    </div>
+    <div class="section-body">
+        {% if layer_summary %}
+        <p class="small text-muted mb-1">Each layer's reactions, the sub-mechanism (family of models with mostly identical rates) and variant it uses, the model with the most identical rates, and the earlier-published model this one most likely took them from.</p>
+        <div class="table-responsive">
+        <table class="table table-sm small">
+            <thead><tr><th>Layer</th><th class="text-end">Reactions</th><th>Sub-mechanism</th><th>Most identical rates</th><th>Likely earlier source</th></tr></thead>
+            <tbody>
+            {% for row in layer_summary %}
+            <tr>
+                <td><a href="{% url 'sub-mechanism-list' %}?layer={{ row.layer|urlencode }}">{{ row.layer }}</a></td>
+                <td class="text-end">{{ row.reactions }}</td>
+                <td>{% if row.variant %}<a href="{% url 'sub-mechanism-detail' row.variant.sub_mechanism_id %}">{{ row.variant.sub_mechanism }}</a>
+                    <span class="text-muted">v{{ row.variant.number }} of {{ row.variant.sub_mechanism.variant_count }}</span>{% else %}–{% endif %}</td>
+                <td><a href="{% url 'kinetic-model-compare' %}?a={{ kinetic_model.pk }}&b={{ row.closest.model_b_id }}">{{ row.closest.model_b.model_name }}</a>
+                    ({% widthratio row.closest.identical row.closest.reactions 100 %}%)</td>
+                <td>{% if row.earlier %}<a href="{% url 'kinetic-model-compare' %}?a={{ kinetic_model.pk }}&b={{ row.earlier.model_b_id }}">{{ row.earlier.model_b.model_name }}</a>
+                    ({% widthratio row.earlier.identical row.earlier.reactions 100 %}%){% else %}–{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+        {% if blocks %}
+        <p class="small fw-semibold mb-1">Largest copied blocks</p>
+        <ul class="small ps-3 mb-2">
+            {% for block in blocks %}
+            <li><a href="{% url 'chemistry-block-detail' block.pk %}">{{ block.size }} identical rates shared by {{ block.model_count }} models</a>{% if block.origin %}, earliest <a href="{% url 'kinetic-model-detail' block.origin_id %}">{{ block.origin.model_name }}</a>{% endif %}:
+                {% for layer, count in block.layers.items %}{{ layer }} {{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if related_models %}
+        <p class="small fw-semibold mb-1">Most related models</p>
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>Model</th><th class="text-end">Identical rates</th><th class="text-end">Same reactions</th><th></th></tr></thead>
+            <tbody>
+            {% for row in related_models %}
+            <tr>
+                <td><a href="{% url 'kinetic-model-detail' row.model_b_id %}">{{ row.model_b.model_name }}</a></td>
+                <td class="text-end">{{ row.identical }} of {{ row.reactions }} ({% widthratio row.identical row.reactions 100 %}%)</td>
+                <td class="text-end">{{ row.shared }}</td>
+                <td class="text-end"><a href="{% url 'kinetic-model-compare' %}?a={{ kinetic_model.pk }}&b={{ row.model_b_id }}">Compare</a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

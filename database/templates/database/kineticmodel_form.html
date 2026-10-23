@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-list' %}">Kinetic Models</a></li>
+            {% if object %}
+            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-detail' object.pk %}">{{ object.model_name|truncatechars:30 }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3 me-2"></i>
+                        {{ form_title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Basic Information
+                            </h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="id_model_name" class="form-label">Model Name <span class="text-danger">*</span></label>
+                                    {{ form.model_name }}
+                                    {% if form.model_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.model_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <label for="id_prime_id" class="form-label">PrIMe ID</label>
+                                    {{ form.prime_id }}
+                                </div>
+                                
+                                <div class="col-md-12">
+                                    <label for="id_source" class="form-label">Source Publication</label>
+                                    {{ form.source }}
+                                    <div class="form-text">
+                                        Select the publication that describes this kinetic model.
+                                        <a href="{% url 'source-create' %}" class="ms-2" target="_blank">
+                                            <i class="bi bi-plus-circle me-1"></i>Create new source
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-12">
+                                    <label for="id_info" class="form-label">Description</label>
+                                    {{ form.info }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- CHEMKIN Files Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-file-earmark-code me-1"></i>
+                                CHEMKIN Files
+                            </h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="id_chemkin_reactions_file" class="form-label">
+                                        <i class="bi bi-file-text me-1"></i>
+                                        Reactions File
+                                    </label>
+                                    {{ form.chemkin_reactions_file }}
+                                    {% if object.chemkin_reactions_file %}
+                                    <div class="form-text text-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Current: {{ object.chemkin_reactions_file.name|default:"Uploaded" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-12">
+                                    <label for="id_chemkin_thermo_file" class="form-label">
+                                        <i class="bi bi-thermometer-half me-1"></i>
+                                        Thermo File
+                                    </label>
+                                    {{ form.chemkin_thermo_file }}
+                                    {% if object.chemkin_thermo_file %}
+                                    <div class="form-text text-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Current: {{ object.chemkin_thermo_file.name|default:"Uploaded" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-12">
+                                    <label for="id_chemkin_transport_file" class="form-label">
+                                        <i class="bi bi-arrow-left-right me-1"></i>
+                                        Transport File
+                                    </label>
+                                    {{ form.chemkin_transport_file }}
+                                    {% if object.chemkin_transport_file %}
+                                    <div class="form-text text-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Current: {{ object.chemkin_transport_file.name|default:"Uploaded" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ submit_text }}
+                            </button>
+                            {% if object %}
+                            <a href="{% url 'kinetic-model-detail' object.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                Cancel
+                            </a>
+                            <a href="{% url 'kinetic-model-delete' object.pk %}" class="btn btn-outline-danger ms-auto">
+                                <i class="bi bi-trash me-1"></i>
+                                Delete
+                            </a>
+                            {% else %}
+                            <a href="{% url 'kinetic-model-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                Cancel
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Help -->
+        <div class="col-lg-2">
+            <div class="card bg-light border-0">
+                <div class="card-body small">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        Tips
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-1"></i>
+                            Use a descriptive model name
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check text-success me-1"></i>
+                            Link to the source publication
+                        </li>
+                        <li>
+                            <i class="bi bi-check text-success me-1"></i>
+                            CHEMKIN files should be in standard format
+                        </li>
+                    </ul>
+                    
+                    {% if object %}
+                    <hr>
+                    <h6 class="card-title">
+                        <i class="bi bi-bar-chart me-1"></i>
+                        Statistics
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>{{ object.species.count }}</strong> Species</li>
+                        <li><strong>{{ object.kinetics.count }}</strong> Kinetics</li>
+                        <li><strong>{{ object.thermo.count }}</strong> Thermo</li>
+                        <li><strong>{{ object.transport.count }}</strong> Transport</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

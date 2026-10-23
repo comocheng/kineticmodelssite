@@ -1,0 +1,24 @@
+{% if library_overlaps %}
+<div class="data-section mb-3">
+    <div class="section-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>RMG-database counterparts</h6>
+        <a class="small" href="{% url 'rmg-library-list' %}">All libraries</a>
+    </div>
+    <div class="section-body p-0">
+        <table class="table table-sm small mb-0">
+            <thead><tr><th>RMG library</th><th>Data</th><th class="text-end">Identical to this model</th><th class="text-end">Same reaction or species</th></tr></thead>
+            <tbody>
+            {% for overlap in library_overlaps %}
+            <tr>
+                <td><a href="{% url 'rmg-library-detail' overlap.kind overlap.library %}">{{ overlap.library }}</a></td>
+                <td>{{ overlap.get_kind_display }}</td>
+                <td class="text-end">{{ overlap.identical }} of {{ overlap.model_total }} ({% widthratio overlap.identical overlap.model_total 100 %}%)</td>
+                <td class="text-end">{{ overlap.shared }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <p class="small text-muted px-2 py-1 mb-0">Identical means the same structures and the same rate (log k within 0.01 at 500, 1000 and 1500 K) or the same thermo polynomial (within 0.1%), the rules RMG's importer uses to spot copied chemistry.</p>
+    </div>
+</div>
+{% endif %}

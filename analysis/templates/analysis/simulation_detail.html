@@ -1,0 +1,650 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Simulation {{ run.id }} Results{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="detail-header mb-4">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'analysis:run-list' %}">Runs</a></li>
+            <li class="breadcrumb-item active">Run #{{ run.id }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div>
+            <h1 class="h4 mb-0">
+                {% if run.status == 'completed' %}
+                    <i class="bi bi-check-circle-fill me-2 text-success"></i>
+                {% elif run.status == 'running' %}
+                    <i class="bi bi-arrow-repeat me-2 text-warning"></i>
+                {% elif run.status == 'failed' %}
+                    <i class="bi bi-x-circle-fill me-2 text-danger"></i>
+                {% else %}
+                    <i class="bi bi-clock me-2 text-secondary"></i>
+                {% endif %}
+                Simulation Run #{{ run.id }}
+            </h1>
+            <p class="text-muted mb-0 mt-1">{{ run.kinetic_model.model_name }} vs {{ run.dataset.short_name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if run.status == 'pending' %}
+            <a href="{% url 'analysis:mapping-review' run.id %}" class="btn btn-info btn-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Review Mapping
+            </a>
+            <form method="post" action="{% url 'analysis:run-execute' run.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-play-fill me-1"></i>Execute Now
+                </button>
+            </form>
+            {% endif %}
+            {% if run.status == 'pending' or run.status == 'running' %}
+            <form method="post" action="{% url 'analysis:run-cancel' run.id %}" class="d-inline" 
+                  onsubmit="return confirm('Are you sure you want to cancel this simulation?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+            </form>
+            {% endif %}
+            {% if run.status == 'completed' or run.status == 'failed' or run.status == 'cancelled' %}
+            <form method="post" action="{% url 'analysis:run-rerun' run.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i>Re-run
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'analysis:run-list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-list me-1"></i>All Runs
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Progress Tracker (shown for pending/running) -->
+    {% if run.status == 'pending' or run.status == 'running' %}
+    <div class="col-12 mb-4">
+        <div class="data-section" id="progress-tracker">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-hourglass-split me-2"></i>Simulation Progress</h6>
+            </div>
+            <div class="section-body">
+                <!-- Step Indicators -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center {% if run.status == 'pending' %}bg-warning text-white{% else %}bg-success text-white{% endif %}" style="width: 40px; height: 40px;">
+                            <i class="bi {% if run.status == 'pending' %}bi-clock{% else %}bi-check{% endif %}"></i>
+                        </div>
+                        <div class="small mt-1 {% if run.status == 'pending' %}fw-bold{% endif %}">Queued</div>
+                    </div>
+                    <div class="flex-fill" style="height: 2px; background: {% if run.status != 'pending' %}#198754{% else %}#dee2e6{% endif %};"></div>
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center {% if run.status == 'running' %}bg-primary text-white pulse-animation{% else %}bg-light text-muted{% endif %}" style="width: 40px; height: 40px;">
+                            <i class="bi bi-gear{% if run.status == 'running' %}-fill{% endif %}"></i>
+                        </div>
+                        <div class="small mt-1 {% if run.status == 'running' %}fw-bold{% endif %}">Running</div>
+                    </div>
+                    <div class="flex-fill" style="height: 2px; background: #dee2e6;"></div>
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center bg-light text-muted" style="width: 40px; height: 40px;">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="small mt-1">Complete</div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated {% if run.status == 'running' %}bg-primary{% else %}bg-warning{% endif %}" 
+                         role="progressbar" 
+                         id="simulation-progress-bar"
+                         style="width: {% if run.status == 'running' %}50{% else %}10{% endif %}%">
+                    </div>
+                </div>
+
+                <!-- Status Info -->
+                <div class="d-flex justify-content-between align-items-center text-muted small">
+                    <div>
+                        <i class="bi bi-clock me-1"></i>
+                        <span>Started: {{ run.created_at|date:"H:i:s" }}</span>
+                    </div>
+                    <div id="elapsed-time">
+                        <i class="bi bi-stopwatch me-1"></i>
+                        <span>Elapsed: <span id="elapsed-seconds">--</span></span>
+                    </div>
+                    <div>
+                        <span class="badge {% if run.status == 'running' %}bg-primary{% else %}bg-warning{% endif %}">
+                            {% if run.status == 'running' %}
+                                <i class="bi bi-arrow-repeat spin me-1"></i>Processing...
+                            {% else %}
+                                <i class="bi bi-hourglass me-1"></i>Waiting...
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-lg-8">
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Run Overview</h6>
+            </div>
+            <div class="section-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Model</div>
+                        <div class="fw-semibold">{{ run.kinetic_model.model_name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Dataset</div>
+                        <div class="fw-semibold">
+                            <a href="{% url 'chemked_database:dataset-detail' run.dataset.id %}">
+                                {{ run.dataset.short_name }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Experiment Type</div>
+                        <span class="badge bg-secondary-subtle text-secondary">{{ run.dataset.experiment_type }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Status</div>
+                        {% if run.status == 'completed' %}
+                            <span class="badge bg-success-subtle text-success">Completed</span>
+                        {% elif run.status == 'running' %}
+                            <span class="badge bg-warning-subtle text-warning">Running</span>
+                        {% elif run.status == 'failed' %}
+                            <span class="badge bg-danger-subtle text-danger">Failed</span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">{{ run.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Created</div>
+                        <div class="fw-semibold">{{ run.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    {% if run.completed_at %}
+                    <div class="col-md-4">
+                        <div class="text-muted small">Completed</div>
+                        <div class="fw-semibold">{{ run.completed_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if run.status == 'completed' and run.result %}
+        <!-- Results Summary -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Results Summary</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width:180px;">Average Error Function</td>
+                            <td>
+                                <strong class="{% if run.result.average_error_function < 1 %}text-success{% elif run.result.average_error_function < 2 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ run.result.average_error_function|floatformat:4 }}
+                                </strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Standard Deviation</td>
+                            <td>{{ run.result.std_error_function|floatformat:4|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Total Datapoints</td>
+                            <td>{{ run.result.datapoint_results.count }}</td>
+                        </tr>
+                        {% if run.result.num_failed > 0 %}
+                        <tr>
+                            <td class="text-muted">Ignition Not Detected</td>
+                            <td>
+                                <span class="text-warning fw-semibold">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>{{ run.result.num_failed }} of {{ run.result.num_datapoints }} datapoint{{ run.result.num_failed|pluralize }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if run.result.num_failed > 0 %}
+        <!-- Ignition Failure Warning -->
+        <div class="alert alert-warning d-flex align-items-start mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+            <div>
+                <strong>Ignition not detected for {{ run.result.num_failed }} datapoint{{ run.result.num_failed|pluralize }}.</strong>
+                <p class="mb-0 mt-1 small">
+                    A sentinel value of <code>1×10<sup>10</sup> s</code> was used in place of the
+                    simulated ignition delay for the affected point{{ run.result.num_failed|pluralize }}.
+                    This typically occurs when the conditions (temperature, pressure, composition)
+                    are outside the range where the kinetic model predicts ignition.
+                    These datapoints are highlighted in the table below with a
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>No ignition</span> badge.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Datapoint Results Table -->
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Datapoint Results</h6>
+            </div>
+            <div class="section-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>T (K)</th>
+                                <th>P (atm)</th>
+                                <th>φ</th>
+                                <th>τ<sub>exp</sub> (s)</th>
+                                <th>τ<sub>sim</sub> (s)</th>
+                                <th>Ratio</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dp in run.result.datapoint_results.all %}
+                            <tr class="{% if not dp.success %}table-warning{% endif %}">
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td>{{ dp.temperature|floatformat:1 }}</td>
+                                <td>{{ dp.pressure_atm|floatformat:2 }}</td>
+                                <td>{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                <td>{{ dp.experimental_ignition_delay|stringformat:"e" }}</td>
+                                <td>
+                                    {% if not dp.success %}
+                                    <span class="text-warning" title="{{ dp.error_message }}">
+                                        {{ dp.simulated_ignition_delay|stringformat:"e" }}
+                                        <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+                                    </span>
+                                    {% else %}
+                                    {{ dp.simulated_ignition_delay|stringformat:"e" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not dp.success %}
+                                    <span class="text-muted">—</span>
+                                    {% elif dp.error_value %}
+                                    <span class="{% if dp.error_value < 0.5 %}text-success{% elif dp.error_value < 1 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ dp.error_value|floatformat:3 }}
+                                    </span>
+                                    {% else %}
+                                    <span class="{% if dp.ignition_delay_ratio %}{% if dp.ignition_delay_ratio > 0.5 and dp.ignition_delay_ratio < 2 %}text-success{% elif dp.ignition_delay_ratio > 0.1 and dp.ignition_delay_ratio < 10 %}text-warning{% else %}text-danger{% endif %}{% endif %}">
+                                        {{ dp.ignition_delay_ratio|floatformat:3|default:"—" }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if dp.success %}
+                                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>OK</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark" title="{{ dp.error_message }}">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>No ignition
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-3">No datapoint results</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parity Plot -->
+        {% if chart_data %}
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-scatter-chart me-2"></i>Parity Plot</h6>
+            </div>
+            <div class="section-body">
+                <div id="parity-plot" style="height: 400px;"></div>
+            </div>
+        </div>
+        {% endif %}
+
+    {% elif run.status == 'failed' %}
+        <!-- Error Message -->
+        <div class="data-section">
+            <div class="section-header bg-danger-subtle">
+                <h6 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Simulation Failed</h6>
+            </div>
+            <div class="section-body">
+                <div class="mb-3">
+                    <div class="text-muted small mb-1">Primary error</div>
+                    <div class="fw-semibold text-danger">{{ run.error_message|default:"No error message recorded" }}</div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a class="btn btn-outline-danger btn-sm" href="{% url 'analysis:api-run-log' run.id %}">
+                        <i class="bi bi-download me-1"></i>View log
+                    </a>
+                </div>
+
+                {% if run.traceback %}
+                <details class="mb-3">
+                    <summary class="small text-muted">Show full traceback</summary>
+                    <pre class="mt-2 small text-danger bg-danger-subtle p-2 rounded">{{ run.traceback }}</pre>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Sidebar -->
+    <div class="col-lg-4">
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Configuration</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">Model</td>
+                            <td>{{ run.kinetic_model.model_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Dataset</td>
+                            <td>
+                                <a href="{% url 'chemked_database:dataset-detail' run.dataset.id %}">
+                                    {{ run.dataset.short_name }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Experiment Type</td>
+                            <td>{{ run.dataset.experiment_type }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status</td>
+                            <td>{{ run.status|title }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Created</td>
+                            <td>{{ run.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% if run.completed_at %}
+                        <tr>
+                            <td class="text-muted">Completed</td>
+                            <td>{{ run.completed_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Species Mapping -->
+        {% if species_mappings %}
+        <div class="data-section mb-3">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Species Mapping</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>ChemKED</th>
+                            <th>Model</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mapping in species_mappings %}
+                        <tr>
+                            <td class="small">{{ mapping.chemked_name }}</td>
+                            <td class="small">{{ mapping.model_name }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Related Runs -->
+        {% if related_runs %}
+        <div class="data-section">
+            <div class="section-header">
+                <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Related Runs</h6>
+            </div>
+            <div class="section-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for run in related_runs %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'analysis:run-detail' run.pk %}" class="small">
+                                    Run #{{ run.pk }}
+                                </a>
+                                <small class="text-muted d-block">{{ run.created_at|date:"M d" }}</small>
+                            </td>
+                            <td class="text-end">
+                                {% if run.result %}
+                                    <span class="badge bg-{% if run.result.average_error_function < 1 %}success{% elif run.result.average_error_function < 2 %}warning{% else %}danger{% endif %}-subtle text-{% if run.result.average_error_function < 1 %}success{% elif run.result.average_error_function < 2 %}warning{% else %}danger{% endif %}">
+                                        {{ run.result.average_error_function|floatformat:2 }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_data %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const plotData = {{ chart_data|safe }};
+    Plotly.newPlot('parity-plot', [
+        {
+            x: plotData.experimental,
+            y: plotData.simulated,
+            mode: 'markers',
+            type: 'scatter',
+            text: plotData.temperatures.map(t => `T=${t} K`),
+            marker: {
+                size: 12,
+                color: '#0d6efd',
+                line: {
+                    color: '#0a58ca',
+                    width: 2
+                }
+            },
+            hovertemplate: '<b>%{text}</b><br>Exp: %{x:.2e} s<br>Sim: %{y:.2e} s<extra></extra>'
+        }
+    ], {
+        xaxis: { title: 'Experimental IDT (s)' },
+        yaxis: { title: 'Simulated IDT (s)' },
+        margin: { t: 20 }
+    }, {responsive: true});
+});
+</script>
+{% endif %}
+
+<!-- Auto-refresh for pending/running simulations -->
+{% if run.status == 'pending' or run.status == 'running' %}
+<script>
+(function() {
+    const runId = {{ run.id }};
+    const statusUrl = '{% url "analysis:api-run-status" run.id %}';
+    const createdAt = new Date('{{ run.created_at|date:"c" }}');
+    const pollInterval = 3000; // 3 seconds
+    let pollCount = 0;
+    const maxPolls = 600; // Stop after 30 minutes (600 * 3s)
+    let progressValue = {{ run.status|yesno:"running,pending"|yesno:"50,10" }};
+
+    // Elapsed time counter
+    function updateElapsedTime() {
+        const now = new Date();
+        const elapsed = Math.floor((now - createdAt) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+        
+        let timeStr = '';
+        if (hours > 0) timeStr += `${hours}h `;
+        if (minutes > 0 || hours > 0) timeStr += `${minutes}m `;
+        timeStr += `${seconds}s`;
+        
+        const elapsedEl = document.getElementById('elapsed-seconds');
+        if (elapsedEl) elapsedEl.textContent = timeStr;
+    }
+    
+    // Update elapsed time every second
+    updateElapsedTime();
+    setInterval(updateElapsedTime, 1000);
+
+    // Animate progress bar
+    function updateProgressBar(status) {
+        const progressBar = document.getElementById('simulation-progress-bar');
+        if (!progressBar) return;
+        
+        if (status === 'running') {
+            // Slowly increase progress while running (cap at 90%)
+            if (progressValue < 90) {
+                progressValue += Math.random() * 2;
+                progressBar.style.width = Math.min(progressValue, 90) + '%';
+            }
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+        } else if (status === 'completed') {
+            progressBar.style.width = '100%';
+            progressBar.className = 'progress-bar bg-success';
+        } else if (status === 'failed') {
+            progressBar.className = 'progress-bar bg-danger';
+        }
+    }
+
+    // Update step indicators
+    function updateStepIndicators(status) {
+        const tracker = document.getElementById('progress-tracker');
+        if (!tracker) return;
+        
+        const circles = tracker.querySelectorAll('.rounded-circle');
+        if (circles.length < 3) return;
+        
+        if (status === 'running') {
+            // Queued complete
+            circles[0].className = 'rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white';
+            circles[0].innerHTML = '<i class="bi bi-check"></i>';
+            // Running active
+            circles[1].className = 'rounded-circle d-inline-flex align-items-center justify-content-center bg-primary text-white pulse-animation';
+            circles[1].innerHTML = '<i class="bi bi-gear-fill"></i>';
+        } else if (status === 'completed') {
+            circles[0].className = 'rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white';
+            circles[0].innerHTML = '<i class="bi bi-check"></i>';
+            circles[1].className = 'rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white';
+            circles[1].innerHTML = '<i class="bi bi-check"></i>';
+            circles[2].className = 'rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white';
+            circles[2].innerHTML = '<i class="bi bi-check-lg"></i>';
+        }
+    }
+
+    function updateStatusBadge(status) {
+        const badges = document.querySelectorAll('[data-status-badge]');
+        badges.forEach(badge => {
+            badge.className = 'badge';
+            if (status === 'completed') {
+                badge.className += ' bg-success-subtle text-success';
+                badge.textContent = 'Completed';
+            } else if (status === 'running') {
+                badge.className += ' bg-warning-subtle text-warning';
+                badge.textContent = 'Running...';
+            } else if (status === 'failed') {
+                badge.className += ' bg-danger-subtle text-danger';
+                badge.textContent = 'Failed';
+            } else {
+                badge.className += ' bg-secondary-subtle text-secondary';
+                badge.textContent = status;
+            }
+        });
+    }
+
+    async function checkStatus() {
+        pollCount++;
+        if (pollCount > maxPolls) {
+            return;
+        }
+
+        try {
+            const response = await fetch(statusUrl);
+            if (!response.ok) throw new Error('Failed to fetch status');
+            
+            const data = await response.json();
+            
+            // Update visuals
+            updateProgressBar(data.status);
+            updateStepIndicators(data.status);
+            updateStatusBadge(data.status);
+            
+            if (data.status === 'completed' || data.status === 'failed') {
+                // Status changed - show completion then reload
+                updateProgressBar(data.status);
+                updateStepIndicators(data.status);
+                
+                setTimeout(() => window.location.reload(), 1500);
+                return;
+            }
+
+            // Still running/pending - continue polling
+            setTimeout(checkStatus, pollInterval);
+
+        } catch (error) {
+            console.error('Status check failed:', error);
+            setTimeout(checkStatus, pollInterval * 2);
+        }
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .pulse-animation { animation: pulse 1.5s ease-in-out infinite; }
+    `;
+    document.head.appendChild(style);
+
+    // Mark status badges for dynamic updates
+    document.querySelectorAll('.badge').forEach(badge => {
+        if (badge.textContent.toLowerCase().includes('pending') || 
+            badge.textContent.toLowerCase().includes('running')) {
+            badge.setAttribute('data-status-badge', 'true');
+        }
+    });
+
+    // Start polling
+    setTimeout(checkStatus, pollInterval);
+})();
+</script>
+{% endif %}
+{% endblock %}

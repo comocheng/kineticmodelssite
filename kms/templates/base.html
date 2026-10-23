@@ -1,0 +1,246 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Combustion Kinetic Models & Experimental Data Database - A comprehensive database of chemical kinetic models and experimental data for combustion and atmospheric chemistry research.">
+    <meta name="keywords" content="kinetics, experimental data, chemical reactions, combustion, thermodynamics, RMG, kinetic models, ChemKED, chemical kinetics database">
+
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'database/images/favicon.ico' %}" type="image/x-icon">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Professional Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 (upgraded from 4) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom Scientific Stylesheet -->
+    <link rel="stylesheet" href="{% static 'database/css/scientific.css' %}">
+    
+    <!-- MathJax for equations -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                displayMath: [["$$", "$$"], ["\\[", "\\]"]]
+            },
+            svg: {
+                fontCache: "global"
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    {% block extra_css %}{% endblock %}
+    
+    <title>{% if title %}{{ title }} | {% endif %}Kinetic Models Database</title>
+</head>
+<body>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="sr-only sr-only-focusable">Skip to main content</a>
+    
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <span>Pr.omethe.us</span>
+                <img src="{% static 'database/images/prometheus-logo.png' %}" alt="Prometheus: Combustion chemical Kinetics model and experimental data" srcset="" style="max-width: 50px;">
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" 
+                    aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                            <i class="bi bi-house-door me-1"></i>Home
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'chemked_database' %}active{% endif %}" href="{% url 'chemked_database:home' %}">
+                            <i class="bi bi-fire me-1"></i>ChemKED
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'analysis' %}active{% endif %}" href="{% url 'analysis:dashboard' %}">
+                            <i class="bi bi-graph-up me-1"></i>Analysis
+                        </a>
+                    </li>
+                    
+                </ul>
+                
+                <!-- Right-side items -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://github.com/comocheng/kineticmodelssite/issues/new" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-github me-1" aria-hidden="true"></i>Report an issue
+                            <span class="visually-hidden">on GitHub (opens in a new tab)</span>
+                        </a>
+                    </li>
+                    {% if site_access_allowed %}
+                    <!-- Importer Dashboard -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'importer' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'importer_dashboard:index' %}">
+                            <i class="bi bi-cloud-upload me-1"></i>Importer
+                        </a>
+                    </li>
+                    <!-- SQL Console -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'livequery' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'livequery:query_console' %}">
+                            <i class="bi bi-terminal me-1"></i>SQL Console
+                        </a>
+                    </li>
+                    <!-- Data Management Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="dataDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-plus-circle me-1"></i>Add Data
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li class="dropdown-header">Create New</li>
+                            <li><a class="dropdown-item" href="{% url 'source-create' %}"><i class="bi bi-journal-plus me-2"></i>Source</a></li>
+                            <li><a class="dropdown-item" href="{% url 'kinetic-model-create' %}"><i class="bi bi-diagram-3 me-2"></i>Kinetic Model</a></li>
+                            <li><a class="dropdown-item" href="{% url 'author-create' %}"><i class="bi bi-person-plus me-2"></i>Author</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="dropdown-header">Manage</li>
+                            <li><a class="dropdown-item" href="{% url 'author-list' %}"><i class="bi bi-people me-2"></i>Authors</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-gear me-2"></i>Admin</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-primary btn-sm ms-2" href="{% url 'register' %}">
+                            Register
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {% if message.tags == 'success' %}
+            <i class="bi bi-check-circle-fill me-2"></i>
+            {% elif message.tags == 'error' %}
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% elif message.tags == 'warning' %}
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            {% else %}
+            <i class="bi bi-info-circle-fill me-2"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main role="main" id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>About</h4>
+                <p class="small mb-3" style="color: #adb5bd;">
+                    The Kinetic Models Database is a comprehensive repository of validated chemical kinetic models 
+                    for combustion and atmospheric chemistry research.
+                </p>
+                <div class="nsf-badge">
+                    <i class="bi bi-award"></i>
+                    NSF-Funded Research Project
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Resources</h4>
+                <a href="{% url 'species-search' %}">Browse Species</a>
+                <a href="{% url 'reaction-search' %}">Browse Reactions</a>
+                <a href="{% url 'source-search' %}">Browse Sources</a>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Tools</h4>
+                <a href="{% url 'importer_dashboard:index' %}">RMG Importer</a>
+                <a href="/docs/">API Documentation</a>
+                <a href="#">Download Data</a>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Connect</h4>
+                <a href="https://github.com/ReactionMechanismGenerator" target="_blank" rel="noopener">
+                    <i class="bi bi-github me-1"></i>GitHub
+                </a>
+                <a href="https://github.com/comocheng/kineticmodelssite/issues" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-github me-1" aria-hidden="true"></i>GitHub issue tracker
+                    <span class="visually-hidden">(opens in a new tab)</span>
+                </a>
+                <a href="#">
+                    <i class="bi bi-envelope me-1"></i>Contact Us
+                </a>
+                <a href="#">
+                    <i class="bi bi-file-text me-1"></i>Cite This Database
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p class="mb-1">
+                &copy; {% now "Y" %} Prometheus: Cyberinfrastructure for combustion kinetics. All rights reserved.
+            </p>
+            <p class="small mb-0">
+                Developed at Northeastern University & Oregon State University | Richard West & Kyle Niemeyer Research Group
+            </p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{% static 'database/main.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

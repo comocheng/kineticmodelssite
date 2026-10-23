@@ -1,0 +1,1 @@
+For every species in the model Sevy provided compare this with the models in the database for thermo, and kinetics discrepancy.

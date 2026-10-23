@@ -1,5 +1,6 @@
 import os
 
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 
 
@@ -31,6 +32,21 @@ class KineticModel(models.Model):
     chemkin_reactions_file = models.FileField(blank=True, upload_to=upload_chemkin_to)
     chemkin_thermo_file = models.FileField(blank=True, upload_to=upload_thermo_to)
     chemkin_transport_file = models.FileField(blank=True, upload_to=upload_transport_to)
+    # FAIR metadata.
+    license = models.ForeignKey(
+        "provenance.License",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="kinetic_models",
+    )
+    version = models.CharField(max_length=80, blank=True)
+    zenodo_doi = models.CharField(max_length=255, blank=True, db_index=True)
+    repository_url = models.URLField(blank=True)
+    model_format = models.CharField(max_length=80, blank=True, default="CHEMKIN")
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    external_identifiers = GenericRelation("provenance.ExternalIdentifier")
 
     class Meta:
         verbose_name_plural = "Kinetic Models"

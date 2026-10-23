@@ -1,0 +1,35 @@
+# Use x86_64 base image to ensure RMG compatibility
+FROM continuumio/miniconda3:latest
+
+# Set environment variables for proper activation
+ENV CONDA_DEFAULT_ENV=/kms_env
+ENV CONDA_PREFIX=/kms_env
+ENV PATH=/kms_env/bin:$PATH
+
+# Create conda environment with Python 3.9
+RUN conda create --prefix /kms_env python=3.9 -y
+
+# Copy environment file and install dependencies
+COPY environment.yml /app/
+WORKDIR /app
+
+# Configure conda and install packages
+RUN conda config --set channel_priority strict
+RUN conda env update --prefix /kms_env --file environment.yml
+RUN conda clean -afy
+
+# Set up proper conda activation
+RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate /kms_env" >> ~/.bashrc
+
+# Make sure we use the conda environment's Python
+ENV PYTHONPATH=/kms_env/lib/python3.9/site-packages:/app
+
+# Copy application code
+COPY . /app/
+
+# Set working directory
+WORKDIR /app
+
+# Default command
+CMD ["/bin/bash"]

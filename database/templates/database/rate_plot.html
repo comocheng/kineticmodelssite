@@ -1,0 +1,21 @@
+{% if rate_plot.series %}
+<div class="data-section mb-3" data-plot-section>
+    <div class="section-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0"><i class="bi bi-graph-down me-2"></i>Rate coefficient against 1000/T</h6>
+        <div class="d-flex align-items-center gap-2 d-none" data-pressure-control>
+            <label for="rate-plot-pressure" class="small mb-0">Pressure</label>
+            <select id="rate-plot-pressure" class="form-select form-select-sm w-auto"></select>
+        </div>
+    </div>
+    <div class="section-body">
+        <div id="rate-plot" style="height: 420px;" role="img" aria-label="Rate coefficient of each model against inverse temperature"></div>
+        <p class="small text-muted mb-1">Each rate over its stated temperature range, or 300–3000 K when none is given. Falloff, PLOG and Chebyshev rates follow the pressure selector; others do not depend on it.</p>
+        {% if reverse_reactions %}
+        <p class="small mb-1">Also written in reverse, not plotted here because the reverse rate needs thermo:
+            {% for other in reverse_reactions %}<a href="{% url 'reaction-detail' other.pk %}">reaction {{ other.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+        {% endif %}
+        <details class="small"><summary>Values table</summary><div id="rate-plot-table" class="table-responsive mt-2"></div></details>
+    </div>
+</div>
+{{ rate_plot|json_script:"rate-plot-data" }}
+{% endif %}

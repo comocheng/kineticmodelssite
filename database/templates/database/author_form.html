@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'author-list' %}">Authors</a></li>
+            {% if object %}
+            <li class="breadcrumb-item active">Edit {{ object.name }}</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person me-2"></i>
+                        {{ form_title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="id_firstname" class="form-label">First Name <span class="text-danger">*</span></label>
+                                {{ form.firstname }}
+                                {% if form.firstname.errors %}
+                                <div class="invalid-feedback d-block">{{ form.firstname.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="id_lastname" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                {{ form.lastname }}
+                                {% if form.lastname.errors %}
+                                <div class="invalid-feedback d-block">{{ form.lastname.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 pt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ submit_text }}
+                            </button>
+                            <a href="{% url 'author-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                Cancel
+                            </a>
+                            {% if object %}
+                            <a href="{% url 'author-delete' object.pk %}" class="btn btn-outline-danger ms-auto">
+                                <i class="bi bi-trash me-1"></i>
+                                Delete
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if object %}
+            <!-- Show associated publications -->
+            {% with publications=object.authorship_set.all %}
+            {% if publications %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-journal-text me-2"></i>
+                        Associated Publications ({{ publications.count }})
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for authorship in publications|slice:":10" %}
+                        <li class="list-group-item small">
+                            <a href="{% url 'source-detail' authorship.source.pk %}">
+                                {{ authorship.source.source_title|truncatechars:80 }}
+                            </a>
+                            <span class="text-muted">({{ authorship.source.publication_year }})</span>
+                        </li>
+                        {% endfor %}
+                        {% if publications.count > 10 %}
+                        <li class="list-group-item text-muted small text-center">
+                            ... and {{ publications.count|add:"-10" }} more
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

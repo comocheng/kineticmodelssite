@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-header mb-3">
+    <nav aria-label="breadcrumb" class="small mb-1">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a></li>
+            <li class="breadcrumb-item active">Sub-mechanisms</li>
+        </ol>
+    </nav>
+    <h1 class="h4 mb-0">Sub-mechanisms</h1>
+</div>
+
+<p class="small text-muted">A sub-mechanism is one layer's chemistry used by a family of models whose rates in that layer are mostly identical. Each distinct version of it is a variant; models with exactly the same rates share one. Variant 1 belongs to the earliest-published model, the origin. {{ total }} sub-mechanisms, {{ shared_total }} of them used by more than one model.</p>
+
+<form method="get" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <label for="layer" class="small mb-0">Layer</label>
+    <select id="layer" name="layer" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+        <option value="">All layers</option>
+        {% for value in layers %}<option value="{{ value }}" {% if value == layer %}selected{% endif %}>{{ value }}</option>{% endfor %}
+    </select>
+    <div class="form-check mb-0 ms-2">
+        <input class="form-check-input" type="checkbox" id="shared" name="shared" value="1" {% if shared %}checked{% endif %} onchange="this.form.submit()">
+        <label class="form-check-label small" for="shared">Only those used by more than one model</label>
+    </div>
+</form>
+
+{% for layer_name, rows in groups %}
+<div class="data-section mb-3">
+    <div class="section-header"><h6 class="mb-0">{{ layer_name }} <span class="text-muted fw-normal small">· {{ rows|length }}</span></h6></div>
+    <div class="section-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm small mb-0 align-middle">
+            <thead><tr><th>Sub-mechanism</th><th>Origin</th><th class="text-end">Models</th><th class="text-end">Variants</th>
+                <th class="text-end">Reactions</th><th class="text-end" title="Reactions with the same rate in every variant">Shared core</th>
+                <th class="text-end" title="Mean share of identical reactions between pairs of variants">Agreement</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr>
+                <td><a href="{% url 'sub-mechanism-detail' row.pk %}">{{ row }}</a>{% if row.name %}<div class="text-muted">{{ row.default_name }}</div>{% endif %}</td>
+                <td>{% if row.origin %}<a href="{% url 'kinetic-model-detail' row.origin_id %}">{{ row.origin.model_name }}</a>
+                    <span class="text-muted">{{ row.origin.source.publication_year|default:"year unknown" }}</span>{% else %}–{% endif %}</td>
+                <td class="text-end">{{ row.model_count }}</td>
+                <td class="text-end">{{ row.variant_count }}</td>
+                <td class="text-end">{{ row.reactions }}</td>
+                <td class="text-end">{% if row.variant_count > 1 %}{{ row.core }}{% else %}–{% endif %}</td>
+                <td class="text-end">{% if row.variant_count > 1 %}{% widthratio row.cohesion 1 100 %}%{% else %}–{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% empty %}
+<p class="text-muted">No sub-mechanisms yet. Run <code>python manage.py analyze_shared_chemistry</code>.</p>
+{% endfor %}
+{% endblock %}

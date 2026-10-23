@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ job.name }} - RMG Log{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
+{% endblock %}
+
+{% block header_subtitle %}Real-time Job Logs{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>RMG Log - {{ job.name }}</h2>
+        <div>
+            <button class="btn btn-secondary" onclick="location.reload()">🔄 Refresh</button>
+            <a href="{% url 'importer_dashboard:job_detail' job.id %}" class="btn btn-secondary">← Back</a>
+        </div>
+    </div>
+    
+    <div class="log-viewer" tabindex="0" role="region" aria-label="Job log">{{ log_content|default:"No log content available" }}</div>
+</div>
+{% endblock %}

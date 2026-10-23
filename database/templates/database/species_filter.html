@@ -1,52 +1,235 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
-{% load crispy_forms_tags %}
 {% load utils %}
 {% load renders %}
 
 {% block content %}
-<h1>Species Search</h1>
-<form method="get">
-    {{ filter.form.media }}
-    {{ filter.form|crispy }}
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
-<br />
-<div class="list-group">
-    {% for species in object_list %}
-    <a
-        href="{% url 'species-detail' species.pk %}"
-        class="list-group-item list-group-item-action flex-column align-items-start"
-    >
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ species.formula }}</h5>
-            <small>ID: {{ species.pk }}</small>
+<!-- Compact Page Header -->
+<div class="page-header-compact">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">Species Search</h1>
         </div>
-        {% if species.enthalpy_formation %}
-        <p class="mb-1">
-            $\Delta H_f^\circ = {{ species.enthalpy_formation }} \left(\frac{J}{mol}\right)$
-        </p>
-        {% endif %} {% if species.names %}
-        <h6>Names</h6>
-        <ul class="list-group">
-            {% for name in species.names %}
-            <li class="list-group-item">{{ name }}</li>
-            {% endfor %}
-        </ul>
-        <br />
-        {% endif %} {% if species.structures %}
-        <h6>Structures</h6>
-        <ul class="list-group">
-            {% for structure in species.structures %}
-            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    </a>
-    {% endfor %}
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} results</span>
+        </div>
+    </div>
 </div>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
+
+<!-- One search field, always visible on desktop and mobile -->
+<div class="mb-3" id="searchPanel">
+    <div class="search-panel">
+        <form method="get" action="{% url 'species-search' %}" id="species-search-form" role="search">
+            <label for="{{ filter.form.q.id_for_label }}" class="form-label fw-semibold">Search species</label>
+            <div class="species-search-controls">
+                {{ filter.form.q }}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search" aria-hidden="true"></i> Search
+                    </button>
+                    <a href="{% url 'species-search' %}" class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+            </div>
+            {% for field in filter.form %}
+                {% for error in field.errors %}<p class="text-danger small mt-2" role="alert">{{ error }}</p>{% endfor %}
+            {% endfor %}
+            <p class="text-muted small mt-2 mb-1" id="species-search-help">
+                Search by name, formula, CAS number, PrIMe ID, database ID, SMILES, or InChI.
+                A formula finds all matching isomers; a name or structure narrows the results.
+            </p>
+            <div class="small d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted">Try:</span>
+                <a href="?q=methane">methane</a>
+                <a href="?q=CH4">CH₄</a>
+                <a href="?q=C2H6O">C₂H₆O</a>
+                <a href="?q=smiles%3ACCO">smiles:CCO</a>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                For ambiguous text, use <code>formula:CO</code> or <code>smiles:CO</code>.
+                Use <code>isomer:123</code> or <code>structure:123</code> to look up those IDs.
+            </p>
+            {% if legacy_filters %}
+            <p class="small mt-2 mb-0">Saved filters are active. Submit a new search or select Clear to replace them.</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="table-container" tabindex="0" role="region" aria-label="Species search results">
+    <table class="table table-hover table-sm mb-0">
+        <thead>
+            <tr>
+                <th style="width: 60px;">ID</th>
+                <th style="width: 80px;">Structure</th>
+                <th>Formula</th>
+                <th>Names</th>
+                <th>PubChem</th>
+                <th class="text-end">H°<sub>298</sub> (J/mol)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for species in object_list %}
+            <tr class="clickable-row" data-href="{% url 'species-detail' species.pk %}">
+                <td class="text-muted small">{{ species.pk }}</td>
+                <td>
+                    {% if species.search_structure %}
+                    {% with species.search_structure as structure %}
+                    <img src="{% url 'draw-structure' structure.pk %}" alt="" class="structure-thumb" loading="lazy">
+                    {% endwith %}
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td><a href="{% url 'species-detail' species.pk %}" class="formula fw-semibold">{{ species.search_formula|default:"View species" }}</a></td>
+                <td class="text-muted small">
+                    {% if species.search_names %}
+                    {% with species.search_names as names_list %}
+                    {{ names_list.0 }}
+                    {% if names_list|length > 1 %}
+                    <span class="text-muted">(+{{ names_list|length|add:"-1" }})</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}—{% endif %}
+                </td>
+                <td class="small">
+                    {% for cid in species.search_pubchem_cids %}
+                    <a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{ cid }}"
+                       class="d-block text-nowrap" target="_blank" rel="noopener noreferrer">
+                        CID {{ cid }} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                        <span class="visually-hidden">(opens in a new tab)</span>
+                    </a>
+                    {% empty %}
+                    <span class="text-muted">No linked record</span>
+                    {% endfor %}
+                </td>
+                <td class="text-end font-monospace small">
+                    {% if species.search_enthalpy %}{{ species.search_enthalpy }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>No species found. Try another name, formula, or structure.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination-compact">
+    {% render_pagination objects=page_obj page_name="page" %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header-compact {
+    padding: 1rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.search-panel {
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.table-container {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background: var(--color-gray-50);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-gray-600);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+    background-color: var(--color-primary-bg) !important;
+}
+
+.structure-thumb {
+    width: 50px;
+    height: 40px;
+    object-fit: contain;
+    background: var(--color-gray-50);
+    border-radius: 4px;
+}
+
+.formula {
+    font-family: var(--font-mono);
+    color: var(--color-gray-900);
+}
+
+.pagination-compact {
+    padding: 0.75rem;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+
+.species-search-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.species-search-controls .form-control {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 575.98px) {
+    .species-search-controls { flex-direction: column; }
+    .species-search-controls .btn { flex: 1; }
+    .table { min-width: 540px; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Make table rows clickable
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function(event) {
+        if (event.target.closest('a') || window.getSelection().toString()) return;
+        window.location.href = this.dataset.href;
+    });
+});
+
+</script>
 {% endblock %}

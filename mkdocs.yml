@@ -1,0 +1,78 @@
+site_name: Pr.omethe.us
+site_description: Kinetic Models Database — FAIR combustion-kinetics platform usage guide and API reference
+site_url: https://dev.omethe.us/docs/
+repo_url: https://github.com/LekiaAnonim/kineticmodelssite
+docs_dir: docs
+site_dir: docs_site
+use_directory_urls: false
+
+theme:
+  name: material
+  logo: assets/prometheus-logo.png
+  favicon: assets/favicon.ico
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    # Colors are set in stylesheets/extra.css to match the main site (#1a56db).
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - toc.follow
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Species search: species-search.md
+  - Thermochemistry sources: thermochemistry.md
+  - Comparing chemistry: chemistry-comparison.md
+  - Authentication: authentication.md
+  - API guide:
+      - Overview: api/overview.md
+      - Filtering & search: api/filtering.md
+      - Relationships & complex queries: api/relationships.md
+      - Experimental data: api/experimental-data.md
+      - Kinetic models & species: api/kinetic-models.md
+      - Analysis & agreement: api/analysis.md
+  - Examples:
+      - cURL: examples/curl.md
+      - Python: examples/python.md
+      - R: examples/r.md
+      - MATLAB: examples/matlab.md
+      - JavaScript: examples/javascript.md
+      - Java: examples/java.md
+  - Client SDKs: clients.md
+  - API reference: reference.md
+  - Contributing data: contributing-data.md

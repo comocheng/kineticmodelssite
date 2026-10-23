@@ -1,20 +1,161 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load crispy_forms_tags %}
 {% load utils %}
 {% load renders %}
 
 {% block content %}
-<h1>Reaction</h1>
-<form action="" method="get">
-    {{ filter.form.media }}
-    {{ filter.form|crispy }}
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
-<br />
-{{ object_list|render_reaction_list }}
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
+<!-- Compact Page Header -->
+<div class="page-header-compact">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">Reaction Search</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} results</span>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#searchPanel" aria-expanded="false" aria-controls="searchPanel">
+                <i class="bi bi-funnel me-1"></i>Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Collapsible Search Panel -->
+<div class="collapse mb-3" id="searchPanel">
+    <div class="search-panel">
+        <form method="get" id="reaction-search-form">
+            {{ filter.form.media }}
+            <div class="row g-2 align-items-end">
+                {{ filter.form|crispy }}
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <a href="{% url 'reaction-search' %}" class="btn btn-outline-secondary btn-sm">
+                        Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="table-container">
+    {% if object_list %}
+    {{ object_list|render_reaction_list }}
+    {% else %}
+    <div class="text-center text-muted py-4">
+        <i class="bi bi-search me-1"></i>No reactions found. Try adjusting your filters.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination-compact">
+    {% render_pagination objects=page_obj page_name="page" %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header-compact {
+    padding: 1rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.search-panel {
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.table-container {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.table th {
+    background: var(--color-gray-50);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-gray-600);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+    background-color: var(--color-primary-bg) !important;
+}
+
+.reaction-equation {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+}
+
+.species-link {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.species-link:hover {
+    text-decoration: underline;
+}
+
+.arrow {
+    color: var(--color-gray-500);
+}
+
+.badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.bg-success-subtle { background-color: #d1e7dd; }
+.bg-secondary-subtle { background-color: #e9ecef; }
+
+.pagination-compact {
+    padding: 0.75rem;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function() {
+        window.location.href = this.dataset.href;
+    });
+});
+
+{% if request.GET %}
+document.getElementById('searchPanel').classList.add('show');
+{% endif %}
+</script>
 {% endblock %}

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Submission #{{ submission.pk }} – ChemKED Database{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+
+      <h2 class="mb-1">
+        Submission #{{ submission.pk }}
+        {% if submission.status == 'success' %}
+          <span class="badge bg-success ms-2">Success</span>
+        {% elif submission.status == 'partial' %}
+          <span class="badge bg-warning text-dark ms-2">Partial</span>
+        {% elif submission.status == 'failed' %}
+          <span class="badge bg-danger ms-2">Failed</span>
+        {% else %}
+          <span class="badge bg-secondary ms-2">Pending</span>
+        {% endif %}
+      </h2>
+      <p class="text-muted mb-4">{{ submission.created_at|date:"N j, Y g:i A" }}</p>
+
+      {# ── Import Results ── #}
+      {% if submission.successful_imports %}
+      <div class="card mb-3 border-success">
+        <div class="card-header bg-success text-white">
+          <i class="bi bi-check-circle me-1"></i>
+          Successfully Imported ({{ submission.successful_imports|length }})
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for item in submission.successful_imports %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <a href="{% url 'chemked_database:dataset-detail' pk=item.dataset_id %}">
+                {{ item.dataset_name|default:item.filename }}
+              </a>
+              <span class="text-muted small ms-2">{{ item.filename }}</span>
+            </div>
+            <span class="badge bg-primary rounded-pill">{{ item.datapoints }} datapoint{{ item.datapoints|pluralize }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if submission.failed_imports %}
+      <div class="card mb-3 border-danger">
+        <div class="card-header bg-danger text-white">
+          <i class="bi bi-x-circle me-1"></i>
+          Failed ({{ submission.failed_imports|length }})
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for item in submission.failed_imports %}
+          <li class="list-group-item">
+            <strong>{{ item.filename }}</strong>
+            <div class="text-danger small">{{ item.error }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if submission.skipped_imports %}
+      <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning text-dark">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Skipped ({{ submission.skipped_imports|length }})
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for item in submission.skipped_imports %}
+          <li class="list-group-item">
+            <strong>{{ item.filename }}</strong>
+            <div class="text-muted small">{{ item.error }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {# ── Contributor ── #}
+      {% if submission.contributor_name or submission.contributor_orcid %}
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person me-1"></i> Contributor</div>
+        <div class="card-body">
+          {% if submission.contributor_name %}
+            <strong>{{ submission.contributor_name }}</strong>
+          {% endif %}
+          {% if submission.contributor_orcid %}
+            &mdash;
+            <a href="https://orcid.org/{{ submission.contributor_orcid }}" target="_blank">
+              {{ submission.contributor_orcid }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── GitHub PR & CI Status ── #}
+      {% if submission.pr_number %}
+      <div class="card mb-3">
+        <div class="card-header">
+          <i class="bi bi-github me-1"></i> Pull Request
+          <a href="{{ submission.pr_url }}" target="_blank" class="fw-bold ms-1">#{{ submission.pr_number }}</a>
+          <span class="text-muted small ms-2">{{ submission.branch }}</span>
+        </div>
+        <div class="card-body">
+          <h6>CI / GitHub Actions</h6>
+          <div id="ci-overall-badge" class="mb-2"></div>
+          <div id="check-runs">
+            <div class="text-muted"><i class="bi bi-arrow-repeat spin me-1"></i> Loading CI status&hellip;</div>
+          </div>
+          <div id="ci-workflow-link" class="mt-2"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── Actions ── #}
+      <div class="d-flex gap-2 mt-4">
+        {% if submission.pr_url %}
+        <a href="{{ submission.pr_url }}" target="_blank" class="btn btn-primary">
+          <i class="bi bi-github me-1"></i> View Pull Request
+        </a>
+        {% endif %}
+        <a href="{% url 'chemked_database:dataset-upload' %}" class="btn btn-outline-primary">
+          <i class="bi bi-upload me-1"></i> Upload More
+        </a>
+        <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-list me-1"></i> All Datasets
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% if submission.pr_number %}
+<style>
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .check-run { padding: .6rem 0; border-bottom: 1px solid #eee; }
+  .check-run:last-child { border-bottom: none; }
+  .annotation { padding: .35rem .6rem; border-radius: .25rem; font-size: .85rem; margin-top: .3rem; }
+  .annotation-failure { background: #f8d7da; color: #842029; }
+  .annotation-warning { background: #fff3cd; color: #664d03; }
+  .annotation-notice  { background: #d1ecf1; color: #0c5460; }
+  .ci-output-summary { margin-top: .4rem; padding: .4rem .6rem; background: #f8f9fa; border-left: 3px solid #dee2e6; font-size: .85rem; }
+  .ci-output-summary pre { margin: 0; white-space: pre-wrap; font-size: .8rem; }
+  .ci-overall-success { color: #198754; }
+  .ci-overall-failure { color: #dc3545; }
+  .ci-overall-pending { color: #6c757d; }
+</style>
+<script>
+(function() {
+  var container = document.getElementById('check-runs');
+  var overallBadge = document.getElementById('ci-overall-badge');
+  var wfLink = document.getElementById('ci-workflow-link');
+  var pollUrl = '{% url "chemked_database:submission-check-runs" pk=submission.pk %}';
+  var pollCount = 0;
+  var maxPolls = 60;
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function statusIcon(run) {
+    if (run.status !== 'completed') {
+      return '<i class="bi bi-arrow-repeat spin text-primary me-1"></i>';
+    }
+    if (run.conclusion === 'success') {
+      return '<i class="bi bi-check-circle-fill text-success me-1"></i>';
+    }
+    if (run.conclusion === 'failure') {
+      return '<i class="bi bi-x-circle-fill text-danger me-1"></i>';
+    }
+    if (run.conclusion === 'skipped') {
+      return '<i class="bi bi-skip-forward-fill text-secondary me-1"></i>';
+    }
+    return '<i class="bi bi-dash-circle text-secondary me-1"></i>';
+  }
+
+  function renderAnnotations(annotations) {
+    if (!annotations || annotations.length === 0) return '';
+    var html = '<div class="mt-1">';
+    annotations.forEach(function(a) {
+      var cls = 'annotation annotation-' + (a.level || 'notice');
+      var title = a.title ? '<strong>' + esc(a.title) + ':</strong> ' : '';
+      var path = a.path ? '<code class="small">' + esc(a.path) + '</code> — ' : '';
+      html += '<div class="' + cls + '">' + path + title + esc(a.message) + '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderOutputSummary(run) {
+    if (!run.output_summary) return '';
+    return '<div class="ci-output-summary"><pre>' + esc(run.output_summary) + '</pre></div>';
+  }
+
+  function overallBadgeHtml(status) {
+    if (status === 'success') {
+      return '<span class="ci-overall-success"><i class="bi bi-check-circle-fill me-1"></i><strong>All checks passed</strong></span>';
+    }
+    if (status === 'failure') {
+      return '<span class="ci-overall-failure"><i class="bi bi-x-circle-fill me-1"></i><strong>Some checks failed</strong> — see details below</span>';
+    }
+    if (status === 'in_progress') {
+      return '<span class="ci-overall-pending"><i class="bi bi-arrow-repeat spin me-1"></i><strong>Checks in progress&hellip;</strong></span>';
+    }
+    return '<span class="ci-overall-pending"><i class="bi bi-hourglass-split me-1"></i><strong>Waiting for CI to start&hellip;</strong></span>';
+  }
+
+  function renderRuns(data) {
+    if (data.status === 'no_pr' || data.status === 'not_configured') {
+      container.innerHTML = '<span class="text-muted">GitHub Actions status unavailable.</span>';
+      overallBadge.innerHTML = '';
+      return false;
+    }
+    if (data.check_runs.length === 0) {
+      container.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Waiting for CI to start&hellip;</span>';
+      overallBadge.innerHTML = overallBadgeHtml('pending');
+      return true;
+    }
+
+    overallBadge.innerHTML = overallBadgeHtml(data.status);
+
+    var html = '';
+    data.check_runs.forEach(function(run) {
+      var label = run.conclusion || run.status;
+      var link = run.html_url ? ' <a href="' + run.html_url + '" target="_blank" class="small">View log</a>' : '';
+      html += '<div class="check-run">';
+      html += statusIcon(run);
+      html += '<strong>' + esc(run.name) + '</strong> ';
+      html += '<span class="badge bg-light text-dark border ms-1">' + esc(label) + '</span>';
+      html += link;
+
+      // Show output summary if available
+      html += renderOutputSummary(run);
+
+      // Show annotations (validation errors/warnings)
+      html += renderAnnotations(run.annotations);
+
+      html += '</div>';
+    });
+    container.innerHTML = html;
+
+    // Workflow run link
+    if (data.workflow_url) {
+      wfLink.innerHTML = '<a href="' + data.workflow_url + '" target="_blank" class="small text-muted"><i class="bi bi-box-arrow-up-right me-1"></i>View full workflow run on GitHub</a>';
+    }
+
+    return data.status === 'in_progress' || data.status === 'pending';
+  }
+
+  function poll() {
+    pollCount++;
+    if (pollCount > maxPolls) {
+      container.innerHTML += '<div class="small text-muted mt-2">Polling stopped after 5 minutes. <a href="javascript:location.reload()">Refresh</a> to check again.</div>';
+      return;
+    }
+    fetch(pollUrl)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (renderRuns(data)) {
+          setTimeout(poll, 5000);
+        }
+      })
+      .catch(function() {
+        container.innerHTML = '<span class="text-danger">Could not reach CI status endpoint.</span>';
+      });
+  }
+
+  poll();
+})();
+</script>
+{% endif %}
+{% endblock %}

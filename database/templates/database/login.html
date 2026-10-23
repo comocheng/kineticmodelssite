@@ -1,27 +1,258 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
 
 {% load crispy_forms_tags %}
 
 {% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="bi bi-diagram-3"></i>
+            </div>
+            <h1>Welcome Back</h1>
+            <p class="text-muted">Sign in to your account</p>
+        </div>
+        
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Your username and password didn't match. Please try again.
+        </div>
+        {% endif %}
+        
+        {% if next %}
+            {% if user.is_authenticated %}
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-shield-exclamation me-2"></i>
+                Your account doesn't have access to this page. Please login with an account that has access.
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                Please login to access this page.
+            </div>
+            {% endif %}
+        {% endif %}
+        
+        <form method="post" action="{% url 'login' %}" class="auth-form">
+            {% csrf_token %}
+            
+            <div class="form-group mb-3">
+                <label for="id_username" class="form-label">
+                    <i class="bi bi-person me-1"></i>Username
+                </label>
+                <input type="text" name="username" id="id_username" class="form-control form-control-lg" 
+                       placeholder="Enter your username" required autofocus>
+            </div>
+            
+            <div class="form-group mb-4">
+                <label for="id_password" class="form-label">
+                    <i class="bi bi-lock me-1"></i>Password
+                </label>
+                <input type="password" name="password" id="id_password" class="form-control form-control-lg" 
+                       placeholder="Enter your password" required>
+            </div>
+            
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+            </button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+        </div>
+    </div>
+    
+    <div class="auth-info">
+        <h2>Kinetic Models Database</h2>
+        <p>Access the comprehensive database of validated chemical kinetic models for combustion and atmospheric chemistry research.</p>
+        
+        <div class="auth-features">
+            <div class="auth-feature">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Browse and search kinetic data</span>
+            </div>
+            <div class="auth-feature">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Download CHEMKIN files</span>
+            </div>
+            <div class="auth-feature">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Access API documentation</span>
+            </div>
+            <div class="auth-feature">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Contribute to the database</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-{% if form.errors %}
-<p>Your username and password didn't match. Please try again.</p>
-{% endif %}
+{% block extra_css %}
+<style>
+/* Auth Container */
+.auth-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - var(--navbar-height) - 100px);
+    margin: calc(-1 * var(--space-8)) calc(-1 * var(--space-6));
+}
 
-{% if next %}
-    {% if user.is_authenticated %}
-    <p>Your account doesn't have access to this page. To proceed,
-    please login with an account that has access.</p>
-    {% else %}
-    <p>Please login to see this page.</p>
-    {% endif %}
-{% endif %}
+/* Auth Card */
+.auth-card {
+    background: var(--color-white);
+    padding: var(--space-12) var(--space-10);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+}
 
-<form method="post" action="{% url 'login' %}">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <input type="submit" class="btn btn-primary" value="login">
-    <input type="hidden" name="next" value="{{ next }}">
-</form>
-Need an Account? <a href="{% url 'register' %}">Register Here</a>
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.auth-logo {
+    width: 64px;
+    height: 64px;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-4);
+    font-size: 2rem;
+}
+
+.auth-header h1 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-2);
+}
+
+/* Auth Form */
+.auth-form {
+    margin-bottom: var(--space-6);
+}
+
+.auth-form .form-label {
+    font-weight: 500;
+    color: var(--color-gray-700);
+}
+
+.auth-form .form-control-lg {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-base);
+    border-radius: var(--radius-md);
+}
+
+.auth-form .form-control:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+.auth-form .btn-lg {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-base);
+    font-weight: 600;
+}
+
+/* Auth Footer */
+.auth-footer {
+    text-align: center;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.auth-footer p {
+    margin: 0;
+    color: var(--color-gray-600);
+}
+
+/* Auth Info Panel */
+.auth-info {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    color: white;
+    padding: var(--space-12) var(--space-10);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auth-info h2 {
+    font-size: var(--text-3xl);
+    margin-bottom: var(--space-4);
+    color: white;
+    border: none;
+}
+
+.auth-info p {
+    font-size: var(--text-lg);
+    opacity: 0.9;
+    margin-bottom: var(--space-8);
+    line-height: 1.6;
+}
+
+.auth-features {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.auth-feature {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-base);
+}
+
+.auth-feature i {
+    font-size: 1.25rem;
+    opacity: 0.8;
+}
+
+/* Alerts */
+.alert {
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4);
+    border: none;
+}
+
+.alert-danger {
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+.alert-warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.alert-info {
+    background-color: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+@media (max-width: 992px) {
+    .auth-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .auth-info {
+        display: none;
+    }
+    
+    .auth-card {
+        padding: var(--space-8) var(--space-6);
+    }
+}
+</style>
 {% endblock %}
