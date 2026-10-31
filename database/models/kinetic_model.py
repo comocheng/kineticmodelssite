@@ -80,6 +80,10 @@ class KineticsComment(models.Model):
     kinetics = models.ForeignKey("Kinetics", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
+    # The model's own arrow for this rate: A <=> B (True) or A => B (False). Every model with
+    # these species and coefficients shares one reaction record, whose flag is only that of the
+    # first import, so the exports use this one.
+    reversible = models.BooleanField(default=True)
 
     def __str__(self):
         return self.comment

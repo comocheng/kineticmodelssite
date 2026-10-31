@@ -862,7 +862,8 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         rmg_reaction = rmg_reaction_cls(
             reactants=[species_map[sp.id] for sp in reactant_rows],
             products=[species_map[sp.id] for sp in product_rows],
-            reversible=reaction.reversible,
+            # The model's own arrow; the shared reaction record has only the first import's.
+            reversible=kinetics_comment.reversible,
         )
         if kinetics.specific_collider_id:
             rmg_reaction.specific_collider = species_map[kinetics.specific_collider_id]

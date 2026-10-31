@@ -644,11 +644,18 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
                             species=species, kinetics=kinetics_instance, efficiency=efficiency)
                     index_new_rows(models, kinetics=kinetics_instance)
 
-                models.KineticsComment.objects.get_or_create(
+                link_fields = {"comment": comment}
+                if has_field(models.KineticsComment, "reversible"):
+                    # The model's own arrow: the reaction record keeps the first import's.
+                    link_fields["reversible"] = rmg_reaction.reversible
+                link, link_created = models.KineticsComment.objects.get_or_create(
                     kinetics=kinetics_instance,
                     kinetic_model=kinetic_model,
-                    defaults={"comment": comment},
+                    defaults=link_fields,
                 )
+                if not link_created and link_fields.get("reversible", link.reversible) != link.reversible:
+                    link.reversible = link_fields["reversible"]
+                    link.save(update_fields=["reversible"])
             cache.update(pending)
             counts["imported"] += 1
         except Exception:
