@@ -259,6 +259,7 @@ def merge_reaction_pair(keep_id, drop_id, report):
         else:
             db.Kinetics.objects.filter(pk=kinetics.pk).update(reaction_id=keep_id)
     move_references(db.Reaction, [drop_id], keep_id, skip=(db.Kinetics, db.Stoichiometry))
+    # Counted only: each model's kinetics link keeps its own arrow, which the exports use.
     reversible = set(db.Reaction.objects.filter(pk__in=[keep_id, drop_id]).values_list("reversible", flat=True))
     if len(reversible) > 1:
         report["merged_reactions_with_different_reversible_flag"] += 1
@@ -315,7 +316,8 @@ def model_links(model):
         list(db.ThermoComment.objects.filter(kinetic_model=model)
              .values("thermo_id", "thermo__species_id", "comment")),
         list(db.KineticsComment.objects.filter(kinetic_model=model)
-             .values("kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key", "comment")),
+             .values("kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key", "comment",
+                     "reversible")),
     )
 
 
@@ -407,7 +409,7 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
     made_reactions = {k["kinetics__reaction__canonical_key"] for k in made[2]} - {""}
     made_equations = set().union(*label_equations(made[2], made_names_of).values())
     old_equations = label_equations(old[2], old_names)
-    keep_kinetics = {k["kinetics_id"]: k["comment"] for k in old[2]
+    keep_kinetics = {k["kinetics_id"]: k for k in old[2]
                      if k["kinetics_id"] not in made_kinetics and kinetics_status != "ok"
                      and k["kinetics__reaction__canonical_key"] not in made_reactions
                      and not old_equations[k["kinetics_id"]] & made_equations}
@@ -415,8 +417,11 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
         db.SpeciesName(species_id=species, kinetic_model=model, name=name) for species, name in keep_names])
     db.ThermoComment.objects.bulk_create([
         db.ThermoComment(thermo_id=pk, kinetic_model=model, comment=c) for pk, c in keep_thermo.items()])
+    # A kept link keeps its arrow too: its library entry failed, so nothing can set it again.
     db.KineticsComment.objects.bulk_create([
-        db.KineticsComment(kinetics_id=pk, kinetic_model=model, comment=c[:1000]) for pk, c in keep_kinetics.items()])
+        db.KineticsComment(kinetics_id=pk, kinetic_model=model, comment=k["comment"][:1000],
+                           reversible=k["reversible"])
+        for pk, k in keep_kinetics.items()])
 
     # Counts compare the link rows before and after: a second copy of a link counts as removed.
     after = model_links(model)
