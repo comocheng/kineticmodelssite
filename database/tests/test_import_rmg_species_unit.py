@@ -12,6 +12,7 @@ from rmgpy.molecule import Molecule
 from rmgpy.species import Species as RMGSpecies
 
 from database import models as db
+from database.models import kinetic_data as kd
 from database.scripts import import_rmg_models as importer
 from database.scripts.import_rmg_models import (
     get_or_create_species,
@@ -281,6 +282,21 @@ class TolerantKineticsLibraryTests(SimpleTestCase):
         library = self.load("OH*", reactions=[("OH", "1.04e+14"), ("OH", "2.0e+13"), ("OH*", "1.0e+10")])
         self.assertEqual(self.rates(library),
                          {"H + O2 <=> O + OH": "MultiArrhenius", "H + O2 <=> O + OH*": "Arrhenius"})
+
+    def test_an_unbalanced_reaction_is_skipped_not_the_library(self):
+        # RMG 4 refuses the whole library for one unbalanced reaction (PCI2017/036-Rashidi).
+        library = self.load("OH*", reactions=[("OH", "1.04e+14"), ("O2", "1.0e+10")])
+        self.assertEqual(self.rates(library), {"H + O2 <=> O + OH": "Arrhenius"})
+        self.assertEqual(library.rejected, [("H + O2 <=> O + O2", "not balanced")])
+
+    def test_activation_energy_in_joules_per_mole(self):
+        # CHEMKIN files in JOULES/MOLE (Chernov, CombFlame2017/45-Olm) give Ea in J/mol.
+        rate = kd.Arrhenius(type="arrhenius", a=1e13, a_si=1e7, a_units="cm^3/(mol*s)", n=0,
+                                     e=67481.1, e_si=67481.1, e_units="J/mol")
+        self.assertAlmostEqual(rate.to_rmg().Ea.value_si, 67481.1)
+        with self.assertRaises(ValueError):
+            kd.Arrhenius(type="arrhenius", a=1e13, a_si=1e7, a_units="cm^3/(mol*s)", n=0,
+                                  e=1, e_si=1, e_units="J")
 
 
 class SpeciesIdentityTests(TestCase):
