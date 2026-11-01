@@ -481,7 +481,8 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
     the oracle:
 
     * **"No duplicate found for declared duplicate reaction number N"** →
-      remove the orphaned ``duplicate: true`` from reaction N.
+      remove the orphaned ``duplicate: true`` from reaction N, and from every
+      other orphan of the file (see ``_unmatched_duplicates``).
     * **"Undeclared duplicate reactions detected"** →
       add ``duplicate: true`` to both flagged reactions.
 
@@ -507,6 +508,7 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
             f.write(content)
             tmp_path = f.name
+        orphans = set()
         try:
             ct.Solution(tmp_path)
             # Success — no duplicate issues remain
@@ -518,6 +520,9 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
             return content
         except Exception as exc:
             msg = str(exc)
+            if orphan_re.search(msg):
+                # Read while Cantera still has this file parsed.
+                orphans = _unmatched_duplicates(tmp_path)
         finally:
             try:
                 os.unlink(tmp_path)
@@ -535,28 +540,41 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
 
         changed = False
 
+        def flag_line(rxn_num):
+            """Line index of the ``duplicate: true`` of reaction rxn_num, or None."""
+            if not 0 <= rxn_num < len(rxn_line_indices):
+                return None
+            eq_line = rxn_line_indices[rxn_num]
+            # Find block end
+            if rxn_num + 1 < len(rxn_line_indices):
+                block_end = rxn_line_indices[rxn_num + 1]
+            else:
+                block_end = len(lines)
+            for check_idx in range(eq_line + 1, block_end):
+                if dup_re.match(lines[check_idx]):
+                    return check_idx
+            return None
+
         # ── Case 1: Orphaned duplicate: true ──
         orphan_match = orphan_re.search(msg)
         if orphan_match:
-            rxn_num = int(orphan_match.group(1))  # 0-based
-            if 0 <= rxn_num < len(rxn_line_indices):
-                eq_line = rxn_line_indices[rxn_num]
-                # Find block end
-                if rxn_num + 1 < len(rxn_line_indices):
-                    block_end = rxn_line_indices[rxn_num + 1]
-                else:
-                    block_end = len(lines)
-                # Find and remove duplicate: true in this block
-                for check_idx in range(eq_line + 1, block_end):
-                    if dup_re.match(lines[check_idx]):
-                        eq_text = lines[eq_line].strip()[:80]
-                        logger.info(
-                            f"Removing orphaned 'duplicate: true' from "
-                            f"reaction {rxn_num}: {eq_text}"
-                        )
-                        lines.pop(check_idx)
-                        changed = True
-                        break
+            reported = int(orphan_match.group(1))  # 0-based
+            if flag_line(reported) is not None:
+                # Cantera names one orphan per load, at about 3 s a load. Removing one never
+                # gives another a partner, so all go now, as one by one would end.
+                numbers = orphans if reported in orphans else {reported}
+                # From the last block up, so the line numbers of the earlier ones stay valid.
+                for rxn_num in sorted(numbers, reverse=True):
+                    check_idx = flag_line(rxn_num)
+                    if check_idx is None:
+                        continue
+                    eq_text = lines[rxn_line_indices[rxn_num]].strip()[:80]
+                    logger.info(
+                        f"Removing orphaned 'duplicate: true' from "
+                        f"reaction {rxn_num}: {eq_text}"
+                    )
+                    lines.pop(check_idx)
+                changed = True
 
         # ── Case 2: Undeclared duplicates ──
         if not changed and "Undeclared duplicate reactions detected" in msg:
@@ -611,6 +629,29 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         f"Could not resolve duplicate issues after {max_iterations} iterations"
     )
     return content
+
+
+def _unmatched_duplicates(path):
+    """Numbers (from 0) of the reactions in the Cantera YAML at *path* that declare
+    ``duplicate: true`` with no declared partner.
+
+    As ``Kinetics::checkDuplicates`` (Cantera 3.0) finds them: two declared duplicates
+    match when their reactants and products give the same key, the sum of k(k + 1)
+    over the species indices k. Cantera reports only one of them per load.
+    """
+    import cantera as ct
+    from collections import defaultdict
+
+    # The species section is in the order of the phase, which sets the indices.
+    species = ct.Species.list_from_file(path)
+    kinetics = ct.Solution(thermo="ideal-gas", kinetics="gas", species=species, reactions=[])
+    declared = defaultdict(list)
+    for number, reaction in enumerate(ct.Reaction.list_from_file(path, kinetics)):
+        if reaction.duplicate:
+            names = [*reaction.reactants, *reaction.products]
+            key = sum(k * (k + 1) for k in map(kinetics.kinetics_species_index, names))
+            declared[key].append(number)
+    return {numbers[0] for numbers in declared.values() if len(numbers) == 1}
 
 
 def _generate_chemkin_files(kinetic_model, strict=False):

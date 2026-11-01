@@ -5,9 +5,10 @@ Cantera reports one at a time."""
 import os
 import shutil
 import tempfile
+from unittest import mock
 
 from django.db import connection
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.test.utils import CaptureQueriesContext
 
 from database import models as db
@@ -78,3 +79,82 @@ class ExportQueriesTests(TestCase):
         species = text.split("SPECIES", 1)[1].split("END", 1)[0].split()
         self.assertEqual(len(species), len(ADJ))
         self.assertEqual(text.split("REACTIONS", 1)[1].count("<=>"), 1)
+
+
+def mechanism(reactions):
+    """A Cantera YAML of species S0 ... S70, all of composition Ar, as ck2yaml lays it out:
+    one ``- equation:`` line per reaction, ``duplicate: true`` on the next line."""
+    names = [f"S{i}" for i in range(71)]
+    lines = ["units: {length: cm, time: s, quantity: mol, activation-energy: cal/mol}", "",
+             "phases:", "- name: gas", "  thermo: ideal-gas", "  elements: [Ar]",
+             f"  species: [{', '.join(names)}]", "  kinetics: gas", "  state: {T: 300.0, P: 1 atm}",
+             "", "species:"]
+    for name in names:
+        lines += [f"- name: {name}", "  composition: {Ar: 1}", "  thermo:", "    model: constant-cp",
+                  "    T0: 300.0", "    h0: 0.0", "    s0: 154.8", "    cp0: 20.786"]
+    lines += ["", "reactions:"]
+    for number, (equation, duplicate, extra) in enumerate(reactions, start=1):
+        lines.append(f"- equation: {equation}  # Reaction {number}")
+        if duplicate:
+            lines.append("  duplicate: true")
+        lines += extra or ["  rate-constant: {A: 1.0, b: 0.0, Ea: 0.0}"]
+    return ("\n".join(lines) + "\n").encode()
+
+
+THREE_BODY = ["  type: three-body", "  rate-constant: {A: 1.0, b: 0.0, Ea: 0.0}"]
+# 60 orphans, more than the 50 loads the loop allows: the patcher used to flag that many in
+# Atef, Gasoline_2 and Pelucchi. Then a declared pair, and S62 + M against S62 + S64, which
+# Cantera does not compare: the participants differ, so both are orphans.
+ORPHANS = [(f"S{i} <=> S{i + 1}", True, None) for i in range(1, 61)]
+PAIR = [("S0 <=> S70", True, None), ("S70 <=> S0", True, ["  rate-constant: {A: 2.0, b: 0.0, Ea: 0.0}"])]
+COLLIDERS = [("S62 + M <=> S63 + M", True, THREE_BODY), ("S62 + S64 <=> S63 + S64", True, None)]
+CONTENT = mechanism(ORPHANS + PAIR + COLLIDERS)
+
+
+def flagged(content):
+    """The equations that keep ``duplicate: true``."""
+    lines = content.decode().split("\n")
+    return [lines[i - 1].split(": ", 1)[1].split("  #")[0]
+            for i, line in enumerate(lines) if line.strip() == "duplicate: true"]
+
+
+class OrphanedDuplicateFlagTests(SimpleTestCase):
+    def setUp(self):
+        import cantera as ct
+        self.ct = ct
+        self.loads = 0
+        solution = ct.Solution
+
+        def counting(*args, **kwargs):
+            if args:  # a file, not the kinetics of _unmatched_duplicates
+                self.loads += 1
+            return solution(*args, **kwargs)
+
+        patcher = mock.patch.object(ct, "Solution", counting)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_cantera_lists_the_orphans_as_this_does(self):
+        with tempfile.NamedTemporaryFile(suffix=".yaml") as handle:
+            handle.write(CONTENT)
+            handle.flush()
+            with self.assertRaisesRegex(Exception, "No duplicate found for declared duplicate"):
+                self.ct.Solution(handle.name)
+            self.assertEqual(exports._unmatched_duplicates(handle.name), set(range(60)) | {62, 63})
+
+    def test_every_orphan_goes_in_two_loads(self):
+        content = exports._fix_duplicate_issues_with_cantera(CONTENT)
+        self.assertEqual(flagged(content), ["S0 <=> S70", "S70 <=> S0"])
+        self.assertEqual(self.loads, 2)
+        self.assertEqual(self.ct.Solution(yaml=content.decode()).n_reactions, len(ORPHANS + PAIR + COLLIDERS))
+
+    def test_the_same_file_as_one_orphan_per_load(self):
+        with mock.patch.object(exports, "_unmatched_duplicates", return_value=set()):
+            one_by_one = exports._fix_duplicate_issues_with_cantera(CONTENT, max_iterations=100)
+        self.assertEqual(self.loads, 63)
+        self.assertEqual(exports._fix_duplicate_issues_with_cantera(CONTENT), one_by_one)
+
+    def test_without_orphans_nothing_changes(self):
+        content = mechanism(PAIR)
+        self.assertEqual(exports._fix_duplicate_issues_with_cantera(content), content)
+        self.assertEqual(self.loads, 1)
