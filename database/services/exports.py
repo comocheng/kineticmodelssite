@@ -491,7 +491,8 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
     the oracle:
 
     * **"No duplicate found for declared duplicate reaction number N"** →
-      remove the orphaned ``duplicate: true`` from reaction N.
+      remove the orphaned ``duplicate: true`` from reaction N, and from every
+      other orphan of the file (see ``_unmatched_duplicates``).
     * **"Undeclared duplicate reactions detected"** →
       add ``duplicate: true`` to both flagged reactions.
 
@@ -518,6 +519,7 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
             f.write(content)
             tmp_path = f.name
+        orphans = set()
         try:
             ct.Solution(tmp_path)
             # Success — no duplicate issues remain
@@ -529,6 +531,9 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
             return content
         except Exception as exc:
             msg = str(exc)
+            if orphan_re.search(msg):
+                # Read while Cantera still has this file parsed.
+                orphans = _unmatched_duplicates(tmp_path)
         finally:
             try:
                 os.unlink(tmp_path)
@@ -546,28 +551,41 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
 
         changed = False
 
+        def flag_line(rxn_num):
+            """Line index of the ``duplicate: true`` of reaction rxn_num, or None."""
+            if not 0 <= rxn_num < len(rxn_line_indices):
+                return None
+            eq_line = rxn_line_indices[rxn_num]
+            # Find block end
+            if rxn_num + 1 < len(rxn_line_indices):
+                block_end = rxn_line_indices[rxn_num + 1]
+            else:
+                block_end = len(lines)
+            for check_idx in range(eq_line + 1, block_end):
+                if dup_re.match(lines[check_idx]):
+                    return check_idx
+            return None
+
         # ── Case 1: Orphaned duplicate: true ──
         orphan_match = orphan_re.search(msg)
         if orphan_match:
-            rxn_num = int(orphan_match.group(1))  # 0-based
-            if 0 <= rxn_num < len(rxn_line_indices):
-                eq_line = rxn_line_indices[rxn_num]
-                # Find block end
-                if rxn_num + 1 < len(rxn_line_indices):
-                    block_end = rxn_line_indices[rxn_num + 1]
-                else:
-                    block_end = len(lines)
-                # Find and remove duplicate: true in this block
-                for check_idx in range(eq_line + 1, block_end):
-                    if dup_re.match(lines[check_idx]):
-                        eq_text = lines[eq_line].strip()[:80]
-                        logger.info(
-                            f"Removing orphaned 'duplicate: true' from "
-                            f"reaction {rxn_num}: {eq_text}"
-                        )
-                        lines.pop(check_idx)
-                        changed = True
-                        break
+            reported = int(orphan_match.group(1))  # 0-based
+            if flag_line(reported) is not None:
+                # Cantera names one orphan per load, at about 3 s a load. Removing one never
+                # gives another a partner, so all go now, as one by one would end.
+                numbers = orphans if reported in orphans else {reported}
+                # From the last block up, so the line numbers of the earlier ones stay valid.
+                for rxn_num in sorted(numbers, reverse=True):
+                    check_idx = flag_line(rxn_num)
+                    if check_idx is None:
+                        continue
+                    eq_text = lines[rxn_line_indices[rxn_num]].strip()[:80]
+                    logger.info(
+                        f"Removing orphaned 'duplicate: true' from "
+                        f"reaction {rxn_num}: {eq_text}"
+                    )
+                    lines.pop(check_idx)
+                changed = True
 
         # ── Case 2: Undeclared duplicates ──
         if not changed and "Undeclared duplicate reactions detected" in msg:
@@ -622,6 +640,29 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         f"Could not resolve duplicate issues after {max_iterations} iterations"
     )
     return content
+
+
+def _unmatched_duplicates(path):
+    """Numbers (from 0) of the reactions in the Cantera YAML at *path* that declare
+    ``duplicate: true`` with no declared partner.
+
+    As ``Kinetics::checkDuplicates`` (Cantera 3.0) finds them: two declared duplicates
+    match when their reactants and products give the same key, the sum of k(k + 1)
+    over the species indices k. Cantera reports only one of them per load.
+    """
+    import cantera as ct
+    from collections import defaultdict
+
+    # The species section is in the order of the phase, which sets the indices.
+    species = ct.Species.list_from_file(path)
+    kinetics = ct.Solution(thermo="ideal-gas", kinetics="gas", species=species, reactions=[])
+    declared = defaultdict(list)
+    for number, reaction in enumerate(ct.Reaction.list_from_file(path, kinetics)):
+        if reaction.duplicate:
+            names = [*reaction.reactants, *reaction.products]
+            key = sum(k * (k + 1) for k in map(kinetics.kinetics_species_index, names))
+            declared[key].append(number)
+    return {numbers[0] for numbers in declared.values() if len(numbers) == 1}
 
 
 def _generate_chemkin_files(kinetic_model, strict=False):
@@ -741,21 +782,25 @@ def _left_out_header(left_out, species_map):
 
 
 def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
-    from database.models import Thermo, Transport
+    from collections import defaultdict
+    from django.db.models import F
+    from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, Transport
 
     species_map = {}
     labels = set()
+    # The model's names and the structures of its species are read in one query each, not
+    # one per species: a model of 2,000 species took seconds of queries alone.
+    names_in_model = defaultdict(list)
+    for species_id, name in SpeciesName.objects.filter(kinetic_model=kinetic_model).values_list(
+            "species_id", "name"):
+        if name:
+            names_in_model[species_id].append(name)
 
     def assign_label(db_species, index):
         name = None
         # Prefer the name linked to THIS specific model to avoid
         # picking up labels from other models (e.g. N2C4H9OH vs sc4h9oh).
-        from database.models import SpeciesName
-        model_names = sorted(
-            sn.name for sn in SpeciesName.objects.filter(
-                species=db_species, kinetic_model=kinetic_model
-            ) if sn.name
-        )
+        model_names = sorted(names_in_model[db_species.id])
         if model_names:
             name = model_names[0]
         elif hasattr(db_species, "names"):
@@ -775,19 +820,21 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         return label
 
     species_list = list(kinetic_model.species.all())
-    reaction_species = {
-        sp
-        for kinetics_comment in kinetic_model.kineticscomment_set.select_related(
-            "kinetics__reaction", "kinetics__specific_collider")
-        for sp in [*kinetics_comment.kinetics.reaction.species.all(),
-                   kinetics_comment.kinetics.specific_collider]
-        if sp is not None
-    }
-    for sp in reaction_species:
-        if sp not in species_list:
-            species_list.append(sp)
+    # Species of the model's reactions, and their specific colliders, that the model does not name.
+    reaction_species_ids = set(Stoichiometry.objects.filter(
+        reaction__kinetics__kineticscomment__kinetic_model=kinetic_model
+    ).values_list("species_id", flat=True))
+    reaction_species_ids.update(kinetic_model.kineticscomment_set.filter(
+        kinetics__specific_collider__isnull=False
+    ).values_list("kinetics__specific_collider_id", flat=True))
+    reaction_species_ids -= {species.id for species in species_list}
+    species_list.extend(Species.objects.filter(id__in=reaction_species_ids).order_by("id"))
 
     species_ids = [species.id for species in species_list]
+    structures = defaultdict(list)
+    for structure in Structure.objects.filter(isomer__species__in=species_ids).annotate(
+            of_species=F("isomer__species")):
+        structures[structure.of_species].append(structure)
 
     # Use thermo entries linked to THIS model via ThermoComment so we get
     # the correct polynomials rather than an arbitrary entry from another model.
@@ -827,7 +874,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         # entire export — the species can still be exported if it has
         # valid thermo data.
         molecules = []
-        for structure in db_species.structures:
+        for structure in structures[db_species.id]:
             try:
                 molecules.append(structure.to_rmg())
             except (ValueError, AttributeError, KeyError) as exc:
@@ -888,8 +935,15 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
     reactions = []
     missing_species = set()
     unbalanced_reactions = []
+    from django.db.models import Prefetch
+    from database.models import Efficiency
+
+    # Coefficients and efficiencies in three queries for the model, not in a dozen per link.
     for kinetics_comment in kinetic_model.kineticscomment_set.select_related(
         "kinetics__reaction"
+    ).prefetch_related(
+        "kinetics__reaction__stoichiometry_set__species",
+        Prefetch("kinetics__efficiency_set", queryset=Efficiency.objects.select_related("species")),
     ):
         kinetics = kinetics_comment.kinetics
         reaction = kinetics.reaction
@@ -931,7 +985,7 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         if kinetics.specific_collider_id:
             rmg_reaction.specific_collider = species_map[kinetics.specific_collider_id]
         rmg_reaction.index = kinetics.id
-        efficiencies = list(kinetics.efficiency_set.select_related("species"))
+        efficiencies = list(kinetics.efficiency_set.all())
         rmg_reaction.kinetics = kinetics.data.to_rmg(
             kinetics.min_temp,
             kinetics.max_temp,
