@@ -1,7 +1,9 @@
 """Loading RMG-format kinetics and thermo libraries the way older RMG did.
 
 RMG-Py 4 refuses a whole library when one reaction has more than three reactants or products,
-or a collider that is missing from the dictionary, and it cannot parse dictionaries whose
+a collider that is missing from the dictionary, or atoms that do not balance (an error in the
+mechanism itself, e.g. PCI2017/036-Rashidi's P-C6H3O2 + H <=> C2H2 + CO + CO), and it cannot
+parse dictionaries whose
 adjacency lists carry `molecularTermSymbol` lines. Many RMG-models mechanisms (and the
 site's existing imports of them) contain such reactions. This loader skips only those
 reactions and records why, so the rest of the library still loads.
@@ -18,6 +20,7 @@ import logging
 import os
 import re
 import tempfile
+from collections import Counter
 
 from rmgpy.data.base import Entry
 from rmgpy.data.kinetics.library import KineticsLibrary
@@ -42,8 +45,25 @@ def dictionary_labels(path):
     return labels
 
 
-def rejection(label, species_labels):
-    """Why RMG 4 would refuse this reaction label, or None."""
+def dictionary_atoms(path):
+    """label -> Counter of the elements in its adjacency list, from an RMG dictionary file."""
+    atoms, label = {}, None
+    with open(path) as handle:
+        for line in handle:
+            words = line.split()
+            if not words:
+                label = None
+            elif label is None:
+                label = words[0]
+                atoms[label] = Counter()
+            elif words[0].isdigit() and len(words) > 1:
+                atoms[label][words[1]] += 1
+    return atoms
+
+
+def rejection(label, species_labels, atoms=None):
+    """Why RMG 4 would refuse this reaction label, or None. `atoms` (from dictionary_atoms)
+    adds the balance check."""
     reactants, _, products = label.partition("=>")
     reactants = reactants[:-1] if reactants.endswith("<") else reactants
     collider = COLLIDER.search(reactants)
@@ -58,6 +78,8 @@ def rejection(label, species_labels):
     missing = [s for side in sides for s in side if s not in species_labels]
     if missing:
         return f"species {', '.join(missing)} missing from the dictionary"
+    if atoms is not None and sum((atoms[s] for s in sides[0]), Counter()) != sum((atoms[s] for s in sides[1]), Counter()):
+        return "not balanced"
     return None
 
 
@@ -66,12 +88,14 @@ class TolerantKineticsLibrary(KineticsLibrary):
 
     def load(self, path, local_context=None, global_context=None):
         self.rejected = []
-        self._species_labels = dictionary_labels(os.path.join(os.path.dirname(path), "dictionary.txt"))
+        dictionary = os.path.join(os.path.dirname(path), "dictionary.txt")
+        self._species_labels = dictionary_labels(dictionary)
+        self._atoms = dictionary_atoms(dictionary)
         return super().load(path, local_context, global_context)
 
     def load_entry(self, *args, **kwargs):
         label = kwargs.get("label", args[1] if len(args) > 1 else "")
-        reason = rejection(label, self._species_labels)
+        reason = rejection(label, self._species_labels, self._atoms)
         if reason:
             self.rejected.append((label, reason))
             return None

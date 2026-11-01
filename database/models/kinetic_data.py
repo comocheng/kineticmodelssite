@@ -31,9 +31,10 @@ def validate_rate_constant_units(units):
 
 
 def validate_energy_units(units):
-    common_units = Energy.common_units
-    if units not in common_units:
-        raise ValueError(f"e_units must be one of {', '.join(common_units)}.")
+    # RMG reads J/mol as well; CHEMKIN files in JOULES/MOLE (Chernov, CombFlame2017/45-Olm) give it.
+    allowed_units = set(Energy.common_units) | {"J/mol"}
+    if units not in allowed_units:
+        raise ValueError(f"e_units must be one of {', '.join(sorted(allowed_units))}.")
 
     return units
 
