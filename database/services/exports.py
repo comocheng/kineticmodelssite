@@ -694,21 +694,25 @@ def _generate_chemkin_files(kinetic_model, strict=False):
 
 
 def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
-    from database.models import Thermo, Transport
+    from collections import defaultdict
+    from django.db.models import F
+    from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, Transport
 
     species_map = {}
     labels = set()
+    # The model's names and the structures of its species are read in one query each, not
+    # one per species: a model of 2,000 species took seconds of queries alone.
+    names_in_model = defaultdict(list)
+    for species_id, name in SpeciesName.objects.filter(kinetic_model=kinetic_model).values_list(
+            "species_id", "name"):
+        if name:
+            names_in_model[species_id].append(name)
 
     def assign_label(db_species, index):
         name = None
         # Prefer the name linked to THIS specific model to avoid
         # picking up labels from other models (e.g. N2C4H9OH vs sc4h9oh).
-        from database.models import SpeciesName
-        model_names = sorted(
-            sn.name for sn in SpeciesName.objects.filter(
-                species=db_species, kinetic_model=kinetic_model
-            ) if sn.name
-        )
+        model_names = sorted(names_in_model[db_species.id])
         if model_names:
             name = model_names[0]
         elif hasattr(db_species, "names"):
@@ -728,19 +732,21 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         return label
 
     species_list = list(kinetic_model.species.all())
-    reaction_species = {
-        sp
-        for kinetics_comment in kinetic_model.kineticscomment_set.select_related(
-            "kinetics__reaction", "kinetics__specific_collider")
-        for sp in [*kinetics_comment.kinetics.reaction.species.all(),
-                   kinetics_comment.kinetics.specific_collider]
-        if sp is not None
-    }
-    for sp in reaction_species:
-        if sp not in species_list:
-            species_list.append(sp)
+    # Species of the model's reactions, and their specific colliders, that the model does not name.
+    reaction_species_ids = set(Stoichiometry.objects.filter(
+        reaction__kinetics__kineticscomment__kinetic_model=kinetic_model
+    ).values_list("species_id", flat=True))
+    reaction_species_ids.update(kinetic_model.kineticscomment_set.filter(
+        kinetics__specific_collider__isnull=False
+    ).values_list("kinetics__specific_collider_id", flat=True))
+    reaction_species_ids -= {species.id for species in species_list}
+    species_list.extend(Species.objects.filter(id__in=reaction_species_ids).order_by("id"))
 
     species_ids = [species.id for species in species_list]
+    structures = defaultdict(list)
+    for structure in Structure.objects.filter(isomer__species__in=species_ids).annotate(
+            of_species=F("isomer__species")):
+        structures[structure.of_species].append(structure)
 
     # Use thermo entries linked to THIS model via ThermoComment so we get
     # the correct polynomials rather than an arbitrary entry from another model.
@@ -780,7 +786,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         # entire export — the species can still be exported if it has
         # valid thermo data.
         molecules = []
-        for structure in db_species.structures:
+        for structure in structures[db_species.id]:
             try:
                 molecules.append(structure.to_rmg())
             except (ValueError, AttributeError, KeyError) as exc:
@@ -834,8 +840,15 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
     reactions = []
     missing_species = set()
     unbalanced_reactions = []
+    from django.db.models import Prefetch
+    from database.models import Efficiency
+
+    # Coefficients and efficiencies in three queries for the model, not in a dozen per link.
     for kinetics_comment in kinetic_model.kineticscomment_set.select_related(
         "kinetics__reaction"
+    ).prefetch_related(
+        "kinetics__reaction__stoichiometry_set__species",
+        Prefetch("kinetics__efficiency_set", queryset=Efficiency.objects.select_related("species")),
     ):
         kinetics = kinetics_comment.kinetics
         reaction = kinetics.reaction
@@ -868,7 +881,7 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         if kinetics.specific_collider_id:
             rmg_reaction.specific_collider = species_map[kinetics.specific_collider_id]
         rmg_reaction.index = kinetics.id
-        efficiencies = list(kinetics.efficiency_set.select_related("species"))
+        efficiencies = list(kinetics.efficiency_set.all())
         rmg_reaction.kinetics = kinetics.data.to_rmg(
             kinetics.min_temp,
             kinetics.max_temp,
