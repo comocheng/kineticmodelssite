@@ -1,8 +1,10 @@
 """Reactions with the same species on both sides in Prometheus, as CombFlame2013/2291-Somers has
-furop1 (+M) <=> furop2 (+M): the model gives two names to one structure, so both names are one
-species record. Cantera read the exported falloff reaction furop1 (+M) <=> furop1 (+M) as a reaction
-with furop1 for a named collider, and did not load the file. The exports leave such a falloff
-reaction out and name it in a comment; the other types load, so they are written as before."""
+furop1 (+M) <=> furop2 (+M): the model gives two names to one structure, and an import before
+variant records put both names on one species record. Cantera read the exported falloff reaction
+furop1 (+M) <=> furop1 (+M) as a reaction with furop1 for a named collider, and did not load the
+file. The exports leave such a falloff reaction out and name it in a comment; the other types
+load, so they are written as before. A model imported with variant records keeps furop2 as a
+species of its own, so its download has the model's reaction."""
 import os
 import re
 import shutil
@@ -15,6 +17,7 @@ from database.scripts.import_rmg_models import import_kinetics, import_thermo
 from database.services import exports
 from database.tests.test_import_rmg_species_unit import MODELS, NASA_TEXT
 from database.tests.test_repeated_species_export_unit import sides
+from database.tests.test_species_variants_unit import import_without_variants
 
 ALLYL = ("multiplicity 2\n1 C u0 p0 c0 {2,D} {4,S} {5,S}\n2 C u0 p0 c0 {1,D} {3,S} {6,S}\n"
          "3 C u1 p0 c0 {2,S} {7,S} {8,S}\n4 H u0 p0 c0 {1,S}\n5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {2,S}\n"
@@ -77,22 +80,28 @@ def library(root):
     return thermo_path, kinetics_path
 
 
+def chemkin_text(model):
+    files = exports._generate_chemkin_files(model)
+    (text,) = [v.decode() for k, v in files.items() if k.endswith("_chem.inp")]
+    return text
+
+
 class SameSideExportTests(TestCase):
+    """A model imported before variant records (local and production databases until their
+    models are rebuilt)."""
+
     @classmethod
     def setUpTestData(cls):
         directory = tempfile.mkdtemp()
         try:
             cls.model = db.KineticModel.objects.create(model_name="somers")
             thermo_path, kinetics_path = library(directory)
-            import_thermo(thermo_path, cls.model, MODELS)
-            cls.counts = import_kinetics(kinetics_path, cls.model, MODELS)
+            cls.counts = import_without_variants(thermo_path, kinetics_path, cls.model)
         finally:
             shutil.rmtree(directory)
 
     def chemkin_text(self):
-        files = exports._generate_chemkin_files(self.model)
-        (text,) = [v.decode() for k, v in files.items() if k.endswith("_chem.inp")]
-        return text
+        return chemkin_text(self.model)
 
     def test_the_two_names_are_one_species(self):
         self.assertEqual((self.counts["imported"], self.counts["failed"]), (5, 0))
@@ -117,3 +126,47 @@ class SameSideExportTests(TestCase):
         description = yaml.safe_load(content)["description"]
         for equation in LEFT_OUT:
             self.assertIn(equation, description)
+
+
+# The model's reactions as the exports write them: the Troe rate with (+M).
+WRITTEN = [label.replace(" <=> ", " (+M) <=> ") + " (+M)" if label == "C3H5-A <=> C3H5-X" else label
+           for label in REACTIONS]
+
+
+class VariantExportTests(TestCase):
+    """The same model imported now: C3H5-X has its own record, so every reaction of the model is
+    written, the falloff reaction too."""
+
+    @classmethod
+    def setUpTestData(cls):
+        directory = tempfile.mkdtemp()
+        try:
+            cls.model = db.KineticModel.objects.create(model_name="somers")
+            thermo_path, kinetics_path = library(directory)
+            import_thermo(thermo_path, cls.model, MODELS)
+            cls.counts = import_kinetics(kinetics_path, cls.model, MODELS)
+        finally:
+            shutil.rmtree(directory)
+
+    def test_the_two_names_are_two_species(self):
+        self.assertEqual((self.counts["imported"], self.counts["failed"]), (5, 0))
+        names = db.SpeciesName.objects.filter(kinetic_model=self.model, name__in=["C3H5-A", "C3H5-X"])
+        self.assertEqual(len({name.species_id for name in names}), 2)
+
+    def test_chemkin_export_writes_the_models_reactions(self):
+        text = chemkin_text(self.model)
+        written = [line.split()[0] for line in text.split("REACTIONS", 1)[1].splitlines()
+                   if "=" in line and not line.lstrip().startswith("!")]
+        self.assertCountEqual(map(sides, written), map(sides, WRITTEN))
+        self.assertFalse([line for line in text.splitlines() if line.startswith("! kinetics ")])
+        species = text.split("SPECIES", 1)[1].split("END", 1)[0].split()
+        # Each name once, with RMG's index (C3H5-A(3)); no C3H5-A01 for a second name.
+        self.assertEqual(sorted(re.sub(r"\(\d+\)$", "", name) for name in species if name.startswith("C3H5")),
+                         ["C3H5-A", "C3H5-X"])
+
+    def test_cantera_file_loads_with_the_falloff_reaction(self):
+        import cantera as ct
+        solution = ct.Solution(yaml=exports.build_cantera_yaml(self.model).content.decode())
+        self.assertCountEqual([sides(r.equation) for r in solution.reactions()], map(sides, WRITTEN))
+        (falloff,) = [r for r in solution.reactions() if r.reaction_type.startswith("falloff")]
+        self.assertEqual(sides(falloff.equation), sides("C3H5-A (+M) <=> C3H5-X (+M)"))

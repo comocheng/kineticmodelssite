@@ -296,6 +296,8 @@ class Command(BaseCommand):
                         f"     skipped thermo entry {skipped['label']}: {skipped['reason']}"))
                 for label, state in thermo_counts["excited_states"].items():
                     self.stdout.write(f"     electronic state of {label}: {state}")
+                for label, first in thermo_counts["repeats"].items():
+                    self.stdout.write(f"     own species record for {label} (same structure as {first})")
             except Exception as e:
                 self.stderr.write(f"   ⚠️ Thermo import failed: {e}")
         

@@ -50,7 +50,7 @@ class SpeciesSerializer(FlexFieldsModelSerializer):
     def create(self, validated_data):
         isomers = models.Isomer.objects.filter(pk__in=validated_data["isomers"])
         validated_data["hash"] = get_species_hash(
-            isomers, validated_data.get("electronic_state", ""))
+            isomers, validated_data.get("electronic_state", ""), validated_data.get("variant", ""))
 
         return super().update(validated_data)
 

@@ -131,6 +131,11 @@ class Species(models.Model):
     # so OH(A2Sigma+) shares its structures with OH; this field keeps the two species apart.
     # The term symbol when the source gives one (A^2S+), otherwise "excited".
     electronic_state = models.CharField(max_length=50, blank=True, default="", db_index=True)
+    # Blank for the record that other models share. A model can list two species with one
+    # structure (conformers furop1/furop2, cis/trans, resonance forms it keeps apart); RMG
+    # molecules hold no conformer or stereo, so the later name gets its own record,
+    # "<model name>: <label>", with the same structures.
+    variant = models.CharField(max_length=300, blank=True, default="", db_index=True)
     external_identifiers = GenericRelation("provenance.ExternalIdentifier")
 
     def __str__(self):
