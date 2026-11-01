@@ -309,6 +309,35 @@ def _patch_temperature_ranges(content):
     return patched.encode("utf-8")
 
 
+_YAML_EQUATION_RE = re.compile(r"^(\s*)-\s+equation:\s*(.*)$")
+_YAML_COMMENT_RE = re.compile(r"\s+#.*$")
+_YAML_INDENT_RE = re.compile(r"^(\s+)\S")
+
+
+def _yaml_equation(lines, idx, indent):
+    """Return ``(equation, last_line_index)`` of the ``- equation:`` entry at ``lines[idx]``.
+
+    ck2yaml wraps a long equation onto continuation lines, indented deeper than the
+    reaction's keys, and ends it with a ``# Reaction N`` comment.  The first line alone
+    is not the equation: ``A + B <=> C +`` is the start of ``A + B <=> C + D`` and of
+    ``A + B <=> C + E``.  A YAML comment needs a space before ``#``, so a species such
+    as ``C#CC`` keeps its name.
+    """
+    parts = [_YAML_EQUATION_RE.match(lines[idx]).group(2)]
+    last = idx
+    key_indent = len(indent) + 2
+    for check_idx in range(idx + 1, len(lines)):
+        m = _YAML_INDENT_RE.match(lines[check_idx])
+        if not m or len(m.group(1)) <= key_indent:
+            break
+        parts.append(lines[check_idx].strip())
+        last = check_idx
+    equation = _YAML_COMMENT_RE.sub("", " ".join(parts)).strip()
+    if len(equation) > 1 and equation[0] == equation[-1] and equation[0] in "'\"":
+        equation = equation[1:-1]
+    return equation, last
+
+
 def _patch_duplicate_reactions_yaml(content):
     """Post-process the Cantera YAML to add ``duplicate: true`` to duplicate
     reactions *without* re-serialising the entire file.
@@ -333,7 +362,6 @@ def _patch_duplicate_reactions_yaml(content):
     lines = text.split("\n")
 
     # ── 1. Locate every "- equation:" line and extract the equation ──
-    eq_re = re.compile(r"^(\s*)-\s+equation:\s*(.+?)(?:\s*#.*)?$")
     arrow_re = re.compile(r"(<?=>?)")
 
     def _canonical_sig(eq_str):
@@ -379,13 +407,13 @@ def _patch_duplicate_reactions_yaml(content):
     # ── 1a. Collect all species names that appear in reaction equations ──
     # This is needed for three-body M expansion.
     all_species_in_reactions: set = set()
-    eq_lines_data = []  # (line_index, indent, eq_text)
+    eq_lines_data = []  # (line_index, indent, eq_text, last_line_index)
     for idx, line in enumerate(lines):
-        m_match = eq_re.match(line)
+        m_match = _YAML_EQUATION_RE.match(line)
         if m_match:
             indent = m_match.group(1)
-            eq_text = m_match.group(2)
-            eq_lines_data.append((idx, indent, eq_text))
+            eq_text, last_idx = _yaml_equation(lines, idx, indent)
+            eq_lines_data.append((idx, indent, eq_text, last_idx))
             # Extract species names from this equation
             parts = arrow_re.split(eq_text, maxsplit=1)
             for side in (parts[0], parts[2] if len(parts) >= 3 else ""):
@@ -394,12 +422,10 @@ def _patch_duplicate_reactions_yaml(content):
                     if sp and sp != "M" and sp != "(+M)":
                         all_species_in_reactions.add(sp)
 
-    # (line_index, indent, primary_signature, all_signatures)
+    # (line_index, indent, last_line_index, all_signatures)
     entries = []
-    for idx, indent, eq_text in eq_lines_data:
-        sigs = _all_sigs(eq_text)
-        primary = sigs[0] if sigs else None
-        entries.append((idx, indent, primary, sigs))
+    for idx, indent, eq_text, last_idx in eq_lines_data:
+        entries.append((idx, indent, last_idx, _all_sigs(eq_text)))
 
     if not entries:
         return content
@@ -425,9 +451,9 @@ def _patch_duplicate_reactions_yaml(content):
     #       insert it.  A reaction block starts at the ``- equation:`` line
     #       and ends just before the next ``- equation:`` (or EOF). ──
     dup_re = re.compile(r"^\s+duplicate:\s*true", re.IGNORECASE)
-    inserts = []                      # (line_index_after_which, indent)
+    inserts = []                      # (last line of the equation, indent)
 
-    for pos, (line_idx, indent, _, _sigs) in enumerate(entries):
+    for pos, (line_idx, indent, last_idx, _sigs) in enumerate(entries):
         if pos not in dup_positions:
             continue
         # Determine the end of this reaction block
@@ -442,31 +468,15 @@ def _patch_duplicate_reactions_yaml(content):
                 already = True
                 break
         if not already:
-            inserts.append((line_idx, indent))
+            inserts.append((last_idx, indent))
 
     if not inserts:
         return content
 
-    # ── 4. Insert ``duplicate: true`` lines (iterate from bottom up to
-    #       keep indices stable). ──
-    #   Multi-line equations: ck2yaml may wrap long equations across
-    #   several lines.  Continuation lines are indented deeper than
-    #   regular reaction sub-keys.  We must skip past them so that
-    #   ``duplicate: true`` is inserted after the full equation text.
-    subkey_re = re.compile(r"^(\s+)\S")
-    for line_idx, indent in reversed(inserts):
-        insert_after = line_idx
-        # The indent level of a reaction sub-key is ``indent + "  "``
-        # (two spaces deeper than the ``-``).  Any line indented more
-        # than that is a continuation of the equation string.
-        subkey_indent = len(indent) + 2
-        for check_idx in range(line_idx + 1, len(lines)):
-            m = subkey_re.match(lines[check_idx])
-            if not m or len(m.group(1)) <= subkey_indent:
-                break
-            insert_after = check_idx
-        new_line = indent + "  duplicate: true"
-        lines.insert(insert_after + 1, new_line)
+    # ── 4. Insert ``duplicate: true`` lines after the full (possibly
+    #       wrapped) equation, from the bottom up to keep indices stable. ──
+    for insert_after, indent in reversed(inserts):
+        lines.insert(insert_after + 1, indent + "  duplicate: true")
 
     return "\n".join(lines).encode("utf-8")
 
@@ -493,13 +503,14 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         logger.warning("Cantera not available — skipping iterative duplicate fix")
         return content
 
-    eq_re = re.compile(r"^(\s*)-\s+equation:\s*(.+?)(?:\s*#.*)?$")
+    eq_re = _YAML_EQUATION_RE
     dup_re = re.compile(r"^\s+duplicate:\s*true", re.IGNORECASE)
     # Matches "No duplicate found for declared duplicate reaction number 363"
     orphan_re = re.compile(
         r"No duplicate found for declared duplicate reaction number\s+(\d+)"
     )
-    # Matches "Reaction 314:" in undeclared-duplicate error blocks
+    # Matches "Reaction 314:" in undeclared-duplicate error blocks.  Cantera counts
+    # these from 1 (Cantera 3.0 and 3.1), but the orphan number above from 0.
     undeclared_rxn_re = re.compile(r"Reaction\s+(\d+):")
 
     for iteration in range(max_iterations):
@@ -561,9 +572,10 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
         # ── Case 2: Undeclared duplicates ──
         if not changed and "Undeclared duplicate reactions detected" in msg:
             undeclared_nums = [
-                int(m.group(1)) for m in undeclared_rxn_re.finditer(msg)
+                int(m.group(1)) - 1 for m in undeclared_rxn_re.finditer(msg)
             ]
-            for rxn_num in undeclared_nums:
+            # From the bottom up, so an inserted line does not move the next reaction.
+            for rxn_num in sorted(set(undeclared_nums), reverse=True):
                 if not (0 <= rxn_num < len(rxn_line_indices)):
                     continue
                 eq_line = rxn_line_indices[rxn_num]
@@ -585,11 +597,10 @@ def _fix_duplicate_issues_with_cantera(content, max_iterations=50):
                         already = True
                         break
                 if not already:
-                    # Determine indent from the equation line
-                    m_eq = eq_re.match(lines[eq_line])
-                    indent = m_eq.group(1) if m_eq else ""
-                    new_line = indent + "  duplicate: true"
-                    lines.insert(eq_line + 1, new_line)
+                    # After the whole equation, which may be wrapped onto more lines
+                    indent = eq_re.match(lines[eq_line]).group(1)
+                    _, eq_last = _yaml_equation(lines, eq_line, indent)
+                    lines.insert(eq_last + 1, indent + "  duplicate: true")
                     eq_text = lines[eq_line].strip()[:80]
                     logger.info(
                         f"Adding 'duplicate: true' to undeclared duplicate "
@@ -644,7 +655,10 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             f"{sample}{suffix}."
         )
 
-    reactions = _build_rmg_reactions(kinetic_model, species_map, RmgReaction, strict=strict)
+    left_out = []
+    reactions = _build_rmg_reactions(
+        kinetic_model, species_map, RmgReaction, strict=strict, left_out=left_out
+    )
 
     if not species_map or not reactions:
         if missing_species:
@@ -683,7 +697,7 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             save_transport_file(transport_path, list(species_map.values()))
 
         with open(reactions_path, "rb") as handle:
-            reactions_content = handle.read()
+            reactions_content = _left_out_header(left_out, species_map) + handle.read()
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -691,6 +705,39 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 files[f"{model_slug}_tran.dat"] = handle.read()
 
     return files
+
+
+_CHEMKIN_COMMENT_PREFIX = "The chemkin file reaction is "
+
+
+def _left_out_header(left_out, species_map):
+    """CHEMKIN comment lines that name the reactions ``_build_rmg_reactions`` did not write.
+    ck2yaml copies the comments at the top of the file into the Cantera file's description."""
+    if not left_out:
+        return b""
+
+    def label(species):
+        rmg_species = species_map.get(species.id)
+        return rmg_species.label if rmg_species is not None else f"species {species.id}"
+
+    lines = [
+        f"! Prometheus did not write {len(left_out)} falloff reaction(s) of this model. In each, two",
+        "! names of the model are one species in Prometheus, so the species is on both sides:",
+        "! the reaction changes no amount, and Cantera cannot read it (it takes the species",
+        "! for a named collider).",
+    ]
+    for kinetics_comment in left_out:
+        comment = kinetics_comment.comment or ""
+        if comment.startswith(_CHEMKIN_COMMENT_PREFIX):
+            equation = comment[len(_CHEMKIN_COMMENT_PREFIX):].strip()
+        else:
+            reaction = kinetics_comment.kinetics.reaction
+            arrow = " <=> " if kinetics_comment.reversible else " => "
+            equation = (" + ".join(label(s) for s in reaction.stoich_reactants()) + arrow
+                        + " + ".join(label(s) for s in reaction.stoich_products()))
+        lines.append(f"! kinetics {kinetics_comment.kinetics_id}: {equation}")
+    logger.info(f"Left out {len(left_out)} falloff reaction(s) with the same species on both sides")
+    return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
@@ -830,7 +877,14 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
     return species_map, missing_thermo
 
 
-def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False):
+_FALLOFF_TYPES = ("troe", "lindemann")
+
+
+def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False, left_out=None):
+    """The model's reactions as RMG objects.  A falloff reaction with the same species on
+    both sides is not written; its kinetics comment goes into ``left_out`` when one is given."""
+    from collections import Counter
+
     reactions = []
     missing_species = set()
     unbalanced_reactions = []
@@ -850,6 +904,15 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     "Strict Chemkin generation failed because a reaction has a fractional "
                     f"coefficient: {kinetics.id}."
                 )
+            continue
+        # A falloff reaction with the same species on both sides, as furop1 (+M) <=> furop2 (+M)
+        # when the model's two names are one species record: Cantera takes the species for a
+        # named collider and does not load the file. The reaction changes no amount. Other
+        # types with the same species on both sides load, so they are written.
+        if (kinetics.data.type in _FALLOFF_TYPES and reactant_rows
+                and Counter(sp.id for sp in reactant_rows) == Counter(sp.id for sp in product_rows)):
+            if left_out is not None:
+                left_out.append(kinetics_comment)
             continue
         # A specific collider, as in H + O2 (+AR), must be in the SPECIES block too.
         needed = [sp.id for sp in [*reactant_rows, *product_rows]]
