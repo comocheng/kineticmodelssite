@@ -655,7 +655,10 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             f"{sample}{suffix}."
         )
 
-    reactions = _build_rmg_reactions(kinetic_model, species_map, RmgReaction, strict=strict)
+    left_out = []
+    reactions = _build_rmg_reactions(
+        kinetic_model, species_map, RmgReaction, strict=strict, left_out=left_out
+    )
 
     if not species_map or not reactions:
         if missing_species:
@@ -694,7 +697,7 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             save_transport_file(transport_path, list(species_map.values()))
 
         with open(reactions_path, "rb") as handle:
-            reactions_content = handle.read()
+            reactions_content = _left_out_header(left_out, species_map) + handle.read()
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -702,6 +705,39 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 files[f"{model_slug}_tran.dat"] = handle.read()
 
     return files
+
+
+_CHEMKIN_COMMENT_PREFIX = "The chemkin file reaction is "
+
+
+def _left_out_header(left_out, species_map):
+    """CHEMKIN comment lines that name the reactions ``_build_rmg_reactions`` did not write.
+    ck2yaml copies the comments at the top of the file into the Cantera file's description."""
+    if not left_out:
+        return b""
+
+    def label(species):
+        rmg_species = species_map.get(species.id)
+        return rmg_species.label if rmg_species is not None else f"species {species.id}"
+
+    lines = [
+        f"! Prometheus did not write {len(left_out)} falloff reaction(s) of this model. In each, two",
+        "! names of the model are one species in Prometheus, so the species is on both sides:",
+        "! the reaction changes no amount, and Cantera cannot read it (it takes the species",
+        "! for a named collider).",
+    ]
+    for kinetics_comment in left_out:
+        comment = kinetics_comment.comment or ""
+        if comment.startswith(_CHEMKIN_COMMENT_PREFIX):
+            equation = comment[len(_CHEMKIN_COMMENT_PREFIX):].strip()
+        else:
+            reaction = kinetics_comment.kinetics.reaction
+            arrow = " <=> " if kinetics_comment.reversible else " => "
+            equation = (" + ".join(label(s) for s in reaction.stoich_reactants()) + arrow
+                        + " + ".join(label(s) for s in reaction.stoich_products()))
+        lines.append(f"! kinetics {kinetics_comment.kinetics_id}: {equation}")
+    logger.info(f"Left out {len(left_out)} falloff reaction(s) with the same species on both sides")
+    return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
@@ -841,7 +877,14 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
     return species_map, missing_thermo
 
 
-def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False):
+_FALLOFF_TYPES = ("troe", "lindemann")
+
+
+def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False, left_out=None):
+    """The model's reactions as RMG objects.  A falloff reaction with the same species on
+    both sides is not written; its kinetics comment goes into ``left_out`` when one is given."""
+    from collections import Counter
+
     reactions = []
     missing_species = set()
     unbalanced_reactions = []
@@ -861,6 +904,15 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     "Strict Chemkin generation failed because a reaction has a fractional "
                     f"coefficient: {kinetics.id}."
                 )
+            continue
+        # A falloff reaction with the same species on both sides, as furop1 (+M) <=> furop2 (+M)
+        # when the model's two names are one species record: Cantera takes the species for a
+        # named collider and does not load the file. The reaction changes no amount. Other
+        # types with the same species on both sides load, so they are written.
+        if (kinetics.data.type in _FALLOFF_TYPES and reactant_rows
+                and Counter(sp.id for sp in reactant_rows) == Counter(sp.id for sp in product_rows)):
+            if left_out is not None:
+                left_out.append(kinetics_comment)
             continue
         # A specific collider, as in H + O2 (+AR), must be in the SPECIES block too.
         needed = [sp.id for sp in [*reactant_rows, *product_rows]]
