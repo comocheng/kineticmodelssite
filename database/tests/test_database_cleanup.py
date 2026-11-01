@@ -333,3 +333,79 @@ class PruneUnlinkedRowsTests(TestCase):
         self.assertFalse(db.Species.objects.filter(pk=lonely.pk).exists())
         self.assertTrue(db.Species.objects.filter(pk=provided.pk).exists())
         self.assertEqual(report["database.Reaction"]["kept_only_for"], {"database.KineticsRecord": 1})
+
+
+class EquationTests(TestCase):
+    """A kinetics link's reaction, written with its model's names, against its comment."""
+
+    def test_the_comment_gives_both_sides(self):
+        self.assertEqual(cleanup.comment_equation("The chemkin file reaction is CH2(S) + H2O <=> CH2 + H2O"),
+                         [["CH2(S)", "H2O"], ["CH2", "H2O"]])
+        self.assertEqual(cleanup.comment_equation("The chemkin file reaction is H + OH + M <=> H2O + M"),
+                         [["H", "OH"], ["H2O"]])
+        self.assertEqual(cleanup.comment_equation("The chemkin file reaction is CH3 + CH3 (+M) <=> C2H6 (+M)"),
+                         [["CH3", "CH3"], ["C2H6"]])
+        self.assertEqual(cleanup.comment_equation("AutoTST M062X for C5H8(1) + HO2(2) <=> C5H7(3) + H2O2(4)"),
+                         [["C5H8(1)", "HO2(2)"], ["C5H7(3)", "H2O2(4)"]])
+        self.assertIsNone(cleanup.comment_equation(""))
+        self.assertIsNone(cleanup.comment_equation("Rate from a review"))
+
+    def test_the_names_must_give_the_equation(self):
+        singlet, triplet, water, oh, h2o2 = 1, 2, 3, 4, 5
+        names = {singlet: {"CH2(S)"}, triplet: {"CH2"}, water: {"H2O"}, oh: {"OH", "OHV"}, h2o2: {"H2O2"}}
+        equation = cleanup.comment_equation("The chemkin file reaction is ch2(s) + H2O <=> ch2 + H2O")
+        right = [(singlet, -1), (water, -1), (triplet, 1), (water, 1)]
+        self.assertTrue(cleanup.writes_equation(right, names, equation))
+        self.assertTrue(cleanup.writes_equation([(s, -c) for s, c in right], names, equation))  # reverse
+        # The old link: ch2(s) on the triplet record.
+        self.assertFalse(cleanup.writes_equation([(triplet, -1), (water, -1), (triplet, 1), (water, 1)], names, equation))
+        # 2OH is two OH; a record with two names may use either.
+        self.assertTrue(cleanup.writes_equation(
+            [(h2o2, -1), (oh, 2)], names, cleanup.comment_equation("The chemkin file reaction is H2O2 <=> 2OH")))
+        self.assertTrue(cleanup.writes_equation(
+            [(h2o2, -1), (oh, 2)], names, cleanup.comment_equation("The chemkin file reaction is H2O2 <=> OH + OHV")))
+        # A name the model does not have: no verdict.
+        self.assertIsNone(cleanup.writes_equation(
+            right, names, cleanup.comment_equation("The chemkin file reaction is CH2X + H2O <=> CH2 + H2O")))
+
+
+class MismatchedLinksTests(TestCase):
+    """An older import left OH* + AR <=> OH + AR on a ground-state OH + AR = OH + AR reaction."""
+
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory)
+        self.model = db.KineticModel.objects.create(model_name="model")
+        self.thermo_path, self.kinetics_path = model_folder(
+            self.directory, "model", ["H", "O", "O2", "OH*", "OH", "H2O", "HCCO", "CO", "AR"], kinetics=True)
+        import_thermo(self.thermo_path, self.model, MODELS)
+        import_kinetics(self.kinetics_path, self.model, MODELS)
+        self.made = set(db.KineticsComment.objects.filter(kinetic_model=self.model).values_list("pk", flat=True))
+        oh = db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name="OH")
+        ar = db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name="AR")
+        self.old = db.KineticsComment.objects.create(
+            kinetics=db.Kinetics.objects.create(reaction=reaction((-1, oh), (-1, ar), (1, oh), (1, ar)), raw_data=RATE),
+            kinetic_model=self.model, comment="The chemkin file reaction is OH* + AR <=> OH + AR")
+
+    def test_only_the_old_link_is_found_and_deleted(self):
+        self.assertEqual(cleanup.integrity_report()["kinetics_links_not_their_equation"], 1)
+        rows = cleanup.prune_mismatched_links()
+        self.assertEqual([k["id"] for k in rows], [self.old.pk])
+        self.assertTrue(db.KineticsComment.objects.filter(pk=self.old.pk).exists())  # dry run
+        cleanup.prune_mismatched_links(apply=True)
+        self.assertEqual(set(db.KineticsComment.objects.filter(kinetic_model=self.model).values_list("pk", flat=True)),
+                         self.made)
+        self.assertEqual(cleanup.integrity_report()["kinetics_links_not_their_equation"], 0)
+
+    def test_the_rebuild_does_not_keep_it_when_an_entry_fails(self):
+        real = cleanup.import_kinetics
+
+        def one_entry_fails(path, model, models):
+            return {**real(path, model, models), "failed": 1}
+
+        with mock.patch.object(cleanup, "import_kinetics", one_entry_fails):
+            result = cleanup.rebuild_model_links(self.model, self.thermo_path, self.kinetics_path)
+        links = db.KineticsComment.objects.filter(kinetic_model=self.model)
+        self.assertFalse(links.filter(kinetics=self.old.kinetics).exists())
+        self.assertEqual(links.count(), len(self.made))
+        self.assertEqual(result["kinetics_links_not_their_equation"], 1)

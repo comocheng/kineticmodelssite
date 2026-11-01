@@ -13,7 +13,9 @@ without it the work is done and rolled back, so a dry run reports exactly what w
    and reactions and kinetics that become identical are merged as well.
 2. rebuild_model_links: replaces a model's names, thermo links and kinetics links with what the
    current importer makes from the model's library. An old link stays when the library entry
-   that would replace it could not be imported, so an import failure loses nothing.
+   that would replace it could not be imported, so an import failure loses nothing, unless the
+   old link's reaction is no longer the equation its comment names. prune_mismatched_links
+   removes such links that an earlier rebuild kept.
 3. prune_unlinked_rows: deletes thermo, kinetics, reaction and species rows that nothing refers
    to any more. Rows that only provider data or derived tables refer to are kept and counted.
 4. integrity_report: counts each defect. Run it before and after the steps as the evidence.
@@ -354,6 +356,114 @@ def label_equations(kinetics_rows, names, most=256):
     return {k["kinetics_id"]: spellings.get(k["kinetics__reaction_id"], set()) for k in kinetics_rows}
 
 
+# The equation a kinetics link's comment names: "The chemkin file reaction is A + B <=> C" from
+# the CHEMKIN conversion, "AutoTST M062X for A + B <=> C" from AutoTST.
+COMMENT_EQUATION = re.compile(r"(?:chemkin file reaction is|M062X for)\s+(.+)$", re.I)
+
+
+def comment_equation(comment):
+    """The two sides of the equation a link's comment names, as lists of tokens ("2OH",
+    "CH2(S)"), or None when it names none. Fall-off and third-body partners ((+M), + M) are
+    left out."""
+    match = COMMENT_EQUATION.search((comment or "").split("\n")[0])
+    sides = re.split(r"\s*(?:<=>|=>|=)\s*", match.group(1).strip(), maxsplit=1) if match else []
+    if len(sides) != 2:
+        return None
+    return [[t for t in re.split(r"\s+\+\s+", re.sub(r"\(\+[^)]*\)", "", side).strip()) if t and t.upper() != "M"]
+            for side in sides]
+
+
+def writes_equation(stoichiometry, names, equation):
+    """Whether the reaction, rows of (species id, coeff), written with the model's names (species
+    id -> names), is `equation` from comment_equation, in either direction. None when the
+    equation uses a name the model does not have, so it cannot tell."""
+    lower = {species: {n.lower() for n in v} for species, v in names.items()}
+    known = set().union(*lower.values()) if lower else set()
+    sides = []
+    for tokens in equation:
+        side = Counter()
+        for token in (t.lower() for t in tokens):
+            count = re.match(r"(\d+)\s*(.+)$", token)
+            if token in known:
+                side[token] += 1
+            elif count and count.group(2) in known:  # 2OH
+                side[count.group(2)] += int(count.group(1))
+            else:
+                return None
+        sides.append(side)
+
+    def fits(rows, wanted):
+        # Gives each species one of its names so that the names add up to `wanted`.
+        if not rows:
+            return not +wanted
+        (species, coeff), rest = rows[0], rows[1:]
+        for name in lower.get(species, ()):
+            if wanted[name] >= coeff:
+                wanted[name] -= coeff
+                if fits(rest, wanted):
+                    return True
+                wanted[name] += coeff
+        return False
+
+    def units(rows):
+        # 2 OH is OH + OH, so that a record with two names may be written OH + OHV.
+        return [(s, 1) for s, c in rows for _ in range(int(c))] if all(c == int(c) for s, c in rows) else rows
+
+    reactants = units([(s, -c) for s, c in stoichiometry if c < 0])
+    products = units([(s, c) for s, c in stoichiometry if c > 0])
+    return any(fits(reactants, Counter(left)) and fits(products, Counter(right))
+               for left, right in (sides, sides[::-1]))
+
+
+def stoichiometry_rows(reaction_ids=None):
+    """reaction id -> [(species id, coeff)], for every reaction when reaction_ids is None."""
+    rows = db.Stoichiometry.objects.all()
+    if reaction_ids is not None:
+        rows = rows.filter(reaction_id__in=reaction_ids)
+    out = defaultdict(list)
+    for reaction_id, species_id, coeff in rows.values_list("reaction_id", "species_id", "coeff"):
+        out[reaction_id].append((species_id, coeff))
+    return out
+
+
+def links_not_their_equation(links, names, stoichiometry):
+    """The kinetics links (rows with kinetics__reaction_id and comment) whose reaction, written
+    with the model's names, is not the equation their comment names."""
+    return [k for k in links
+            if (equation := comment_equation(k["comment"]))
+            and writes_equation(stoichiometry[k["kinetics__reaction_id"]], names, equation) is False]
+
+
+def mismatched_kinetics_links():
+    """The kinetics links of every model whose reaction is not the equation their comment names:
+    links an older import made before the clean-up corrected a species, e.g. ch2(s) <=> ch2 on a
+    CH2(T) = CH2(T) reaction. rebuild_model_links kept them because their model's library does
+    not import whole."""
+    names = defaultdict(lambda: defaultdict(set))
+    for model_id, species_id, name in db.SpeciesName.objects.exclude(kinetic_model=None).values_list(
+            "kinetic_model_id", "species_id", "name"):
+        if name:
+            names[model_id][species_id].add(name)
+    stoichiometry = stoichiometry_rows()
+    links = defaultdict(list)
+    for k in db.KineticsComment.objects.values(
+            "id", "kinetic_model_id", "kinetic_model__model_name", "kinetics_id", "kinetics__reaction_id", "comment"):
+        links[k["kinetic_model_id"]].append(k)
+    return [k for model_id, rows in links.items()
+            for k in links_not_their_equation(rows, names[model_id], stoichiometry)]
+
+
+def prune_mismatched_links(apply=False):
+    """Deletes the links mismatched_kinetics_links() finds and returns them. Their kinetics,
+    reactions and species are left to prune_unlinked_rows."""
+    with transaction.atomic():
+        rows = mismatched_kinetics_links()
+        db.KineticsComment.objects.filter(pk__in=[k["id"] for k in rows]).delete()
+        if not apply:
+            transaction.set_rollback(True)
+    return rows
+
+
 def run_import(func, path, model):
     """Import one library; returns (counts or error text, status): "ok" when every entry was
     imported, "absent" when the model has no such library, else "failed"."""
@@ -413,6 +523,14 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
                      if k["kinetics_id"] not in made_kinetics and kinetics_status != "ok"
                      and k["kinetics__reaction__canonical_key"] not in made_reactions
                      and not old_equations[k["kinetics_id"]] & made_equations}
+    # A kept link must still be the equation it names, written with the names the model has
+    # now: an old link on a species the clean-up corrected (ch2(s) <=> ch2 on CH2(T) = CH2(T)) goes.
+    names_now = names_of_species(made[0] + [{"species_id": s, "name": n} for s, n in keep_names])
+    stoichiometry = stoichiometry_rows({k["kinetics__reaction_id"] for k in keep_kinetics.values()})
+    wrong = links_not_their_equation(keep_kinetics.values(), names_now, stoichiometry)
+    for k in wrong:
+        del keep_kinetics[k["kinetics_id"]]
+    result["kinetics_links_not_their_equation"] = len(wrong)
     db.SpeciesName.objects.bulk_create([
         db.SpeciesName(species_id=species, kinetic_model=model, name=name) for species, name in keep_names])
     db.ThermoComment.objects.bulk_create([
@@ -534,7 +652,11 @@ def integrity_report():
     ground = set(db.Species.objects.filter(electronic_state="").values_list("pk", flat=True))
     r["excited_names_on_ground_state_records"] = sum(
         1 for m, s, n in names if n and EXCITED_NAME.search(n) and s in ground)
+    mismatched = mismatched_kinetics_links()
+    r["kinetics_links_not_their_equation"] = len(mismatched)
     r["examples"] = {
+        "kinetics_links_not_their_equation": [
+            (k["kinetic_model__model_name"], k["comment"][:80]) for k in mismatched[:5]],
         "split_species": [g[:4] for g in groups[:5]],
         "model_names_on_2plus_records": [
             (db.KineticModel.objects.get(pk=m).model_name, n, sorted(v))
