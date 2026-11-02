@@ -51,9 +51,10 @@ def standard_inchi(value):
 
 def _by_standard_inchi(std):
     """species id -> multiplicities of its structures, for the ground-state records whose
-    InChI is this standard InChI, perhaps followed by RMG's layers."""
+    InChI is this standard InChI, perhaps followed by RMG's layers. A model's variant record
+    (furop2 next to furop1) has the structures of the shared record, which a component means."""
     found = {}
-    rows = (Species.objects.filter(electronic_state="", isomers__inchi__startswith=std)
+    rows = (Species.objects.filter(electronic_state="", variant="", isomers__inchi__startswith=std)
             .values_list("pk", "isomers__inchi", "isomers__structure__multiplicity"))
     for pk, inchi, multiplicity in rows:
         if standard_inchi(inchi) == std:
@@ -71,7 +72,8 @@ def _by_inchikey(std):
         return {}
     found = {}
     rows = (Structure.objects.filter(structure_key__startswith=f"{key}-",
-                                     isomer__species__electronic_state="")
+                                     isomer__species__electronic_state="",
+                                     isomer__species__variant="")
             .values_list("isomer__species", "multiplicity"))
     for pk, multiplicity in rows:
         if pk is not None:

@@ -193,12 +193,12 @@ class TolerantThermoLibraryTests(SimpleTestCase):
 
     def test_term_symbol_keeps_excited_and_ground_state_apart(self):
         library = self.load(["OH*", "OH", "OHV", "CO", "CO"])
-        self.assertEqual(list(library.entries), ["OH*", "OH", "CO"])
-        self.assertEqual(library.states, {"OH*": "A^2S+", "OH": "", "CO": ""})
-        skipped = {(s["label"], s["kept"]) for s in library.skipped}
-        self.assertEqual(skipped, {("OHV", "OH"), ("CO", "CO")})
-        ohv = next(s for s in library.skipped if s["label"] == "OHV")
-        self.assertEqual(ohv["reason"], "same structure, multiplicity and electronic state as OH")
+        self.assertEqual(list(library.entries), ["OH*", "OH", "OHV", "CO"])
+        self.assertEqual(library.states, {"OH*": "A^2S+", "OH": "", "OHV": "", "CO": ""})
+        self.assertEqual([(s["label"], s["kept"], s["reason"]) for s in library.skipped],
+                         [("CO", "CO", "label repeated")])
+        # OHV, written as ground-state OH, is a second species of OH's structure in the model.
+        self.assertEqual(library.repeats, {"OHV": "OH"})
 
     def test_declared_state_keeps_an_entry_without_term_symbol(self):
         library = self.load(["OHX", "OH"], declared_states={"OHX": "excited"})
@@ -206,10 +206,11 @@ class TolerantThermoLibraryTests(SimpleTestCase):
         self.assertEqual(library.states["OHX"], "excited")
         self.assertEqual(library.skipped, [])
 
-    def test_undeclared_excited_entry_is_a_reported_duplicate(self):
+    def test_undeclared_excited_entry_is_repeated_by_the_ground_state(self):
         library = self.load(["OHX", "OH"])
-        self.assertEqual(list(library.entries), ["OHX"])
-        self.assertEqual([(s["label"], s["kept"]) for s in library.skipped], [("OH", "OHX")])
+        self.assertEqual(list(library.entries), ["OHX", "OH"])
+        self.assertEqual(library.skipped, [])
+        self.assertEqual(library.repeats, {"OH": "OHX"})
 
     def test_smiles_txt_states(self):
         with open(os.path.join(self.directory, "SMILES.txt"), "w") as handle:

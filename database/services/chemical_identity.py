@@ -90,12 +90,13 @@ def inchikey_of(key):
 def inchikey_species_map():
     """Standard InChIKey -> species id, read from Structure.structure_key, which is the
     source of truth for species identifiers. The lowest species id wins a shared key.
-    An InChIKey denotes the ground state, so excited-state species are left out."""
+    An InChIKey denotes the ground state, so excited-state species are left out, and the
+    record other models share, so a model's variant records (furop2) are left out too."""
     from database.models import Structure
 
     mapping = {}
     rows = (Structure.objects.exclude(structure_key="").exclude(isomer__species=None)
-            .filter(isomer__species__electronic_state="")
+            .filter(isomer__species__electronic_state="", isomer__species__variant="")
             .order_by("isomer__species").values_list("structure_key", "isomer__species"))
     for key, species_id in rows:
         inchikey = inchikey_of(key)

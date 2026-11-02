@@ -10,11 +10,12 @@ reactions and records why, so the rest of the library still loads.
 
 RMG-Py 4 also refuses a whole thermo library when two entries share a label or a structure.
 CHEMKIN mechanisms do that when they list an excited state (OH*, CH*) next to the ground
-state. The thermo loader keeps both when their electronic states differ (from a
-`molecularTermSymbol` line or SMILES.txt), and keeps the first of any other repeat and
-records the rest, so the import can report them. For the same reason the kinetics loader does
-not take two reactions that differ only in an electronic state (C2H + O <=> CH* + CO and
-C2H + O <=> CH + CO) for duplicates, which RMG would merge into one reaction.
+state (from a `molecularTermSymbol` line or SMILES.txt), or two species that RMG molecules
+cannot tell apart (conformers, cis/trans). The thermo loader keeps every entry of a repeated
+structure and records which ones repeat it; it keeps the first of a repeated label. For the
+same reason the kinetics loader does not take two reactions that differ only in an electronic
+state (C2H + O <=> CH* + CO and C2H + O <=> CH + CO) or a variant for duplicates, which RMG
+would merge into one reaction.
 """
 import logging
 import os
@@ -27,6 +28,8 @@ from rmgpy.data.kinetics.library import KineticsLibrary
 from rmgpy.kinetics import Arrhenius, MultiArrhenius, MultiPDepArrhenius, PDepArrhenius, ThirdBody
 from rmgpy.data.thermo import ThermoLibrary
 from rmgpy.molecule import Molecule
+
+from database.services.chemical_identity import structure_key
 
 NON_STANDARD_ADJACENCY_TOKENS = ("molecularTermSymbol",)
 COLLIDER = re.compile(r"\(\+[^\)]+\)")
@@ -85,6 +88,7 @@ def rejection(label, species_labels, atoms=None):
 
 class TolerantKineticsLibrary(KineticsLibrary):
     declared_states = None
+    declared_variants = None
 
     def load(self, path, local_context=None, global_context=None):
         self.rejected = []
@@ -125,16 +129,24 @@ class TolerantKineticsLibrary(KineticsLibrary):
         label = getattr(species, "label", "")
         return getattr(self, "term_symbols", {}).get(label) or (self.declared_states or {}).get(label, "")
 
+    def identity_of(self, species):
+        """What RMG's molecules leave out of a reaction species: its electronic state, and its
+        variant (set `declared_variants`, label -> variant, before load())."""
+        label = getattr(species, "label", "")
+        return self.state_of(species), (self.declared_variants or {}).get(label, "")
+
     def same_reaction(self, reaction0, reaction, either_direction=True):
-        """RMG's reaction isomorphism, with the electronic states of each side compared too.
+        """RMG's reaction isomorphism, with the electronic states and variants of each side
+        compared too.
 
         RMG molecules have no electronic state, so to RMG C2H + O <=> CH* + CO is a duplicate
-        of C2H + O <=> CH + CO, and the two Arrhenius rates were merged into one reaction."""
+        of C2H + O <=> CH + CO, and the two Arrhenius rates were merged into one reaction. Nor
+        do they have a conformer: furop2 + H is not furop1 + H when the model lists both."""
         if not reaction0.is_isomorphic(reaction, either_direction=either_direction):
             return False
 
         def sides(r):
-            return sorted(map(self.state_of, r.reactants)), sorted(map(self.state_of, r.products))
+            return sorted(map(self.identity_of, r.reactants)), sorted(map(self.identity_of, r.products))
 
         first, second = sides(reaction0), sides(reaction)
         return first == second or (either_direction and first == second[::-1])
@@ -242,12 +254,17 @@ def smiles_txt_states(model_dir):
 
 
 class TolerantThermoLibrary(ThermoLibrary):
-    """Keeps the first entry for each label, and for each structure in each electronic state.
+    """Keeps the first entry for each label, and every label of a repeated structure.
 
     Set `declared_states` (label -> state, e.g. from smiles_txt_states) before load(); an
     entry's own term symbol wins over it. Entries with one structure but different states
-    (OH and OH*) are both kept, and `states` gives the state of each kept entry. `skipped`
-    lists the rest, as dicts with the skipped `label`, the `kept` label and the `reason`.
+    (OH and OH*) are both kept, and `states` gives the state of each kept entry. Two labels
+    with one structure (same structure key or graph) in one state are two species of the
+    model too: conformers (furop1/furop2), cis/trans, or resonance forms that the model keeps
+    apart, which RMG molecules cannot tell apart. The later entry is kept, and `repeats` maps
+    its label to the first label of that structure and state. `skipped` lists the entries left
+    out (a repeated label, an unreadable adjacency list), as dicts with the skipped `label`,
+    the `kept` label and the `reason`.
     """
 
     declared_states = None
@@ -255,6 +272,8 @@ class TolerantThermoLibrary(ThermoLibrary):
     def load(self, path, local_context=None, global_context=None):
         self.skipped = []
         self.states = {}
+        self.repeats = {}
+        self._keys = {}
         return super().load(path, local_context, global_context)
 
     def load_entry(self, index, label, molecule, thermo, **kwargs):
@@ -269,14 +288,14 @@ class TolerantThermoLibrary(ThermoLibrary):
             self.skipped.append({"label": label, "kept": "",
                                  "reason": f"adjacency list not readable: {error}"})
             return None
+        key = structure_key_or_none(item)
         for entry in self.entries.values():
-            if (item.multiplicity == entry.item.multiplicity
-                    and self.states[entry.label] == state and item.is_isomorphic(entry.item)):
-                self.skipped.append({
-                    "label": label, "kept": entry.label,
-                    "reason": ("same structure, multiplicity and electronic state as "
-                               f"{entry.label}")})
-                return None
+            if entry.label in self.repeats or self.states[entry.label] != state:
+                continue
+            if ((key is not None and key == self._keys[entry.label])
+                    or (item.multiplicity == entry.item.multiplicity and item.is_isomorphic(entry.item))):
+                self.repeats[label] = entry.label
+                break
         # RMG's own load_entry refuses a second entry for a structure even in another state,
         # so the entry is made here, as RMG makes it.
         item.update_atomtypes()
@@ -289,4 +308,13 @@ class TolerantThermoLibrary(ThermoLibrary):
             site=kwargs.get("site"),
         )
         self.states[label] = state
+        self._keys[label] = key
+        return None
+
+
+def structure_key_or_none(molecule):
+    """The structure key (InChIKey plus multiplicity), or None when RMG cannot make one."""
+    try:
+        return structure_key(molecule)
+    except Exception:
         return None

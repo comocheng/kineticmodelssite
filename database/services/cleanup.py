@@ -31,7 +31,7 @@ from django.db.models import Count
 from database import models as db
 from database.models.kinetic_data import efficiencies_hash
 from database.scripts.import_rmg_models import (
-    get_reaction_hash, get_species_hash, import_kinetics, import_thermo)
+    get_reaction_hash, get_species_hash, import_kinetics, import_thermo, variant_name)
 
 MODELS = SimpleNamespace(**{name: getattr(db, name) for name in (
     "KineticModel", "Source", "Author", "Authorship", "Thermo", "ThermoComment", "Species", "Formula",
@@ -128,7 +128,7 @@ def keep_oldest(model, group_fields, **filters):
 # ---------------------------------------------------------------------------
 
 def species_identities():
-    """species id -> (structure keys of its isomers, electronic state).
+    """species id -> (structure keys of its isomers, electronic state and variant).
 
     Records without structure keys are left out."""
     keys_of_isomer = defaultdict(set)
@@ -137,15 +137,17 @@ def species_identities():
     keys = defaultdict(set)
     for species_id, isomer_id in db.Species.isomers.through.objects.values_list("species_id", "isomer_id"):
         keys[species_id] |= keys_of_isomer[isomer_id]
-    states = dict(db.Species.objects.values_list("pk", "electronic_state"))
+    states = {pk: (state, variant) for pk, state, variant
+              in db.Species.objects.values_list("pk", "electronic_state", "variant")}
     return {sp: (frozenset(k), states[sp]) for sp, k in keys.items() if k}
 
 
 def split_groups():
     """Groups of records that are one species, the record to keep first.
 
-    Records in one electronic state that share a structure key are one species (spin states
-    have different keys). Resonance forms usually share one key, but not when their InChI H
+    Records in one electronic state and variant that share a structure key are one species
+    (spin states have different keys; a model's variant record, furop2 next to furop1, is a
+    species of its own). Resonance forms usually share one key, but not when their InChI H
     layers differ: an older import left CH2COOH as a record with [CH2]C(=O)O and another with
     that form and C=C([O])O. So records are joined through any key they share, also through a
     third record, not only when all their keys are the same. The kept record is the one the
@@ -159,10 +161,10 @@ def split_groups():
         return species_id
 
     first_holder = {}
-    for species_id, (keys, state) in species_identities().items():
+    for species_id, (keys, state_and_variant) in species_identities().items():
         parent.setdefault(species_id, species_id)
         for key in keys:
-            holder = first_holder.setdefault((key, state), species_id)
+            holder = first_holder.setdefault((key, state_and_variant), species_id)
             parent[root(species_id)] = root(holder)
     groups = defaultdict(list)
     for species_id in parent:
@@ -210,7 +212,7 @@ def merge_species_group(ids):
     keep.save(update_fields=["prime_id", "cas_number"])
     db.Species.objects.filter(pk__in=drop_ids).delete()
     keep.isomers.add(*isomers)
-    keep.hash = get_species_hash(keep.isomers.all(), keep.electronic_state)
+    keep.hash = get_species_hash(keep.isomers.all(), keep.electronic_state, keep.variant)
     keep.save(update_fields=["hash"])
     # Names: one row per model and name, and no empty placeholder next to a name.
     keep_oldest(db.SpeciesName, ("kinetic_model", "name"), species_id=keep_id)
@@ -625,8 +627,9 @@ def integrity_report():
     for species_id, isomer_id in db.Species.isomers.through.objects.values_list("species_id", "isomer_id"):
         isomers[species_id].append(SimpleNamespace(id=isomer_id))
     r["species_with_stale_hash"] = sum(
-        1 for pk, stored, state in db.Species.objects.values_list("pk", "hash", "electronic_state")
-        if stored != get_species_hash(isomers[pk], state))
+        1 for pk, stored, state, variant in db.Species.objects.values_list(
+            "pk", "hash", "electronic_state", "variant")
+        if stored != get_species_hash(isomers[pk], state, variant))
     stoich = defaultdict(list)
     for reaction_id, coeff, species_id in db.Stoichiometry.objects.values_list("reaction_id", "coeff", "species_id"):
         stoich[reaction_id].append((coeff, SimpleNamespace(id=species_id)))
@@ -652,6 +655,13 @@ def integrity_report():
     ground = set(db.Species.objects.filter(electronic_state="").values_list("pk", flat=True))
     r["excited_names_on_ground_state_records"] = sum(
         1 for m, s, n in names if n and EXCITED_NAME.search(n) and s in ground)
+    # A variant record ("<model>: <label>") carries that model's label and no other name.
+    model_names = dict(db.KineticModel.objects.values_list("pk", "model_name"))
+    variants = dict(db.Species.objects.exclude(variant="").values_list("pk", "variant"))
+    r["variant_species"] = len(variants)
+    r["names_not_their_variant"] = sum(
+        1 for m, s, n in names
+        if s in variants and variants[s] != variant_name(SimpleNamespace(model_name=model_names.get(m)), n))
     mismatched = mismatched_kinetics_links()
     r["kinetics_links_not_their_equation"] = len(mismatched)
     r["examples"] = {
