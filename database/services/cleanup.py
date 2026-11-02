@@ -476,7 +476,7 @@ def run_import(func, path, model):
             counts = func(path, model, MODELS)
     except Exception as error:
         return f"library not loaded: {type(error).__name__}: {error}"[:300], "failed"
-    counts = {k: v for k, v in counts.items() if k in ("imported", "failed", "rejected")}
+    counts = {k: v for k, v in counts.items() if k in ("imported", "failed", "rejected", "moved_terms")}
     return counts, "failed" if counts.get("failed") or counts.get("rejected") else "ok"
 
 
