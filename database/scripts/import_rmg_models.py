@@ -13,8 +13,11 @@ from django.db import transaction, IntegrityError
 from dateutil import parser
 from rmgpy import kinetics, constants
 from rmgpy.quantity import RateCoefficient
+from rmgpy.reaction import Reaction
+from rmgpy.species import Species
+from database.scripts import chemkin_lines
 from database.scripts.rmg_libraries import (
-    TolerantKineticsLibrary, TolerantThermoLibrary, smiles_txt_states)
+    TolerantKineticsLibrary, TolerantThermoLibrary, smiles_txt_states, structure_key_or_none)
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
 
 from django.conf import settings
@@ -624,13 +627,9 @@ def _repeats_key(thermo_path, states):
             tuple(sorted((states or {}).items())) if states is not None else None)
 
 
-def model_variants(library_path, kinetic_model, states=None):
-    """label -> variant for the model's later labels of a structure it already lists.
-
-    The model's thermo library decides: its first entry of a structure and electronic state
-    keeps the record other models share, and each later entry (furop2 after furop1) is a
-    species of its own (TolerantThermoLibrary.repeats). `library_path` is any RMG-Py library
-    of the model; a model without a thermo library has no variants."""
+def model_repeats(library_path, kinetic_model, states=None):
+    """later label -> first label for the structures the model's thermo library lists more than
+    once (TolerantThermoLibrary.repeats); {} for a model without a thermo library."""
     model_dir = os.path.dirname(os.path.dirname(os.path.abspath(library_path)))
     thermo_path = os.path.join(model_dir, "RMG-Py-thermo-library", "ThermoLibrary.py")
     if not os.path.exists(thermo_path):
@@ -638,7 +637,151 @@ def model_variants(library_path, kinetic_model, states=None):
     key = _repeats_key(thermo_path, states)
     if key not in _thermo_repeats:
         _thermo_repeats[key] = dict(load_thermo_library(thermo_path, kinetic_model.model_name, states).repeats)
-    return {label: variant_name(kinetic_model, label) for label in _thermo_repeats[key]}
+    return _thermo_repeats[key]
+
+
+def model_variants(library_path, kinetic_model, states=None):
+    """label -> variant for the model's later labels of a structure it already lists.
+
+    The model's thermo library decides: its first entry of a structure and electronic state
+    keeps the record other models share, and each later entry (furop2 after furop1) is a
+    species of its own (TolerantThermoLibrary.repeats). `library_path` is any RMG-Py library
+    of the model; a model without a thermo library has no variants."""
+    return {label: variant_name(kinetic_model, label)
+            for label in model_repeats(library_path, kinetic_model, states)}
+
+
+def _names_key(reactants, products):
+    return tuple(sorted(tuple(sorted(n.upper() for n in side)) for side in (reactants, products)))
+
+
+def _combined(terms, kinetics_data):
+    """One rate term as it is, several as the kind of multi-rate they came from."""
+    if len(terms) == 1:
+        return terms[0]
+    if isinstance(kinetics_data, kinetics.MultiPDepArrhenius):
+        return kinetics.MultiPDepArrhenius(arrhenius=terms, Tmin=kinetics_data.Tmin, Tmax=kinetics_data.Tmax,
+                                           Pmin=kinetics_data.Pmin, Pmax=kinetics_data.Pmax)
+    return kinetics.MultiArrhenius(arrhenius=terms, Tmin=kinetics_data.Tmin, Tmax=kinetics_data.Tmax)
+
+
+def _term_rate(term):
+    """(A in the written units, n, Ea in J/mol) of an Arrhenius term, or of the first pressure of a
+    PDepArrhenius term (as a CHEMKIN PLOG line writes it), and whether it is the latter."""
+    if isinstance(term, kinetics.PDepArrhenius):
+        first = term.arrhenius[0]
+        if isinstance(first, kinetics.MultiArrhenius):
+            first = first.arrhenius[0]
+        return _term_rate(first)[0], True
+    if isinstance(term, kinetics.Arrhenius):
+        return (term.A.value, term.n.value_si, term.Ea.value_si), False
+    return None, False
+
+
+class MergedRates:
+    """Gives each rate term of a merged library entry back to the reaction its CHEMKIN line writes.
+
+    Where two of a model's names had one SMILES, RMG-models wrote both names' reactions as one
+    entry, labelled with one name: a MultiArrhenius (or MultiPDepArrhenius) with one term per
+    CHEMKIN line. When the names have two species records (variants), the importer would put
+    both rates on the labelled name's reaction and leave the other name without it. Each term is
+    matched to its line in the model's CHEMKIN file (the same species structures, the same A, n
+    and Ea); a term from a line of other records becomes that line's reaction, with its names.
+    RMG-models is only read."""
+
+    def __init__(self, kinetics_path, library, states, variants, repeats):
+        self.lines, self.used, self.moved = {}, set(), 0
+        self.states, self.variants = states or {}, variants or {}
+        self._keys = {}
+        species = dict(getattr(library, "species_dict", None) or {})
+        model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
+        path = chemkin_lines.reactions_file(model_dir)
+        if not (path and self.variants and species):
+            return
+        for later, first in (repeats or {}).items():
+            # A name the kinetics dictionary leaves out (it keeps one label per molecule): the later
+            # one (MatheuCH4 MECY24PD) or the first (Atef NC6H13COC2H3, with C6H13COC2H3 kept).
+            for missing, present in ((later, first), (first, later)):
+                if missing not in species and present in species:
+                    species[missing] = Species(label=missing, molecule=species[present].molecule)
+        self.species = species
+        spelling = {name.upper(): name for name in species}
+        tokens = set(spelling)
+        with open(path, errors="replace") as handle:
+            block = re.search(r"^\s*SPEC\w*(.*?)^\s*END", handle.read(), re.S | re.M | re.I)
+        if block:
+            tokens.update(t.upper() for line in block.group(1).splitlines() for t in line.split("!")[0].split())
+        ea_to_j, self.molecules = chemkin_lines.units(path, kinetics_path)
+        for line in chemkin_lines.read_reactions(path, tokens, ea_to_j):
+            names = line["reactants"] + line["products"]
+            if line["third_body"] or not all(n.upper() in spelling for n in names):
+                continue
+            line["reactants"] = [spelling[n.upper()] for n in line["reactants"]]
+            line["products"] = [spelling[n.upper()] for n in line["products"]]
+            key = self.key(line["reactants"], line["products"])
+            if key is not None:
+                self.lines.setdefault(key, []).append(line)
+
+    def key(self, reactants, products):
+        """The reaction's species structures, either direction; None if one has no key."""
+        sides = []
+        for side in (reactants, products):
+            keys = []
+            for name in side:
+                if name not in self._keys:
+                    found = self.species.get(name)
+                    self._keys[name] = structure_key_or_none(found.molecule[0]) if found else None
+                if self._keys[name] is None:
+                    return None
+                keys.append(self._keys[name])
+            sides.append(tuple(sorted(keys)))
+        return tuple(sorted(sides))
+
+    def identity(self, reactants, products):
+        """What tells records of one structure apart: each name's electronic state and variant."""
+        side = lambda names: tuple(sorted((self.states.get(n, ""), self.variants.get(n, "")) for n in names))
+        return tuple(sorted((side(reactants), side(products))))
+
+    def parts(self, entry):
+        """[(RMG reaction, kinetics, comment)] to import for the entry: the entry itself, or its own
+        terms and one part for each other CHEMKIN reaction its terms came from."""
+        data = entry.data
+        whole = [(entry.item, data, entry.short_desc)]
+        if not self.lines or not isinstance(data, (kinetics.MultiArrhenius, kinetics.MultiPDepArrhenius)):
+            return whole
+        labels = ([s.label for s in entry.item.reactants], [s.label for s in entry.item.products])
+        candidates = self.lines.get(self.key(*labels), [])
+        if not candidates:
+            return whole
+        own_names, own_identity = _names_key(*labels), self.identity(*labels)
+        own, other = [], {}
+        for term in data.arrhenius:
+            rate, pdep = _term_rate(term)
+            hits = [line for line in candidates if id(line) not in self.used and rate is not None
+                    and (line["plog"] if pdep else (line["A"], line["n"], line["Ea"])) is not None
+                    and chemkin_lines.same_rate(rate, line["plog"] if pdep else (line["A"], line["n"], line["Ea"]),
+                                                self.molecules)]
+            # The entry's own line first, then lines of the entry's records.
+            hits.sort(key=lambda line: (_names_key(line["reactants"], line["products"]) != own_names,
+                                        self.identity(line["reactants"], line["products"]) != own_identity))
+            line = hits[0] if hits else None
+            if line is not None:
+                self.used.add(id(line))
+            if line is None or self.identity(line["reactants"], line["products"]) == own_identity:
+                own.append(term)
+            else:
+                other.setdefault((tuple(line["reactants"]), tuple(line["products"]), line["reversible"]), []).append(term)
+        if not other:
+            return whole
+        parts = [(entry.item, _combined(own, data), entry.short_desc)] if own else []
+        for (reactants, products, reversible), terms in other.items():
+            reaction = Reaction(reactants=[self.species[n] for n in reactants],
+                                products=[self.species[n] for n in products], reversible=reversible)
+            comment = ("The chemkin file reaction is " + " + ".join(reactants) + (" <=> " if reversible else " => ")
+                       + " + ".join(products))
+            parts.append((reaction, _combined(terms, data), comment))
+            self.moved += len(terms)
+        return parts
 
 
 def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, states=None,
@@ -647,9 +790,12 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
 
     `states` (label -> electronic state) defaults to the model's SMILES.txt; a term symbol in
     the library dictionary wins over it. `variants` (label -> variant) defaults to
-    model_variants. Returns counts of imported, skipped and failed entries."""
+    model_variants. A merged entry's terms go to the reactions their CHEMKIN lines write
+    (MergedRates). Returns counts of imported, skipped and failed entries, and of moved terms."""
     local_context = kinetics_local_context()
     variants = model_variants(kinetics_path, kinetic_model, states) if variants is None else variants
+    repeats = {later: first for later, first in model_repeats(kinetics_path, kinetic_model, states).items()
+               if later in variants} if variants else {}
     # Older RMG accepted reactions that RMG 4 refuses; skip just those, not the whole library.
     library = TolerantKineticsLibrary(label=kinetic_model.model_name)
     library.SKIP_DUPLICATES = True
@@ -666,6 +812,7 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
     counts = {"imported": 0, "skipped": 0, "failed": 0, "rejected": len(library.rejected)}
     for label, reason in library.rejected:
         logger.warning(f"RMG cannot load reaction {label} ({reason}); skipped")
+    merged = MergedRates(kinetics_path, library, states, variants, repeats)
     for entry in library.entries.values():
         if only_types is not None and entry.data.__class__.__name__ not in only_types:
             counts["skipped"] += 1
@@ -674,56 +821,63 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
         lookups = ChainMap(pending, cache)
         try:
             with transaction.atomic():
-                rmg_kinetics_data = entry.data
-                comment = entry.short_desc
-                rmg_reaction = entry.item
-                reaction = get_or_create_reaction(
-                    kinetic_model, rmg_reaction, models, states, cache=lookups, variants=variants)
-                kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, models)
-                base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
-                identity = {"reaction": reaction, "raw_data": kinetics_data}
-                if has_field(models.Kinetics, "specific_collider"):
-                    # H + O2 (+AR) <=> HO2 (+AR): the library names the collider only in the
-                    # label, and RMG keeps it on the reaction, not in the efficiencies.
-                    collider = getattr(rmg_reaction, "specific_collider", None)
-                    identity["specific_collider"] = (
-                        labelled_species(kinetic_model, collider, models, states, lookups, variants)
-                        if collider is not None else None)
-                efficiencies = collider_efficiencies(
-                    kinetic_model, rmg_kinetics_data, models, labels=labels, cache=lookups)
-                if has_field(models.Kinetics, "efficiencies_hash"):
-                    # Another model's record with the same parameters but other efficiencies
-                    # (H2O 7.5 where this library has 0.0) is not this model's rate.
-                    identity["efficiencies_hash"] = kd.efficiencies_hash(
-                        (species.pk, efficiency) for species, efficiency in efficiencies)
-
-                kinetics_instance, created = models.Kinetics.objects.get_or_create(
-                    **identity, defaults=base_fields
-                )
-                if created:
-                    for species, efficiency in efficiencies:
-                        models.Efficiency.objects.create(
-                            species=species, kinetics=kinetics_instance, efficiency=efficiency)
-                    index_new_rows(models, kinetics=kinetics_instance)
-
-                link_fields = {"comment": comment}
-                if has_field(models.KineticsComment, "reversible"):
-                    # The model's own arrow: the reaction record keeps the first import's.
-                    link_fields["reversible"] = rmg_reaction.reversible
-                link, link_created = models.KineticsComment.objects.get_or_create(
-                    kinetics=kinetics_instance,
-                    kinetic_model=kinetic_model,
-                    defaults=link_fields,
-                )
-                if not link_created and link_fields.get("reversible", link.reversible) != link.reversible:
-                    link.reversible = link_fields["reversible"]
-                    link.save(update_fields=["reversible"])
+                for rmg_reaction, rmg_kinetics_data, comment in merged.parts(entry):
+                    import_kinetics_link(kinetic_model, rmg_reaction, rmg_kinetics_data, comment, models,
+                                         states, lookups, variants, labels)
             cache.update(pending)
             counts["imported"] += 1
         except Exception:
             counts["failed"] += 1
             logger.exception(f"Failed to import reaction {entry.label}")
+    if merged.moved:
+        counts["moved_terms"] = merged.moved
     return counts
+
+
+def import_kinetics_link(kinetic_model, rmg_reaction, rmg_kinetics_data, comment, models, states, lookups,
+                         variants, labels):
+    """The reaction, kinetics row and model link of one library rate; see import_kinetics."""
+    reaction = get_or_create_reaction(
+        kinetic_model, rmg_reaction, models, states, cache=lookups, variants=variants)
+    kinetics_data = create_kinetics_data(kinetic_model, rmg_kinetics_data, models)
+    base_fields = get_base_kinetics_data_fields(rmg_kinetics_data)
+    identity = {"reaction": reaction, "raw_data": kinetics_data}
+    if has_field(models.Kinetics, "specific_collider"):
+        # H + O2 (+AR) <=> HO2 (+AR): the library names the collider only in the
+        # label, and RMG keeps it on the reaction, not in the efficiencies.
+        collider = getattr(rmg_reaction, "specific_collider", None)
+        identity["specific_collider"] = (
+            labelled_species(kinetic_model, collider, models, states, lookups, variants)
+            if collider is not None else None)
+    efficiencies = collider_efficiencies(
+        kinetic_model, rmg_kinetics_data, models, labels=labels, cache=lookups)
+    if has_field(models.Kinetics, "efficiencies_hash"):
+        # Another model's record with the same parameters but other efficiencies
+        # (H2O 7.5 where this library has 0.0) is not this model's rate.
+        identity["efficiencies_hash"] = kd.efficiencies_hash(
+            (species.pk, efficiency) for species, efficiency in efficiencies)
+
+    kinetics_instance, created = models.Kinetics.objects.get_or_create(
+        **identity, defaults=base_fields
+    )
+    if created:
+        for species, efficiency in efficiencies:
+            models.Efficiency.objects.create(
+                species=species, kinetics=kinetics_instance, efficiency=efficiency)
+        index_new_rows(models, kinetics=kinetics_instance)
+
+    link_fields = {"comment": comment}
+    if has_field(models.KineticsComment, "reversible"):
+        # The model's own arrow: the reaction record keeps the first import's.
+        link_fields["reversible"] = rmg_reaction.reversible
+    link, link_created = models.KineticsComment.objects.get_or_create(
+        kinetics=kinetics_instance,
+        kinetic_model=kinetic_model,
+        defaults=link_fields,
+    )
+    if not link_created and link_fields.get("reversible", link.reversible) != link.reversible:
+        link.reversible = link_fields["reversible"]
+        link.save(update_fields=["reversible"])
 
 
 def import_thermo(thermo_path, kinetic_model, models, states=None):
