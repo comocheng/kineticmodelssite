@@ -1,6 +1,7 @@
 import functools
 from itertools import zip_longest
 from collections import defaultdict
+from urllib.parse import urlencode
 
 from dal import autocomplete
 from django.contrib import messages
@@ -20,7 +21,9 @@ from django.utils.html import format_html
 from rmgpy.molecule.draw import MoleculeDrawer
 
 from database import models
-from database.services import chemistry_index, curves, landing, rmg_matching, shared_chemistry, sub_mechanisms
+from database.services import (
+    chemistry_index, curves, landing, reaction_search, rmg_matching, shared_chemistry, sub_mechanisms,
+)
 from database.services.chemical_identity import rates_match
 from .models import (
     Species,
@@ -126,6 +129,46 @@ class BaseView(TemplateView):
         context.update(landing.landing_context())
         return context
 
+# Each scope of the database search: the page and query parameter that answer it, and examples
+# (label, query) that all return results in the current database
+SEARCH_SCOPES = [
+    {
+        "key": "species", "label": "Species", "url": "species-search", "param": "q",
+        "placeholder": "Search species by formula, name, SMILES, InChI or CAS number…",
+        "examples": [("CH₄", "CH4"), ("methane", "methane"), ("smiles:CCO", "smiles:CCO")],
+    },
+    {
+        "key": "reactions", "label": "Reactions", "url": "reaction-search", "param": "species",
+        "placeholder": "Search reactions by species, or by an equation such as H + O2…",
+        "examples": [("CH₄ + OH", "CH4 + OH"), ("H + O₂", "H + O2"), ("NH₃", "NH3")],
+    },
+    {
+        "key": "models", "label": "Kinetic models", "url": "kinetic-model-list", "param": "q",
+        "placeholder": "Search kinetic models by name or PrIMe ID…",
+        "examples": [("GRI", "GRI"), ("AramcoMech", "AramcoMech"), ("butanol", "butanol")],
+    },
+    {
+        "key": "sources", "label": "Publications", "url": "source-search", "param": "source_title",
+        "placeholder": "Search publications by title…",
+        "examples": [("ignition", "ignition"), ("flame", "flame"), ("butanol", "butanol")],
+    },
+]
+
+
+def search_scope(key):
+    """One entry of SEARCH_SCOPES with its address and the links of its examples."""
+    scope = next(scope for scope in SEARCH_SCOPES if scope["key"] == key)
+    action = reverse(scope["url"])
+    return {
+        **scope,
+        "action": action,
+        "examples": [
+            {"label": label, "href": f"{action}?{urlencode({scope['param']: query})}"}
+            for label, query in scope["examples"]
+        ],
+    }
+
+
 class DatabaseHomeView(TemplateView):
     """The Kinetic Models Database home: search, collections and live counts (Figma node 77:2495)."""
     template_name = "database/database_home.html"
@@ -136,6 +179,7 @@ class DatabaseHomeView(TemplateView):
         context["numbers"] = landing.live_numbers(copy)["numbers"]
         context["community"] = copy.get("community", {})
         context["citation"] = landing.citation()
+        context["search_scopes"] = [search_scope(scope["key"]) for scope in SEARCH_SCOPES]
         return context
 
 
@@ -144,6 +188,18 @@ class KineticModelFilterView(ListView):
     paginate_by = 25
     queryset = KineticModel.objects.order_by("id")
     template_name = "database/kineticmodel_filter.html"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        query = self.request.GET.get("q", "").strip()
+        if query:
+            queryset = queryset.filter(Q(model_name__icontains=query) | Q(prime_id__iexact=query))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["query"] = self.request.GET.get("q", "").strip()
+        return context
 
 @SidebarLookup
 class SpeciesFilterView(FilterView):
@@ -192,6 +248,15 @@ class SourceFilterView(FilterView):
 class ReactionFilterView(FilterView):
     filterset_class = ReactionFilter
     paginate_by = 25
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        scope = search_scope("reactions")
+        context["species_query"] = self.request.GET.get("species", "")
+        context["species_terms"] = reaction_search.describe_terms(context["species_query"])
+        context["species_placeholder"] = scope["placeholder"]
+        context["species_examples"] = scope["examples"]
+        return context
 
 
 @SidebarLookup

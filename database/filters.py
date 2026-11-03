@@ -53,6 +53,15 @@ class SpeciesFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
+    species = django_filters.CharFilter(
+        method="search_species", label="Species", max_length=500,
+    )
+
+    def search_species(self, queryset, name, value):
+        from database.services.reaction_search import filter_reactions
+
+        return filter_reactions(queryset, value)
+
     reactant1 = django_filters.ModelChoiceFilter(
         queryset=models.Species.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0

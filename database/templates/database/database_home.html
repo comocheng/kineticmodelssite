@@ -32,7 +32,8 @@
         </div>
 
         <!-- Each scope sends the query to the search that exists for it -->
-        <form class="app-search" id="db-search" action="{% url 'species-search' %}" method="get" role="search">
+        {% with first=search_scopes.0 %}
+        <form class="app-search" id="db-search" action="{{ first.action }}" method="get" role="search">
             <div class="app-search__head">
                 <h2 class="app-search__title">Search the database</h2>
                 <a class="app-link" href="{% url 'reaction-search' %}">Search reactions by species <img class="app-icon" src="{% static 'database/images/icons/sliders-horizontal.svg' %}" alt="" width="15" height="15"></a>
@@ -40,24 +41,27 @@
             <div class="app-search__field">
                 <label class="visually-hidden" for="db-scope">Search in</label>
                 <select class="app-search__scope" id="db-scope">
-                    <option value="species" data-action="{% url 'species-search' %}" data-name="q" data-placeholder="Search species by formula, name, SMILES, InChI or CAS number…">Species</option>
-                    <option value="sources" data-action="{% url 'source-search' %}" data-name="source_title" data-placeholder="Search publications by title…">Publications</option>
+                    {% for scope in search_scopes %}
+                    <option value="{{ scope.key }}" data-action="{{ scope.action }}" data-name="{{ scope.param }}" data-placeholder="{{ scope.placeholder }}">{{ scope.label }}</option>
+                    {% endfor %}
                 </select>
                 <div class="app-search__query">
                     <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="20" height="20">
                     <label class="visually-hidden" for="db-query">Search text</label>
-                    <input class="app-search__input" id="db-query" type="search" name="q" placeholder="Search species by formula, name, SMILES, InChI or CAS number…">
+                    <input class="app-search__input" id="db-query" type="search" name="{{ first.param }}" placeholder="{{ first.placeholder }}">
                 </div>
                 <button class="app-btn" type="submit">Search database <img class="app-icon" src="{% static 'database/images/icons/arrow-right-white.svg' %}" alt="" width="16" height="16"></button>
             </div>
-            <div class="app-search__examples">
+            {# One row of examples for each scope; the script shows the row of the chosen one #}
+            {% for scope in search_scopes %}
+            <div class="app-search__examples" data-scope="{{ scope.key }}"{% if not forloop.first %} hidden{% endif %}>
                 <span>Try a search</span>
-                <a class="app-chip" href="{% url 'species-search' %}?q=CH4">CH₄</a>
-                <a class="app-chip" href="{% url 'species-search' %}?q=methane">methane</a>
-                <a class="app-chip" href="{% url 'species-search' %}?q=smiles:CCO">smiles:CCO</a>
+                {% for example in scope.examples %}<a class="app-chip" href="{{ example.href }}">{{ example.label }}</a>{% endfor %}
                 <span>or choose a collection below</span>
             </div>
+            {% endfor %}
         </form>
+        {% endwith %}
     </section>
 
     <!-- Browse by collection (Figma 77:2553) -->
@@ -264,18 +268,24 @@
 
 {% block extra_js %}
 <script>
-    // Point the search form at the search that exists for the chosen scope
+    // Point the search form, and its examples, at the search that exists for the chosen scope
     (() => {
         const form = document.getElementById("db-search");
         const scope = document.getElementById("db-scope");
         const input = document.getElementById("db-query");
         if (!form || !scope || !input) return;
-        scope.addEventListener("change", () => {
+        const apply = () => {
             const option = scope.selectedOptions[0];
             form.action = option.dataset.action;
             input.name = option.dataset.name;
             input.placeholder = option.dataset.placeholder;
-        });
+            form.querySelectorAll(".app-search__examples").forEach(row => {
+                row.hidden = row.dataset.scope !== option.value;
+            });
+        };
+        scope.addEventListener("change", apply);
+        // A page restored from history keeps the chosen scope, so match the form to it
+        apply();
     })();
 </script>
 {% endblock %}

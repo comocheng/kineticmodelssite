@@ -25,22 +25,37 @@
             <p class="app-lede">Find reactions, compare rate expressions, and explore their kinetic models.</p>
         </div>
 
-        {# The site has no free-text reaction search; this box is the reaction ID lookup that SidebarLookup handles #}
-        <form class="app-search rx-search__lookup" method="get" action="{% url 'reaction-search' %}" role="search">
+        {# Species go to the filter's species field; a reaction ID goes to the lookup that SidebarLookup opens #}
+        <form class="app-search rx-search__lookup" id="rx-search" method="get" action="{% url 'reaction-search' %}" role="search">
             <div class="app-search__head">
-                <label class="rx-search__lookup-title" for="rx-lookup-id">Go to a reaction</label>
+                <h2 class="app-search__title">Search reactions</h2>
                 {% if request.GET %}<a class="rx-search__clear" href="{% url 'reaction-search' %}">Clear search</a>{% endif %}
             </div>
-            <div class="rx-search__lookup-row">
-                <div class="rx-search__input">
-                    <img class="app-icon" src="{% static 'database/images/icons/search-111827-24.svg' %}" alt="" width="18" height="18">
-                    <input id="rx-lookup-id" type="text" name="reaction_pk" inputmode="numeric" pattern="[0-9]+" required
-                           title="A reaction ID is a whole number" placeholder="Enter a reaction ID"
-                           {% if reaction_invalid %}value="{{ request.GET.reaction_pk }}" aria-invalid="true" aria-describedby="rx-lookup-error"{% endif %}>
+            <div class="app-search__field">
+                <label class="visually-hidden" for="rx-scope">Search by</label>
+                <select class="app-search__scope" id="rx-scope">
+                    <option value="species" data-name="species" data-placeholder="{{ species_placeholder }}"{% if not reaction_invalid %} selected{% endif %}>Species</option>
+                    <option value="id" data-name="reaction_pk" data-placeholder="Enter a reaction ID"{% if reaction_invalid %} selected{% endif %}>Reaction ID</option>
+                </select>
+                <div class="app-search__query">
+                    <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="rx-query">Search text</label>
+                    {% if reaction_invalid %}
+                    <input class="app-search__input" id="rx-query" type="search" name="reaction_pk" value="{{ request.GET.reaction_pk }}" placeholder="Enter a reaction ID"
+                           inputmode="numeric" pattern="[0-9]+" required title="A reaction ID is a whole number" aria-invalid="true" aria-describedby="rx-lookup-error">
+                    {% else %}
+                    <input class="app-search__input" id="rx-query" type="search" name="species" value="{{ species_query }}" placeholder="{{ species_placeholder }}"
+                           autocapitalize="none" spellcheck="false">
+                    {% endif %}
                 </div>
-                <button class="app-btn" type="submit">Go to reaction</button>
+                <button class="app-btn" type="submit">Search reactions <img class="app-icon" src="{% static 'database/images/icons/arrow-right-white.svg' %}" alt="" width="16" height="16"></button>
             </div>
             {% if reaction_invalid %}<p class="rx-search__error" id="rx-lookup-error" role="alert">{{ reaction_invalid }}.</p>{% endif %}
+            <div class="app-search__examples" id="rx-examples"{% if reaction_invalid %} hidden{% endif %}>
+                <span>Try a search</span>
+                {% for example in species_examples %}<a class="app-chip" href="{{ example.href }}">{{ example.label }}</a>{% endfor %}
+                <span>Separate species with + to find one reaction</span>
+            </div>
         </form>
     </section>
 
@@ -51,6 +66,8 @@
                 {# DAL's Select2 needs jQuery, which base.html does not load #}
                 <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
                 {{ filter.form.media }}
+                {# The filters narrow the species search, so they keep it #}
+                {% if species_query %}<input type="hidden" name="species" value="{{ species_query }}">{% endif %}
                 <div class="rx-filters__head">
                     <h2 class="rx-filters__title" id="rx-filters-title"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="18" height="18">Filters</h2>
                     <a class="rx-filters__reset" href="{% url 'reaction-search' %}">Reset</a>
@@ -106,7 +123,12 @@
 
         <section class="app-panel rx-results" aria-labelledby="rx-results-count">
             <div class="rx-results__toolbar">
-                <p class="rx-results__count" id="rx-results-count"><strong>{{ page_obj.paginator.count|default:0|floatformat:"0g" }}</strong> {% if page_obj.paginator.count == 1 %}reaction{% else %}reactions{% endif %}</p>
+                <p class="rx-results__count" id="rx-results-count"><strong>{{ page_obj.paginator.count|default:0|floatformat:"0g" }}</strong> {% if page_obj.paginator.count == 1 %}reaction{% else %}reactions{% endif %}{% if species_terms %}
+                    that {% if page_obj.paginator.count == 1 %}includes{% else %}include{% endif %}
+                    {% for item in species_terms %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<span class="rx-results__term">{{ item.term }}</span>{% endfor %}{% endif %}</p>
+                {% for item in species_terms %}{% if not item.matches %}
+                <p class="rx-results__note" role="status">No species matches “{{ item.term }}”. Try its formula, a SMILES string with smiles:, or another name.</p>
+                {% endif %}{% endfor %}
             </div>
             <div class="rx-table-wrap">
                 <table class="rx-table rx-results__table">
@@ -216,55 +238,9 @@
     gap: 16px;
 }
 
-.rx-search__lookup-title {
-    font-size: 14px;
-    color: var(--color-gray-900);
-}
-
 .rx-search__clear {
     font-size: 12px;
     color: var(--color-gray-500);
-}
-
-.rx-search__lookup-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.rx-search__input {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--color-gray-200);
-    border-radius: 6px;
-    background: var(--color-white);
-}
-
-.rx-search__input:focus-within {
-    border-color: var(--color-primary-light);
-    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
-}
-
-.rx-search__input input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    font-size: 13px;
-    color: var(--color-gray-900);
-}
-
-.rx-search__input input::placeholder {
-    color: var(--color-gray-500);
-}
-
-.rx-search__input input:focus {
-    outline: none;
 }
 
 .rx-search__error {
@@ -411,15 +387,6 @@
     color: inherit;
 }
 
-.select2-container--open .select2-dropdown {
-    border-color: var(--color-gray-200);
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background: var(--color-primary-bg);
-    color: var(--color-gray-900);
-}
-
 .select2-container--open .select2-results__option img {
     max-width: 120px;
     height: auto;
@@ -432,7 +399,9 @@
 
 .rx-results__toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 4px 0;
     min-height: 58px;
     padding: 12px 20px;
 }
@@ -448,6 +417,18 @@
     font-size: 16px;
     font-weight: 400;
     color: var(--color-gray-900);
+}
+
+.rx-results__term {
+    font-family: var(--font-mono);
+    color: var(--color-gray-900);
+}
+
+.rx-results__note {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-error);
 }
 
 .rx-results__table td {
@@ -567,14 +548,6 @@
 }
 
 @media (max-width: 575.98px) {
-    .rx-search__lookup-row {
-        flex-wrap: wrap;
-    }
-
-    .rx-search__lookup-row .app-btn {
-        width: 100%;
-    }
-
     .rx-results__id {
         width: auto;
     }
@@ -597,6 +570,34 @@
 
 {% block extra_js %}
 <script>
+// Give the search box the field, checks and examples of the chosen scope
+(() => {
+    const scope = document.getElementById('rx-scope');
+    const input = document.getElementById('rx-query');
+    const examples = document.getElementById('rx-examples');
+    if (!scope || !input) return;
+    const apply = () => {
+        const option = scope.selectedOptions[0];
+        const byId = option.value === 'id';
+        input.name = option.dataset.name;
+        input.placeholder = option.dataset.placeholder;
+        input.required = byId;
+        if (byId) {
+            input.pattern = '[0-9]+';
+            input.inputMode = 'numeric';
+            input.title = 'A reaction ID is a whole number';
+        } else {
+            input.removeAttribute('pattern');
+            input.removeAttribute('inputmode');
+            input.removeAttribute('title');
+        }
+        if (examples) examples.hidden = byId;
+    };
+    scope.addEventListener('change', () => { input.value = ''; apply(); input.focus(); });
+    // A page restored from history keeps the chosen scope, so match the box to it
+    apply();
+})();
+
 document.querySelectorAll('.rx-search .clickable-row').forEach(row => {
     row.addEventListener('click', function (event) {
         if (event.target.closest('a')) return;

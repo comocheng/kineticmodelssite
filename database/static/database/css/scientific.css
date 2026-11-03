@@ -1326,6 +1326,27 @@ a:focus-visible {
     background-color: #ce4801;
 }
 
+/* Select2, from the autocomplete widgets: its stylesheet loads after this one and colours the
+   options through these variables, so two classes here outrank its one-class defaults (blue #5897fb) */
+.select2-container.select2-container--default {
+    --select2-highlighted-bg: var(--color-primary-bg);
+    --select2-highlighted-fg: var(--color-gray-900);
+    --selected-bg: var(--color-gray-100);
+    --border-color: var(--color-gray-200);
+}
+
+.select2-container.select2-container--default .select2-search--dropdown .select2-search__field {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.select2-container.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    outline: none;
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
 /* ==================== Figma application components ==================== */
 /* Built from the research database home (Figma node 77:2495). Pages compose these instead of
    their own boxes, so every screen shares one look. Icons are the Lucide SVGs the file uses,
