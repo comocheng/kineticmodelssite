@@ -18,7 +18,7 @@ This guide walks you through setting up and running the **kineticmodelssite** Dj
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/LekiaAnonim/kineticmodelssite.git
+git clone https://github.com/comocheng/kineticmodelssite.git
 cd kineticmodelssite
 ```
 
@@ -176,7 +176,7 @@ Visit [http://localhost:8000](http://localhost:8000) in your browser.
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/LekiaAnonim/kineticmodelssite.git
+git clone https://github.com/comocheng/kineticmodelssite.git
 cd kineticmodelssite
 
 # 2. Create conda environment

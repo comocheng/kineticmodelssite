@@ -4,7 +4,7 @@ ChemKED Database Models
 Models for storing experimental combustion data in ChemKED format: ignition delay, laminar
 burning velocity and speciation measurements, as PyKED's schema defines them.
 
-Reference: https://github.com/pr-omethe-us/ChemKED
+Format: https://pr-omethe-us.github.io/PyKED/schema-docs.html
 Schema: https://github.com/pr-omethe-us/PyKED
 """
 

@@ -1,7 +1,7 @@
 site_name: Pr.omethe.us
 site_description: Kinetic Models Database — FAIR combustion-kinetics platform usage guide and API reference
 site_url: https://dev.omethe.us/docs/
-repo_url: https://github.com/LekiaAnonim/kineticmodelssite
+repo_url: https://github.com/comocheng/kineticmodelssite
 docs_dir: docs
 site_dir: docs_site
 use_directory_urls: false

@@ -26,7 +26,7 @@ Usage::
 
     python manage.py ci_check_chemked_repo \
         --files-dir /tmp/pyked_ci_files \
-        --pr-repo LekiaAnonim/ChemKED-database \
+        --pr-repo pr-omethe-us/ChemKED-database \
         --pr-number 1 \
         --commit-sha abc123def456
 

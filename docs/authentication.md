@@ -43,7 +43,7 @@ The API is throttled:
 | Authenticated | 100,000 requests/day |
 
 If you need higher limits for a research workload, contact the maintainers (see the
-[repository](https://github.com/LekiaAnonim/kineticmodelssite)).
+[repository](https://github.com/comocheng/kineticmodelssite)).
 
 !!! tip
     For bulk/automated access, generate a [client SDK](clients.md) and configure it once
