@@ -20,7 +20,7 @@ from django.utils.html import format_html
 from rmgpy.molecule.draw import MoleculeDrawer
 
 from database import models
-from database.services import chemistry_index, curves, rmg_matching, shared_chemistry, sub_mechanisms
+from database.services import chemistry_index, curves, landing, rmg_matching, shared_chemistry, sub_mechanisms
 from database.services.chemical_identity import rates_match
 from .models import (
     Species,
@@ -119,13 +119,11 @@ class SidebarLookup:
 @SidebarLookup
 class BaseView(TemplateView):
     template_name = "database/home.html"
-    # Get counts for display on home page
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["species_count"] = Species.objects.count()
-        context["model_count"] = KineticModel.objects.count()
-        context["reaction_count"] = Reaction.objects.count()
-        context["source_count"] = Source.objects.count()
+        # Copy from database/content/landing.yaml, filled with live counts
+        context.update(landing.landing_context())
         return context
 
 class KineticModelFilterView(ListView):

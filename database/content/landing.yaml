@@ -1,0 +1,229 @@
+# Copy for the home page (database/templates/database/home.html).
+#
+# Change the words here. The template only lays them out, and the tests in
+# database/tests/test_landing_unit.py check this file after each change.
+#
+# Rules for this file:
+# - Put every value in double quotes. YAML 1.1 reads a bare No, Yes, On or Off
+#   as true or false.
+# - "url" is a Django URL name, for example "species-search". "href" is a path
+#   or a full address. Give one of the two.
+# - A word in braces, for example {models}, is a live number from the database.
+#   database/services/landing.py lists the keys. The tests fail on an unknown key.
+# - The text is public, so it follows ASD-STE100 Simplified Technical English:
+#   at most 25 words in a sentence, active voice, no -ing verb forms.
+# - The name of the project is "Prometheus". "Pr.omethe.us" is only the
+#   wordmark and the web address.
+
+meta:
+  title: "Prometheus: open cyberinfrastructure for combustion kinetics"
+  description: "Prometheus keeps kinetic models and experimental data for combustion in one open database, with the same identity for each molecule on both sides."
+
+hero:
+  eyebrow: "Open cyberinfrastructure for combustion kinetics"
+  title: "The chemistry of fire,"
+  title_highlight: "open to all who study it."
+  lede: "Prometheus keeps kinetic models and experimental data in one database. Both use the same identity for each molecule. Thus, you can test a model against the experiments that it describes, and keep the result on record."
+  actions:
+    - label: "Explore kinetic models"
+      url: "kinetic-model-list"
+      style: "primary"
+    - label: "Read the API documentation"
+      url: "swagger-ui"
+      style: "ghost"
+  note: "Read access through the API is public. You do not need an account to read data."
+
+holdings:
+  title: "In the database today"
+  note: "The database supplies these numbers. They update automatically."
+  items:
+    - key: "models"
+      label: "Kinetic models"
+      url: "kinetic-model-list"
+    - key: "species"
+      label: "Species"
+      url: "species-search"
+    - key: "reactions"
+      label: "Reactions"
+      url: "reaction-search"
+    - key: "datasets"
+      label: "Experimental datasets"
+      url: "chemked_database:dataset-list"
+    - key: "datapoints"
+      label: "Experimental datapoints"
+      url: "chemked_database:dataset-list"
+    - key: "sources"
+      label: "Sources"
+      url: "source-search"
+
+why:
+  eyebrow: "01 · Why"
+  title: "Why do models and experiments need one shared record?"
+  paragraphs:
+    - "Engineers use kinetic models to design engines, gas turbines and new fuels. A kinetic model lists the species and reactions of a fuel, with a rate for each reaction."
+    - "Experiments test the models. Shock tubes and rapid compression machines measure ignition delay. Flame experiments measure the laminar burning velocity. Jet-stirred and flow reactors give species profiles."
+    - "Each research group publishes its model and its data in its own files, with its own names for the same molecules. Thus, each comparison of a model with data starts with manual work. Other people cannot easily repeat it."
+  term:
+    label: "New word"
+    title: "Kinetic model"
+    text: "A set of species and elementary reactions, with rate parameters, thermochemistry and transport data. CHEMKIN and Cantera YAML are two common file formats."
+  name:
+    label: "Why the name"
+    title: "Prometheus"
+    text: "In Greek myth, the Titan Prometheus took fire from the gods and gave it to people. This platform gives the combustion community open access to what it knows about fire."
+    image_alt: "A hand that holds a flame, the logo of Prometheus"
+
+problem:
+  eyebrow: "02 · The problem"
+  title: "What goes wrong when names are the only link?"
+  intro: "Propyne and allene are two different molecules with the same formula. Each model gives them its own names. The tags below are the real names in the {models} models in Prometheus."
+  # The two molecules of the scene. "key" names their live numbers, for
+  # example {propyne_names} and {propyne_models}. "inchi" finds the record.
+  species:
+    - key: "propyne"
+      name: "Propyne"
+      condensed: "CH3–C≡CH"
+      inchi: "InChI=1S/C3H4/c1-3-2/h1H,2H3"
+    - key: "allene"
+      name: "Allene"
+      condensed: "CH2=C=CH2"
+      inchi: "InChI=1S/C3H4/c1-3-2/h1-2H2"
+  shared_name: "C3H4"
+  shared_name_note: "{shared_name_models} models write only this formula. Which molecule is it?"
+  shared_name_pill: "no structure"
+  caption: "Each tag is a name in a model. The number on a tag is the number of models that use that name."
+  steps:
+    - "Propyne and allene have the same formula, C3H4, but different structures."
+    - "The models in Prometheus use {propyne_names} names for propyne and {allene_names} names for allene."
+    - "Some models write only C3H4. A match of names cannot tell which molecule they mean."
+    - "An experiment reports C3H4-P. A person must find the model name for the same molecule."
+    - "If nobody records that decision, nobody can check the comparison later."
+
+fix:
+  eyebrow: "03 · The fix"
+  title: "How does Prometheus connect the names?"
+  intro: "Prometheus does not match strings. It finds the molecular structure behind each name, and it gives that structure one identity."
+  shared_name_note: "Each model that writes this formula now points to one structure."
+  shared_name_pill: "resolved"
+  record_label: "One identity"
+  no_experiments: "No experiments yet"
+  caption: "These are the same tags. Each tag now points to one structure. An experiment tag counts entries in experimental mixtures."
+  steps:
+    - "The Importer finds the molecular structure of each species in a CHEMKIN mechanism."
+    - "Prometheus keeps one record for each structure. Its InChI identifier is the key."
+    - "Each model keeps its own name. The name points to a species with that structure."
+    - "Species in experimental mixtures point to the same records. Now, {linked_percent} of {composition_entries} mixture entries have this link."
+    - "Before a simulation, a reviewer can correct a species match. Prometheus records the correction, the person and the reason."
+
+how:
+  eyebrow: "04 · How it works"
+  title: "How does a mechanism file become a tested, citable record?"
+  steps:
+    - title: "Import"
+      text: "The Importer reads a CHEMKIN mechanism. It links each species, reaction, rate expression, thermochemistry entry and transport entry to a database record."
+    - title: "Curate"
+      text: "Experiments arrive as ChemKED files, and PyKED validates each file. Each value keeps its units, its uncertainty and its origin: reported, digitized or estimated."
+    - title: "Compare"
+      text: "Cantera simulates an experiment with a model. Prometheus stores the results, and it records which pairs of model and dataset have results."
+    - title: "Share"
+      text: "A documented REST API gives access to the records. Each model exports as CHEMKIN or Cantera YAML. JSON-LD metadata describes sources, models and datasets."
+
+capabilities:
+  eyebrow: "05 · Use it today"
+  title: "What can you do with Prometheus now?"
+  cards:
+    - title: "Kinetic models"
+      text: "Browse {models} kinetic models. See the chemistry that two models share. Download a model as CHEMKIN or Cantera YAML."
+      url: "kinetic-model-list"
+      link_label: "Browse models"
+    - title: "Experimental data"
+      text: "Search {datasets} ChemKED datasets: ignition delays, laminar burning velocities and species profiles from shock tubes, reactors and flames."
+      url: "chemked_database:home"
+      link_label: "Open ChemKED data"
+    - title: "Model and data analysis"
+      text: "Simulate experiments with a model in Cantera. Review the species matches. See which pairs of model and dataset have results."
+      url: "analysis:dashboard"
+      link_label: "Open analysis"
+    - title: "Species and thermochemistry"
+      text: "Search by formula, SMILES, InChI or CAS number. Compare the thermochemistry and transport data from each source."
+      url: "species-search"
+      link_label: "Search species"
+    - title: "Reactions and rate laws"
+      text: "Find the models that contain a reaction. Each rate expression has a type: Arrhenius, PLOG, Chebyshev, Lindemann, Troe or third-body."
+      url: "reaction-search"
+      link_label: "Search reactions"
+    - title: "Open API"
+      text: "Read the records from Python, R, MATLAB, Java, JavaScript or cURL. Read access is public. Contributions need a token."
+      url: "swagger-ui"
+      link_label: "Try the API"
+  contribute:
+    title: "Contribute your data"
+    text: "Upload a ChemKED dataset. Prometheus validates it, opens a pull request on GitHub and imports it. Your ORCID iD stays with the record."
+    url: "chemked_database:dataset-upload"
+    link_label: "Upload a dataset"
+
+impact:
+  eyebrow: "06 · What it means"
+  title: "What does this change for the field?"
+  lead: "The aim of Prometheus is to move combustion kinetics from publish-and-archive to contribute-and-continuously-validate."
+  points:
+    - title: "Comparisons that others can repeat"
+      text: "A comparison keeps its model, its data and its species matches. Another group can examine the comparison or run it again."
+    - title: "Credit for shared data"
+      text: "Contributors have ORCID iDs, and licenses have SPDX identifiers. Thus, people can count and cite each shared dataset."
+    - title: "Data that machines can find and use"
+      text: "The records follow the FAIR principles: findable, accessible, interoperable and reusable. Open formats and a public API connect them to other tools."
+
+next:
+  eyebrow: "07 · What comes next"
+  title: "Which parts are still in development?"
+  intro: "The data layer is in use now. These parts of the research program are not complete."
+  status_label: "In development"
+  items:
+    - title: "Continuous validation"
+      text: "Test each new contribution against each applicable model, automatically."
+    - title: "Dataset consistency"
+      text: "Find if one set of rate parameters can reproduce each measurement within its uncertainty. The method is Bound-to-Bound Data Collaboration."
+    - title: "Sensitivity analysis and optimization"
+      text: "Find the rates that control a prediction, and adjust them against the data, directly on the stored records."
+
+community:
+  eyebrow: "08 · Who builds it"
+  title: "Who builds Prometheus, and on what?"
+  intro: "Prometheus builds on open formats and tools from the combustion community."
+  tools:
+    - name: "ChemKED and PyKED"
+      role: "Format and validation of experiment files"
+    - name: "PyTeCK"
+      role: "Agreement between models and experiments"
+    - name: "Cantera"
+      role: "Simulation of experiments"
+    - name: "RMG"
+      role: "Species structures and the RMG-models collection"
+    - name: "ReSpecTh"
+      role: "Experimental records, converted to ChemKED with PyKED"
+  prior_art: "Earlier work, for example PrIMe, ReSpecTh and SciExpeM, showed the value of linked records, curated experiments and integrated analysis. Prometheus puts these ideas in one database that you can query."
+  team:
+    - group: "CoMoChEng group, Northeastern University"
+      lead: "Richard West"
+    - group: "Niemeyer Research Group, Oregon State University"
+      lead: "Kyle Niemeyer"
+  funding: "Supported by the U.S. National Science Foundation."
+  # Add the award number, for example "Award OAC-0000000". Leave it empty to hide it.
+  award: ""
+  cite_title: "How to cite"
+  cite_intro: "If you use Prometheus, please cite it as follows. The text comes from CITATION.cff in the repository."
+  code_label: "Source code:"
+
+closing:
+  title: "Start with a species, a model or a dataset."
+  actions:
+    - label: "Search species"
+      url: "species-search"
+      style: "primary"
+    - label: "Browse kinetic models"
+      url: "kinetic-model-list"
+      style: "ghost"
+    - label: "Open ChemKED data"
+      url: "chemked_database:home"
+      style: "ghost"
