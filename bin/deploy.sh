@@ -6,7 +6,8 @@
 #   bin/deploy.sh
 #
 # It applies the migrations, collects the static files, grants the SQL console login the
-# tables of those migrations, rebuilds the guide and checks the identifier mappings.
+# tables of those migrations, rebuilds the guide and loads the identifier mappings into
+# the database.
 # The guide goes to settings.DOCS_ROOT (default docs_site/ in this checkout). If nginx
 # serves /docs/ from another folder, set DOCS_ROOT in .env to that folder.
 set -euo pipefail
@@ -50,15 +51,20 @@ rm -rf "$docs_root.old"
 echo "Built the guide into $docs_root. nginx must serve /docs/ from this folder."
 
 step "Identifier mappings"
-# provenance/resolver.py reads the mappings folder next to this checkout
+# The identifier pages (the /species/ namespace, /species/<name> and the others) read
+# SemanticMapping rows, which import_sssom copies from the mappings folder next to this
+# checkout. link_semantic_mappings then links the rows to the records of this database.
 mappings=$(cd .. && pwd)/mappings
-if [ ! -f "$mappings/sssom/prometheus.sssom.tsv" ]; then
-  echo "Missing $mappings/sssom/prometheus.sssom.tsv, so the identifier pages" >&2
+sssom=$mappings/sssom/prometheus.sssom.tsv
+if [ ! -f "$sssom" ]; then
+  echo "Missing $sssom, so the identifier pages" >&2
   echo "(/species/<name> and the others) return 404. Copy the mappings folder there." >&2
-elif grep -q "dev\.omethe\.us" "$mappings/sssom/prometheus.sssom.tsv"; then
+elif grep -q "dev\.omethe\.us" "$sssom"; then
   echo "$mappings still names dev.omethe.us. Copy the current mappings folder, which names pr.omethe.us." >&2
 else
   echo "Found $mappings, on pr.omethe.us."
+  python manage.py import_sssom --path "$sssom"
+  python manage.py link_semantic_mappings
 fi
 
 step "Done"

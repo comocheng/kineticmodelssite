@@ -334,10 +334,15 @@ Then restart gunicorn. `bin/deploy.sh` does these steps:
 4. It rebuilds the guide into `DOCS_ROOT` (default `docs_site/`). A restart of gunicorn does
    not rebuild the guide. nginx serves `/docs/` from a folder, so its `location /docs/` must
    point to `DOCS_ROOT`, or `DOCS_ROOT` in `.env` must name the folder that nginx serves.
-5. It checks the `mappings/` folder next to the checkout, which the identifier pages read.
-   That folder is not in this repository, so copy it to the server when it changes.
+5. It loads the identifier mappings into the database. `import_sssom` copies the rows of
+   `mappings/sssom/prometheus.sssom.tsv`, in the `mappings/` folder next to the checkout.
+   Then `link_semantic_mappings` links the rows to the species, sources, kinetic models and
+   datasets of the server's database. The identifier pages (`/species/` and
+   `/species/<name>`, for example) show these rows. The `mappings/` folder is not in this
+   repository, so clone or copy it to the server, and update it when it changes.
 
-The Docker image does the same steps in `bin/entrypoint.sh` each time the container starts.
+The Docker image does steps 1 to 4 in `bin/entrypoint.sh` each time the container starts.
+It has no `mappings/` folder, so it does not do step 5.
 
 ## Temporary Public Access
 
