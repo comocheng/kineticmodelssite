@@ -33,10 +33,21 @@
 
     <!-- Models catalogue (Figma 161:6179) -->
     <section class="app-panel km-list__catalogue" aria-labelledby="km-list-summary">
+        <form class="km-list__search" method="get" action="{% url 'kinetic-model-list' %}" role="search">
+            <div class="km-list__search-field">
+                <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="18" height="18">
+                <label class="visually-hidden" for="km-query">Search kinetic models</label>
+                <input id="km-query" type="search" name="q" value="{{ query }}" placeholder="Search kinetic models by name or PrIMe ID…" autocapitalize="none" spellcheck="false">
+            </div>
+            <button class="app-btn" type="submit">Search</button>
+            {% if query %}<a class="km-list__clear" href="{% url 'kinetic-model-list' %}">Clear search</a>{% endif %}
+        </form>
         <div class="km-list__toolbar">
             <p class="km-list__summary" id="km-list-summary">
                 {% if page_obj.paginator.count %}
-                Showing <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> of {{ page_obj.paginator.count }} models
+                Showing <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> of {{ page_obj.paginator.count }} {% if page_obj.paginator.count == 1 %}model{% else %}models{% endif %}{% if query %} matching “{{ query }}”{% endif %}
+                {% elif query %}
+                No model name or PrIMe ID matches “{{ query }}”
                 {% else %}
                 No models yet
                 {% endif %}
@@ -83,7 +94,11 @@
             </table>
         </div>
 
+        {% if query %}
+        {% include "database/kineticmodel_pager.html" with page=page_obj param="page" label="Model pages" other="q" other_value=query %}
+        {% else %}
         {% include "database/kineticmodel_pager.html" with page=page_obj param="page" label="Model pages" %}
+        {% endif %}
     </section>
 </div>
 {% endblock %}
@@ -94,6 +109,55 @@
 .km-list__heading {
     display: grid;
     gap: 12px;
+}
+
+.km-list__search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 18px 20px 0;
+}
+
+.km-list__search-field {
+    display: flex;
+    flex: 1 1 320px;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    max-width: 560px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.km-list__search-field:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.km-list__search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.km-list__search input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.km-list__search input:focus {
+    outline: none;
+}
+
+.km-list__clear {
+    font-size: 12px;
+    color: var(--color-gray-500);
 }
 
 .km-list__toolbar {

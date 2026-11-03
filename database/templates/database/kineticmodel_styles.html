@@ -167,8 +167,10 @@ extra_css; every rule is scoped under .km-page, the wrapper each kinetic model p
     padding: 20px;
 }
 
-/* Tables scroll inside their panel on narrow screens */
+/* Tables scroll inside their panel on narrow screens; position: relative keeps visually hidden
+   header text inside the scroller, so the page itself never scrolls sideways */
 .km-table-wrap {
+    position: relative;
     overflow-x: auto;
 }
 
