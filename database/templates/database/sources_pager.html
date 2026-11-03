@@ -1,0 +1,27 @@
+{% load static utils %}
+{# Numbered page controls (Figma 150:2670); pass page. The links keep every other GET parameter, so filters survive. #}
+{% if page.has_other_pages %}
+<nav class="src-pager" aria-label="Pages">
+    {% if page.has_previous %}
+    <a class="src-pager__step" href="?{% param_replace page=page.previous_page_number %}" aria-label="Previous page"><img class="app-icon" src="{% static 'database/images/icons/angle-left-374957.svg' %}" alt="" width="8" height="16"></a>
+    {% else %}
+    <span class="src-pager__step is-disabled" aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/angle-left-374957.svg' %}" alt="" width="8" height="16"></span>
+    {% endif %}
+    {% for n in page.paginator.page_range %}
+        {% if n == page.number %}
+        <span class="src-pager__page is-current" aria-current="page">{{ n }}</span>
+        {% elif n == 1 or n == page.paginator.num_pages %}
+        <a class="src-pager__page" href="?{% param_replace page=n %}">{{ n }}</a>
+        {% elif n >= page.number|add:"-2" and n <= page.number|add:"2" %}
+        <a class="src-pager__page" href="?{% param_replace page=n %}">{{ n }}</a>
+        {% elif n == page.number|add:"-3" or n == page.number|add:"3" %}
+        <span class="src-pager__gap" aria-hidden="true">…</span>
+        {% endif %}
+    {% endfor %}
+    {% if page.has_next %}
+    <a class="src-pager__step" href="?{% param_replace page=page.next_page_number %}" aria-label="Next page"><img class="app-icon" src="{% static 'database/images/icons/angle-right-374957.svg' %}" alt="" width="8" height="16"></a>
+    {% else %}
+    <span class="src-pager__step is-disabled" aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/angle-right-374957.svg' %}" alt="" width="8" height="16"></span>
+    {% endif %}
+</nav>
+{% endif %}

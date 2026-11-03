@@ -1,88 +1,288 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load utils %}
+{# One kinetics record. No Figma frame: it takes the look of the reaction detail (node 161:5716) #}
+
+{% block title %}Kinetics {{ kinetics.pk }}: {{ kinetics.reaction.equation }} | Prometheus{% endblock %}
 
 {% block content %}
-<h1>
-    <a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction.equation }}</a>
-    {% if kinetics.source %}
-    | <a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.source_title|titlecase|truncatewords:8 }}</a>
-    {% endif %}
-</h1>
-<br>
-{% if kinetics.prime_id %}
-<h2>PrIMe ID: {{ kinetics.prime_id }}</h2>
-<br>
-{% endif %}
-{% if kinetics.min_temp or kinetics.min_pressure %}
-<ul class="list-group">
-    {% if kinetics.min_temp and kinetics.max_temp %}
-    <li class="list-group-item"><strong>Temperature Range (K):</strong> {{ kinetics.min_temp }} - {{ kinetics.max_temp }}</li>
-    {% endif %}
-    {% if kinetics.min_pressure and kinetics.max_pressure %}
-    <li class="list-group-item"><strong>Pressure Range (Pa):</strong> {{ kinetics.min_pressure }} - {{ kinetics.max_pressure }}</li>
-    {% endif %}
-</ul>
-<br>
-{% endif %}
-{% include 'database/rate_plot.html' %}
-{% for header, heads, bodies in table_data %}
-{% if header %}<h2>{{ header }}</h2>{% endif %}
-<table class="table table-bordered">
-    <thead>
-        <tr>
-        {% for head in heads %}
-        <th scope="col">{{ head }}</th>
-        {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-    {% for row_header, cells in bodies %}
-        <tr>
-            {% if row_header %}
-            <th scope="row">{{ row_header }}</th>
+<div class="rx-page rx-kinetics-page">
+
+    <!-- Page heading -->
+    <header class="rx-heading">
+        <nav aria-label="Breadcrumb">
+            <ol class="rx-crumbs">
+                <li><a href="{% url 'database-home' %}">Database</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url 'reaction-search' %}">Reactions</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url 'reaction-detail' kinetics.reaction.pk %}">Reaction {{ kinetics.reaction.pk }}</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page">Kinetics {{ kinetics.pk }}</li>
+            </ol>
+        </nav>
+        <div class="rx-heading__row">
+            <div class="rx-heading__title">
+                <h1>Kinetics detail</h1>
+                <span class="rx-pill">ID {{ kinetics.pk }}</span>
+                <span class="rx-tag">{{ kinetics.type }}</span>
+            </div>
+            <div class="rx-heading__actions">
+                <a class="rx-action" href="{% url 'reaction-detail' kinetics.reaction.pk %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-left-right-sm.svg' %}" alt="" width="18" height="18">View the reaction</a>
+                <a class="rx-action" href="{% url 'api-kinetics-detail' kinetics.pk %}"><img class="app-icon" src="{% static 'database/images/icons/code.svg' %}" alt="" width="18" height="18">Open in the API</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Overview: the reaction and the record's provenance -->
+    <section class="app-panel rx-kin-overview" aria-label="Reaction and provenance">
+        <p class="rx-kin-overview__equation"><a href="{% url 'reaction-detail' kinetics.reaction.pk %}">{{ kinetics.reaction.equation }}</a></p>
+        <dl class="rx-facts">
+            <div>
+                <dt class="rx-label">Source</dt>
+                <dd class="rx-value">{% if kinetics.source %}<a href="{% url 'source-detail' kinetics.source.pk %}">{{ kinetics.source.source_title|titlecase|truncatewords:8 }}</a>{% else %}<span class="rx-muted">Not linked</span>{% endif %}</dd>
+            </div>
+            {% if kinetics.prime_id %}
+            <div>
+                <dt class="rx-label">PrIMe ID</dt>
+                <dd class="rx-value rx-mono">{{ kinetics.prime_id }}</dd>
+            </div>
             {% endif %}
-            {% for cell in cells %}
-            <td>{{ cell|format_g_or_str }}</td>
-            {% endfor %}
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% endfor %}
-<br>
-{% if efficiencies %}
-<h2>Collider Efficiencies</h2>
-<div class="list-group">
-    {% for efficiency in efficiencies %}
-    <a href="{% url 'species-detail' efficiency.species.pk %}"class="list-group-item list-group-item-action flex-column align-items-start">
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ efficiency.species }}</h5>
-         </div>
-        <p class="mb-1">Efficiency: {{ efficiency.efficiency }}</p>
-    </a>
-    {% endfor %}
-</div>
-{% endif %}
-<h2>Chemkin Format</h2>
-<figure>
-    <pre><code id="input">{{ kinetics.to_chemkin }}</code></pre>
-</figure>
-<button id="copy" type="button" class="btn btn-outline-primary">Copy to Clipboard</button>
-<br>
-<br>
-<h2>Kinetic Models</h2>
-<div class="list-group">
-    {% for kc in kinetics_comments %}
-    <a href="{% url 'kinetic-model-detail' kc.kinetic_model.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
-      <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">{{kc.kinetic_model.model_name}}</h5>
-        <small>ID: {{kc.kinetic_model.pk}}</small>
+            {% if kinetics.min_temp and kinetics.max_temp %}
+            <div>
+                <dt class="rx-label">Temperature range (K)</dt>
+                <dd class="rx-value rx-mono">{{ kinetics.min_temp }} – {{ kinetics.max_temp }}</dd>
+            </div>
+            {% endif %}
+            {% if kinetics.min_pressure and kinetics.max_pressure %}
+            <div>
+                <dt class="rx-label">Pressure range (Pa)</dt>
+                <dd class="rx-value rx-mono">{{ kinetics.min_pressure }} – {{ kinetics.max_pressure }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </section>
+
+    <!-- Rate plot beside the parameters -->
+    <div class="rx-kin-data{% if not rate_plot.series %} is-single{% endif %}">
+        {% include 'database/rate_plot.html' %}
+
+        <section class="app-panel rx-kin-params" aria-labelledby="rx-params-title">
+            <div class="rx-panel-head">
+                <h2 class="app-panel__title" id="rx-params-title">Rate parameters</h2>
+            </div>
+            <div class="rx-panel-body rx-kin-params__body">
+                {% for header, heads, bodies in table_data %}
+                <div class="rx-kin-params__block">
+                    {% if header %}<h3 class="rx-kin-params__title">{{ header }}</h3>{% endif %}
+                    <div class="rx-params rx-table-wrap">
+                        <table class="rx-table">
+                            <thead>
+                                <tr>
+                                    {% for head in heads %}
+                                    <th scope="col">{{ head }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {# Most blocks are (row header, cells) rows; a Troe block is one bare row of values #}
+                                {% if bodies.0.1 %}
+                                {% for row_header, cells in bodies %}
+                                <tr>
+                                    {% if row_header %}<th scope="row">{{ row_header }}</th>{% endif %}
+                                    {% for cell in cells %}
+                                    <td>{{ cell|format_g_or_str }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    {% for cell in bodies %}
+                                    <td>{{ cell|format_g_or_str }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="rx-empty">No rate parameters to show.</p>
+                {% endfor %}
+
+                {% if efficiencies %}
+                <div class="rx-kin-params__block">
+                    <h3 class="rx-kin-params__title">Collider efficiencies</h3>
+                    <div class="rx-params rx-table-wrap">
+                        <table class="rx-table">
+                            <thead><tr><th scope="col">Species</th><th scope="col">Efficiency</th></tr></thead>
+                            <tbody>
+                                {% for efficiency in efficiencies %}
+                                <tr>
+                                    <td><a href="{% url 'species-detail' efficiency.species.pk %}">{{ efficiency.species }}</a></td>
+                                    <td>{{ efficiency.efficiency }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
     </div>
-    <p class="mb-1">{{kc.comment}}</p>
-    </a>
-    {% endfor %}
+
+    <!-- Chemkin format -->
+    <section class="app-panel" aria-labelledby="rx-chemkin-title">
+        <div class="rx-panel-head">
+            <h2 class="app-panel__title" id="rx-chemkin-title">Chemkin format</h2>
+            <button id="copy" type="button" class="rx-action"><img class="app-icon" src="{% static 'database/images/icons/duplicate-111827.svg' %}" alt="" width="16" height="16">Copy to clipboard</button>
+        </div>
+        <div class="rx-panel-body">
+            <pre class="rx-chemkin"><code id="input">{{ kinetics.to_chemkin }}</code></pre>
+        </div>
+    </section>
+
+    <!-- Kinetic models that use this record -->
+    <section class="app-panel rx-kin-models" aria-labelledby="rx-models-title">
+        <div class="rx-panel-head">
+            <h2 class="app-panel__title" id="rx-models-title">Kinetic models</h2>
+            <span class="app-panel__meta">{{ kinetics_comments|length|pluralize:"model" }}</span>
+        </div>
+        <div class="rx-table-wrap rx-kin-models__table">
+            <table class="rx-table">
+                <thead>
+                    <tr><th scope="col">Model</th><th scope="col">ID</th><th scope="col">Comment</th></tr>
+                </thead>
+                <tbody>
+                    {% for kc in kinetics_comments %}
+                    <tr>
+                        <td><a class="fw-semibold" href="{% url 'kinetic-model-detail' kc.kinetic_model.pk %}">{{ kc.kinetic_model.model_name }}</a></td>
+                        <td class="is-mono rx-muted">{{ kc.kinetic_model.pk }}</td>
+                        <td class="rx-kin-models__comment">{% if kc.comment %}{{ kc.comment }}{% else %}<span class="rx-muted">–</span>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="rx-empty">No kinetic model uses this record.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/reaction_styles.html" %}
+<style>
+.rx-kin-overview {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+}
+
+.rx-kin-overview__equation {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.rx-kin-overview__equation a {
+    color: var(--color-gray-900);
+}
+
+.rx-kin-overview__equation a:hover {
+    color: var(--color-primary);
+}
+
+.rx-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 40px;
+    margin: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.rx-facts > div {
+    min-width: 0;
+}
+
+.rx-facts dd {
+    margin: 0;
+}
+
+.rx-kin-data {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 448px;
+    gap: 20px;
+    align-items: start;
+}
+
+.rx-kin-data.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.rx-kin-params__body {
+    display: grid;
+    gap: 18px;
+}
+
+.rx-kin-params__block {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.rx-kin-params__title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-500);
+}
+
+.rx-chemkin {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-gray-50);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-900);
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.rx-kin-models__table {
+    margin-top: 16px;
+}
+
+.rx-kin-models__comment {
+    min-width: 240px;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+@media (max-width: 1199.98px) {
+    .rx-kin-data {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .rx-kin-overview__equation {
+        font-size: 20px;
+    }
+
+    .rx-facts {
+        gap: 14px 24px;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

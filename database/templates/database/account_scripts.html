@@ -1,0 +1,26 @@
+<script>
+// The eye button of a password input shows or hides the password; without the script it stays hidden
+document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+    var input = document.getElementById(button.dataset.passwordToggle);
+    var icon = button.querySelector('.bi');
+    if (!input) return;
+    button.hidden = false;
+    button.addEventListener('click', function () {
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        button.setAttribute('aria-pressed', show ? 'true' : 'false');
+        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+        input.focus();
+    });
+});
+// Hide the password again before the form is sent, so the browser does not save it as plain text
+document.querySelectorAll('.acct-form').forEach(function (form) {
+    form.addEventListener('submit', function () {
+        form.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+            var input = document.getElementById(button.dataset.passwordToggle);
+            if (input) input.type = 'password';
+        });
+    });
+});
+</script>

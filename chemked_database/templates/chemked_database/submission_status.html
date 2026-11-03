@@ -1,168 +1,224 @@
 {% extends "base.html" %}
 {% load static %}
+{# The state of one upload submission; no frame of its own, so it follows "ChemKED · Upload data" (node 139:2641) #}
 
 {% block title %}Submission #{{ submission.pk }} – ChemKED Database{% endblock %}
 
-{% block content %}
-<div class="container py-4">
-  <div class="row">
-    <div class="col-lg-10 mx-auto">
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-submission {
+    max-width: 1120px;
+    width: 100%;
+    margin: 0 auto;
+}
 
-      <h2 class="mb-1">
-        Submission #{{ submission.pk }}
+.ck-submission__files > li {
+    flex-wrap: nowrap;
+}
+
+.ck-submission__file {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ck-submission__file code {
+    font-size: 12px;
+}
+
+.ck-submission__error {
+    display: block;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+.ck-submission__error--muted {
+    color: var(--color-gray-500);
+}
+
+.ck-submission .ck-plain-list > li {
+    align-items: flex-start;
+}
+
+.ck-submission__failed .ck-plain-list > li,
+.ck-submission__skipped .ck-plain-list > li {
+    display: grid;
+    gap: 3px;
+}
+
+.ck-submission__pr-meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+.ck-submission__ci-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+@media (max-width: 575.98px) {
+    .ck-submission__files > li {
+        flex-wrap: wrap;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-submission">
+  <nav class="ck-crumbs" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+      <li><a href="{% url 'chemked_database:dataset-upload' %}">Upload data</a></li>
+      <li aria-current="page">Submission #{{ submission.pk }}</li>
+    </ol>
+  </nav>
+
+  <header class="ck-heading">
+    <div class="ck-heading__intro">
+      <div class="ck-heading__title">
+        <h1>Submission #{{ submission.pk }}</h1>
         {% if submission.status == 'success' %}
-          <span class="badge bg-success ms-2">Success</span>
+          <span class="ck-status ck-status--valid">Success</span>
         {% elif submission.status == 'partial' %}
-          <span class="badge bg-warning text-dark ms-2">Partial{% if submission.pr_url %}, in review{% endif %}</span>
+          <span class="ck-status ck-status--warning">Partial{% if submission.pr_url %}, in review{% endif %}</span>
         {% elif submission.status == 'failed' %}
-          <span class="badge bg-danger ms-2">Failed</span>
+          <span class="ck-status ck-status--invalid">Failed</span>
         {% elif submission.pr_url %}
-          <span class="badge bg-info text-dark ms-2">In review</span>
+          <span class="ck-status ck-status--info">In review</span>
         {% else %}
-          <span class="badge bg-secondary ms-2">Pending</span>
+          <span class="ck-status ck-status--muted">Pending</span>
+        {% endif %}
+      </div>
+      <p class="ck-lede">{{ submission.created_at|date:"N j, Y g:i A" }}</p>
+    </div>
+    <div class="ck-actions">
+      {% if submission.pr_url %}
+      <a href="{{ submission.pr_url }}" target="_blank" rel="noopener" class="app-btn"><i class="bi bi-github" aria-hidden="true"></i>View Pull Request</a>
+      {% endif %}
+      <a href="{% url 'chemked_database:dataset-upload' %}" class="ck-btn"><i class="bi bi-upload" aria-hidden="true"></i>Upload More</a>
+      <a href="{% url 'chemked_database:dataset-list' %}" class="ck-btn"><i class="bi bi-list" aria-hidden="true"></i>All Datasets</a>
+    </div>
+  </header>
+
+  {# Submitted files (in review) or, for older submissions, imported datasets #}
+  {% if submission.successful_imports %}
+  <section class="app-panel" aria-labelledby="ck-sub-ok-title">
+    <div class="ck-panel__head">
+      <h2 id="ck-sub-ok-title" class="ck-panel__title">
+        <i class="bi bi-check-circle" aria-hidden="true"></i>
+        {% if submission.successful_imports.0.repo_path %}
+          Submitted for review ({{ submission.successful_imports|length }})
+        {% else %}
+          Successfully Imported ({{ submission.successful_imports|length }})
         {% endif %}
       </h2>
-      <p class="text-muted mb-4">{{ submission.created_at|date:"N j, Y g:i A" }}</p>
-
-      {# ── Submitted files (in review) or, for older submissions, imported datasets ── #}
-      {% if submission.successful_imports %}
-      <div class="card mb-3 border-success">
-        <div class="card-header bg-success text-white">
-          <i class="bi bi-check-circle me-1"></i>
-          {% if submission.successful_imports.0.repo_path %}
-            Submitted for review ({{ submission.successful_imports|length }})
-          {% else %}
-            Successfully Imported ({{ submission.successful_imports|length }})
-          {% endif %}
-        </div>
-        {% if submission.successful_imports.0.repo_path %}
-        <div class="card-body py-2 small text-muted">
-          These files are in the pull request below. They are added to the database when the
-          pull request is merged.
-        </div>
-        {% endif %}
-        <ul class="list-group list-group-flush">
-          {% for item in submission.successful_imports %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              {% if item.dataset_id %}
-              <a href="{% url 'chemked_database:dataset-detail' pk=item.dataset_id %}">
-                {{ item.dataset_name|default:item.filename }}
-              </a>
-              <span class="text-muted small ms-2">{{ item.filename }}</span>
-              {% else %}
-              <code>{{ item.repo_path }}</code>
-              <span class="text-muted small ms-2">{{ item.filename }}</span>
-              {% endif %}
-            </div>
-            <span class="badge bg-primary rounded-pill">{{ item.datapoints }} datapoint{{ item.datapoints|pluralize }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      {% if submission.failed_imports %}
-      <div class="card mb-3 border-danger">
-        <div class="card-header bg-danger text-white">
-          <i class="bi bi-x-circle me-1"></i>
-          Failed ({{ submission.failed_imports|length }})
-        </div>
-        <ul class="list-group list-group-flush">
-          {% for item in submission.failed_imports %}
-          <li class="list-group-item">
-            <strong>{{ item.filename }}</strong>
-            <div class="text-danger small">{{ item.error }}</div>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      {% if submission.skipped_imports %}
-      <div class="card mb-3 border-warning">
-        <div class="card-header bg-warning text-dark">
-          <i class="bi bi-exclamation-triangle me-1"></i>
-          Skipped ({{ submission.skipped_imports|length }})
-        </div>
-        <ul class="list-group list-group-flush">
-          {% for item in submission.skipped_imports %}
-          <li class="list-group-item">
-            <strong>{{ item.filename }}</strong>
-            <div class="text-muted small">{{ item.error }}</div>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      {# ── Contributor ── #}
-      {% if submission.contributor_name or submission.contributor_orcid %}
-      <div class="card mb-3">
-        <div class="card-header"><i class="bi bi-person me-1"></i> Contributor</div>
-        <div class="card-body">
-          {% if submission.contributor_name %}
-            <strong>{{ submission.contributor_name }}</strong>
-          {% endif %}
-          {% if submission.contributor_orcid %}
-            &mdash;
-            <a href="https://orcid.org/{{ submission.contributor_orcid }}" target="_blank">
-              {{ submission.contributor_orcid }}
-            </a>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-      {# ── GitHub PR & CI Status ── #}
-      {% if submission.pr_number %}
-      <div class="card mb-3">
-        <div class="card-header">
-          <i class="bi bi-github me-1"></i> Pull Request
-          <a href="{{ submission.pr_url }}" target="_blank" class="fw-bold ms-1">#{{ submission.pr_number }}</a>
-          <span class="text-muted small ms-2">{{ submission.branch }}</span>
-        </div>
-        <div class="card-body">
-          <h6>CI / GitHub Actions</h6>
-          <div id="ci-overall-badge" class="mb-2"></div>
-          <div id="check-runs">
-            <div class="text-muted"><i class="bi bi-arrow-repeat spin me-1"></i> Loading CI status&hellip;</div>
-          </div>
-          <div id="ci-workflow-link" class="mt-2"></div>
-        </div>
-      </div>
-      {% endif %}
-
-      {# ── Actions ── #}
-      <div class="d-flex gap-2 mt-4">
-        {% if submission.pr_url %}
-        <a href="{{ submission.pr_url }}" target="_blank" class="btn btn-primary">
-          <i class="bi bi-github me-1"></i> View Pull Request
-        </a>
-        {% endif %}
-        <a href="{% url 'chemked_database:dataset-upload' %}" class="btn btn-outline-primary">
-          <i class="bi bi-upload me-1"></i> Upload More
-        </a>
-        <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-secondary">
-          <i class="bi bi-list me-1"></i> All Datasets
-        </a>
-      </div>
-
     </div>
-  </div>
+    {% if submission.successful_imports.0.repo_path %}
+    <p class="ck-panel__foot ck-submission__note">These files are in the pull request below. They are added to the database when the pull request is merged.</p>
+    {% endif %}
+    <ul class="ck-plain-list ck-submission__files">
+      {% for item in submission.successful_imports %}
+      <li>
+        <span class="ck-submission__file">
+          {% if item.dataset_id %}
+          <a href="{% url 'chemked_database:dataset-detail' pk=item.dataset_id %}">{{ item.dataset_name|default:item.filename }}</a>
+          {% else %}
+          <code>{{ item.repo_path }}</code>
+          {% endif %}
+          <span class="ck-sub">{{ item.filename }}</span>
+        </span>
+        <span class="ck-count">{{ item.datapoints }} datapoint{{ item.datapoints|pluralize }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if submission.failed_imports %}
+  <section class="app-panel ck-submission__failed" aria-labelledby="ck-sub-failed-title">
+    <div class="ck-panel__head">
+      <h2 id="ck-sub-failed-title" class="ck-panel__title"><i class="bi bi-x-circle" aria-hidden="true"></i>Failed ({{ submission.failed_imports|length }})</h2>
+    </div>
+    <ul class="ck-plain-list">
+      {% for item in submission.failed_imports %}
+      <li>
+        <strong>{{ item.filename }}</strong>
+        <span class="ck-submission__error">{{ item.error }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if submission.skipped_imports %}
+  <section class="app-panel ck-submission__skipped" aria-labelledby="ck-sub-skipped-title">
+    <div class="ck-panel__head">
+      <h2 id="ck-sub-skipped-title" class="ck-panel__title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Skipped ({{ submission.skipped_imports|length }})</h2>
+    </div>
+    <ul class="ck-plain-list">
+      {% for item in submission.skipped_imports %}
+      <li>
+        <strong>{{ item.filename }}</strong>
+        <span class="ck-submission__error ck-submission__error--muted">{{ item.error }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {# Contributor #}
+  {% if submission.contributor_name or submission.contributor_orcid %}
+  <section class="app-panel" aria-labelledby="ck-sub-person-title">
+    <div class="ck-panel__head">
+      <h2 id="ck-sub-person-title" class="ck-panel__title"><i class="bi bi-person" aria-hidden="true"></i>Contributor</h2>
+    </div>
+    <dl class="ck-facts">
+      {% if submission.contributor_name %}<div><dt>Name</dt><dd>{{ submission.contributor_name }}</dd></div>{% endif %}
+      {% if submission.contributor_orcid %}<div><dt>ORCID</dt><dd class="is-mono"><a href="https://orcid.org/{{ submission.contributor_orcid }}" target="_blank" rel="noopener">{{ submission.contributor_orcid }}</a></dd></div>{% endif %}
+    </dl>
+  </section>
+  {% endif %}
+
+  {# GitHub PR and CI status #}
+  {% if submission.pr_number %}
+  <section class="app-panel" aria-labelledby="ck-sub-pr-title">
+    <div class="ck-panel__head">
+      <h2 id="ck-sub-pr-title" class="ck-panel__title">
+        <i class="bi bi-github" aria-hidden="true"></i>Pull Request
+        <a href="{{ submission.pr_url }}" target="_blank" rel="noopener">#{{ submission.pr_number }}</a>
+      </h2>
+      <span class="ck-submission__pr-meta">{{ submission.branch }}</span>
+    </div>
+    <div class="ck-panel__body">
+      <h3 class="ck-submission__ci-title">CI / GitHub Actions</h3>
+      <div id="ci-overall-badge"></div>
+      <div id="check-runs">
+        <div class="text-muted"><i class="bi bi-arrow-repeat spin me-1"></i> Loading CI status&hellip;</div>
+      </div>
+      <div id="ci-workflow-link"></div>
+    </div>
+  </section>
+  {% endif %}
 </div>
 
 {% if submission.pr_number %}
 <style>
   .spin { display: inline-block; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .check-run { padding: .6rem 0; border-bottom: 1px solid #eee; }
+  .check-run { padding: .6rem 0; border-bottom: 1px solid var(--color-gray-200); font-size: 13px; overflow-wrap: anywhere; }
   .check-run:last-child { border-bottom: none; }
   .annotation { padding: .35rem .6rem; border-radius: .25rem; font-size: .85rem; margin-top: .3rem; }
   .annotation-failure { background: #f8d7da; color: #842029; }
   .annotation-warning { background: #fff3cd; color: #664d03; }
   .annotation-notice  { background: #d1ecf1; color: #0c5460; }
-  .ci-output-summary { margin-top: .4rem; padding: .4rem .6rem; background: #f8f9fa; border-left: 3px solid #dee2e6; font-size: .85rem; }
+  .ci-output-summary { margin-top: .4rem; padding: .4rem .6rem; background: var(--color-gray-50); border-left: 3px solid var(--color-gray-300); font-size: .85rem; }
   .ci-output-summary pre { margin: 0; white-space: pre-wrap; font-size: .8rem; }
   .ci-overall-success { color: #198754; }
   .ci-overall-failure { color: #dc3545; }

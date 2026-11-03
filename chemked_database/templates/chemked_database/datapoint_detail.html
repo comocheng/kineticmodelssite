@@ -1,502 +1,547 @@
 {% extends "base.html" %}
 {% load static %}
 {% load math_filters %}
+{# An experimental datapoint, from the Figma "ChemKED · Experimental datapoint" (node 140:2075) #}
+
+{% block title %}Datapoint {{ datapoint.pk }} | ChemKED | Prometheus{% endblock %}
+
 {% block content %}
-<!-- Page Header -->
-<div class="detail-header">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}">{{ datapoint.dataset.chemked_file_path|truncatechars:20 }}</a></li>
-            <li class="breadcrumb-item active">Datapoint {{ datapoint.pk }}</li>
+<div class="ck-page ck-point">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li><a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}">{{ datapoint.dataset.chemked_file_path|truncatechars:40 }}</a></li>
+            <li aria-current="page">Datapoint {{ datapoint.pk }}</li>
         </ol>
     </nav>
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-        <h1 class="h4 mb-0">Experimental Datapoint</h1>
-        <span class="badge bg-secondary">ID: {{ datapoint.pk }}</span>
-        <span class="badge bg-primary-subtle text-primary">T = {{ datapoint.temperature }} K</span>
-        <span class="badge bg-success-subtle text-success">P = {{ datapoint.pressure }} Pa</span>
-    </div>
-</div>
 
-<div class="row g-3">
-    <!-- Main Content -->
-    <div class="col-lg-8">
-        <!-- Primary Conditions -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Experimental Conditions</h6>
+    <!-- Page heading (Figma 139:2875) -->
+    <header class="ck-heading">
+        <div class="ck-heading__intro">
+            <div class="ck-heading__title">
+                <h1>Experimental datapoint</h1>
+                <span class="ck-pill">ID {{ datapoint.pk }}</span>
             </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted" style="width: 200px;">Temperature</td>
-                            <td class="fw-medium font-monospace">{% if datapoint.temperature is not None %}{{ datapoint.temperature }} K{% else %}—{% endif %}</td>
-                            <td>
-                                {% if datapoint.temperature_quantity %}
-                                <small class="text-muted">
-                                    ({{ datapoint.temperature_quantity.value }} {{ datapoint.temperature_quantity.units }}
-                                    {% if datapoint.temperature_quantity.uncertainty %}
-                                    ± {{ datapoint.temperature_quantity.uncertainty }} {{ datapoint.temperature_quantity.uncertainty_type }}
-                                    {% endif %})
-                                </small>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Pressure</td>
-                            <td class="fw-medium font-monospace">{{ datapoint.pressure }} Pa</td>
-                            <td>
-                                {% if datapoint.pressure_quantity %}
-                                <small class="text-muted">
-                                    ({{ datapoint.pressure_quantity.value }} {{ datapoint.pressure_quantity.units }}
-                                    {% if datapoint.pressure_quantity.uncertainty %}
-                                    ± {{ datapoint.pressure_quantity.uncertainty }} {{ datapoint.pressure_quantity.uncertainty_type }}
-                                    {% endif %})
-                                </small>
-                                {% endif %}
-                            </td>
-                        </tr>
+            <p class="ck-lede">{{ datapoint.dataset.experiment_type|capfirst }}{% if datapoint.dataset.apparatus %} · {{ datapoint.dataset.apparatus.kind|capfirst }}{% endif %}{% if datapoint.dataset.reference_year %} · {{ datapoint.dataset.reference_year }}{% endif %}</p>
+        </div>
+        <a class="ck-btn" href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to dataset</a>
+    </header>
+
+    <div class="ck-columns ck-point__columns">
+        <div class="ck-stack">
+            <!-- Conditions and measurement (Figma 139:2887) -->
+            <div class="ck-point__pair">
+                <section class="app-panel" aria-labelledby="ck-conditions-title">
+                    <div class="ck-panel__head">
+                        <h2 id="ck-conditions-title" class="ck-panel__title"><i class="bi bi-thermometer-half" aria-hidden="true"></i>Experimental conditions</h2>
+                    </div>
+                    <dl class="ck-point__values">
+                        <div>
+                            <dt>Temperature</dt>
+                            <dd><span class="ck-point__value">{% if datapoint.temperature is not None %}{{ datapoint.temperature }}{% else %}—{% endif %}</span>{% if datapoint.temperature is not None %}<span class="ck-point__unit">K</span>{% endif %}</dd>
+                            {% if datapoint.temperature_quantity %}
+                            <dd class="ck-point__reported">As reported: {{ datapoint.temperature_quantity.value }} {{ datapoint.temperature_quantity.units }}{% if datapoint.temperature_quantity.uncertainty %} ± {{ datapoint.temperature_quantity.uncertainty }} {{ datapoint.temperature_quantity.uncertainty_type }}{% endif %}</dd>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <dt>Pressure</dt>
+                            <dd><span class="ck-point__value">{% if datapoint.pressure is not None %}{{ datapoint.pressure }}{% else %}—{% endif %}</span>{% if datapoint.pressure is not None %}<span class="ck-point__unit">Pa</span>{% endif %}</dd>
+                            {% if datapoint.pressure_quantity %}
+                            <dd class="ck-point__reported">As reported: {{ datapoint.pressure_quantity.value }} {{ datapoint.pressure_quantity.units }}{% if datapoint.pressure_quantity.uncertainty %} ± {{ datapoint.pressure_quantity.uncertainty }} {{ datapoint.pressure_quantity.uncertainty_type }}{% endif %}</dd>
+                            {% endif %}
+                        </div>
                         {% if datapoint.equivalence_ratio %}
-                        <tr>
-                            <td class="text-muted">Equivalence Ratio (φ)</td>
-                            <td class="fw-medium font-monospace" colspan="2">{{ datapoint.equivalence_ratio }}</td>
-                        </tr>
+                        <div>
+                            <dt>Equivalence ratio (φ)</dt>
+                            <dd><span class="ck-point__value">{{ datapoint.equivalence_ratio }}</span></dd>
+                        </div>
                         {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                    </dl>
+                </section>
 
-        {% if speciation_measurement %}
-        {% include "chemked_database/partials/speciation_measurement.html" %}
-        {% endif %}
+                {% if ignition_delay %}
+                <!-- Ignition delay measurement (Figma 139:2903) -->
+                <section class="app-panel" aria-labelledby="ck-ignition-title">
+                    <div class="ck-panel__head">
+                        <h2 id="ck-ignition-title" class="ck-panel__title"><i class="bi bi-lightning" aria-hidden="true"></i>Ignition delay <span class="ck-point__symbol">τ</span></h2>
+                    </div>
+                    <div class="ck-panel__body">
+                        <div>
+                            {% if ignition_delay.ignition_delay %}
+                            {# Six significant figures hide float noise; the stored value is in the title and the reported one below #}
+                            <p class="ck-point__headline" title="{{ ignition_delay.ignition_delay }} s"><span>{{ ignition_delay.ignition_delay|stringformat:"g" }}</span><span class="ck-point__unit">s</span></p>
+                            <p class="ck-point__reported">{{ ignition_delay.ignition_delay|multiply:1000 }} ms{% if ignition_delay.ignition_delay_quantity %} · As reported: {{ ignition_delay.ignition_delay_quantity.value }} {{ ignition_delay.ignition_delay_quantity.units }}{% if ignition_delay.ignition_delay_quantity.uncertainty %} ± {{ ignition_delay.ignition_delay_quantity.uncertainty }} {{ ignition_delay.ignition_delay_quantity.uncertainty_type }}{% endif %}{% endif %}</p>
+                            {% else %}
+                            <p class="ck-point__headline"><span>—</span></p>
+                            {% endif %}
+                        </div>
+                        <dl class="ck-point__attrs">
+                            <div><dt>Ignition target</dt><dd>{{ ignition_delay.get_ignition_target|default:"—" }}</dd></div>
+                            <div><dt>Ignition type</dt><dd>{{ ignition_delay.get_ignition_type|default:"—" }}</dd></div>
+                            {% if ignition_delay.first_stage_ignition_delay %}<div><dt>First stage delay</dt><dd class="is-mono">{{ ignition_delay.first_stage_ignition_delay }} s</dd></div>{% endif %}
+                            {% if ignition_delay.pressure_rise %}<div><dt>Pressure rise</dt><dd class="is-mono">{{ ignition_delay.pressure_rise }} 1/s</dd></div>{% endif %}
+                        </dl>
+                    </div>
+                </section>
+                {% endif %}
 
-        <!-- Ignition Delay Data -->
-        {% if ignition_delay %}
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Ignition Delay Measurement</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted" style="width: 200px;">Ignition Delay (τ)</td>
-                            <td class="fw-medium font-monospace">
-                                {% if ignition_delay.ignition_delay %}
-                                {{ ignition_delay.ignition_delay }} s
-                                <span class="text-muted ms-2">
-                                    ({{ ignition_delay.ignition_delay|multiply:1000 }} ms)
-                                </span>
-                                {% else %}—{% endif %}
-                            </td>
-                        </tr>
-                        {% if ignition_delay.first_stage_ignition_delay %}
-                        <tr>
-                            <td class="text-muted">First Stage Delay</td>
-                            <td class="fw-medium font-monospace">
-                                {{ ignition_delay.first_stage_ignition_delay }} s
-                            </td>
-                        </tr>
+                {% if laminar_burning_velocity_measurement %}
+                <!-- Laminar burning velocity, in the place of the ignition delay panel -->
+                <section class="app-panel" aria-labelledby="ck-lbv-title">
+                    <div class="ck-panel__head">
+                        <h2 id="ck-lbv-title" class="ck-panel__title"><i class="bi bi-fire" aria-hidden="true"></i>Laminar burning velocity</h2>
+                    </div>
+                    <div class="ck-panel__body">
+                        {% if laminar_burning_velocity_measurement.laminar_burning_velocity is not None %}
+                        <p class="ck-point__headline"><span>{{ laminar_burning_velocity_measurement.laminar_burning_velocity }}</span><span class="ck-point__unit">m/s</span></p>
+                        {% else %}
+                        <p class="ck-point__headline"><span>—</span></p>
                         {% endif %}
-                        <tr>
-                            <td class="text-muted">Ignition Target</td>
-                            <td>{{ ignition_delay.get_ignition_target|default:"—" }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Ignition Type</td>
-                            <td>{{ ignition_delay.get_ignition_type|default:"—" }}</td>
-                        </tr>
-                        {% if ignition_delay.pressure_rise %}
-                        <tr>
-                            <td class="text-muted">Pressure Rise</td>
-                            <td class="font-monospace">{{ ignition_delay.pressure_rise }} 1/s</td>
-                        </tr>
+                        {% if laminar_burning_velocity_measurement.stretch is not None or laminar_burning_velocity_measurement.pressure_rise is not None %}
+                        <dl class="ck-point__attrs">
+                            {% if laminar_burning_velocity_measurement.stretch is not None %}<div><dt>Stretch rate</dt><dd class="is-mono">{{ laminar_burning_velocity_measurement.stretch }} 1/s</dd></div>{% endif %}
+                            {% if laminar_burning_velocity_measurement.pressure_rise is not None %}<div><dt>Pressure rise</dt><dd class="is-mono">{{ laminar_burning_velocity_measurement.pressure_rise }} 1/s</dd></div>{% endif %}
+                        </dl>
                         {% endif %}
-                    </tbody>
-                </table>
+                    </div>
+                </section>
+                {% endif %}
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Flame Speed Data -->
-        {% if flame_speed %}
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-fire me-2"></i>Flame Speed Measurement</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted" style="width: 200px;">Laminar Flame Speed</td>
-                            <td class="fw-medium font-monospace">
-                                {% if flame_speed.laminar_flame_speed %}
-                                {{ flame_speed.laminar_flame_speed }} m/s
-                                {% else %}—{% endif %}
-                            </td>
-                        </tr>
-                        {% if flame_speed.stretch %}
-                        <tr>
-                            <td class="text-muted">Stretch Rate</td>
-                            <td class="font-monospace">{{ flame_speed.stretch }} 1/s</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
+            {% if speciation_measurement %}
+            {% include "chemked_database/partials/speciation_measurement.html" %}
+            {% endif %}
 
-        <!-- Composition -->
-        {% if composition and species_list %}
-        <div class="data-section mb-3">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#compositionSection">
-                <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Composition ({{ species_list|length }} species)</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="compositionSection">
-                <div class="section-body p-0">
-                    <table class="table table-sm table-hover mb-0">
+            {% if composition and species_list %}
+            <!-- Mixture composition (Figma 139:2922) -->
+            <section class="app-panel" aria-labelledby="ck-composition-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-composition-title" class="ck-panel__title"><i class="bi bi-pie-chart" aria-hidden="true"></i>Mixture composition</h2>
+                    <span class="ck-count">{{ species_list|length }} species</span>
+                </div>
+                <div class="ck-table-wrap">
+                    <table class="ck-table ck-point__species">
                         <thead>
                             <tr>
-                                <th>Species</th>
-                                <th>Identifier</th>
-                                <th class="text-end">Amount</th>
-                                <th class="text-end">Uncertainty</th>
+                                <th scope="col">Species</th>
+                                <th scope="col">Identifier</th>
+                                <th scope="col" class="is-end">Amount</th>
+                                <th scope="col" class="is-end">Uncertainty</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for species in species_list %}
                             <tr>
-                                <td class="fw-medium">
-                                    <a href="{% url 'chemked_database:species-datapoints' species.species_name %}">
-                                        {{ species.species_name }}
-                                    </a>
-                                </td>
+                                <td><a href="{% url 'chemked_database:species-datapoints' species.species_name %}">{{ species.species_name }}</a></td>
                                 <td>
                                     {% if species.inchi %}
-                                    <code class="small text-break">{{ species.inchi|truncatechars:35 }}</code>
+                                    <span class="ck-id" title="{{ species.inchi }}">{{ species.inchi }}</span>
                                     {% elif species.smiles %}
-                                    <code class="small">{{ species.smiles|truncatechars:25 }}</code>
+                                    <span class="ck-id" title="{{ species.smiles }}">{{ species.smiles }}</span>
                                     {% else %}
-                                    <span class="text-muted">—</span>
+                                    <span class="is-muted">—</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-end font-monospace">{{ species.amount }}</td>
-                                <td class="text-end">
-                                    {% if species.amount_uncertainty %}
-                                    <small class="text-muted">
-                                        ± {{ species.amount_uncertainty }}
-                                        {% if species.amount_uncertainty_type %}({{ species.amount_uncertainty_type }}){% endif %}
-                                    </small>
-                                    {% else %}—{% endif %}
-                                </td>
+                                <td class="is-number">{{ species.amount }}</td>
+                                <td class="is-end is-muted">{% if species.amount_uncertainty %}± {{ species.amount_uncertainty }}{% if species.amount_uncertainty_type %} ({{ species.amount_uncertainty_type }}){% endif %}{% else %}—{% endif %}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    {% if composition.kind %}
-                    <div class="p-2 bg-light border-top small text-muted">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Composition specified as: <strong>{{ composition.kind }}</strong>
+                </div>
+                <div class="ck-panel__foot">
+                    <span class="ck-note"><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="15" height="15"><span>{% if composition.kind %}Composition specified as <strong>{{ composition.kind }}</strong>{% else %}Composition basis not given{% endif %}</span></span>
+                    <span>{% if datapoint.composition_id %}Given for this datapoint{% else %}Common to the dataset{% endif %}</span>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if rcm_data %}
+            <!-- RCM data -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#rcmSection" aria-expanded="true" aria-controls="rcmSection">
+                    <i class="bi bi-box" aria-hidden="true"></i>
+                    <span>RCM data</span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse show" id="rcmSection">
+                    <dl class="ck-facts ck-point__collapse-body">
+                        {% if rcm_data.compressed_temperature %}<div><dt>Compressed temperature</dt><dd class="is-mono">{{ rcm_data.compressed_temperature }} K</dd></div>{% endif %}
+                        {% if rcm_data.compressed_pressure %}<div><dt>Compressed pressure</dt><dd class="is-mono">{{ rcm_data.compressed_pressure }} Pa</dd></div>{% endif %}
+                        {% if rcm_data.compression_time %}<div><dt>Compression time</dt><dd class="is-mono">{{ rcm_data.compression_time }} s</dd></div>{% endif %}
+                        {% if rcm_data.compression_ratio %}<div><dt>Compression ratio</dt><dd class="is-mono">{{ rcm_data.compression_ratio }}</dd></div>{% endif %}
+                        {% if rcm_data.stroke %}<div><dt>Stroke</dt><dd class="is-mono">{{ rcm_data.stroke }} m</dd></div>{% endif %}
+                        {% if rcm_data.clearance %}<div><dt>Clearance</dt><dd class="is-mono">{{ rcm_data.clearance }} m</dd></div>{% endif %}
+                    </dl>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if time_histories %}
+            <!-- Time histories -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#timeHistorySection" aria-expanded="false" aria-controls="timeHistorySection">
+                    <i class="bi bi-graph-up" aria-hidden="true"></i>
+                    <span>Time histories <span class="ck-count">{{ time_histories|length }}</span></span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse" id="timeHistorySection">
+                    <div class="ck-panel__body ck-point__collapse-body">
+                        {% for history in time_histories %}
+                        <div class="ck-point__history">
+                            <div class="ck-point__history-head">
+                                <strong>{{ history.get_history_type_display }}</strong>
+                                <span class="ck-count">{{ history.num_points }} points</span>
+                            </div>
+                            <p class="ck-help">Time: {{ history.time_units }} | Quantity: {{ history.quantity_units }}{% if history.source_filename %}<br>Source: {{ history.source_filename }}{% endif %}</p>
+
+                            {% if history.values %}
+                            <div class="ck-table-wrap">
+                                <table class="ck-table time-history-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Time ({{ history.time_units }})</th>
+                                            <th scope="col">Value ({{ history.quantity_units }})</th>
+                                            <th scope="col">Uncertainty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for point in history.values %}
+                                        <tr class="{% if forloop.counter > 5 %}hidden-row collapse{% endif %}"
+                                            {% if forloop.counter > 5 %}data-bs-parent="#historyMore{{ forloop.parentloop.counter }}"{% endif %}>
+                                            <td class="is-mono">{{ point.0 }}</td>
+                                            <td class="is-mono">{{ point.1 }}</td>
+                                            <td class="is-mono">{% if point|length > 2 %}{{ point.2 }}{% else %}—{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% if history.values|length > 5 %}
+                            <div id="historyMore{{ forloop.counter }}">
+                                <button class="ck-btn ck-btn--sm toggle-rows-btn" type="button" data-target-table="{{ forloop.counter }}" aria-expanded="false">
+                                    <span class="show-text"><i class="bi bi-chevron-down" aria-hidden="true"></i> Show more ({{ history.values|length|add:"-5" }} remaining)</span>
+                                    <span class="hide-text"><i class="bi bi-chevron-up" aria-hidden="true"></i> Show less</span>
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% elif history.source_filename %}
+                            <p class="ck-help">Inline values not stored; see source file.</p>
+                            {% else %}
+                            <p class="ck-help">No time-history values available.</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endif %}
                 </div>
-            </div>
-        </div>
-        {% endif %}
+            </section>
+            {% endif %}
 
-        <!-- RCM Data -->
-        {% if rcm_data %}
-        <div class="data-section mb-3">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#rcmSection">
-                <h6 class="mb-0"><i class="bi bi-box me-2"></i>RCM Data</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="rcmSection">
-                <div class="section-body p-0">
-                    <table class="table table-sm mb-0">
-                        <tbody>
-                            {% if rcm_data.compressed_temperature %}
-                            <tr>
-                                <td class="text-muted" style="width: 200px;">Compressed Temperature</td>
-                                <td class="font-monospace">{{ rcm_data.compressed_temperature }} K</td>
-                            </tr>
-                            {% endif %}
-                            {% if rcm_data.compressed_pressure %}
-                            <tr>
-                                <td class="text-muted">Compressed Pressure</td>
-                                <td class="font-monospace">{{ rcm_data.compressed_pressure }} Pa</td>
-                            </tr>
-                            {% endif %}
-                            {% if rcm_data.compression_time %}
-                            <tr>
-                                <td class="text-muted">Compression Time</td>
-                                <td class="font-monospace">{{ rcm_data.compression_time }} s</td>
-                            </tr>
-                            {% endif %}
-                            {% if rcm_data.compression_ratio %}
-                            <tr>
-                                <td class="text-muted">Compression Ratio</td>
-                                <td class="font-monospace">{{ rcm_data.compression_ratio }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if rcm_data.stroke %}
-                            <tr>
-                                <td class="text-muted">Stroke</td>
-                                <td class="font-monospace">{{ rcm_data.stroke }} m</td>
-                            </tr>
-                            {% endif %}
-                            {% if rcm_data.clearance %}
-                            <tr>
-                                <td class="text-muted">Clearance</td>
-                                <td class="font-monospace">{{ rcm_data.clearance }} m</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Time Histories -->
-        {% if time_histories %}
-        <div class="data-section mb-3">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#timeHistorySection">
-                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Time Histories ({{ time_histories|length }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse" id="timeHistorySection">
-                <div class="section-body">
-                    {% for history in time_histories %}
-                    <div class="border rounded p-2 mb-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <strong class="small">{{ history.get_history_type_display }}</strong>
-                            <span class="badge bg-secondary">{{ history.num_points }} points</span>
-                        </div>
-                        <small class="text-muted">
-                            Time: {{ history.time_units }} | Quantity: {{ history.quantity_units }}
-                        </small>
-                        {% if history.source_filename %}
-                        <br><small class="text-muted">Source: {{ history.source_filename }}</small>
-                        {% endif %}
-
-                        {% if history.values %}
-                        <div class="table-responsive mt-2">
-                            <table class="table table-sm mb-0 time-history-table">
-                                <thead>
-                                    <tr>
-                                        <th class="text-muted">Time ({{ history.time_units }})</th>
-                                        <th class="text-muted">Value ({{ history.quantity_units }})</th>
-                                        <th class="text-muted">Uncertainty</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for point in history.values %}
-                                    <tr class="{% if forloop.counter > 5 %}hidden-row collapse{% endif %}" 
-                                        {% if forloop.counter > 5 %}data-bs-parent="#historyMore{{ forloop.parentloop.counter }}"{% endif %}>
-                                        <td class="font-monospace">{{ point.0 }}</td>
-                                        <td class="font-monospace">{{ point.1 }}</td>
-                                        <td class="font-monospace">
-                                            {% if point|length > 2 %}{{ point.2 }}{% else %}—{% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if history.values|length > 5 %}
-                        <div class="mt-2" id="historyMore{{ forloop.counter }}">
-                            <button class="btn btn-outline-secondary btn-sm toggle-rows-btn" type="button"
-                                    data-target-table="{{ forloop.counter }}"
-                                    aria-expanded="false">
-                                <span class="show-text"><i class="bi bi-chevron-down me-1"></i>Show more ({{ history.values|length|add:"-5" }} remaining)</span>
-                                <span class="hide-text"><i class="bi bi-chevron-up me-1"></i>Show less</span>
-                            </button>
-                        </div>
-                        {% endif %}
-                        {% elif history.source_filename %}
-                        <div class="small text-muted mt-2">Inline values not stored; see source file.</div>
-                        {% else %}
-                        <div class="small text-muted mt-2">No time-history values available.</div>
-                        {% endif %}
+            {% if volume_history %}
+            <!-- Volume history -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#volumeHistorySection" aria-expanded="false" aria-controls="volumeHistorySection">
+                    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                    <span>Volume history</span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse" id="volumeHistorySection">
+                    <div class="ck-panel__body ck-point__collapse-body">
+                        <p class="ck-help"><strong>{{ volume_history.values|length }}</strong> points · Time: {{ volume_history.time_units }} | Volume: {{ volume_history.volume_units }}</p>
                     </div>
-                    {% endfor %}
                 </div>
-            </div>
+            </section>
+            {% endif %}
         </div>
-        {% endif %}
 
-        <!-- Volume History -->
-        {% if volume_history %}
-        <div class="data-section mb-3">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#volumeHistorySection">
-                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Volume History</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse" id="volumeHistorySection">
-                <div class="section-body">
-                    <p class="small mb-1">
-                        <strong>{{ volume_history.values|length }}</strong> points
-                    </p>
-                    <small class="text-muted">
-                        Time: {{ volume_history.time_units }} | Volume: {{ volume_history.volume_units }}
-                    </small>
+        <!-- Provenance and navigation (Figma 139:2971) -->
+        <aside class="ck-stack">
+            <section class="app-panel" aria-labelledby="ck-parent-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-parent-title" class="ck-panel__title"><img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="19" height="19">Parent dataset</h2>
                 </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Dataset Info -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Parent Dataset</h6>
-            </div>
-            <div class="section-body">
-                <a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}" class="d-block mb-2 fw-medium">
-                    {{ datapoint.dataset.chemked_file_path }}
-                </a>
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted">Experiment Type</td>
-                            <td class="text-end">{{ datapoint.dataset.experiment_type|title }}</td>
-                        </tr>
-                        {% if datapoint.dataset.apparatus %}
-                        <tr>
-                            <td class="text-muted">Apparatus</td>
-                            <td class="text-end">{{ datapoint.dataset.apparatus.kind|title }}</td>
-                        </tr>
+                <div class="ck-panel__body">
+                    <dl class="ck-facts ck-facts--stacked ck-point__parent">
+                        <div><dt>Dataset</dt><dd><a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}">{{ datapoint.dataset.chemked_file_path }}</a></dd></div>
+                        <div><dt>Experiment type</dt><dd>{{ datapoint.dataset.experiment_type|capfirst }}</dd></div>
+                        {% if datapoint.dataset.apparatus %}<div><dt>Apparatus</dt><dd>{{ datapoint.dataset.apparatus.kind|capfirst }}</dd></div>{% endif %}
+                        {% if datapoint.dataset.reference_year or datapoint.dataset.reference_doi %}
+                        <div class="ck-point__pub">
+                            {% if datapoint.dataset.reference_year %}<div><dt>Year</dt><dd>{{ datapoint.dataset.reference_year }}</dd></div>{% endif %}
+                            {% if datapoint.dataset.reference_doi %}<div><dt>DOI</dt><dd><a class="ck-point__doi" href="https://doi.org/{{ datapoint.dataset.reference_doi }}" target="_blank" rel="noopener">Open DOI<img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a></dd></div>{% endif %}
+                        </div>
                         {% endif %}
-                        {% if datapoint.dataset.reference_year %}
-                        <tr>
-                            <td class="text-muted">Year</td>
-                            <td class="text-end">{{ datapoint.dataset.reference_year }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if datapoint.dataset.reference_doi %}
-                        <tr>
-                            <td class="text-muted">DOI</td>
-                            <td class="text-end">
-                                <a href="https://doi.org/{{ datapoint.dataset.reference_doi }}" target="_blank" rel="noopener">
-                                    <i class="bi bi-box-arrow-up-right"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Quick Navigation -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-signpost me-2"></i>Navigate</h6>
-            </div>
-            <div class="section-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i>Back to Dataset
-                    </a>
-                    <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-list me-1"></i>All Datasets
-                    </a>
+                    </dl>
+                    <a class="ck-btn ck-point__all" href="{% url 'chemked_database:dataset-detail' datapoint.dataset.pk %}#ck-datapoints"><i class="bi bi-arrow-right" aria-hidden="true"></i>All datapoints of the dataset</a>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <!-- Datapoint Info -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Datapoint Info</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted">Database ID</td>
-                            <td class="text-end fw-medium">{{ datapoint.pk }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Has Composition</td>
-                            <td class="text-end">
-                                {% if composition %}
-                                <i class="bi bi-check-circle text-success"></i> Yes
-                                {% else %}
-                                <i class="bi bi-dash-circle text-muted"></i> Inherited
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% if time_histories %}
-                        <tr>
-                            <td class="text-muted">Time Histories</td>
-                            <td class="text-end">{{ time_histories|length }}</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <section class="app-panel" aria-labelledby="ck-record-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-record-title" class="ck-panel__title">Datapoint information</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Database ID</dt><dd class="is-mono">{{ datapoint.pk }}</dd></div>
+                    <div>
+                        <dt>Composition</dt>
+                        <dd>
+                            {% if datapoint.composition_id %}
+                            <span class="ck-point__yes"><i class="bi bi-check-circle" aria-hidden="true"></i>Yes</span>
+                            {% elif composition %}
+                            <span class="ck-faint"><i class="bi bi-dash-circle" aria-hidden="true"></i> Inherited</span>
+                            {% else %}
+                            <span class="ck-faint">None</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% if time_histories %}<div><dt>Time histories</dt><dd class="is-mono">{{ time_histories|length }}</dd></div>{% endif %}
+                </dl>
+            </section>
+
+            <p class="ck-point__nav"><span>Browse more experiments</span><a href="{% url 'chemked_database:dataset-list' %}">All datasets →</a></p>
+        </aside>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.ck-point__columns {
+    grid-template-columns: minmax(0, 1fr) 364px;
 }
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+
+.ck-point__pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    align-items: stretch;
 }
-.section-header {
+
+.ck-point__values {
+    display: grid;
+    gap: 22px;
+    margin: 0;
+    padding: 22px;
+}
+
+.ck-point__values > div {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ck-point__values dt {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.ck-point__values dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.ck-point__value {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.ck-point__unit {
+    margin-left: 6px;
+    font-size: 14px;
+    color: var(--color-gray-500);
+}
+
+.ck-point__reported {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+.ck-point__symbol {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.ck-point__headline {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    align-items: baseline;
+    margin: 0 0 4px;
+    font-family: var(--font-mono);
+    font-size: 34px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.ck-point__headline .ck-point__unit {
+    font-family: var(--font-sans);
+    font-size: 16px;
+}
+
+.ck-point__attrs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    margin: 0;
+}
+
+.ck-point__attrs > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ck-point__attrs dt {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.ck-point__attrs dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.ck-point__attrs .is-mono {
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.ck-point__species {
+    min-width: 560px;
+}
+
+.ck-point__species th:nth-child(2) {
+    width: 50%;
+}
+
+.ck-point__collapse-body {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.ck-point__history {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+}
+
+.ck-point__history-head {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
-    cursor: pointer;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
 }
-.section-header h6 {
-    font-size: 0.8rem;
-    font-weight: 600;
+
+.ck-point__history .ck-table th:first-child,
+.ck-point__history .ck-table td:first-child {
+    padding-left: 10px;
 }
-.section-body {
-    padding: 0.75rem;
-}
-.table {
-    font-size: 0.85rem;
-}
-.table td, .table th {
-    padding: 0.4rem 0.75rem;
-    vertical-align: middle;
-}
-/* Hidden rows - initially collapsed */
+
+/* Rows past the fifth stay hidden until the toggle shows them */
 .time-history-table .hidden-row {
     display: none;
 }
+
 .time-history-table .hidden-row.show {
     display: table-row;
 }
-/* Toggle button states */
+
 .toggle-rows-btn .hide-text { display: none; }
 .toggle-rows-btn[aria-expanded="true"] .show-text { display: none; }
 .toggle-rows-btn[aria-expanded="true"] .hide-text { display: inline; }
+
+.ck-point__parent {
+    padding: 0;
+}
+
+.ck-point__parent dd a {
+    font-weight: 600;
+}
+
+.ck-point__pub {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px !important;
+}
+
+.ck-point__pub > div {
+    display: grid;
+    gap: 4px;
+}
+
+.ck-point__pub dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.ck-point__doi {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ck-point__yes {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-success);
+}
+
+.ck-point__nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin: 0;
+    padding: 0 4px;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.ck-point__nav a {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (max-width: 1199.98px) {
+    .ck-point__columns {
+        grid-template-columns: minmax(0, 1fr) 320px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .ck-point__columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ck-point__values {
+        padding: 18px 16px;
+    }
+
+    .ck-point__headline {
+        font-size: 26px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -507,9 +552,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.toggle-rows-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const isExpanded = btn.getAttribute('aria-expanded') === 'true';
-            const tableContainer = btn.closest('.border');
+            const tableContainer = btn.closest('.ck-point__history');
             const hiddenRows = tableContainer.querySelectorAll('.hidden-row');
-            
+
             if (isExpanded) {
                 // Collapse - hide rows
                 hiddenRows.forEach(row => row.classList.remove('show'));

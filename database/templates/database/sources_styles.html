@@ -1,0 +1,376 @@
+{% load static %}
+{% comment %}Shared look of the source and author pages (Figma 150:2528, 140:2236, 150:2377): breadcrumb,
+page heading, panels, buttons, form fields and page controls. Each page includes it in its
+extra_css block; every rule is scoped under .src-ui.{% endcomment %}
+<style>
+.src-ui {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.src-ui h1,
+.src-ui h2,
+.src-ui h3 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Breadcrumb */
+.src-crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.src-crumbs li + li::before {
+    content: "/";
+    margin-right: 10px;
+    color: var(--color-gray-400);
+}
+
+.src-crumbs a {
+    color: var(--color-gray-500);
+}
+
+.src-crumbs a:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* Page heading */
+.src-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.src-heading__copy {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.src-heading h1 {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.src-heading p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-gray-500);
+}
+
+/* Panels */
+.src-panel {
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    min-width: 0;
+}
+
+.src-panel__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.src-ui .app-panel__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.src-panel__meta {
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.src-panel__lede {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.src-count {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: #ecf2ff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+.src-pill {
+    display: inline-flex;
+    padding: 5px 10px;
+    border-radius: 99px;
+    background: var(--color-primary-bg);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+/* Buttons: the Figma actions are 38 px; the detail page uses 42 px */
+.src-ui .app-btn,
+.src-ui .app-btn-secondary {
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.src-ui .app-btn-secondary {
+    border-color: var(--color-gray-200);
+    color: var(--color-gray-900);
+}
+
+.src-ui .app-btn-secondary:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.src-ui .app-btn-secondary.src-btn--accent {
+    color: var(--color-primary);
+}
+
+.src-ui .app-btn-secondary.src-btn--danger {
+    color: var(--color-error);
+}
+
+.src-ui .app-btn-secondary.src-btn--danger:hover {
+    border-color: var(--color-error);
+    background: var(--color-error-bg);
+}
+
+.src-ui .src-btn--tall {
+    height: 42px;
+    padding: 0 16px;
+}
+
+.src-ui button.app-btn-secondary {
+    background: var(--color-white);
+}
+
+/* Form fields */
+.src-field {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    align-content: start;
+}
+
+.src-field label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.src-field__required {
+    color: var(--color-primary);
+}
+
+/* The form widgets carry inline widths (forms.py); the grid sets the width instead */
+.src-ui .src-field .form-control,
+.src-ui .src-field .form-select {
+    width: 100% !important;
+    height: 38px;
+    padding: 8px 11px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-900);
+    background-color: var(--color-white);
+}
+
+.src-ui .src-field .form-select {
+    padding-right: 36px;
+    background-image: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}");
+    background-position: right 11px center;
+    background-size: 16px;
+}
+
+.src-ui .src-field .form-control::placeholder {
+    color: var(--color-gray-400);
+}
+
+.src-ui .src-field .form-control:focus,
+.src-ui .src-field .form-select:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.src-ui .src-field.has-error .form-control,
+.src-ui .src-field.has-error .form-select {
+    border-color: var(--color-error);
+}
+
+.src-ui .invalid-feedback {
+    margin: 0;
+    font-size: 11px;
+    color: var(--color-error);
+}
+
+.src-errors {
+    margin: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--color-error);
+    border-radius: 6px;
+    background: var(--color-error-bg);
+    font-size: 13px;
+    color: var(--color-error);
+}
+
+.src-errors ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+/* Guidance column: tips with orange bullets */
+.src-tips {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+}
+
+.src-tips h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.src-tips ul {
+    display: grid;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.src-tips li {
+    display: flex;
+    gap: 9px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+.src-tips li::before {
+    content: "•";
+    color: var(--color-primary);
+}
+
+/* Form actions row */
+.src-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0 8px;
+}
+
+.src-actions__note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.src-actions__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Page controls (Figma 150:2670) */
+.src-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.src-pager__page,
+.src-pager__step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+    text-decoration: none;
+}
+
+.src-pager__page {
+    background: var(--color-gray-100);
+}
+
+a.src-pager__page:hover,
+a.src-pager__step:hover {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.src-pager__page.is-current {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.src-pager__step.is-disabled {
+    opacity: 0.35;
+}
+
+.src-pager__gap {
+    padding: 0 4px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+@media (max-width: 575.98px) {
+    .src-heading h1 {
+        font-size: 24px;
+    }
+
+    .src-panel {
+        padding: 18px 16px;
+    }
+
+    .src-actions,
+    .src-actions__buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>

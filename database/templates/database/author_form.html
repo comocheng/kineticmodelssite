@@ -1,106 +1,191 @@
 {% extends "base.html" %}
 {% load static %}
+{# Add and edit an author, in the look of the Figma source forms (node 150:2377) #}
+
+{% block title %}{{ form_title }} | Prometheus{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'author-list' %}">Authors</a></li>
+<div class="src-ui author-form">
+    <nav class="src-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'author-list' %}">Authors</a></li>
             {% if object %}
-            <li class="breadcrumb-item active">Edit {{ object.name }}</li>
+            <li aria-current="page">Edit {{ object.name }}</li>
             {% else %}
-            <li class="breadcrumb-item active">Create</li>
+            <li aria-current="page">{{ form_title }}</li>
             {% endif %}
         </ol>
     </nav>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-person me-2"></i>
-                        {{ form_title }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_firstname" class="form-label">First Name <span class="text-danger">*</span></label>
-                                {{ form.firstname }}
-                                {% if form.firstname.errors %}
-                                <div class="invalid-feedback d-block">{{ form.firstname.errors }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="id_lastname" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                {{ form.lastname }}
-                                {% if form.lastname.errors %}
-                                <div class="invalid-feedback d-block">{{ form.lastname.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <!-- Form Actions -->
-                        <div class="d-flex gap-2 pt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>
-                                {{ submit_text }}
-                            </button>
-                            <a href="{% url 'author-list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i>
-                                Cancel
-                            </a>
-                            {% if object %}
-                            <a href="{% url 'author-delete' object.pk %}" class="btn btn-outline-danger ms-auto">
-                                <i class="bi bi-trash me-1"></i>
-                                Delete
-                            </a>
-                            {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
+    <header class="src-heading">
+        <div class="src-heading__copy">
+            <h1>{{ form_title }}</h1>
             {% if object %}
-            <!-- Show associated publications -->
+            <p>Update this author's name. The change applies to every publication the author is linked to.</p>
+            {% else %}
+            <p>Add a person who wrote one of the publications in the database.</p>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="author-form__layout">
+        <div class="author-form__main">
+            <form method="post" novalidate class="author-form__form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="src-errors" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <section class="app-panel src-panel" aria-labelledby="author-form-details">
+                    <div class="src-panel__head">
+                        <h2 id="author-form-details" class="app-panel__title"><img class="app-icon" src="{% static 'database/images/icons/user-add-111827.svg' %}" alt="" width="18" height="18">Author details</h2>
+                        <span class="src-panel__meta">* Required fields</span>
+                    </div>
+                    <div class="author-form__names">
+                        {% include "database/sources_field.html" with field=form.firstname label="First name" only %}
+                        {% include "database/sources_field.html" with field=form.lastname label="Last name" only %}
+                    </div>
+                </section>
+
+                <div class="src-actions">
+                    <div class="src-actions__buttons">
+                        {% if object %}
+                        <a class="app-btn-secondary src-btn--danger" href="{% url 'author-delete' object.pk %}">Delete</a>
+                        {% endif %}
+                        <a class="app-btn-secondary" href="{% url 'author-list' %}">Cancel</a>
+                        <button type="submit" class="app-btn"><img class="app-icon" src="{% static 'database/images/icons/check-white-16.svg' %}" alt="" width="16" height="16">{{ submit_text }}</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if object %}
             {% with publications=object.authorship_set.all %}
             {% if publications %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="bi bi-journal-text me-2"></i>
-                        Associated Publications ({{ publications.count }})
-                    </h6>
+            <!-- Publications of this author -->
+            <section class="app-panel author-form__pubs" aria-labelledby="author-form-pubs">
+                <div class="src-panel__head author-form__pubs-head">
+                    <h2 id="author-form-pubs" class="app-panel__title">Associated publications <span class="src-count">{{ publications.count }}</span></h2>
                 </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        {% for authorship in publications|slice:":10" %}
-                        <li class="list-group-item small">
-                            <a href="{% url 'source-detail' authorship.source.pk %}">
-                                {{ authorship.source.source_title|truncatechars:80 }}
-                            </a>
-                            <span class="text-muted">({{ authorship.source.publication_year }})</span>
-                        </li>
-                        {% endfor %}
-                        {% if publications.count > 10 %}
-                        <li class="list-group-item text-muted small text-center">
-                            ... and {{ publications.count|add:"-10" }} more
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
+                <ul class="author-form__pub-list">
+                    {% for authorship in publications|slice:":10" %}
+                    <li>
+                        <a href="{% url 'source-detail' authorship.source.pk %}">{{ authorship.source.source_title|striptags|truncatechars:80|default:"Untitled source" }}</a>
+                        {% if authorship.source.publication_year %}<span>{{ authorship.source.publication_year }}</span>{% endif %}
+                    </li>
+                    {% endfor %}
+                    {% if publications.count > 10 %}
+                    <li class="author-form__pub-more">… and {{ publications.count|add:"-10" }} more</li>
+                    {% endif %}
+                </ul>
+            </section>
             {% endif %}
             {% endwith %}
             {% endif %}
         </div>
+
+        <aside class="src-tips" aria-labelledby="author-form-tips">
+            <h2 id="author-form-tips"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="17" height="17">Good to know</h2>
+            <ul>
+                <li>Each first and last name pair is stored once, so an existing author cannot be added again.</li>
+                <li>Enter names as they appear on the publication.</li>
+                <li>Author order is set on each source, not here.</li>
+            </ul>
+        </aside>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/sources_styles.html" %}
+<style>
+.author-form__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
+    align-items: start;
+}
+
+.author-form__main,
+.author-form__form {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.author-form .src-actions {
+    justify-content: flex-end;
+}
+
+.author-form__names {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.author-form__pubs {
+    overflow: hidden;
+}
+
+.author-form__pubs-head {
+    min-height: 60px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.author-form__pub-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.author-form__pub-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 13px;
+}
+
+.author-form__pub-list li:last-child {
+    border-bottom: 0;
+}
+
+.author-form__pub-list a {
+    font-weight: 500;
+    color: var(--color-primary);
+    overflow-wrap: anywhere;
+}
+
+.author-form__pub-list span {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.author-form__pub-list .author-form__pub-more {
+    justify-content: center;
+    color: var(--color-gray-500);
+}
+
+@media (max-width: 991.98px) {
+    .author-form__layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .author-form__names {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .author-form__pubs-head,
+    .author-form__pub-list li {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+</style>
 {% endblock %}

@@ -1,191 +1,193 @@
 {% extends "base.html" %}
 {% load static %}
+{# The import job queue, from the Figma "Promethe.us · Import jobs" (node 179:2995) #}
 
-{% block title %}Dashboard - RMG Importer{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}">
-<style>
-    /* Auto-refresh animation for updated stats */
-    .job-stat {
-        transition: background-color 0.3s ease;
-    }
-    .stat-updated {
-        background-color: rgba(34, 197, 94, 0.2) !important;
-    }
-    /* Running job indicator */
-    tr[data-status="running"] .job-stat {
-        font-weight: 500;
-    }
-</style>
-{% endblock %}
-
-{% block header_subtitle %}Job Management and Monitoring{% endblock %}
+{% block title %}Import jobs | Prometheus{% endblock %}
 
 {% block content %}
+<div class="im-page im-jobs">
 
-<div id="auto-refresh-enabled"></div>
+    {# hidden, so the empty marker takes no row of the page grid #}
+    <div id="auto-refresh-enabled" hidden></div>
 
-<div class="toolbar compact">
-    <button class="btn btn-primary btn-small btn-icon" onclick="location.href='{% url 'importer_dashboard:refresh_jobs' %}'">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-        Refresh Jobs
-    </button>
-    <button class="btn btn-secondary btn-small btn-icon" onclick="location.href='{% url 'importer_dashboard:refresh_progress' %}'">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        Update Progress
-    </button>
-    <form method="post" action="{% url 'importer_dashboard:reconnect' %}" style="display: inline;">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-secondary btn-small btn-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>
-            Reconnect SSH
-        </button>
-    </form>
-    <div style="flex: 1;"></div>
-    <a href="{% url 'importer_dashboard:settings' %}" class="btn btn-secondary btn-small btn-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        Settings
-    </a>
-</div>
-
-<div class="card">
-    <h2>Import Jobs</h2>
-    
-    <!-- Search Field -->
-    <div class="search-container" style="margin-bottom: 1rem;">
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <div style="position: relative; flex: 1; max-width: 400px;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #888;">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" id="job-search-input" placeholder="Search jobs by name, port, or SLURM ID..." 
-                       style="width: 100%; padding: 0.5rem 0.5rem 0.5rem 2.25rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
-                <button type="button" id="clear-search-btn" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #888; font-size: 1.2rem; line-height: 1;">&times;</button>
-            </div>
+    <!-- Page heading (Figma 179:3029) -->
+    <header class="im-heading">
+        <div class="im-heading__intro">
+            <h1>Import jobs</h1>
+            <p class="im-lede">Run and monitor RMG imports of kinetic mechanisms, and follow their species identification.</p>
         </div>
-        <p id="search-results-info" style="margin-top: 0.5rem; color: #666; font-size: 0.85rem; display: none;"></p>
-    </div>
-    
-    {% if jobs %}
-    <div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Mechanism</th>
-                <th>Port</th>
-                <th>Job #</th>
-                <th>Job</th>
-                <th>Host</th>
-                <th>Web</th>
-                <th>Log</th>
-                <th>Errors</th>
-                <th title="Processed Species">Pr.</th>
-                <th title="Identified Species">Id.</th>
-                <th title="Total Species">Tot.</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for job in jobs %}
-            <tr>
-                <td>
-                    <a href="{% url 'importer_dashboard:job_detail' job.id %}" class="job-name">
-                        {{ job.name }}
-                    </a>
-                    {% if job.status == 'awaiting_input' %}
-                    <span class="status-badge status-awaiting_input" title="Waiting for someone to confirm a match on the importer page">Awaiting input</span>
-                    {% endif %}
-                </td>
-                <td>{{ job.port|default:"-" }}</td>
-                <td>{{ job.slurm_job_id|default:"-" }}</td>
-                <td>
-                    {% if job.slurm_job_id or job.status == 'running' or job.status == 'pending' or job.status == 'awaiting_input' %}
-                        <form method="post" action="{% url 'importer_dashboard:job_kill' job.id %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-link" onclick="return confirm('Are you sure you want to kill this job?');">kill</button>
-                        </form>
-                    {% else %}
-                        <form method="post" action="{% url 'importer_dashboard:job_start' job.id %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-link">start</button>
-                        </form>
-                    {% endif %}
-                </td>
-                <td>{{ job.host|default:"-" }}</td>
-                <td>
-                    {% if job.port and job.status == 'running' or job.port and job.status == 'awaiting_input' %}
-                        {% if job.host == 'Pending...' %}
-                            <a href="{% url 'importer_dashboard:refresh_jobs' %}">refresh</a>
-                        {% elif job.host == 'localhost' or job.host == '127.0.0.1' %}
-                            <a href="#" onclick="window.open('http://' + window.location.hostname + '/importer/{{ job.port }}/', '_blank'); return false;">open</a>
-                        {% elif job.ood_url %}
-                            <a href="{{ job.ood_url }}" target="_blank">open</a>
-                        {% elif job.host %}
-                            <a href="http://{{ job.host }}/importer/{{ job.port }}/" target="_blank">open</a>
-                        {% else %}
-                            <span title="Compute node not assigned yet">-</span>
-                        {% endif %}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'importer_dashboard:job_log' job.id %}">log tail</a>
-                </td>
-                <td>
-                    <a href="{% url 'importer_dashboard:job_error_log' job.id %}">errors</a>
-                </td>
-                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="processed">{{ job.processed_species|default:"-" }}</td>
-                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="identified">{{ job.identified_species|default:"-" }}</td>
-                <td class="job-stat" data-job-id="{{ job.id }}" data-stat="total">{{ job.total_species|default:"-" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    {% else %}
-    <div class="alert alert-info">
-        <p>No jobs found. Click "Refresh Jobs" to discover import jobs on the cluster.</p>
-    </div>
-    {% endif %}
-</div>
+        <div class="im-actions">
+            <a href="{% url 'importer_dashboard:settings' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="settings" %}Settings</a>
+            <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
+        </div>
+    </header>
 
-<!-- Real-time Activity Logger - Right Side Panel -->
-<div id="activityLogPanel" class="activity-log-fixed minimized">
+    <!-- Jobs by status (Figma 179:3041) -->
+    <section class="app-panel im-health" aria-labelledby="im-health-title">
+        <h2 class="visually-hidden" id="im-health-title">Jobs by status</h2>
+        <dl class="im-health__metrics">
+            <div><dt>Running</dt><dd>{{ stats.running_jobs }}</dd></div>
+            <div><dt>Awaiting input</dt><dd>{{ stats.awaiting_input_jobs }}</dd></div>
+            <div><dt>Pending</dt><dd>{{ stats.pending_jobs }}</dd></div>
+            <div><dt>Idle</dt><dd>{{ stats.idle_jobs }}</dd></div>
+            <div><dt>Completed</dt><dd>{{ stats.completed_jobs }}</dd></div>
+            <div><dt>Failed</dt><dd>{{ stats.failed_jobs }}</dd></div>
+        </dl>
+        <div class="im-health__connection">
+            <p>Check the connection to the job backend</p>
+            <form method="post" action="{% url 'importer_dashboard:reconnect' %}">
+                {% csrf_token %}
+                <button type="submit" class="im-btn im-btn--sm">{% include "importer_dashboard/im_icon.html" with icon="plug" size=14 %}Reconnect SSH</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Jobs table (Figma 179:3066) -->
+    <section class="app-panel im-queue" aria-labelledby="im-queue-title">
+        <h2 class="visually-hidden" id="im-queue-title">Jobs</h2>
+        <div class="im-toolbar">
+            <div class="im-search search-container">
+                <label class="visually-hidden" for="job-search-input">Search jobs</label>
+                <img class="app-icon" src="{% static 'database/images/icons/search-607185-18.svg' %}" alt="" width="18" height="18">
+                <input type="text" id="job-search-input" placeholder="Search by name, host, port or SLURM ID" autocomplete="off">
+                <button type="button" id="clear-search-btn" style="display: none;" aria-label="Clear search">&times;</button>
+            </div>
+            <a href="{% url 'importer_dashboard:refresh_progress' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="chart" %}Update progress</a>
+        </div>
+
+        <div class="im-caption">
+            <span class="im-caption__count">{% include "importer_dashboard/im_icon.html" with icon="table" size=15 %}<strong>{{ jobs|length }}</strong> {% if jobs|length == 1 %}job{% else %}jobs{% endif %}{% if search_query %} matching “{{ search_query }}”{% endif %}</span>
+            <span class="im-caption__sort">Running and awaiting-input jobs first, then by name</span>
+            <p id="search-results-info" class="im-caption__found" style="display: none;" aria-live="polite"></p>
+            <span class="im-caption__help">Species counts of live jobs refresh every 15 s</span>
+        </div>
+
+        {% if jobs %}
+        {# position: relative keeps the visually hidden text inside the scroller, so the page never scrolls sideways #}
+        <div class="table-container im-table-wrap" tabindex="0" role="region" aria-label="Import jobs">
+        <table class="im-table im-jobs__table">
+            <thead>
+                <tr>
+                    <th scope="col">Mechanism</th>
+                    <th scope="col">Connection</th>
+                    <th scope="col">SLURM job</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="is-end" title="Processed species">Processed</th>
+                    <th scope="col" class="is-end" title="Identified species">Identified</th>
+                    <th scope="col" class="is-end" title="Total species">Total</th>
+                    <th scope="col" class="is-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr data-status="{{ job.status }}" data-search="{{ job.name }} {{ job.port|default_if_none:'' }} {{ job.slurm_job_id|default_if_none:'' }} {{ job.host|default_if_none:'' }}">
+                    <td class="im-jobs__mechanism">
+                        <a href="{% url 'importer_dashboard:job_detail' job.id %}" class="job-name">{{ job.name }}</a>
+                    </td>
+                    <td class="im-jobs__connection">
+                        <span class="im-mono">{{ job.host|default:"-" }}</span>
+                        <small>{% if job.port %}Port <span class="im-mono">{{ job.port }}</span>{% else %}No port{% endif %}</small>
+                    </td>
+                    <td class="im-mono">{{ job.slurm_job_id|default:"-" }}</td>
+                    <td class="im-jobs__state">
+                        <span class="im-status im-status--{{ job.status }}"{% if job.status == 'awaiting_input' %} title="Waiting for someone to confirm a match on the importer page"{% endif %}>{{ job.get_status_display }}</span>
+                        {% if job.total_species %}
+                        <span class="im-progress" data-progress-job="{{ job.id }}">
+                            <span class="im-progress__track" aria-hidden="true"><span class="im-progress__value" style="width: {{ job.progress_percentage }}%;"></span></span>
+                            <span class="im-progress__pct" title="Identified of total species">{{ job.progress_percentage }}%</span>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="job-stat is-number" data-job-id="{{ job.id }}" data-stat="processed">{{ job.processed_species|default:"-" }}</td>
+                    <td class="job-stat is-number" data-job-id="{{ job.id }}" data-stat="identified">{{ job.identified_species|default:"-" }}</td>
+                    <td class="job-stat is-number" data-job-id="{{ job.id }}" data-stat="total">{{ job.total_species|default:"-" }}</td>
+                    <td class="is-end">
+                        <div class="im-row-actions">
+                            {% if job.slurm_job_id or job.status == 'running' or job.status == 'pending' or job.status == 'awaiting_input' %}
+                            <form method="post" action="{% url 'importer_dashboard:job_kill' job.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="im-textbtn im-textbtn--danger" onclick="return confirm('Are you sure you want to kill this job?');">Kill</button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="{% url 'importer_dashboard:job_start' job.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="im-textbtn">Start</button>
+                            </form>
+                            {% endif %}
+                            {# Fixed positioning lets the menu leave the scrolling table #}
+                            <div class="dropdown">
+                                <button type="button" class="im-iconbtn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy": "fixed"}' aria-expanded="false" aria-label="More actions for {{ job.name }}">
+                                    <img class="app-icon" src="{% static 'database/images/icons/dots-vertical-111827.svg' %}" alt="" width="18" height="18">
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end im-menu">
+                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_detail' job.id %}">Job details</a></li>
+                                    {% if job.port and job.status == 'running' or job.port and job.status == 'awaiting_input' %}
+                                    {% if job.host == 'Pending...' %}
+                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:refresh_jobs' %}">Refresh jobs to find the host</a></li>
+                                    {% elif job.host == 'localhost' or job.host == '127.0.0.1' %}
+                                    <li><a class="dropdown-item" href="#" onclick="window.open('http://' + window.location.hostname + '/importer/{{ job.port }}/', '_blank'); return false;">Open importer</a></li>
+                                    {% elif job.ood_url %}
+                                    <li><a class="dropdown-item" href="{{ job.ood_url }}" target="_blank">Open importer</a></li>
+                                    {% elif job.host %}
+                                    <li><a class="dropdown-item" href="http://{{ job.host }}/importer/{{ job.port }}/" target="_blank">Open importer</a></li>
+                                    {% else %}
+                                    <li><span class="dropdown-item-text im-faint">Compute node not assigned yet</span></li>
+                                    {% endif %}
+                                    {% endif %}
+                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_log' job.id %}">RMG log</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_error_log' job.id %}">Error log</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <p class="im-empty">No jobs found. Select “Refresh jobs” to discover import jobs on the cluster.</p>
+        {% endif %}
+    </section>
+
+    <!-- Workspace note (Figma 179:3284) -->
+    <p class="im-note">
+        <img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="14" height="14">
+        Job statuses are checked each time this page loads. Refresh jobs reloads the job list from the cluster; Update progress refreshes the progress of running jobs.
+    </p>
+
+<!-- Real-time activity log: a drawer on the right -->
+<aside id="activityLogPanel" class="activity-log-fixed minimized" aria-labelledby="im-activity-title">
     <div class="activity-log-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; color: #2563eb;">
+        <div class="im-drawer__title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Activity Log</h3>
-            <span id="logStatusIndicator" class="log-status-indicator">●</span>
+            <h2 id="im-activity-title">Activity log</h2>
+            <span id="logStatusIndicator" class="log-status-indicator" aria-hidden="true">●</span>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <button id="pauseLogBtn" class="btn btn-secondary btn-small" title="Pause log updates">
-                <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+        <div class="im-drawer__actions">
+            <button id="pauseLogBtn" type="button" class="im-btn im-btn--sm" title="Pause log updates">
+                <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
                     <rect x="6" y="4" width="4" height="16"/>
                     <rect x="14" y="4" width="4" height="16"/>
                 </svg>
                 <span id="pauseText">Pause</span>
             </button>
-            <button id="minimizeLogBtn" class="btn btn-secondary btn-small" title="Hide log panel">
-                <svg id="minimizeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                    <polyline points="9 18 15 12 9 6"/>
-                </svg>
-            </button>
-            <form method="post" action="{% url 'importer_dashboard:clear_logs' %}" style="display: inline; margin: 0;">
+            <form method="post" action="{% url 'importer_dashboard:clear_logs' %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-secondary btn-small" onclick="return confirm('Clear all logs?')" title="Clear all logs">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                <button type="submit" class="im-btn im-btn--sm" onclick="return confirm('Clear all logs?')" title="Clear all logs" aria-label="Clear all logs">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
                         <polyline points="3 6 5 6 21 6"/>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
                 </button>
             </form>
+            <button id="minimizeLogBtn" type="button" class="im-btn im-btn--sm" title="Hide log panel" aria-label="Hide log panel">
+                <svg id="minimizeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </button>
         </div>
     </div>
     <div id="logViewer" class="log-viewer" style="display: none;">
@@ -196,18 +198,601 @@
             </div>
         </div>
     </div>
-</div>
+</aside>
 
-<!-- Floating Toggle Button (visible when panel is minimized) -->
-<button id="floatingLogToggle" class="floating-log-toggle" title="Show Activity Log" style="display: flex;">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 22px; height: 22px;">
+<!-- Floating toggle button (visible when the drawer is hidden) -->
+<button id="floatingLogToggle" type="button" class="floating-log-toggle" title="Show Activity Log" aria-controls="activityLogPanel" style="display: flex;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
-    <span style="font-size: 10px; display: block; margin-top: 4px; font-weight: 600;">Logs</span>
-    <span id="floatingStatusDot" class="floating-status-dot">●</span>
+    <span>Logs</span>
+    <span id="floatingStatusDot" class="floating-status-dot" aria-hidden="true">●</span>
 </button>
 <script>document.body.classList.add('log-minimized');</script>
 
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+<style>
+/* Jobs by status: six counts, then the connection check */
+.im-health {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.im-health__metrics {
+    display: grid;
+    flex: 1 1 640px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px 0;
+    margin: 0;
+    padding: 22px 0;
+}
+
+/* The count reads before its label, as in the design; dt stays first for screen readers */
+.im-health__metrics > div {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    padding: 0 12px 0 24px;
+}
+
+.im-health__metrics dt {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.im-health__metrics dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-900);
+}
+
+.im-health__connection {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 18px 0;
+    padding: 4px 24px;
+    border-left: 1px solid var(--color-gray-200);
+}
+
+.im-health__connection p {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+/* Table toolbar */
+.im-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.im-search {
+    position: relative;
+    display: flex;
+    flex: 0 1 420px;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 40px;
+    padding: 0 36px 0 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.im-search:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.im-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.im-search input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.im-search input:focus {
+    outline: none;
+}
+
+#clear-search-btn {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--color-gray-500);
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+#clear-search-btn:hover {
+    background: var(--color-gray-50);
+    color: var(--color-gray-900);
+}
+
+/* Caption above the column heads */
+.im-caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 0 20px 12px;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.im-caption__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-gray-900);
+}
+
+.im-caption__count strong {
+    font-weight: 600;
+}
+
+.im-caption__sort {
+    flex: 1 1 auto;
+}
+
+.im-caption__found {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.im-caption__help {
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+/* Jobs table */
+.im-queue {
+    overflow: hidden;
+}
+
+.im-jobs__table {
+    min-width: 1080px;
+}
+
+.im-jobs__table td {
+    height: 68px;
+}
+
+.im-jobs__mechanism {
+    min-width: 240px;
+}
+
+.im-jobs__mechanism .job-name {
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.im-jobs__connection small {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.im-jobs__state {
+    min-width: 170px;
+}
+
+.im-progress {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 128px;
+    margin-top: 6px;
+}
+
+.im-progress__track {
+    flex: 1;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--color-gray-200);
+    overflow: hidden;
+}
+
+.im-progress__value {
+    display: block;
+    max-width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--color-primary);
+}
+
+.im-progress__pct {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-gray-600);
+}
+
+.im-jobs__table .is-number {
+    font-size: 14px;
+}
+
+/* Live counts flash when the stats poll changes them */
+.im-jobs .job-stat {
+    transition: background-color 0.3s ease;
+}
+
+.im-jobs .stat-updated {
+    background-color: var(--color-success-bg) !important;
+}
+
+.im-jobs tr[data-status="running"] .job-stat {
+    font-weight: 600;
+}
+
+.im-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.im-menu {
+    min-width: 190px;
+    padding: 6px;
+    border-color: var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(23, 43, 67, 0.12);
+    font-size: 13px;
+}
+
+.im-menu .dropdown-item {
+    border-radius: 4px;
+    padding: 7px 10px;
+    color: var(--color-gray-900);
+}
+
+.im-menu .dropdown-item:hover,
+.im-menu .dropdown-item:focus {
+    background: var(--color-gray-50);
+    color: var(--color-primary);
+}
+
+.im-menu .dropdown-item-text {
+    padding: 7px 10px;
+    font-size: 12px;
+}
+
+/* Activity log drawer; replaces the dashboard.css panel, which pushed the whole body aside */
+.im-jobs .activity-log-fixed {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-fixed);
+    display: flex;
+    flex-direction: column;
+    width: min(450px, 100vw);
+    border-left: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+    box-shadow: -12px 0 32px rgba(23, 43, 67, 0.14);
+    transition: transform var(--transition-slow), visibility var(--transition-slow);
+}
+
+.im-jobs .activity-log-fixed.minimized {
+    visibility: hidden;
+    transform: translateX(100%);
+}
+
+.im-jobs .activity-log-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 16px 16px 20px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.im-drawer__title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--color-primary);
+}
+
+.im-drawer__title h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.im-drawer__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.im-drawer__actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.im-jobs .log-status-indicator {
+    font-size: 11px;
+    color: var(--color-gray-400);
+    animation: im-pulse 2s ease-in-out infinite;
+}
+
+.im-jobs .activity-log-fixed .log-viewer {
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--color-gray-50);
+}
+
+.im-jobs .log-messages {
+    flex: 1;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-800);
+}
+
+.im-jobs .log-entry {
+    display: grid;
+    grid-template-columns: 62px minmax(0, auto) minmax(0, 1fr);
+    gap: 4px 8px;
+    align-items: start;
+    margin-bottom: 4px;
+    padding: 6px 8px;
+    border-left: 3px solid var(--color-gray-300);
+    border-radius: 4px;
+    background: var(--color-white);
+}
+
+.im-jobs .log-time {
+    padding-top: 1px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.im-jobs .log-message {
+    grid-column: 3;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.im-jobs .log-job-context {
+    max-width: 160px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--im-tint);
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.im-jobs .log-details-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 3px;
+    border: 0;
+    border-radius: 3px;
+    background: none;
+    vertical-align: middle;
+    color: var(--color-gray-500);
+    cursor: pointer;
+}
+
+.im-jobs .log-details-toggle:hover {
+    background: var(--color-gray-50);
+    color: var(--color-gray-900);
+}
+
+.im-jobs .log-details-toggle svg {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition-fast);
+}
+
+.im-jobs .log-details-toggle.expanded svg {
+    transform: rotate(180deg);
+}
+
+.im-jobs .log-details-content {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 11px;
+}
+
+.im-jobs .log-details-list {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 3px 12px;
+    margin: 0;
+}
+
+.im-jobs .log-details-list dt {
+    font-weight: 600;
+    color: var(--color-gray-600);
+}
+
+.im-jobs .log-details-list dd {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.im-jobs .log-success {
+    border-left-color: var(--color-success);
+}
+
+.im-jobs .log-success .log-message {
+    color: var(--im-ok);
+}
+
+.im-jobs .log-warning {
+    border-left-color: var(--color-warning);
+    background: var(--color-warning-bg);
+}
+
+.im-jobs .log-warning .log-message {
+    color: var(--im-wait);
+}
+
+.im-jobs .log-error {
+    border-left-color: var(--color-error);
+    background: var(--color-error-bg);
+}
+
+.im-jobs .log-error .log-message {
+    font-weight: 500;
+    color: var(--im-bad);
+}
+
+.im-jobs .log-info {
+    border-left-color: var(--color-primary);
+}
+
+.im-jobs .log-debug {
+    opacity: 0.75;
+}
+
+.im-jobs .log-debug .log-message {
+    font-style: italic;
+    color: var(--color-gray-500);
+}
+
+/* Floating button that opens the drawer */
+.im-jobs .floating-log-toggle {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: var(--z-sticky);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 6px 18px rgba(206, 72, 1, 0.3);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-white);
+    cursor: pointer;
+}
+
+.im-jobs .floating-log-toggle:hover {
+    background: var(--color-primary-dark);
+}
+
+.im-jobs .floating-status-dot {
+    position: absolute;
+    top: 9px;
+    right: 11px;
+    font-size: 9px;
+    animation: im-pulse 2s ease-in-out infinite;
+}
+
+@media (max-width: 1199.98px) {
+    .im-health__metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .im-health__connection {
+        flex: 1 1 100%;
+        margin: 0;
+        padding: 14px 24px;
+        border-top: 1px solid var(--color-gray-200);
+        border-left: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .im-health__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 16px 0;
+    }
+
+    .im-health__metrics > div {
+        padding: 0 8px 0 14px;
+    }
+
+    .im-health__metrics dd {
+        font-size: 24px;
+    }
+
+    .im-health__connection {
+        padding: 12px 14px;
+    }
+
+    .im-toolbar {
+        padding: 14px;
+    }
+
+    .im-search {
+        flex-basis: 100%;
+    }
+
+    .im-caption {
+        padding: 0 14px 12px;
+    }
+
+    .im-jobs .floating-log-toggle {
+        right: 14px;
+        bottom: 14px;
+        width: 52px;
+        height: 52px;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -216,21 +801,21 @@
     if (typeof Dashboard !== 'undefined' && Dashboard.autoRefresh) {
         Dashboard.autoRefresh.start();
     }
-    
+
     // Update progress for running jobs using the API
     const runningJobs = {{ running_job_ids|safe }};
     const STATS_REFRESH_INTERVAL = 15000; // 15 seconds
-    
+
     // Function to update job stats from API
     async function refreshJobStats() {
         if (runningJobs.length === 0) return;
-        
+
         try {
             const response = await fetch(`{% url 'importer_dashboard:jobs_stats_api' %}?job_ids=${runningJobs.join(',')}`);
             if (!response.ok) return;
-            
+
             const data = await response.json();
-            
+
             // Update each job's stats in the table
             for (const [jobId, stats] of Object.entries(data.jobs)) {
                 // Update processed column
@@ -243,7 +828,7 @@
                         setTimeout(() => processedCell.classList.remove('stat-updated'), 1000);
                     }
                 }
-                
+
                 // Update identified column
                 const identifiedCell = document.querySelector(`td.job-stat[data-job-id="${jobId}"][data-stat="identified"]`);
                 if (identifiedCell) {
@@ -254,7 +839,7 @@
                         setTimeout(() => identifiedCell.classList.remove('stat-updated'), 1000);
                     }
                 }
-                
+
                 // Update total column
                 const totalCell = document.querySelector(`td.job-stat[data-job-id="${jobId}"][data-stat="total"]`);
                 if (totalCell) {
@@ -265,12 +850,20 @@
                         setTimeout(() => totalCell.classList.remove('stat-updated'), 1000);
                     }
                 }
+
+                // Keep the progress bar in step: identified of total, as ClusterJob.progress_percentage
+                const progress = document.querySelector(`[data-progress-job="${jobId}"]`);
+                if (progress && stats.total > 0) {
+                    const percent = Math.floor((stats.identified || 0) / stats.total * 100);
+                    progress.querySelector('.im-progress__value').style.width = percent + '%';
+                    progress.querySelector('.im-progress__pct').textContent = percent + '%';
+                }
             }
         } catch (error) {
             console.warn('Failed to refresh job stats:', error);
         }
     }
-    
+
     // Start auto-refresh for running jobs
     if (runningJobs.length > 0) {
         console.log(`Auto-refresh enabled for ${runningJobs.length} running jobs`);
@@ -279,7 +872,7 @@
         // Then every 15 seconds
         setInterval(refreshJobStats, STATS_REFRESH_INTERVAL);
     }
-    
+
     // Real-time logging - IIFE to avoid pollution but expose needed functions
     (function() {
         // Local state
@@ -290,13 +883,13 @@
         let pollTimer = null;
         let lastTimestamp = null;
         const logsUrl = '{% url "importer_dashboard:get_logs" %}';
-    
+
         // Toggle pause function
         function toggleLogPause() {
             logPaused = !logPaused;
             const pauseIcon = document.getElementById('pauseIcon');
             const pauseText = document.getElementById('pauseText');
-            
+
             if (pauseIcon && pauseText) {
                 if (logPaused) {
                     // Change to play icon
@@ -311,15 +904,15 @@
                 }
             }
         }
-        
+
         // Expose to window for button click
         window.toggleLogPause = toggleLogPause;
-    
+
         function formatTime(timestamp) {
             const date = new Date(timestamp);
             return date.toLocaleTimeString('en-US', { hour12: false });
         }
-        
+
         function getLevelClass(level) {
             const levelMap = {
                 'INFO': 'log-info',
@@ -330,30 +923,30 @@
             };
             return levelMap[level] || 'log-info';
         }
-        
+
         function addLogEntry(entry) {
             if (logPaused) return;
-        
+
             const logMessages = document.getElementById('logMessages');
             if (!logMessages) {
                 console.warn('logMessages element not found');
                 return;
             }
-            
+
             const logEntry = document.createElement('div');
             logEntry.className = `log-entry ${getLevelClass(entry.level)}`;
-            
+
             const timeSpan = document.createElement('span');
             timeSpan.className = 'log-time';
             timeSpan.textContent = formatTime(entry.timestamp);
-            
+
             const messageSpan = document.createElement('span');
             messageSpan.className = 'log-message';
             messageSpan.textContent = entry.message;
-            
+
             logEntry.appendChild(timeSpan);
             logEntry.appendChild(messageSpan);
-            
+
             // Add job context if available
             if (entry.job_name) {
                 const jobContext = document.createElement('span');
@@ -361,57 +954,57 @@
                 jobContext.textContent = `[${entry.job_name}]`;
                 logEntry.insertBefore(jobContext, messageSpan);
             }
-            
+
             // Add expandable details section if details are available
             if (entry.details && Object.keys(entry.details).length > 0) {
                 const detailsToggle = document.createElement('button');
                 detailsToggle.className = 'log-details-toggle';
                 detailsToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
                 detailsToggle.title = 'Show details';
-                
+
                 const detailsContent = document.createElement('div');
                 detailsContent.className = 'log-details-content';
                 detailsContent.style.display = 'none';
-                
+
                 // Format details as a nice key-value list
                 const detailsList = document.createElement('dl');
                 detailsList.className = 'log-details-list';
-                
+
                 for (const [key, value] of Object.entries(entry.details)) {
                     const dt = document.createElement('dt');
                     dt.textContent = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    
+
                     const dd = document.createElement('dd');
                     dd.textContent = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
-                    
+
                     detailsList.appendChild(dt);
                     detailsList.appendChild(dd);
                 }
-                
+
                 detailsContent.appendChild(detailsList);
-                
+
                 detailsToggle.onclick = function(e) {
                     e.stopPropagation();
                     const isVisible = detailsContent.style.display !== 'none';
                     detailsContent.style.display = isVisible ? 'none' : 'block';
                     detailsToggle.classList.toggle('expanded', !isVisible);
                 };
-                
+
                 messageSpan.appendChild(detailsToggle);
                 logEntry.appendChild(detailsContent);
             }
-            
+
             logMessages.appendChild(logEntry);
-            
+
             // Limit number of log entries
             while (logMessages.children.length > maxLogEntries) {
                 logMessages.removeChild(logMessages.firstChild);
             }
-            
+
             // Auto-scroll to bottom
             logMessages.scrollTop = logMessages.scrollHeight;
         }
-        
+
         function pollLogs() {
             let url = logsUrl + '?count=' + (lastTimestamp ? 100 : 20);
             if (lastTimestamp) {
@@ -448,7 +1041,7 @@
         // Initialize on DOM ready
         function init() {
             console.log('Initializing log stream connection...');
-            
+
             // Attach pause button listener
             const pauseBtn = document.getElementById('pauseLogBtn');
             if (pauseBtn) {
@@ -457,18 +1050,18 @@
             } else {
                 console.warn('Pause button not found');
             }
-            
+
             // Start fetching log messages
             startLogPolling();
         }
-        
+
         // Minimize/Maximize log viewer
         function toggleMinimize() {
             const panel = document.getElementById('activityLogPanel');
             const viewer = document.getElementById('logViewer');
             const icon = document.getElementById('minimizeIcon');
             const floatingBtn = document.getElementById('floatingLogToggle');
-            
+
             if (panel.classList.contains('minimized')) {
                 // Show panel
                 panel.classList.remove('minimized');
@@ -487,12 +1080,12 @@
                 if (floatingBtn) floatingBtn.style.display = 'flex';
             }
         }
-        
+
         // Update connection status indicator
         function updateStatusIndicator(status) {
             const indicator = document.getElementById('logStatusIndicator');
             const floatingDot = document.getElementById('floatingStatusDot');
-            
+
             let color, title;
             if (status === 'connected') {
                 color = '#10b981';
@@ -504,25 +1097,25 @@
                 color = '#ef4444';
                 title = 'Disconnected';
             }
-            
+
             if (indicator) {
                 indicator.style.color = color;
                 indicator.title = title;
             }
-            
+
             if (floatingDot) {
                 floatingDot.style.color = color;
                 floatingDot.title = title;
             }
         }
-        
+
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
         } else {
             init();
         }
-        
+
         // Attach minimize button listeners
         document.addEventListener('DOMContentLoaded', function() {
             const minimizeBtn = document.getElementById('minimizeLogBtn');
@@ -530,23 +1123,23 @@
                 minimizeBtn.addEventListener('click', toggleMinimize);
                 console.log('Minimize button listener attached');
             }
-            
+
             const floatingBtn = document.getElementById('floatingLogToggle');
             if (floatingBtn) {
                 floatingBtn.addEventListener('click', toggleMinimize);
                 console.log('Floating toggle button listener attached');
             }
         });
-        
+
         // Cleanup on page unload
         window.addEventListener('beforeunload', function() {
             if (pollTimer) {
                 clearInterval(pollTimer);
             }
         });
-        
+
     })(); // End IIFE
-    
+
     // ============================================
     // Async Job Search
     // ============================================
@@ -555,15 +1148,15 @@
         const clearBtn = document.getElementById('clear-search-btn');
         const resultsInfo = document.getElementById('search-results-info');
         const jobsTable = document.querySelector('.table-container table');
-        
+
         if (!searchInput || !jobsTable) return;
-        
+
         const tbody = jobsTable.querySelector('tbody');
         if (!tbody) return;
-        
+
         const allRows = Array.from(tbody.querySelectorAll('tr'));
         const totalJobs = allRows.length;
-        
+
         // Debounce function
         function debounce(func, wait) {
             let timeout;
@@ -572,31 +1165,22 @@
                 timeout = setTimeout(() => func.apply(this, args), wait);
             };
         }
-        
+
         // Filter rows based on search query
         function filterJobs(query) {
             query = query.toLowerCase().trim();
             let visibleCount = 0;
-            
+
             allRows.forEach(row => {
                 if (!query) {
                     row.style.display = '';
                     visibleCount++;
                     return;
                 }
-                
-                // Get searchable text from relevant columns
-                const cells = row.querySelectorAll('td');
-                const jobName = cells[0]?.textContent?.toLowerCase() || '';
-                const port = cells[1]?.textContent?.toLowerCase() || '';
-                const slurmId = cells[2]?.textContent?.toLowerCase() || '';
-                const host = cells[4]?.textContent?.toLowerCase() || '';
-                
-                const matches = jobName.includes(query) || 
-                               port.includes(query) || 
-                               slurmId.includes(query) || 
-                               host.includes(query);
-                
+
+                // Name, port, SLURM ID and host, written on the row by the template
+                const matches = (row.dataset.search || '').toLowerCase().includes(query);
+
                 if (matches) {
                     row.style.display = '';
                     visibleCount++;
@@ -604,7 +1188,7 @@
                     row.style.display = 'none';
                 }
             });
-            
+
             // Update results info
             if (query) {
                 resultsInfo.textContent = `Found ${visibleCount} job${visibleCount !== 1 ? 's' : ''} matching "${query}"`;
@@ -615,19 +1199,19 @@
                 clearBtn.style.display = 'none';
             }
         }
-        
+
         // Attach event listeners
         searchInput.addEventListener('input', debounce(function(e) {
             filterJobs(e.target.value);
         }, 150));
-        
+
         // Clear button
         clearBtn.addEventListener('click', function() {
             searchInput.value = '';
             filterJobs('');
             searchInput.focus();
         });
-        
+
         // Support Escape key to clear
         searchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {

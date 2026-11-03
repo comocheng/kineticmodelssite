@@ -1,105 +1,191 @@
 {% extends "base.html" %}
 {% load static %}
+{% load utils %}
+{# The author list, in the look of the Figma source search (node 150:2528) #}
+
+{% block title %}Authors | Prometheus{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item active">Authors</li>
+<div class="src-ui author-list">
+    <nav class="src-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li aria-current="page">Authors</li>
         </ol>
     </nav>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-            <i class="bi bi-people me-2"></i>
-            Authors
-            <span class="badge bg-secondary ms-2">{{ total_authors }}</span>
-        </h4>
-        <a href="{% url 'author-create' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>
-            Add Author
-        </a>
-    </div>
+    <header class="src-heading">
+        <div class="src-heading__copy">
+            <h1>Authors</h1>
+            <p>The people credited on the source publications, with the number of publications for each.</p>
+        </div>
+        <a class="app-btn" href="{% url 'author-create' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="16" height="16">Add Author</a>
+    </header>
 
-    <div class="card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm mb-0">
-                    <thead class="table-light">
+    <section class="author-list__results" aria-labelledby="author-list-count">
+        <div class="author-list__summary">
+            <h2 id="author-list-count" class="author-list__count">{{ total_authors|pluralize:"author" }}</h2>
+            {% if page_obj %}<span class="author-list__meta">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} · sorted by last name</span>{% endif %}
+        </div>
+
+        <div class="app-panel author-list__table">
+            <div class="author-list__scroll">
+                <table class="app-table">
+                    <thead>
                         <tr>
-                            <th style="width: 60px;">ID</th>
-                            <th>Last Name</th>
-                            <th>First Name</th>
-                            <th style="width: 120px;">Publications</th>
-                            <th style="width: 100px;">Actions</th>
+                            <th scope="col" class="author-list__id">ID</th>
+                            <th scope="col">Last name</th>
+                            <th scope="col">First name</th>
+                            <th scope="col" class="is-end author-list__pubs">Publications</th>
+                            <th scope="col" class="is-end author-list__actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for author in author_list %}
                         <tr>
-                            <td class="text-muted">{{ author.author_id }}</td>
-                            <td><strong>{{ author.lastname }}</strong></td>
+                            <td class="author-list__id">{{ author.author_id }}</td>
+                            <td class="author-list__last">{{ author.lastname }}</td>
                             <td>{{ author.firstname }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ author.publication_count }}</span>
-                            </td>
-                            <td>
-                                <a href="{% url 'author-update' author.author_id %}" 
-                                   class="btn btn-outline-primary btn-sm" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <a href="{% url 'author-delete' author.author_id %}" 
-                                   class="btn btn-outline-danger btn-sm" title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                            <td class="is-number author-list__pubs">{{ author.publication_count }}</td>
+                            <td class="is-end author-list__actions">
+                                <a class="author-list__action" href="{% url 'author-update' author.author_id %}"><img class="app-icon" src="{% static 'database/images/icons/pencil-192f4d-18.svg' %}" alt="" width="15" height="15">Edit</a>
+                                <a class="author-list__action author-list__action--danger" href="{% url 'author-delete' author.author_id %}">Delete</a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
-                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No authors found.
-                                <a href="{% url 'author-create' %}">Add the first author</a>.
-                            </td>
+                            <td colspan="5" class="author-list__empty">No authors found. <a href="{% url 'author-create' %}">Add the first author</a>.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <nav aria-label="Page navigation" class="mt-3">
-        <ul class="pagination pagination-sm justify-content-center">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                    <i class="bi bi-chevron-left"></i>
-                </a>
-            </li>
-            {% endif %}
-            
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                    <i class="bi bi-chevron-right"></i>
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
+        {% if is_paginated %}
+        <div class="author-list__pagination">
+            <span class="author-list__meta">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% include "database/sources_pager.html" with page=page_obj %}
+        </div>
+        {% endif %}
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/sources_styles.html" %}
+<style>
+.author-list__results {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.author-list__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.author-list .author-list__count {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.author-list__meta {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.author-list__table {
+    overflow: hidden;
+}
+
+.author-list__scroll {
+    overflow-x: auto;
+}
+
+.author-list .app-table {
+    min-width: 600px;
+}
+
+.author-list .app-table th {
+    border-top: 0;
+}
+
+.author-list .app-table td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.author-list .app-table tbody tr:hover {
+    background: var(--color-gray-50);
+}
+
+.author-list__id {
+    width: 90px;
+}
+
+td.author-list__id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-400);
+}
+
+.author-list .author-list__last {
+    font-weight: 600;
+}
+
+.author-list__pubs {
+    width: 140px;
+}
+
+.author-list .app-table td.author-list__pubs {
+    font-size: 14px;
+}
+
+.author-list__actions {
+    width: 170px;
+    white-space: nowrap;
+}
+
+.author-list__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.author-list__action + .author-list__action {
+    margin-left: 16px;
+}
+
+.author-list__action--danger {
+    color: var(--color-error);
+}
+
+.author-list__action--danger:hover {
+    color: var(--color-error);
+}
+
+.author-list .app-table td.author-list__empty {
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+.author-list__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+</style>
 {% endblock %}

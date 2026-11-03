@@ -1,129 +1,190 @@
 {% extends "base.html" %}
-
-{% load crispy_forms_tags %}
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# The kinetic model catalogue, from the Figma "Prometheus · Kinetic models" (node 161:6128) #}
+
+{% block title %}Kinetic models | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Page Header -->
-<div class="page-header-compact">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="h4 mb-0">Kinetic Models</h1>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} models</span>
+<div class="km-page km-list">
+
+    <!-- Page heading (Figma 161:6168) -->
+    <header class="km-list__heading">
+        <nav aria-label="Breadcrumb">
+            <ol class="km-crumbs">
+                <li><a href="{% url 'database-home' %}">Database</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page">Models</li>
+            </ol>
+        </nav>
+        <div class="km-heading">
+            <div class="km-heading__intro">
+                <div class="km-heading__title">
+                    <h1>Kinetic models</h1>
+                    <span class="km-pill km-pill--count">{{ page_obj.paginator.count|default:0 }}<span class="visually-hidden"> models</span></span>
+                </div>
+                <p class="km-lede">Browse kinetic mechanisms, species, rate data and their original sources.</p>
+            </div>
             {% if site_access_allowed %}
-            <a href="{% url 'kinetic-model-create' %}" class="btn btn-sm btn-success">
-                <i class="bi bi-plus-lg me-1"></i>Add Model
-            </a>
+            <a class="app-btn" href="{% url 'kinetic-model-create' %}">＋ Add model</a>
             {% endif %}
         </div>
-    </div>
-</div>
+    </header>
 
-<!-- Results Table -->
-<div class="table-container">
-    <table class="table table-hover table-sm mb-0">
-        <thead>
-            <tr>
-                <th style="width: 60px;">ID</th>
-                <th>Model Name</th>
-                <th class="text-center" style="width: 100px;">Species</th>
-                <th class="text-center" style="width: 100px;">Kinetics</th>
-                <th style="width: 200px;">Source</th>
-                <th style="width: 40px;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for model in object_list %}
-            <tr class="clickable-row" data-href="{% url 'kinetic-model-detail' model.pk %}">
-                <td class="text-muted small">{{ model.pk }}</td>
-                <td><strong>{{ model.model_name }}</strong></td>
-                <td class="text-center text-muted">{{ model.species.count|default:"—" }}</td>
-                <td class="text-center text-muted">{{ model.kinetics.count|default:"—" }}</td>
-                <td class="text-muted small">
-                    {% if model.source %}
-                    <a href="{% url 'source-detail' model.source.pk %}">{{ model.source.source_title|truncatewords:6 }}</a>
-                    {% else %}—{% endif %}
-                </td>
-                <td class="text-end"><i class="bi bi-chevron-right text-muted"></i></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="text-center text-muted py-4">
-                    <i class="bi bi-box me-1"></i>No kinetic models found.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <!-- Models catalogue (Figma 161:6179) -->
+    <section class="app-panel km-list__catalogue" aria-labelledby="km-list-summary">
+        <div class="km-list__toolbar">
+            <p class="km-list__summary" id="km-list-summary">
+                {% if page_obj.paginator.count %}
+                Showing <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> of {{ page_obj.paginator.count }} models
+                {% else %}
+                No models yet
+                {% endif %}
+            </p>
+            <div class="km-list__tools">
+                <a class="app-link" href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a>
+                <a class="app-link" href="{% url 'kinetic-model-compare' %}">Compare two models</a>
+                <a class="app-link" href="{% url 'sub-mechanism-list' %}">Sub-mechanisms</a>
+            </div>
+        </div>
 
-<!-- Pagination -->
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="pagination-compact">
-    {% render_pagination objects=page_obj page_name="page" %}
+        <div class="km-table-wrap">
+            <table class="km-table km-list__table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="km-list__id" aria-sort="ascending">ID ↑</th>
+                        <th scope="col">Model name</th>
+                        <th scope="col" class="is-end">Species</th>
+                        <th scope="col" class="is-end">Kinetics</th>
+                        <th scope="col" class="km-list__source">Source</th>
+                        <th scope="col" class="km-list__open"><span class="visually-hidden">Open</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model in object_list %}
+                    <tr class="clickable-row" data-href="{% url 'kinetic-model-detail' model.pk %}">
+                        <td class="is-mono is-muted">{{ model.pk }}</td>
+                        <td class="km-list__name"><a href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a></td>
+                        <td class="is-number">{{ model.species.count|default:"—" }}</td>
+                        <td class="is-number">{{ model.kinetics.count|default:"—" }}</td>
+                        <td class="km-list__source">
+                            {% if model.source %}
+                            <a class="km-list__ellipsis" href="{% url 'source-detail' model.source.pk %}" title="{{ model.source.source_title|striptags }}">{% if model.source.source_title %}{{ model.source.source_title|titlecase }}{% else %}Untitled source{% endif %}</a>
+                            {% else %}<span class="is-muted">—</span>{% endif %}
+                        </td>
+                        <td class="km-list__open"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16"></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="km-empty">No kinetic models found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include "database/kineticmodel_pager.html" with page=page_obj param="page" label="Model pages" %}
+    </section>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
 <style>
-.page-header-compact {
-    padding: 1rem 0;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.km-list__heading {
+    display: grid;
+    gap: 12px;
 }
 
-.table-container {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+.km-list__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding: 18px 20px;
 }
 
-.table th {
-    background: var(--color-gray-50);
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.km-list__summary {
+    margin: 0;
+    font-size: 12px;
     color: var(--color-gray-600);
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
 }
 
-.table td {
-    padding: 0.5rem 0.75rem;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--color-gray-100);
+.km-list__summary strong {
+    font-weight: 400;
+    color: var(--color-gray-900);
 }
 
-.table tbody tr:last-child td {
-    border-bottom: none;
+.km-list__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
 }
 
-.clickable-row {
+.km-list__table {
+    min-width: 760px;
+}
+
+.km-list__table th {
+    font-size: 11px;
+}
+
+.km-list__table td {
+    height: 42px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.km-list__id {
+    width: 64px;
+}
+
+.km-list__name {
+    font-size: 13px;
+}
+
+.km-list__name a {
+    color: var(--color-gray-900);
+}
+
+/* The source takes the remaining width and ends in an ellipsis */
+.km-list__source {
+    width: 45%;
+    max-width: 0;
+    padding-left: 18px !important;
+}
+
+.km-list__ellipsis {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.km-list__open {
+    width: 36px;
+    text-align: right;
+}
+
+.km-list .clickable-row {
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--transition-fast);
 }
 
-.clickable-row:hover {
-    background-color: var(--color-primary-bg) !important;
+.km-list .clickable-row:hover {
+    background-color: var(--color-gray-50);
 }
 
-.pagination-compact {
-    padding: 0.75rem;
-    border-top: 1px solid var(--color-gray-200);
-    background: var(--color-gray-50);
+.km-list .clickable-row:hover .km-list__name a {
+    color: var(--color-primary);
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.querySelectorAll('.clickable-row').forEach(row => {
+document.querySelectorAll('.km-list .clickable-row').forEach(row => {
     row.addEventListener('click', function(event) {
         if (event.target.closest('a')) return;  // a link inside the row goes to its own page
         window.location.href = this.dataset.href;

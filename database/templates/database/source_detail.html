@@ -1,187 +1,537 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# Publication details, from the Figma "Prometheus · Publication details" (node 140:2236) #}
+
+{% block title %}{{ source.source_title|striptags|truncatewords:8|default:"Publication details" }} | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Header -->
-<div class="detail-header">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'source-search' %}">Sources</a></li>
-            <li class="breadcrumb-item active">{{ source.source_title|truncatewords:5 }}</li>
+<div class="src-ui src-detail">
+    <nav class="src-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'source-search' %}">Sources</a></li>
+            <li aria-current="page">Publication {{ source.pk }}</li>
         </ol>
     </nav>
-</div>
 
-<!-- Source Citation -->
-<div class="data-section mb-3">
-    <div class="section-body">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="badge bg-primary-subtle text-primary small">Publication</span>
-            <div class="d-flex align-items-center gap-2">
-                <span class="small text-muted">ID: {{ source.pk }}</span>
-                {% if site_access_allowed %}
-                <a href="{% url 'source-update' source.pk %}" class="btn btn-outline-primary btn-sm" title="Edit">
-                    <i class="bi bi-pencil"></i>
-                </a>
-                {% endif %}
-            </div>
+    <header class="src-heading">
+        <div class="src-heading__copy">
+            <h1>Publication details</h1>
+            <p>Bibliographic information and kinetic models associated with this source.</p>
         </div>
-        <h1 class="h5 mb-2">{{ source.source_title|titlecase }}</h1>
-        {% if source.author_line %}<p class="text-muted mb-1 small">{{ source.author_line }}</p>{% endif %}
-        {% if source.pub_info %}<p class="text-muted mb-2 small"><i class="bi bi-book me-1"></i>{{ source.pub_info }}</p>{% endif %}
-        <div class="d-flex gap-2 mt-3">
-            {% if source.doi %}
-            <a href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
-                <i class="bi bi-link-45deg me-1"></i>DOI
-            </a>
+        {% if site_access_allowed %}
+        <a class="app-btn-secondary src-btn--accent src-btn--tall" href="{% url 'source-update' source.pk %}"><img class="app-icon" src="{% static 'database/images/icons/pencil-192f4d-18.svg' %}" alt="" width="18" height="18">Edit source</a>
+        {% endif %}
+    </header>
+
+    <!-- Publication identity (Figma 140:2278) -->
+    <section class="app-panel src-detail__identity" aria-labelledby="src-detail-title">
+        <div class="src-detail__type">
+            <span class="src-detail__type-label"><img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="22" height="22"><span class="src-pill">Publication</span></span>
+            <span class="src-detail__id">Source ID: {{ source.pk }}</span>
+        </div>
+        <h2 id="src-detail-title" class="src-detail__title">{% if source.source_title %}{{ source.source_title|titlecase }}{% else %}Untitled source{% endif %}</h2>
+        {% if source.author_line %}
+        <div class="src-detail__authors">
+            <h3 class="src-detail__label">Authors</h3>
+            <p>{{ source.author_line }}</p>
+        </div>
+        {% endif %}
+        {% if source.journal_name or source.publication_year or source.journal_volume_number or source.page_numbers %}
+        <p class="src-detail__journal">
+            {% if source.journal_name %}<strong>{{ source.journal_name }}</strong>{% endif %}
+            {% if source.publication_year or source.journal_volume_number or source.page_numbers %}
+            {% if source.journal_name %}<span aria-hidden="true">·</span>{% endif %}
+            <span>{% if source.publication_year %}{{ source.publication_year }}{% endif %}{% if source.journal_volume_number %}{% if source.publication_year %} · {% endif %}Volume {{ source.journal_volume_number }}{% endif %}{% if source.page_numbers %}{% if source.publication_year or source.journal_volume_number %} · {% endif %}Pages {{ source.page_numbers }}{% endif %}</span>
             {% endif %}
-            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#citationPanel">
-                <i class="bi bi-quote me-1"></i>Cite
-            </button>
+        </p>
+        {% endif %}
+        <div class="src-detail__actions">
+            {% if source.doi %}
+            <a class="app-btn src-btn--tall" href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener">Open DOI</a>
+            {% endif %}
+            <button class="app-btn-secondary src-btn--accent src-btn--tall copy-btn" type="button" data-copy="src-citation"><img class="app-icon" src="{% static 'database/images/icons/duplicate-111827.svg' %}" alt="" width="17" height="17"><span>Copy citation</span></button>
+            {% if source.doi %}
+            <a class="src-detail__doi-text" href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener">{{ source.doi }}</a>
+            {% endif %}
         </div>
-        
-        <!-- Collapsible Citation -->
-        <div class="collapse mt-3" id="citationPanel">
-            <div class="p-2 bg-light rounded small">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <strong>BibTeX</strong>
-                    <button class="btn btn-sm btn-link p-0 copy-btn" data-copy="bibtex"><i class="bi bi-clipboard"></i></button>
-                </div>
-                <pre class="mb-0 small" id="bibtex">@article{source{{ source.pk }},
-  title = {% templatetag openbrace %}{{ source.source_title }}{% templatetag closebrace %},
-  author = {% templatetag openbrace %}{{ source.author_line|default:"Unknown" }}{% templatetag closebrace %},
-  journal = {% templatetag openbrace %}{{ source.pub_info|default:"Unknown" }}{% templatetag closebrace %},
-  year = {% templatetag openbrace %}{{ source.pub_year|default:"Unknown" }}{% templatetag closebrace %}
-}</pre>
-            </div>
-        </div>
-    </div>
-</div>
+    </section>
 
-<div class="row g-3">
-    <!-- Main Content -->
-    <div class="col-lg-8">
-        <!-- Kinetic Models -->
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#modelsSection">
-                <h6 class="mb-0"><i class="bi bi-box me-2"></i>Kinetic Models ({{ kinetic_models|length }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="modelsSection">
-                <div class="section-body p-0">
-                    {% if kinetic_models %}
-                    <table class="table table-sm table-hover mb-0">
+    <div class="src-detail__columns">
+        <div class="src-detail__main">
+            <!-- Associated kinetic models (Figma 140:2302) -->
+            <section class="app-panel src-detail__models" aria-labelledby="src-models-title">
+                <div class="src-detail__section-head">
+                    <h2 id="src-models-title" class="app-panel__title"><img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="20" height="20">Kinetic models <span class="src-count">{{ kinetic_models|length }}</span></h2>
+                </div>
+                {% if kinetic_models %}
+                <div class="src-detail__scroll">
+                    <table class="app-table">
                         <thead>
                             <tr>
-                                <th>Model Name</th>
-                                <th class="text-center" style="width:80px;">Species</th>
-                                <th class="text-center" style="width:80px;">Reactions</th>
-                                <th style="width:50px;"></th>
+                                <th scope="col">Model name</th>
+                                <th scope="col" class="is-end">Species</th>
+                                <th scope="col" class="is-end">Reactions</th>
+                                <th scope="col"><span class="visually-hidden">Open</span></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for km in kinetic_models %}
                             <tr class="clickable-row" data-href="{% url 'kinetic-model-detail' km.pk %}">
-                                <td class="fw-medium">{{ km.model_name }}</td>
-                                <td class="text-center text-muted">{{ km.species.count|default:"—" }}</td>
-                                <td class="text-center text-muted">{{ km.kinetics.count|default:"—" }}</td>
-                                <td class="text-end"><i class="bi bi-chevron-right text-muted"></i></td>
+                                <td><a href="{% url 'kinetic-model-detail' km.pk %}">{{ km.model_name }}</a></td>
+                                <td class="is-number">{{ km.species.count|default:"—" }}</td>
+                                <td class="is-number">{{ km.kinetics.count|default:"—" }}</td>
+                                <td class="is-end"><img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="bi bi-box me-1"></i>No models associated with this source.
+                </div>
+                {% else %}
+                <div class="src-detail__empty">
+                    <span class="src-detail__empty-icon"><img class="app-icon" src="{% static 'database/images/icons/database-white-24.svg' %}" alt="" width="24" height="24"></span>
+                    <p class="src-detail__empty-title">No models associated with this source</p>
+                    <p class="src-detail__empty-text">This publication is in the database, but no kinetic models are linked to its source record.</p>
+                    <a class="app-btn-secondary src-btn--accent src-btn--tall" href="{% url 'kinetic-model-list' %}">Browse kinetic models</a>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Citation (Figma 140:2315) -->
+            <section class="app-panel src-panel src-detail__citation" aria-labelledby="src-cite-title">
+                <div class="src-panel__head">
+                    <h2 id="src-cite-title" class="app-panel__title">Citation</h2>
+                    <span class="src-panel__meta">Plain text</span>
+                </div>
+                <p class="src-detail__cite-text" id="src-citation">{% if source.author_line %}{{ source.author_line }}. {% endif %}{% if source.source_title %}{{ source.source_title|titlecase }}.{% endif %}{% if source.journal_name %} {{ source.journal_name }}{% endif %}{% if source.journal_volume_number %}{% if source.journal_name %},{% endif %} vol. {{ source.journal_volume_number }}{% endif %}{% if source.page_numbers %}{% if source.journal_name or source.journal_volume_number %},{% endif %} pp. {{ source.page_numbers }}{% endif %}{% if source.publication_year %}{% if source.journal_name or source.journal_volume_number or source.page_numbers %},{% endif %} {{ source.publication_year }}{% endif %}{% if source.journal_name or source.journal_volume_number or source.page_numbers or source.publication_year %}.{% endif %}{% if source.doi %} DOI: {{ source.doi }}.{% endif %}</p>
+                <button class="src-detail__copy-link copy-btn" type="button" data-copy="src-citation"><img class="app-icon" src="{% static 'database/images/icons/duplicate-111827.svg' %}" alt="" width="16" height="16"><span>Copy citation</span></button>
+
+                <details class="src-detail__bibtex">
+                    <summary>BibTeX</summary>
+                    <div class="src-detail__bibtex-body">
+                        <pre id="bibtex">@article{source{{ source.pk }},
+  title = {% templatetag openbrace %}{{ source.source_title }}{% templatetag closebrace %},
+  author = {% templatetag openbrace %}{{ source.author_line|default:"Unknown" }}{% templatetag closebrace %},
+  journal = {% templatetag openbrace %}{{ source.pub_info|default:"Unknown" }}{% templatetag closebrace %},
+  year = {% templatetag openbrace %}{{ source.publication_year|default:"Unknown" }}{% templatetag closebrace %}
+}</pre>
+                        <button class="src-detail__copy-link copy-btn" type="button" data-copy="bibtex"><img class="app-icon" src="{% static 'database/images/icons/duplicate-111827.svg' %}" alt="" width="16" height="16"><span>Copy BibTeX</span></button>
                     </div>
-                    {% endif %}
+                </details>
+            </section>
+        </div>
+
+        <!-- Bibliographic details (Figma 140:2323) -->
+        <aside class="app-panel src-detail__facts" aria-labelledby="src-facts-title">
+            <div class="src-detail__section-head">
+                <h2 id="src-facts-title" class="app-panel__title"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="20" height="20">Bibliographic details</h2>
+            </div>
+            <div class="src-detail__facts-body">
+                <div class="src-detail__fact">
+                    <span class="src-detail__fact-label">Journal</span>
+                    <span class="src-detail__fact-value">{{ source.journal_name|default:"—" }}</span>
+                </div>
+                <div class="src-detail__fact-row">
+                    <div class="src-detail__fact">
+                        <span class="src-detail__fact-label">Publication year</span>
+                        <span class="src-detail__fact-value">{{ source.publication_year|default:"—" }}</span>
+                    </div>
+                    <div class="src-detail__fact">
+                        <span class="src-detail__fact-label">Volume</span>
+                        <span class="src-detail__fact-value">{{ source.journal_volume_number|default:"—" }}</span>
+                    </div>
+                    <div class="src-detail__fact">
+                        <span class="src-detail__fact-label">Pages</span>
+                        <span class="src-detail__fact-value">{{ source.page_numbers|default:"—" }}</span>
+                    </div>
+                </div>
+                {% if source.doi %}
+                <div class="src-detail__group">
+                    <span class="src-detail__fact-label">Digital object identifier (DOI)</span>
+                    <a class="src-detail__doi" href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener"><span>{{ source.doi }}</span><img class="app-icon" src="{% static 'database/images/icons/external-link-111827.svg' %}" alt="" width="18" height="18"></a>
+                    <p class="src-detail__note">Opens the publication on the publisher’s website.</p>
+                </div>
+                {% endif %}
+                <div class="src-detail__group">
+                    <h3 class="src-detail__label">Database record</h3>
+                    <dl class="src-detail__record">
+                        <div><dt>Source ID</dt><dd>{{ source.pk }}</dd></div>
+                        {% if source.prime_id %}<div><dt>PrIMe ID</dt><dd>{{ source.prime_id }}</dd></div>{% endif %}
+                        {% if source.url %}<div><dt>URL</dt><dd><a href="{{ source.url }}" target="_blank" rel="noopener">{{ source.url }}</a></dd></div>{% endif %}
+                        {% if source.license %}<div><dt>License</dt><dd>{{ source.license }}</dd></div>{% endif %}
+                        {% if source.created_at %}<div><dt>Created</dt><dd>{{ source.created_at|date:"Y-m-d" }}</dd></div>{% endif %}
+                        {% if source.updated_at %}<div><dt>Updated</dt><dd>{{ source.updated_at|date:"Y-m-d" }}</dd></div>{% endif %}
+                    </dl>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Source Details -->
-        <div class="data-section">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Details</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    {% for name, val in source|fields %}
-                    {% if val %}
-                    <tr>
-                        <td class="text-muted small">{{ name }}</td>
-                        <td class="text-end">{{ val }}</td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </table>
-            </div>
-        </div>
+        </aside>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/sources_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.src-detail .app-panel {
+    border-radius: 12px;
 }
 
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    margin-bottom: 0.75rem;
+/* Publication identity */
+.src-detail__identity {
+    display: grid;
+    gap: 20px;
+    padding: 28px;
+}
+
+.src-detail__type {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.src-detail__type-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.src-detail__id {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.src-detail .src-detail__title {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.src-detail__authors {
+    display: grid;
+    gap: 8px;
+}
+
+.src-detail__authors p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-gray-900);
+}
+
+.src-detail .src-detail__label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.src-detail__journal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-gray-500);
+}
+
+.src-detail__journal strong {
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.src-detail__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.src-detail__doi-text {
+    font-size: 13px;
+    color: var(--color-primary);
+    overflow-wrap: anywhere;
+}
+
+/* Two columns: models and citation, then the bibliographic details */
+.src-detail__columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 440px;
+    gap: 24px;
+    align-items: start;
+}
+
+.src-detail__main {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.src-detail__models {
     overflow: hidden;
 }
 
-.section-header {
+.src-detail__section-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
+    min-height: 60px;
+    padding: 0 24px;
     border-bottom: 1px solid var(--color-gray-200);
+}
+
+.src-detail__scroll {
+    overflow-x: auto;
+}
+
+.src-detail .app-table th {
+    border-top: 0;
+}
+
+.src-detail .clickable-row {
     cursor: pointer;
 }
 
-.section-header h6 { font-size: 0.8rem; font-weight: 600; }
-.section-body { padding: 0.75rem; }
+.src-detail .clickable-row:hover {
+    background: var(--color-gray-50);
+}
 
-.table td, .table th { padding: 0.4rem 0.75rem; vertical-align: middle; }
-.clickable-row { cursor: pointer; }
-.clickable-row:hover { background-color: var(--color-primary-bg) !important; }
+.src-detail__empty {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 28px 40px;
+    text-align: center;
+}
 
-.bg-primary-subtle { background-color: #cfe2ff; }
+.src-detail__empty-icon {
+    display: inline-flex;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--color-primary);
+}
+
+.src-detail__empty-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.src-detail__empty-text {
+    max-width: 550px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+/* Citation */
+.src-detail__citation {
+    gap: 14px;
+}
+
+.src-detail__cite-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.src-detail__copy-link {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.src-detail__copy-link:hover {
+    color: var(--color-primary-dark);
+}
+
+.src-detail__bibtex {
+    border-top: 1px solid var(--color-gray-200);
+    padding-top: 14px;
+}
+
+.src-detail__bibtex summary {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    cursor: pointer;
+}
+
+.src-detail__bibtex-body {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.src-detail__bibtex pre {
+    margin: 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-gray-50);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+/* Bibliographic details */
+.src-detail__facts-body {
+    display: grid;
+    gap: 24px;
+    padding: 24px;
+}
+
+.src-detail__fact {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.src-detail__fact-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.src-detail__fact-label {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.src-detail__fact-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.src-detail__group {
+    display: grid;
+    gap: 10px;
+    padding-top: 22px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.src-detail__doi {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.src-detail__doi span {
+    overflow-wrap: anywhere;
+}
+
+.src-detail__note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+.src-detail__record {
+    display: grid;
+    gap: 16px;
+    margin: 6px 0 0;
+}
+
+.src-detail__record div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+}
+
+.src-detail__record dt {
+    font-weight: 400;
+    color: var(--color-gray-500);
+}
+
+.src-detail__record dd {
+    margin: 0;
+    font-weight: 500;
+    text-align: right;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1199.98px) {
+    .src-detail__columns {
+        grid-template-columns: minmax(0, 1fr) 360px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .src-detail__columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .src-detail__identity {
+        padding: 20px 16px;
+    }
+
+    .src-detail .src-detail__title {
+        font-size: 22px;
+    }
+
+    .src-detail__section-head,
+    .src-detail__facts-body {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .src-detail__empty {
+        padding: 24px 16px;
+    }
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.querySelectorAll('.clickable-row').forEach(row => {
-    row.addEventListener('click', function() {
+    row.addEventListener('click', function(event) {
+        if (event.target.closest('a, button')) return;
         window.location.href = this.dataset.href;
     });
 });
 
+// Copy the citation or the BibTeX; the label says "Copied" for two seconds
 document.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const target = document.getElementById(this.dataset.copy);
-        if (target) {
-            navigator.clipboard.writeText(target.textContent.trim()).then(() => {
-                const icon = this.querySelector('i');
-                icon.classList.replace('bi-clipboard', 'bi-check');
-                setTimeout(() => icon.classList.replace('bi-check', 'bi-clipboard'), 2000);
-            });
-        }
+        if (!target || !navigator.clipboard) return;
+        const text = this.dataset.copy === 'bibtex' ? target.textContent.trim() : target.textContent.replace(/\s+/g, ' ').trim();
+        navigator.clipboard.writeText(text).then(() => {
+            const label = this.querySelector('span');
+            const original = label.textContent;
+            label.textContent = 'Copied';
+            setTimeout(() => { label.textContent = original; }, 2000);
+        });
     });
 });
 </script>

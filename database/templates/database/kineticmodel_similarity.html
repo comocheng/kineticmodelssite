@@ -1,56 +1,100 @@
 {% extends "base.html" %}
+{% load static %}
+{# Which models share chemistry; no Figma frame, so it uses the kinetic model pages' look (170:6885) #}
+
+{% block title %}Shared chemistry | Prometheus{% endblock %}
 
 {% block content %}
-<div class="detail-header mb-3">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-list' %}">Kinetic models</a></li>
-            <li class="breadcrumb-item active">Shared chemistry</li>
+<div class="km-page km-similarity">
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-list' %}">Kinetic models</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Shared chemistry</span></li>
         </ol>
     </nav>
-    <h1 class="h4 mb-0">Which models use the same chemistry</h1>
-</div>
 
-<form method="get" class="d-flex align-items-center gap-2 mb-2">
-    <label for="layer" class="small mb-0">Layer</label>
-    <select id="layer" name="layer" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-        {% for value in layers %}<option value="{{ value }}" {% if value == layer %}selected{% endif %}>{{ value }}</option>{% endfor %}
-    </select>
-    <a class="small ms-2" href="{% url 'kinetic-model-compare' %}">Compare two models</a>
-    <a class="small ms-2" href="{% url 'sub-mechanism-list' %}{% if layer != 'all' %}?layer={{ layer|urlencode }}{% endif %}">Sub-mechanisms</a>
-</form>
-<p class="small text-muted">Each row is a model; each cell is the share of that row's reactions (in this layer) whose rate is identical in the column's model. Click a cell to compare the two. Models are ordered by publication year.</p>
-
-<div class="data-section mb-3" data-plot-section>
-    <div class="section-body">
-        <div id="similarity-plot" style="height: {% if matrix.names|length > 40 %}1100{% else %}700{% endif %}px;" role="img" aria-label="Heatmap of identical rates between models"></div>
-    </div>
-</div>
-{{ matrix|json_script:"similarity-data" }}
-
-<div class="data-section">
-    <div class="section-header"><h6 class="mb-0">Most shared chemistry ({{ layer }})</h6></div>
-    <div class="section-body p-0">
-        <div class="table-responsive">
-        <table class="table table-sm small mb-0">
-            <thead><tr><th>Model</th><th>Shares rates with</th><th class="text-end">Identical rates</th><th></th></tr></thead>
-            <tbody>
-            {% for row in top_pairs %}
-            <tr>
-                <td><a href="{% url 'kinetic-model-detail' row.model_a_id %}">{{ row.model_a.model_name }}</a></td>
-                <td><a href="{% url 'kinetic-model-detail' row.model_b_id %}">{{ row.model_b.model_name }}</a></td>
-                <td class="text-end">{{ row.identical }} of {{ row.reactions }} ({% widthratio row.identical row.reactions 100 %}%)</td>
-                <td class="text-end"><a href="{% url 'kinetic-model-compare' %}?a={{ row.model_a_id }}&b={{ row.model_b_id }}">Compare</a></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-muted">Run analyze_shared_chemistry to fill this page.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <h1>Which models use the same chemistry</h1>
+            <p class="km-lede">Each row is a model; each cell is the share of that row's reactions (in this layer) whose rate is identical in the column's model. Click a cell to compare the two. Models are ordered by publication year.</p>
         </div>
-    </div>
+    </header>
+
+    <form method="get" class="app-panel km-filter km-similarity__form">
+        <div class="km-filter__field">
+            <label for="layer">Layer</label>
+            <select id="layer" name="layer" class="form-select" onchange="this.form.submit()">
+                {% for value in layers %}<option value="{{ value }}" {% if value == layer %}selected{% endif %}>{{ value }}</option>{% endfor %}
+            </select>
+        </div>
+        <span class="km-similarity__links">
+            <a class="app-link" href="{% url 'kinetic-model-compare' %}">Compare two models</a>
+            <a class="app-link" href="{% url 'sub-mechanism-list' %}{% if layer != 'all' %}?layer={{ layer|urlencode }}{% endif %}">Sub-mechanisms</a>
+        </span>
+    </form>
+
+    <section class="app-panel km-similarity__plot" data-plot-section>
+        <div id="similarity-plot" style="height: {% if matrix.names|length > 40 %}1100{% else %}700{% endif %}px;" role="img" aria-label="Heatmap of identical rates between models"></div>
+    </section>
+    {{ matrix|json_script:"similarity-data" }}
+
+    <section class="app-panel" aria-labelledby="km-similarity-top">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="km-similarity-top">Most shared chemistry ({{ layer }})</h2>
+        </div>
+        <div class="km-table-wrap">
+            <table class="km-table km-similarity__table">
+                <thead>
+                    <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col">Shares rates with</th>
+                        <th scope="col" class="is-end">Identical rates</th>
+                        <th scope="col"><span class="visually-hidden">Compare</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in top_pairs %}
+                    <tr>
+                        <td><a href="{% url 'kinetic-model-detail' row.model_a_id %}">{{ row.model_a.model_name }}</a></td>
+                        <td><a href="{% url 'kinetic-model-detail' row.model_b_id %}">{{ row.model_b.model_name }}</a></td>
+                        <td class="is-number">{{ row.identical }} of {{ row.reactions }} <span class="is-muted">({% widthratio row.identical row.reactions 100 %}%)</span></td>
+                        <td class="is-end"><a class="app-link" href="{% url 'kinetic-model-compare' %}?a={{ row.model_a_id }}&amp;b={{ row.model_b_id }}">Compare →</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="km-empty">Run analyze_shared_chemistry to fill this page.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
+<style>
+.km-similarity__form {
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.km-similarity__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    padding-bottom: 10px;
+}
+
+.km-similarity__plot {
+    padding: 16px;
+    overflow: hidden;
+}
+
+.km-similarity__table {
+    min-width: 560px;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

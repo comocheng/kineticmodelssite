@@ -1,185 +1,410 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load utils %}
+{# One reaction, from the Figma "Prometheus · Reaction detail" (node 161:5716); gaps filled from "Kinetic database · Reaction detail" (152:4410) #}
+
+{% block title %}Reaction {{ reaction.pk }}: {{ reaction.equation }} | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Header -->
-<div class="detail-header">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'reaction-search' %}">Reactions</a></li>
-            <li class="breadcrumb-item active">Reaction {{ reaction.pk }}</li>
-        </ol>
-    </nav>
-    <div class="d-flex align-items-center gap-3">
-        <h1 class="h4 mb-0">Reaction Detail</h1>
-        <span class="badge bg-secondary">ID: {{ reaction.pk }}</span>
-    </div>
-</div>
+<div class="rx-page rx-detail">
 
-<!-- Reaction Equation -->
-<div class="data-section mb-3">
-    <div class="section-body text-center py-3">
-        <span class="reaction-equation h5 font-monospace">{{ reaction.equation }}</span>
-    </div>
-</div>
-
-<!-- Reactants & Products -->
-<div class="row g-3 mb-3">
-    <div class="col-md-5">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-arrow-right-circle me-2"></i>Reactants</h6>
+    <!-- Page heading (Figma 161:5756) -->
+    <header class="rx-heading">
+        <nav aria-label="Breadcrumb">
+            <ol class="rx-crumbs">
+                <li><a href="{% url 'database-home' %}">Database</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url 'reaction-search' %}">Reactions</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page">Reaction {{ reaction.pk }}</li>
+            </ol>
+        </nav>
+        <div class="rx-heading__row">
+            <div class="rx-heading__title">
+                <h1>Reaction detail</h1>
+                <span class="rx-pill">ID {{ reaction.pk }}</span>
+                {% if reaction.prime_id %}<span class="rx-tag">PrIMe ID {{ reaction.prime_id }}</span>{% endif %}
             </div>
-            <div class="section-body p-0">
-                <table class="table table-sm table-hover mb-0">
+            <a class="rx-action" href="{% url 'api-reaction-detail' reaction.pk %}"><img class="app-icon" src="{% static 'database/images/icons/code.svg' %}" alt="" width="18" height="18">Open in the API</a>
+        </div>
+    </header>
+
+    <!-- Reaction overview (Figma 161:5766) -->
+    <section class="app-panel rx-overview" aria-label="Reaction equation and species">
+        <div class="rx-overview__equation">
+            <p class="rx-equation">{{ reaction.equation }}</p>
+            <span class="rx-tag">{% if reaction.reversible %}Reversible{% else %}Irreversible{% endif %}</span>
+        </div>
+        <div class="rx-participants">
+            <div class="rx-group">
+                <span class="rx-group__label" id="rx-reactants">Reactants</span>
+                <ul class="rx-group__species" aria-labelledby="rx-reactants">
                     {% for reactant in reactants %}
-                    <tr class="clickable-row" data-href="{% url 'species-detail' reactant.pk %}">
-                        <td style="width: 50px;">
+                    <li>
+                        <a class="rx-species" href="{% url 'species-detail' reactant.pk %}">
                             {% if reactant.structures %}
                             {% with reactant.structures|to_list|first as structure %}
-                            <img src="{% url 'draw-structure' structure.pk %}" alt="" class="species-thumb">
+                            <img class="rx-species__structure" src="{% url 'draw-structure' structure.pk %}" alt="" loading="lazy">
                             {% endwith %}
-                            {% else %}<span class="text-muted">—</span>{% endif %}
-                        </td>
-                        <td class="font-monospace fw-medium">{{ reactant.formula }}</td>
-                        <td class="text-muted small text-end">{{ reactant.pk }}</td>
-                    </tr>
+                            {% endif %}
+                            <span class="rx-species__formula">{{ reactant.formula }}</span>
+                            <span class="rx-species__id">#{{ reactant.pk }}</span>
+                            <img class="app-icon rx-species__open" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="14" height="14">
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li class="rx-muted">None</li>
                     {% endfor %}
-                </table>
+                </ul>
             </div>
-        </div>
-    </div>
-    <div class="col-md-2 d-flex align-items-center justify-content-center">
-        <i class="bi bi-arrow-right-circle-fill text-primary fs-3"></i>
-    </div>
-    <div class="col-md-5">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-arrow-left-circle me-2"></i>Products</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm table-hover mb-0">
+            <span class="rx-direction" aria-hidden="true">{% if reaction.reversible %}⇌{% else %}→{% endif %}</span>
+            <div class="rx-group">
+                <span class="rx-group__label" id="rx-products">Products</span>
+                <ul class="rx-group__species" aria-labelledby="rx-products">
                     {% for product in products %}
-                    <tr class="clickable-row" data-href="{% url 'species-detail' product.pk %}">
-                        <td style="width: 50px;">
+                    <li>
+                        <a class="rx-species" href="{% url 'species-detail' product.pk %}">
                             {% if product.structures %}
                             {% with product.structures|to_list|first as structure %}
-                            <img src="{% url 'draw-structure' structure.pk %}" alt="" class="species-thumb">
+                            <img class="rx-species__structure" src="{% url 'draw-structure' structure.pk %}" alt="" loading="lazy">
                             {% endwith %}
-                            {% else %}<span class="text-muted">—</span>{% endif %}
-                        </td>
-                        <td class="font-monospace fw-medium">{{ product.formula }}</td>
-                        <td class="text-muted small text-end">{{ product.pk }}</td>
-                    </tr>
+                            {% endif %}
+                            <span class="rx-species__formula">{{ product.formula }}</span>
+                            <span class="rx-species__id">#{{ product.pk }}</span>
+                            <img class="app-icon rx-species__open" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="14" height="14">
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li class="rx-muted">None</li>
                     {% endfor %}
-                </table>
+                </ul>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
-{% include 'database/rate_plot.html' %}
-{% include 'database/reaction_counterparts.html' %}
+    <!-- Rate and provenance (Figma 161:5797) -->
+    <div class="rx-detail__data{% if not rate_plot.series %} is-single{% endif %}">
+        {% include 'database/rate_plot.html' %}
 
-<!-- Kinetics Data -->
-<div class="data-section">
-    <div class="section-header" data-bs-toggle="collapse" data-bs-target="#kineticsSection">
-        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Kinetics Data ({{ kinetics_modelnames|length }})</h6>
-        <i class="bi bi-chevron-down"></i>
-    </div>
-    <div class="collapse show" id="kineticsSection">
-        <div class="section-body p-0">
-            {% for k, model_names in kinetics_modelnames %}
-            <div class="kinetics-entry {% if not forloop.last %}border-bottom{% endif %}">
-                <div class="d-flex justify-content-between align-items-start p-2 bg-light border-bottom">
-                    <div>
-                        <a href="{% url 'kinetics-detail' k.pk %}" class="fw-medium text-decoration-none">Kinetics #{{ k.pk }}</a>
-                        <span class="badge bg-secondary-subtle text-secondary small ms-2">{{ k.type }}</span>
-                        {% if k.source %}<div class="small">Reference: <a href="{% url 'source-detail' k.source.pk %}">{{ k.source.source_title|truncatewords:12 }}</a></div>{% endif %}
+        <section class="app-panel rx-summary" aria-labelledby="rx-kinetics-title">
+            <div class="rx-panel-head">
+                <h2 class="app-panel__title" id="rx-kinetics-title">Kinetics data</h2>
+                <span class="app-panel__meta">{{ kinetics_modelnames|length|pluralize:"record" }}</span>
+            </div>
+            <div class="rx-summary__list">
+                {% for k, model_names in kinetics_modelnames %}
+                <article class="rx-kinetics" aria-labelledby="rx-kinetics-{{ k.pk }}">
+                    <div class="rx-kinetics__identity">
+                        <a class="rx-kinetics__link" id="rx-kinetics-{{ k.pk }}" href="{% url 'kinetics-detail' k.pk %}">Kinetics #{{ k.pk }}</a>
+                        <span class="rx-tag">{{ k.type }}</span>
                     </div>
-                    <span class="small text-muted">ID: {{ k.pk }}</span>
-                </div>
-                
-                <!-- Rate Parameters -->
-                {% with k.data.table_data|last as table %}
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead>
-                            <tr class="small">
-                                {% for head in table.1 %}
-                                <th>{{ head }}</th>
+                    {% if k.source %}<p class="rx-value"><span class="rx-muted">Reference:</span> <a href="{% url 'source-detail' k.source.pk %}">{{ k.source.source_title|truncatewords:12 }}</a></p>{% endif %}
+
+                    {# The last parameter block, as before; the kinetics page has every block #}
+                    {% with k.data.table_data|last as table %}
+                    {% if table %}
+                    <div class="rx-params rx-table-wrap">
+                        <table class="rx-table">
+                            <thead>
+                                <tr>
+                                    {% for head in table.1 %}
+                                    <th scope="col">{{ head }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row_header, cells in table.2 %}
+                                <tr>
+                                    {% if row_header %}<th scope="row">{{ row_header }}</th>{% endif %}
+                                    {% for cell in cells %}
+                                    <td>{{ cell|format_g_or_str }}</td>
+                                    {% endfor %}
+                                </tr>
                                 {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row_header, cells in table.2 %}
-                            <tr>
-                                {% if row_header %}<th scope="row" class="small">{{ row_header }}</th>{% endif %}
-                                {% for cell in cells %}
-                                <td class="font-monospace small">{{ cell|format_g_or_str }}</td>
-                                {% endfor %}
-                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    {% if model_names %}
+                    <div>
+                        <span class="rx-label">Models</span>
+                        <div class="rx-chips">
+                            {% for model in model_names %}
+                            <a class="app-chip" href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endwith %}
-                
-                {% if model_names %}
-                <div class="p-2 small">
-                    <span class="text-muted">Models:</span>
-                    {% for model in model_names %}
-                    <a class="badge bg-light text-dark me-1 text-decoration-none" href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a>
-                    {% endfor %}
-                </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </article>
+                {% empty %}
+                <p class="rx-empty">No kinetics data available.</p>
+                {% endfor %}
+            </div>
+
+            <!-- RMG counterpart (Figma 161:5878) -->
+            <div class="rx-summary__rmg">
+                <span class="rx-label">RMG counterpart</span>
+                {% if rmg_family == "-" %}
+                <p class="rx-value">No <a href="{% url 'rmg-family-list' %}">RMG reaction family</a> generates this reaction.</p>
+                {% elif rmg_family == "?" %}
+                <p class="rx-value">RMG's families could not be applied to these species.</p>
+                {% elif rmg_family %}
+                <p class="rx-value">Family <a class="fw-semibold" href="{% url 'rmg-family-detail' rmg_family %}">{{ rmg_family }}</a></p>
+                {% if reaction.rmg_template %}<p class="rx-value rx-mono rx-muted">{{ reaction.rmg_template }}</p>{% endif %}
+                {% else %}
+                <p class="rx-value rx-muted">Not classified into an RMG family yet.</p>
                 {% endif %}
+                <p class="rx-value rx-muted">{% if rmg_records %}{{ rmg_records|length|pluralize:"RMG-database record" }}{% else %}No RMG-database record{% endif %} · <a href="#rx-counterparts">Details</a></p>
             </div>
-            {% empty %}
-            <div class="text-center text-muted py-4">
-                <i class="bi bi-graph-up me-1"></i>No kinetics data available.
-            </div>
-            {% endfor %}
-        </div>
+        </section>
     </div>
+
+    <!-- Additional scientific details (Figma 161:5885) -->
+    <details class="app-panel rx-disclosure" id="rx-counterparts">
+        <summary>
+            <img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="18" height="18">
+            <span class="rx-disclosure__title">RMG-database counterparts</span>
+            <span class="rx-disclosure__summary">{% if rmg_records %}{{ rmg_records|length|pluralize:"record" }}: source, entry, rate type, direction and the models with the same rate{% else %}Which RMG-database libraries and families have this reaction{% endif %}</span>
+            <img class="app-icon rx-disclosure__chevron" src="{% static 'database/images/icons/chevron-down-111827-24.svg' %}" alt="" width="18" height="18">
+        </summary>
+        <div class="rx-disclosure__body">
+            {% include 'database/reaction_counterparts.html' %}
+        </div>
+    </details>
 </div>
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/reaction_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+/* Overview: the equation, then reactants -> products as species links */
+.rx-overview {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
 }
 
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-.section-header {
+.rx-overview__equation {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
-    cursor: pointer;
+    justify-content: space-between;
+    gap: 8px 16px;
 }
 
-.section-header h6 { font-size: 0.8rem; font-weight: 600; }
-.section-body { padding: 0.75rem; }
+.rx-equation {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
 
-.table td, .table th { padding: 0.4rem 0.5rem; vertical-align: middle; }
-.species-thumb { width: 40px; height: 30px; object-fit: contain; }
-.clickable-row { cursor: pointer; }
-.clickable-row:hover { background-color: var(--color-primary-bg) !important; }
+.rx-participants {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px 20px;
+}
 
-.kinetics-entry .table { font-size: 0.8rem; }
+.rx-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.rx-group__label {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-500);
+}
+
+.rx-group__species {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.rx-group__species li {
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+.rx-species {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 4px 12px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.rx-species:hover {
+    border-color: var(--color-primary);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.rx-species__structure {
+    flex-shrink: 0;
+    width: auto;
+    max-width: 56px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.rx-species__formula {
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.rx-species__id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.rx-species__open {
+    margin-left: auto;
+}
+
+.rx-direction {
+    font-size: 24px;
+    line-height: 1;
+    color: var(--color-gray-500);
+}
+
+/* Rate plot beside the kinetics summary */
+.rx-detail__data {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 448px;
+    gap: 20px;
+    align-items: start;
+}
+
+.rx-detail__data.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.rx-summary {
+    display: grid;
+    min-width: 0;
+}
+
+.rx-summary__list {
+    display: grid;
+    max-height: 720px;
+    overflow-y: auto;
+    padding: 0 20px;
+}
+
+.rx-detail__data.is-single .rx-summary__list {
+    max-height: none;
+}
+
+.rx-kinetics {
+    display: grid;
+    gap: 12px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.rx-kinetics:last-child {
+    border-bottom: 0;
+}
+
+.rx-kinetics__identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.rx-kinetics__link {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.rx-summary__rmg {
+    margin: 0 20px 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+/* The counterparts row (reaction_counterparts.html) */
+.rx-counterparts {
+    display: grid;
+    gap: 12px;
+}
+
+.rx-counterparts__wrap {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+}
+
+.rx-counterparts__table th {
+    padding: 9px 14px;
+    border-top: 0;
+}
+
+.rx-counterparts__table td {
+    padding: 10px 14px;
+    font-size: 12px;
+}
+
+@media (max-width: 1199.98px) {
+    .rx-detail__data {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .rx-summary__list {
+        max-height: none;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .rx-participants {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .rx-direction {
+        justify-self: start;
+        transform: rotate(90deg);
+    }
+
+    .rx-group {
+        flex-wrap: wrap;
+    }
+
+    .rx-group__label {
+        flex-basis: 100%;
+    }
+
+    .rx-equation {
+        font-size: 22px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -189,10 +414,13 @@
 <script>renderRatePlot("rate-plot", "rate-plot-data", "rate-plot-pressure", "rate-plot-table");</script>
 {% endif %}
 <script>
-document.querySelectorAll('.clickable-row').forEach(row => {
-    row.addEventListener('click', function() {
-        window.location.href = this.dataset.href;
-    });
-});
+// Following the summary's "Details" link opens the counterparts row it points to
+(() => {
+    const row = document.getElementById("rx-counterparts");
+    if (!row) return;
+    const open = () => { if (location.hash === "#rx-counterparts") row.open = true; };
+    window.addEventListener("hashchange", open);
+    open();
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,388 @@
+{% comment %}
+The shared look of the kinetic model pages, from the Figma frames "Prometheus · Kinetic models"
+(161:6128), "CH2F2 kinetic model" (170:6885) and "Edit kinetic model" (170:7072). Include it in
+extra_css; every rule is scoped under .km-page, the wrapper each kinetic model page uses.
+{% endcomment %}
+<style>
+.km-page {
+    --km-tint: #edf3ff;  /* the Figma blue tint: count chips, the current page, guidance boxes */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-width: 0;
+}
+
+.km-page > * {
+    min-width: 0;
+}
+
+/* Breadcrumb */
+.km-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.km-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.km-crumbs a {
+    color: var(--color-primary);
+}
+
+.km-crumbs [aria-current] {
+    overflow-wrap: anywhere;
+}
+
+/* Title row */
+.km-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.km-heading__intro {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.km-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.km-heading h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.km-lede {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.km-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+/* White secondary button; .app-btn is the orange one */
+.km-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.km-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.km-page .app-btn {
+    height: 38px;
+    padding: 0 14px;
+}
+
+.km-page .app-link {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Status and count chips */
+.km-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 30px;
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.km-pill--success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.km-pill--count {
+    padding: 4px 9px;
+    border-radius: 100px;
+    background: var(--km-tint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+/* Panels: the design's panel titles are 16 px */
+.km-page .app-panel {
+    min-width: 0;
+}
+
+.km-page .app-panel__title {
+    font-size: 16px;
+}
+
+/* The design's panel heads line up with the 20 px table gutter */
+.km-page .app-panel__head {
+    padding: 20px;
+}
+
+/* Tables scroll inside their panel on narrow screens */
+.km-table-wrap {
+    overflow-x: auto;
+}
+
+.km-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.km-table th {
+    padding: 11px 10px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.km-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+}
+
+.km-table th:first-child,
+.km-table td:first-child {
+    padding-left: 20px;
+}
+
+.km-table th:last-child,
+.km-table td:last-child {
+    padding-right: 20px;
+}
+
+.km-table .is-number {
+    font-family: var(--font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.km-table .is-end {
+    text-align: right;
+}
+
+.km-table .is-mono {
+    font-family: var(--font-mono);
+}
+
+.km-table .is-muted {
+    color: var(--color-gray-500);
+}
+
+.km-empty {
+    margin: 0;
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+/* Notes and small filter forms of the shared-chemistry pages, which have no frame of their own */
+.km-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-panel-note {
+    margin: 0;
+    padding: 14px 20px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 16px;
+    padding: 18px 20px;
+}
+
+.km-filter__field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+}
+
+.km-filter__field--grow {
+    flex: 1 1 260px;
+}
+
+.km-filter label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-filter .form-select {
+    min-height: 38px;
+    border-color: var(--color-gray-300);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.km-filter .form-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    margin: 0;
+}
+
+.km-filter .form-check-label {
+    font-weight: 400;
+}
+
+.km-panel-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0 20px 18px 38px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+/* Pagination (Figma 161:6429) */
+.km-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 16px 20px;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.km-pager__pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.km-pager__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 4px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+.km-pager__page:hover {
+    background: var(--color-gray-50);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.km-pager__page.is-current {
+    background: var(--km-tint);
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.km-pager__step {
+    padding: 0 4px;
+    color: var(--color-gray-900);
+    white-space: nowrap;
+}
+
+.km-pager__step.is-disabled {
+    color: var(--color-gray-500);
+}
+
+@media (max-width: 575.98px) {
+    .km-heading h1 {
+        font-size: 26px;
+    }
+
+    .km-table th:first-child,
+    .km-table td:first-child {
+        padding-left: 14px;
+    }
+
+    .km-table th:last-child,
+    .km-table td:last-child {
+        padding-right: 14px;
+    }
+
+    .km-pager {
+        padding: 14px;
+    }
+
+    .km-page .app-panel__head {
+        padding: 16px 14px;
+    }
+}
+</style>

@@ -1,35 +1,62 @@
 {% extends "base.html" %}
+{% load static %}
+{# The RMG reaction families; no Figma frame, so it takes the list look of the database pages (catalog_styles.html) #}
+
+{% block title %}RMG reaction families | Prometheus{% endblock %}
 
 {% block content %}
-<div class="detail-header mb-3">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item active">RMG reaction families</li>
+<div class="cat-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">RMG reaction families</span></li>
         </ol>
     </nav>
-    <h1 class="h4 mb-0">RMG reaction families</h1>
-</div>
-<p class="small text-muted">The RMG reaction family that generates each of the site's reactions, in either direction. {{ unclassified }} reactions have no family, and RMG could not handle the species of {{ unsupported }}. <a href="{% url 'rmg-library-list' %}">RMG-database libraries</a></p>
 
-<div class="data-section">
-    <div class="section-body p-0">
-        <div class="table-responsive">
-        <table class="table table-sm small mb-0">
-            <thead><tr><th>Family</th><th class="text-end">Reactions</th><th class="text-end">Rate-rule estimates</th></tr></thead>
-            <tbody>
-            {% for row in rows %}
-            <tr>
-                <td><a href="{% url 'rmg-family-detail' row.name %}">{{ row.name }}</a></td>
-                <td class="text-end">{{ row.reactions }}</td>
-                <td class="text-end">{{ row.estimates }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-muted">Run classify_reaction_families to fill this page.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <div class="cat-heading__title">
+                <h1>RMG reaction families</h1>
+                <span class="cat-pill cat-pill--count">{{ rows|length }}<span class="visually-hidden"> families</span></span>
+            </div>
+            <p class="cat-lede">The RMG reaction family that generates each of the site's reactions, in either direction. {{ unclassified }} reactions have no family, and RMG could not handle the species of {{ unsupported }}.</p>
         </div>
-    </div>
+        <div class="cat-actions">
+            <a class="cat-btn" href="{% url 'rmg-library-list' %}">RMG-database libraries</a>
+        </div>
+    </header>
+
+    <section class="app-panel" aria-labelledby="rmg-families-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rmg-families-title">Families</h2>
+            <span class="app-panel__meta">Most reactions first</span>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Family</th>
+                        <th scope="col" class="is-end">Reactions</th>
+                        <th scope="col" class="is-end">Rate-rule estimates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="is-wrap"><a href="{% url 'rmg-family-detail' row.name %}">{{ row.name }}</a></td>
+                        <td class="is-number">{{ row.reactions }}</td>
+                        <td class="is-number">{{ row.estimates }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="cat-empty">Run classify_reaction_families to fill this page.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
 {% endblock %}

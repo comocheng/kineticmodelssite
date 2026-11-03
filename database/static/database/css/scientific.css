@@ -12,11 +12,11 @@
 
 /* ==================== CSS Variables ==================== */
 :root {
-    /* Primary Palette - Professional Blue (Trust, Science) */
-    --color-primary: #1a56db;
-    --color-primary-dark: #1e40af;
-    --color-primary-light: #3b82f6;
-    --color-primary-bg: #eff6ff;
+    /* Primary palette: Brand-primary of the Figma file "dev.omethe.us" */
+    --color-primary: #ce4801;
+    --color-primary-dark: #a93b01;
+    --color-primary-light: #e8641f;
+    --color-primary-bg: #faede6;     /* 10 % brand on white, the Figma funding notice */
     
     /* Accent Colors */
     --color-success: #059669;
@@ -28,22 +28,27 @@
     --color-info: #0891b2;
     --color-info-bg: #ecfeff;
     
-    /* Neutral Palette */
+    /* Neutral palette: the blue-greys of the Figma application screens. 700 is not in the file;
+       it sits between 600 and 800. */
     --color-white: #ffffff;
-    --color-gray-50: #f9fafb;
-    --color-gray-100: #f3f4f6;
-    --color-gray-200: #e5e7eb;
-    --color-gray-300: #d1d5db;
-    --color-gray-400: #9ca3af;
-    --color-gray-500: #6b7280;
-    --color-gray-600: #4b5563;
-    --color-gray-700: #374151;
-    --color-gray-800: #1f2937;
-    --color-gray-900: #111827;
+    --color-gray-50: #f8fafd;    /* table heads, example chips */
+    --color-gray-100: #f6f8fb;   /* page background */
+    --color-gray-200: #dfe6ef;   /* card and table borders */
+    --color-gray-300: #b6c9e9;   /* input borders */
+    --color-gray-400: #94a0af;   /* section labels */
+    --color-gray-500: #647488;   /* secondary text */
+    --color-gray-600: #607086;   /* navigation text */
+    --color-gray-700: #3c4c61;
+    --color-gray-800: #18283d;   /* strong text */
+    --color-gray-900: #172b43;   /* headings and body ink */
+    --color-nav-border: #dce3ec;
+    --color-footer: #181818;
+    --color-footer-label: #b8c8db;
     
     /* Typography */
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    --font-display: 'Instrument Sans', var(--font-sans);
+    --font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace;
     --font-serif: 'Merriweather', Georgia, 'Times New Roman', serif;
     
     /* Font Sizes */
@@ -102,7 +107,8 @@
     /* Layout */
     --max-width-content: 1200px;
     --max-width-narrow: 800px;
-    --navbar-height: 64px;
+    --navbar-height: 76px;      /* the global row; the tools row below it scrolls away */
+    --tools-height: 44px;
 }
 
 /* ==================== Base Reset ==================== */
@@ -122,8 +128,8 @@ body {
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--leading-normal);
-    color: var(--color-gray-800);
-    background-color: var(--color-gray-50);
+    color: var(--color-gray-900);
+    background-color: var(--color-gray-100);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
@@ -140,10 +146,12 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: var(--space-4);
 }
 
+/* Page titles use the display face, as in the Figma screens ("Kinetic Models Database") */
 h1 {
+    font-family: var(--font-display);
     font-size: var(--text-3xl);
-    font-weight: 700;
-    letter-spacing: -0.025em;
+    font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 h2 {
@@ -187,53 +195,255 @@ a:hover {
 }
 
 /* ==================== Main Layout ==================== */
+/* The Figma application screens: 1600 px frames with 64 px margins, so 1472 px of content */
 main[role="main"] {
-    max-width: var(--max-width-content);
+    max-width: calc(1472px + 2 * var(--space-6));
     margin: 0 auto;
-    padding: var(--space-8) var(--space-6);
+    padding: 40px var(--space-6);
     min-height: calc(100vh - var(--navbar-height) - 100px);
 }
 
-/* ==================== Navigation Bar ==================== */
-.navbar {
-    background: var(--color-white) !important;
-    border-bottom: 1px solid var(--color-gray-200);
-    box-shadow: var(--shadow-sm);
-    padding: var(--space-3) var(--space-6) !important;
-    height: var(--navbar-height);
+/* ==================== Application Navigation ==================== */
+/* Two rows, as in the Figma "Application navigation": the global row (76 px) and the tools row
+   (44 px). The header sticks 44 px up, so the tools row scrolls away and the global row stays. */
+.app-header {
+    position: sticky;
+    top: calc(-1 * var(--tools-height));
+    z-index: var(--z-sticky);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: saturate(1.4) blur(10px);
 }
 
-.navbar-brand {
-    font-weight: 700;
-    font-size: var(--text-lg);
-    color: var(--color-primary) !important;
-    letter-spacing: -0.02em;
+.app-nav {
+    gap: 36px;
+    min-height: var(--navbar-height);
+    padding: 0 48px;
+    border-bottom: 1px solid var(--color-nav-border);
+    font-family: var(--font-sans);
 }
 
-.navbar-brand:hover {
-    color: var(--color-primary-dark) !important;
+.app-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--color-primary);
+    text-decoration: none;
+    white-space: nowrap;
 }
 
-.navbar-dark .navbar-nav .nav-link,
-.nav-link {
-    color: var(--color-gray-600) !important;
+.app-brand:hover {
+    color: var(--color-primary-dark);
+    text-decoration: none;
+}
+
+.app-brand img {
+    width: auto;
+    height: 38px;
+}
+
+.app-nav .navbar-collapse {
+    gap: 36px;
+}
+
+.app-nav__primary {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-nav__link {
+    font-size: 14px;
     font-weight: 500;
-    font-size: var(--text-sm);
-    padding: var(--space-2) var(--space-4) !important;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
+    white-space: nowrap;
+    color: var(--color-gray-600);
+    text-decoration: none;
 }
 
-.navbar-dark .navbar-nav .nav-link:hover,
-.nav-link:hover {
-    color: var(--color-primary) !important;
-    background-color: var(--color-primary-bg);
+.app-nav__link:hover,
+.app-nav__link.is-active {
+    color: var(--color-gray-900);
+    text-decoration: none;
 }
 
-.navbar-dark .navbar-nav .nav-link.active,
-.nav-link.active {
-    color: var(--color-primary) !important;
-    background-color: var(--color-primary-bg);
+.app-nav__account {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+}
+
+.app-nav__strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-800);
+    text-decoration: none;
+}
+
+.app-nav__strong:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 20px;
+    border: 1px solid var(--color-nav-border);
+    border-radius: 7px;
+    background: var(--color-white);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-800);
+    text-decoration: none;
+}
+
+.app-btn-secondary:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-tools {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 28px;
+    height: var(--tools-height);
+    padding: 0 48px;
+    font-family: var(--font-sans);
+}
+
+.app-tools__section {
+    display: flex;
+    align-items: stretch;
+    gap: 28px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.app-tools__label {
+    align-self: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-400);
+    text-decoration: none;
+}
+
+a.app-tools__label:hover,
+.app-tools__label.is-active {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-tab {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: nowrap;
+    color: #69788c;
+    text-decoration: none;
+}
+
+.app-tab:hover {
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.app-tab.is-active {
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.app-tools__links {
+    align-items: center;
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-tools__links--row {
+    display: flex;
+}
+
+.app-tools__links--menu {
+    display: none;
+}
+
+.app-tool {
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+.app-tool:hover,
+.app-tool.is-active {
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.app-tool--accent,
+.app-tool--accent:hover {
+    color: var(--color-primary);
+}
+
+@media (max-width: 991.98px) {
+    .app-nav {
+        padding: 12px 24px;
+    }
+
+    .app-nav .navbar-collapse {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 8px 0 16px;
+    }
+
+    /* Bootstrap shows an open menu as a block; a column keeps the gap between the groups */
+    .app-nav .navbar-collapse.show,
+    .app-nav .navbar-collapse.collapsing {
+        display: flex;
+    }
+
+    .app-nav__primary,
+    .app-tools__links--menu {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .app-tools {
+        padding: 0 24px;
+    }
+
+    .app-tools__links--row {
+        display: none;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .app-nav,
+    .app-tools {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 }
 
 /* ==================== Page Header ==================== */
@@ -787,55 +997,81 @@ label {
 }
 
 /* ==================== Footer ==================== */
+/* The Figma "Research resources footer" (node 77:2652) */
 .site-footer {
-    background: var(--color-gray-800);
-    color: var(--color-gray-300);
-    padding: var(--space-8) var(--space-6);
+    background: var(--color-footer);
+    color: var(--color-footer-label);
+    padding: 32px 64px 24px;
     margin-top: var(--space-12);
+    font-family: var(--font-sans);
 }
 
 .footer-content {
-    max-width: var(--max-width-content);
-    margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-8);
+    grid-template-columns: minmax(0, 400px) repeat(3, minmax(0, 1fr));
+    gap: 64px;
 }
 
 .footer-section h4 {
-    color: var(--color-white);
-    font-size: var(--text-sm);
+    margin-bottom: 18px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: var(--space-4);
+    color: var(--color-footer-label);
+}
+
+.footer-section p {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--color-footer-label);
 }
 
 .footer-section a {
-    color: var(--color-gray-400);
     display: block;
-    padding: var(--space-1) 0;
-    font-size: var(--text-sm);
-}
-
-.footer-section a:hover {
+    padding: 0 0 12px;
+    font-size: 12px;
     color: var(--color-white);
 }
 
+.footer-section a:hover {
+    color: #ff7a33;
+}
+
 .footer-bottom {
-    max-width: var(--max-width-content);
-    margin: var(--space-8) auto 0;
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--color-gray-700);
-    text-align: center;
-    font-size: var(--text-sm);
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.13);
+    font-size: 11px;
+}
+
+.footer-bottom .small {
+    font-size: 10px;
 }
 
 .nsf-badge {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-    color: var(--color-gray-400);
-    font-size: var(--text-xs);
+    color: var(--color-footer-label);
+    font-size: 11px;
+}
+
+@media (max-width: 991.98px) {
+    .site-footer {
+        padding: 32px 24px 24px;
+    }
+
+    .footer-content {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 32px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .footer-content {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 /* ==================== Utility Classes ==================== */
@@ -950,7 +1186,7 @@ label {
         color: black;
     }
     
-    .navbar,
+    .app-header,
     .site-footer,
     .btn,
     .pagination {
@@ -1015,4 +1251,552 @@ button:focus-visible,
 a:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+}
+
+/* ==================== Bootstrap theme ==================== */
+/* Bootstrap loads first, so these give its components the Figma brand and blue-greys */
+:root {
+    --bs-primary: #ce4801;
+    --bs-primary-rgb: 206, 72, 1;
+    --bs-link-color: #ce4801;
+    --bs-link-color-rgb: 206, 72, 1;
+    --bs-link-hover-color: #a93b01;
+    --bs-link-hover-color-rgb: 169, 59, 1;
+    --bs-body-font-family: var(--font-sans);
+    --bs-body-color: var(--color-gray-900);
+    --bs-body-bg: var(--color-gray-100);
+    --bs-secondary-color: var(--color-gray-500);
+    --bs-border-color: var(--color-gray-200);
+    --bs-font-monospace: var(--font-mono);
+    --bs-focus-ring-color: rgba(206, 72, 1, 0.25);
+}
+
+.btn-primary {
+    --bs-btn-bg: #ce4801;
+    --bs-btn-border-color: #ce4801;
+    --bs-btn-hover-bg: #a93b01;
+    --bs-btn-hover-border-color: #a93b01;
+    --bs-btn-active-bg: #8f3201;
+    --bs-btn-active-border-color: #8f3201;
+    --bs-btn-disabled-bg: #ce4801;
+    --bs-btn-disabled-border-color: #ce4801;
+    --bs-btn-focus-shadow-rgb: 206, 72, 1;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #ce4801;
+    --bs-btn-border-color: #ce4801;
+    --bs-btn-hover-bg: #ce4801;
+    --bs-btn-hover-border-color: #ce4801;
+    --bs-btn-active-bg: #a93b01;
+    --bs-btn-active-border-color: #a93b01;
+    --bs-btn-disabled-color: #ce4801;
+    --bs-btn-disabled-border-color: #ce4801;
+    --bs-btn-focus-shadow-rgb: 206, 72, 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #e8641f;
+    box-shadow: 0 0 0 0.25rem rgba(206, 72, 1, 0.2);
+}
+
+.form-check-input:checked {
+    background-color: #ce4801;
+    border-color: #ce4801;
+}
+
+.page-link {
+    --bs-pagination-color: #ce4801;
+    --bs-pagination-hover-color: #a93b01;
+    --bs-pagination-focus-color: #a93b01;
+    --bs-pagination-active-bg: #ce4801;
+    --bs-pagination-active-border-color: #ce4801;
+}
+
+.pagination {
+    --bs-pagination-color: #ce4801;
+    --bs-pagination-hover-color: #a93b01;
+    --bs-pagination-active-bg: #ce4801;
+    --bs-pagination-active-border-color: #ce4801;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #ce4801;
+}
+
+/* ==================== Figma application components ==================== */
+/* Built from the research database home (Figma node 77:2495). Pages compose these instead of
+   their own boxes, so every screen shares one look. Icons are the Lucide SVGs the file uses,
+   in database/static/database/images/icons/. */
+
+.app-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* Component titles are h1-h3 for the outline; drop the global h2 underline and margins */
+.app-title,
+.app-section-title,
+.app-panel__title,
+.app-search__title {
+    margin-top: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+/* White panel: cards, tables and forms */
+.app-panel {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+}
+
+.app-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+}
+
+.app-panel__title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.app-panel__meta {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.app-section-title {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Dark workspace with the hero image, wave lines and a search panel (Figma 71:1890) */
+.app-workspace {
+    position: relative;
+    overflow: hidden;
+    padding: 30px 28px 32px;
+    border: 1px solid #ececec;
+    border-radius: 24px;
+    color: var(--color-white);
+    /* The Figma crop: the image at full width and 301.59 % height, aligned to its bottom */
+    background: #05060b url("../images/landing/figma/hero-bg.webp") left bottom / 100% 301.59% no-repeat;
+}
+
+.app-workspace > *:not(.app-waves) {
+    position: relative;
+}
+
+.app-workspace__intro {
+    max-width: 869px;
+    margin: 0 0 28px;
+}
+
+.app-eyebrow {
+    margin: 0 0 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: inherit;
+}
+
+.app-title {
+    margin: 0 0 10px;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: inherit;
+}
+
+.app-title__accent {
+    color: var(--color-primary);
+}
+
+.app-lede {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.app-waves {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.app-wave {
+    position: absolute;
+}
+
+.app-wave__box {
+    position: absolute;
+}
+
+.app-wave img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+}
+
+.app-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 10px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 100px;
+    background: var(--color-primary);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.app-pill:hover {
+    background: var(--color-primary-dark);
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.app-pill__plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+/* Search panel (Figma 71:1923) */
+.app-search {
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background: var(--color-white);
+    color: var(--color-gray-900);
+}
+
+.app-search__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.app-search__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.app-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: none;
+}
+
+.app-search__field {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 58px;
+    padding: 8px 8px 8px 18px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.app-search__field:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.app-search__scope {
+    border: 0;
+    padding: 0 22px 0 0;
+    background: transparent url("../images/icons/chevron-down.svg") right center / 14px no-repeat;
+    appearance: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    cursor: pointer;
+}
+
+.app-search__scope:focus {
+    outline: none;
+}
+
+.app-search__query {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding-left: 18px;
+    border-left: 1px solid var(--color-gray-200);
+}
+
+.app-search__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    font-size: 14px;
+    color: var(--color-gray-900);
+    background: transparent;
+}
+
+.app-search__input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.app-search__input:focus {
+    outline: none;
+}
+
+.app-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--color-primary);
+    border-radius: 6px;
+    background: var(--color-primary);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.app-btn:hover {
+    border-color: var(--color-primary-dark);
+    background: var(--color-primary-dark);
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.app-search__examples {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.app-chip {
+    display: inline-flex;
+    align-items: flex-start;
+    padding: 5px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 4px;
+    background: var(--color-gray-50);
+    font-size: 12px;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.app-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* Collection cards (Figma 77:2556) */
+.app-collections {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.app-collection {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background: var(--color-white);
+    color: var(--color-gray-900);
+    text-decoration: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.app-collection:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 6px 16px rgba(23, 43, 67, 0.08);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.app-collection__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.app-collection__head span {
+    flex: 1;
+}
+
+.app-collection p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+/* Data table (Figma 77:2581) */
+.app-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
+
+.app-table th {
+    padding: 12px 24px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 10px;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.app-table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 14px;
+    font-weight: 500;
+    vertical-align: middle;
+    color: var(--color-gray-900);
+}
+
+.app-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.app-table .is-number {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 500;
+    text-align: right;
+}
+
+.app-table .is-end {
+    text-align: right;
+}
+
+.app-table__identity {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Feature list (Figma 77:2625) */
+.app-features {
+    display: grid;
+    gap: 19px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-features li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+/* Funding and status notice (Figma 77:2649) */
+.app-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 6px;
+    background: rgba(206, 72, 1, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.app-notice strong {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+@media (max-width: 991.98px) {
+    .app-collections {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .app-collections {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-workspace {
+        padding: 24px 16px;
+        border-radius: 16px;
+    }
+
+    .app-search__field {
+        flex-wrap: wrap;
+        padding: 12px;
+    }
+
+    .app-search__query {
+        flex-basis: 100%;
+        order: 2;
+        padding-left: 0;
+        border-left: 0;
+    }
+
+    .app-search__field .app-btn {
+        order: 3;
+        width: 100%;
+    }
+
+    .app-table th,
+    .app-table td {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
 }

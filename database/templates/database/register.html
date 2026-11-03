@@ -1,15 +1,66 @@
 {% extends "base.html" %}
+{% load static %}
+{# Register, from the registration form of the Figma "Prometheus · Sign in" (node 198:3779) #}
 
-{% load crispy_forms_tags %}
+{% block title %}Register | Prometheus{% endblock %}
+
+{% block body_class %} class="acct-auth"{% endblock %}
 
 {% block content %}
-<h2>Register</h2>
+<div class="acct-page">
+    <!-- Research welcome (Figma 198:3803) -->
+    <div class="acct-welcome" aria-hidden="true">
+        <img src="{% static 'database/images/landing/prometheus-gift.png' %}" alt="" width="720" height="631">
+    </div>
 
-<form method="post">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <input type="submit" class="btn btn-primary" value="Register">
-</form>
+    <!-- Registration form (Figma 198:3840) -->
+    <div class="acct-panel">
+        <section class="acct-card acct-card--register" aria-labelledby="acct-title">
+            <div class="acct-welcome-text">
+                <h1 id="acct-title" class="acct-title">Register</h1>
+                <p class="acct-lede">Create an account for the Kinetic Models Database.</p>
+            </div>
+            <p class="acct-note">Fields marked <span class="acct-required">*</span> are required.</p>
 
-<a href="{% url 'login' %}">Back to login</a>
+            {% if form.non_field_errors %}
+            <div class="acct-alert acct-alert--error" role="alert">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <ul>{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+
+            <form method="post" class="acct-form">
+                {% csrf_token %}
+                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                <div class="acct-fields">
+                    {% for field in form.visible_fields %}
+                    {% if field.name == "username" %}
+                    {% include "database/account_field.html" with field=field placeholder="Choose a username" marks=True only %}
+                    {% elif field.name == "email" %}
+                    {% include "database/account_field.html" with field=field placeholder="Enter your email address" marks=True only %}
+                    {% elif field.name == "password1" %}
+                    {% include "database/account_field.html" with field=field placeholder="Create a password" marks=True toggle=True rules=True only %}
+                    {% elif field.name == "password2" %}
+                    {% include "database/account_field.html" with field=field placeholder="Enter the password again" marks=True toggle=True only %}
+                    {% else %}
+                    {% include "database/account_field.html" with field=field marks=True only %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <button type="submit" class="app-btn acct-submit">Register</button>
+            </form>
+
+            <!-- Existing account (Figma 198:3889) -->
+            <p class="acct-switch acct-switch--inline">Already have an account?<a href="{% url 'login' %}">Back to login</a></p>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/account_styles.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "database/account_scripts.html" %}
 {% endblock %}

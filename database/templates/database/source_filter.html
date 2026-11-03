@@ -1,184 +1,498 @@
 {% extends "base.html" %}
-
-{% load crispy_forms_tags %}
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# Source search, from the Figma "Promethe.us · Source Search" (node 150:2528) #}
+
+{% block title %}Source Search | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Page Header -->
-<div class="page-header-compact">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="h4 mb-0">Source Search</h1>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} results</span>
-            {% if site_access_allowed %}
-            <a href="{% url 'source-create' %}" class="btn btn-sm btn-success">
-                <i class="bi bi-plus-lg me-1"></i>Add Source
-            </a>
-            {% endif %}
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
-                    data-bs-target="#searchPanel" aria-expanded="false" aria-controls="searchPanel">
-                <i class="bi bi-funnel me-1"></i>Filters
-            </button>
-        </div>
-    </div>
-</div>
+<div class="src-ui src-search">
 
-<!-- Collapsible Search Panel -->
-<div class="collapse mb-3" id="searchPanel">
-    <div class="search-panel">
-        <form method="get" id="source-search-form">
+    <!-- Search workspace (Figma 150:2796) -->
+    <section class="app-workspace" aria-labelledby="src-search-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="src-search__top">
+            <div class="app-workspace__intro">
+                <nav class="src-search__crumbs" aria-label="Breadcrumb">
+                    <ol>
+                        <li><a href="{% url 'home' %}">Home</a></li>
+                        <li><a href="{% url 'source-search' %}">Sources</a></li>
+                        <li aria-current="page">Source Search</li>
+                    </ol>
+                </nav>
+                <h1 id="src-search-title" class="app-title"><span class="app-title__accent">Source</span> Search</h1>
+                <p class="app-lede">Explore the literature behind the kinetic models. Find, cite, and manage publication records.</p>
+            </div>
+            {% if site_access_allowed %}
+            <a class="app-pill" href="{% url 'source-create' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="16" height="16">Add Source</a>
+            {% endif %}
+        </div>
+
+        <!-- Search and filters (Figma 150:2819); the fields are those of the source FilterSet -->
+        <form class="app-search src-search__panel" method="get" id="source-search-form" role="search">
             {{ filter.form.media }}
-            <div class="row g-2 align-items-end">
-                {{ filter.form|crispy }}
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-search"></i> Search
-                    </button>
-                    <a href="{% url 'source-search' %}" class="btn btn-outline-secondary btn-sm">
-                        Clear
-                    </a>
+            <h2 class="app-search__title">Find a source</h2>
+            <div class="src-search__filters">
+                <span class="src-search__filter-label"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="16" height="16">Filter by</span>
+                <label class="src-search__filter" for="{{ filter.form.journal_name.id_for_label }}"><span>Journal</span>{{ filter.form.journal_name }}</label>
+                <label class="src-search__filter src-search__filter--short" for="{{ filter.form.publication_year.id_for_label }}"><span>Year</span>{{ filter.form.publication_year }}</label>
+                <label class="src-search__filter" for="{{ filter.form.doi.id_for_label }}"><span>DOI</span>{{ filter.form.doi }}</label>
+                <label class="src-search__filter src-search__filter--short" for="{{ filter.form.prime_id.id_for_label }}"><span>PrIMe ID</span>{{ filter.form.prime_id }}</label>
+                <a class="src-search__reset" href="{% url 'source-search' %}">Reset filters</a>
+            </div>
+            <div class="src-search__row">
+                <div class="src-search__query">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-111827-24.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="{{ filter.form.source_title.id_for_label }}">{{ filter.form.source_title.label }}</label>
+                    <input class="app-search__input" type="search" name="{{ filter.form.source_title.html_name }}" id="{{ filter.form.source_title.id_for_label }}" value="{{ filter.form.source_title.value|default_if_none:'' }}" placeholder="Search by publication title">
                 </div>
+                <button class="app-btn src-search__submit" type="submit">Search</button>
             </div>
         </form>
-    </div>
-</div>
+    </section>
 
-<!-- Results Table -->
-<div class="table-container">
-    <table class="table table-hover table-sm mb-0">
-        <thead>
-            <tr>
-                <th style="width: 60px;">ID</th>
-                <th>Title</th>
-                <th style="width: 250px;">Authors</th>
-                <th style="width: 180px;">Publication</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for source in object_list %}
-            <tr class="clickable-row" data-href="{% url 'source-detail' source.pk %}">
-                <td class="text-muted small">{{ source.pk }}</td>
-                <td>
-                    <strong class="source-title">{{ source.source_title.title|titlecase|truncatewords:15 }}</strong>
-                </td>
-                <td class="text-muted small">
-                    {{ source.author_line|truncatewords:8|default:"—" }}
-                </td>
-                <td class="small">
-                    <span class="text-muted">{{ source.pub_info|truncatewords:6|default:"—" }}</span>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" class="text-center text-muted py-4">
-                    <i class="bi bi-search me-1"></i>No sources found. Try adjusting your filters.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <!-- Results (Figma 150:2588) -->
+    <section class="src-search__results" aria-labelledby="src-results-title">
+        <div class="src-search__summary">
+            <h2 id="src-results-title" class="src-search__count">{{ page_obj.paginator.count|default:0|pluralize:"source" }}</h2>
+            {% if page_obj.paginator.count %}<span class="src-search__showing">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}</span>{% endif %}
+        </div>
 
-<!-- Pagination -->
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="pagination-compact">
-    {% render_pagination objects=page_obj page_name="page" %}
+        <div class="app-panel src-search__table">
+            <div class="src-search__scroll">
+                <table class="app-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="src-search__id">ID</th>
+                            <th scope="col">Publication title</th>
+                            <th scope="col" class="src-search__authors">Authors</th>
+                            <th scope="col" class="src-search__journal">Journal &amp; publication</th>
+                            <th scope="col" class="src-search__menu-cell"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for source in object_list %}
+                        <tr class="clickable-row" data-href="{% url 'source-detail' source.pk %}">
+                            <td class="src-search__id">{{ source.pk }}</td>
+                            <td><a class="src-search__title" href="{% url 'source-detail' source.pk %}">{% if source.source_title %}{{ source.source_title|titlecase }}{% else %}Untitled source{% endif %}</a></td>
+                            <td class="src-search__authors">
+                                {% with authorships=source.authorship_set.all %}{% with total=authorships|length %}
+                                {% if total %}
+                                <span class="src-search__primary">{% for authorship in authorships|slice:":2" %}{{ authorship.author }}{% if not forloop.last %}; {% endif %}{% endfor %}</span>
+                                {% if total > 2 %}<span class="src-search__secondary">+{{ total|add:"-2"|pluralize:"author" }}</span>{% endif %}
+                                {% else %}
+                                <span class="src-search__secondary">No authors recorded</span>
+                                {% endif %}
+                                {% endwith %}{% endwith %}
+                            </td>
+                            <td class="src-search__journal">
+                                <span class="src-search__primary">{{ source.journal_name|default:"—" }}</span>
+                                {% if source.publication_year or source.journal_volume_number or source.page_numbers %}
+                                <span class="src-search__secondary">{% if source.publication_year %}{{ source.publication_year }}{% endif %}{% if source.journal_volume_number %}{% if source.publication_year %} · {% endif %}Vol. {{ source.journal_volume_number }}{% endif %}{% if source.page_numbers %}{% if source.publication_year or source.journal_volume_number %} · {% endif %}{{ source.page_numbers }}{% endif %}</span>
+                                {% endif %}
+                            </td>
+                            <td class="src-search__menu-cell">
+                                <div class="dropdown">
+                                    <button class="src-search__menu" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Actions for source {{ source.pk }}">
+                                        <img class="app-icon" src="{% static 'database/images/icons/dots-vertical-111827.svg' %}" alt="" width="20" height="20">
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="{% url 'source-detail' source.pk %}">View details</a></li>
+                                        {% if source.doi %}<li><a class="dropdown-item" href="https://doi.org/{{ source.doi }}" target="_blank" rel="noopener">Open DOI</a></li>{% endif %}
+                                        {% if site_access_allowed %}<li><a class="dropdown-item" href="{% url 'source-update' source.pk %}">Edit source</a></li>{% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="src-search__empty">No sources found. Try a shorter title or <a href="{% url 'source-search' %}">reset the filters</a>.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="src-search__pagination">
+            <span class="src-search__showing">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% include "database/sources_pager.html" with page=page_obj %}
+        </div>
+        {% endif %}
+    </section>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/sources_styles.html" %}
 <style>
-.page-header-compact {
-    padding: 1rem 0;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-gray-200);
+/* The Figma frame shows the whole hero image, cropped to cover the panel */
+.src-search .app-workspace {
+    background-position: center;
+    background-size: cover;
 }
 
-.search-panel {
-    background: var(--color-gray-50);
+.src-search__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.src-search .app-workspace__intro {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 34px;
+}
+
+.src-search .app-title {
+    margin: 0;
+}
+
+.src-search__crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+}
+
+.src-search__crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.src-search__crumbs li + li::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    background: url("{% static 'database/images/icons/chevron-right-white-12.svg' %}") center / 12px no-repeat;
+}
+
+.src-search__crumbs a {
+    color: var(--color-white);
+}
+
+.src-search__crumbs a:hover {
+    color: var(--color-primary-light);
+    text-decoration: none;
+}
+
+.src-search__crumbs [aria-current] {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.src-search .app-pill {
+    flex-shrink: 0;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border-color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Search and filters */
+.src-search__panel {
+    gap: 16px;
+    padding: 20px;
+}
+
+.src-search__panel .app-search__title {
+    font-size: 12px;
+}
+
+.src-search__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.src-search__filter-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.src-search__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    margin: 0;
+    padding: 0 12px;
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-}
-
-.table-container {
+    border-radius: 6px;
     background: var(--color-white);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-500);
+    cursor: text;
+}
+
+.src-search__filter:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.src-search__filter span {
+    white-space: nowrap;
+}
+
+.src-search__filter input {
+    width: 150px;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.src-search__filter--short input {
+    width: 80px;
+}
+
+.src-search__filter input:focus {
+    outline: none;
+}
+
+.src-search__reset {
+    font-size: 12px;
+    color: var(--color-primary);
+}
+
+.src-search__row {
+    display: flex;
+    gap: 12px;
+}
+
+.src-search__query {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    height: 44px;
+    padding: 0 14px;
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
+    border-radius: 6px;
+}
+
+.src-search__query:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.src-search .src-search__submit {
+    width: 104px;
+    height: 44px;
+}
+
+/* Results */
+.src-search__results {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.src-search__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.src-search__count {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.src-search__showing {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.src-search__table {
     overflow: hidden;
 }
 
-.table th {
-    background: var(--color-gray-50);
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-gray-600);
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.src-search__scroll {
+    overflow-x: auto;
 }
 
-.table td {
-    padding: 0.5rem 0.75rem;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--color-gray-100);
+.src-search .app-table {
+    min-width: 960px;
+    table-layout: fixed;
 }
 
-.table tbody tr:last-child td {
-    border-bottom: none;
+.src-search .app-table th {
+    padding: 12px 10px;
+    border-top: 0;
 }
 
-.clickable-row {
-    cursor: pointer;
-    transition: background-color 0.15s ease;
+.src-search .app-table td {
+    height: 72px;
+    padding: 12px 10px;
+    font-weight: 400;
 }
 
-.clickable-row:hover {
-    background-color: var(--color-primary-bg) !important;
+.src-search .app-table th:first-child,
+.src-search .app-table td:first-child {
+    padding-left: 18px;
 }
 
-.source-title {
-    color: var(--color-gray-900);
+.src-search .app-table th:last-child,
+.src-search .app-table td:last-child {
+    padding-right: 18px;
+}
+
+.src-search__id {
+    width: 72px;
+}
+
+td.src-search__id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-400);
+}
+
+.src-search__authors {
+    width: 265px;
+}
+
+.src-search__journal {
+    width: 300px;
+}
+
+.src-search__menu-cell {
+    width: 58px;
+    text-align: right;
+}
+
+.src-search__title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 13px;
     font-weight: 500;
+    line-height: 1.5;
+    color: var(--color-primary);
 }
 
-.pagination-compact {
-    padding: 0.75rem;
-    border-top: 1px solid var(--color-gray-200);
+.src-search__primary,
+.src-search__secondary {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.src-search__primary {
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.src-search__secondary {
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.src-search__menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+}
+
+.src-search__menu:hover,
+.src-search__menu[aria-expanded="true"] {
+    background: var(--color-gray-100);
+}
+
+.src-search .clickable-row {
+    cursor: pointer;
+}
+
+.src-search .clickable-row:hover {
     background: var(--color-gray-50);
 }
 
-.search-panel .form-group {
-    margin-bottom: 0;
+.src-search .app-table td.src-search__empty {
+    height: auto;
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--color-gray-500);
 }
 
-.search-panel label {
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
+.src-search__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.search-panel .form-control {
-    font-size: 0.875rem;
-    padding: 0.375rem 0.5rem;
+@media (max-width: 767.98px) {
+    .src-search__top {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .src-search .app-pill {
+        margin-bottom: 24px;
+    }
+
+    .src-search__row {
+        flex-direction: column;
+    }
+
+    .src-search .src-search__submit {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .src-search__panel {
+        padding: 16px;
+    }
+
+    .src-search__filter {
+        flex: 1 1 100%;
+    }
+
+    .src-search__filter input,
+    .src-search__filter--short input {
+        flex: 1;
+        width: auto;
+    }
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// A row opens its source, unless the click was on a link, a button or the row menu
 document.querySelectorAll('.clickable-row').forEach(row => {
-    row.addEventListener('click', function() {
+    row.addEventListener('click', function(event) {
+        if (event.target.closest('a, button, .dropdown-menu')) return;
         window.location.href = this.dataset.href;
     });
 });
-
-{% if request.GET %}
-document.getElementById('searchPanel').classList.add('show');
-{% endif %}
 </script>
 {% endblock %}

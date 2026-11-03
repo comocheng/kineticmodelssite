@@ -1,161 +1,607 @@
 {% extends "base.html" %}
-
-{% load crispy_forms_tags %}
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# The reaction search, from the Figma "Reaction search" (node 152:3985) #}
+
+{% block title %}Reaction search | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Page Header -->
-<div class="page-header-compact">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="h4 mb-0">Reaction Search</h1>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">{{ page_obj.paginator.count|default:0 }} results</span>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" 
-                    data-bs-target="#searchPanel" aria-expanded="false" aria-controls="searchPanel">
-                <i class="bi bi-funnel me-1"></i>Filters
-            </button>
-        </div>
-    </div>
-</div>
+<div class="rx-page rx-search">
 
-<!-- Collapsible Search Panel -->
-<div class="collapse mb-3" id="searchPanel">
-    <div class="search-panel">
-        <form method="get" id="reaction-search-form">
-            {{ filter.form.media }}
-            <div class="row g-2 align-items-end">
-                {{ filter.form|crispy }}
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-search"></i> Search
-                    </button>
-                    <a href="{% url 'reaction-search' %}" class="btn btn-outline-secondary btn-sm">
-                        Clear
-                    </a>
-                </div>
+    <!-- Search workspace (Figma 187:3123) -->
+    <section class="app-workspace rx-search__hero" aria-labelledby="rx-search-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="app-workspace__intro rx-search__intro">
+            <nav aria-label="Breadcrumb">
+                <ol class="rx-search__crumbs">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-white-12.svg' %}" alt="" width="12" height="12"></li>
+                    <li><a href="{% url 'database-home' %}">Database</a></li>
+                    <li aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-white-12.svg' %}" alt="" width="12" height="12"></li>
+                    <li aria-current="page">Reactions</li>
+                </ol>
+            </nav>
+            <h1 id="rx-search-title" class="app-title"><span class="app-title__accent">Reaction</span> search</h1>
+            <p class="app-lede">Find reactions, compare rate expressions, and explore their kinetic models.</p>
+        </div>
+
+        {# The site has no free-text reaction search; this box is the reaction ID lookup that SidebarLookup handles #}
+        <form class="app-search rx-search__lookup" method="get" action="{% url 'reaction-search' %}" role="search">
+            <div class="app-search__head">
+                <label class="rx-search__lookup-title" for="rx-lookup-id">Go to a reaction</label>
+                {% if request.GET %}<a class="rx-search__clear" href="{% url 'reaction-search' %}">Clear search</a>{% endif %}
             </div>
+            <div class="rx-search__lookup-row">
+                <div class="rx-search__input">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-111827-24.svg' %}" alt="" width="18" height="18">
+                    <input id="rx-lookup-id" type="text" name="reaction_pk" inputmode="numeric" pattern="[0-9]+" required
+                           title="A reaction ID is a whole number" placeholder="Enter a reaction ID"
+                           {% if reaction_invalid %}value="{{ request.GET.reaction_pk }}" aria-invalid="true" aria-describedby="rx-lookup-error"{% endif %}>
+                </div>
+                <button class="app-btn" type="submit">Go to reaction</button>
+            </div>
+            {% if reaction_invalid %}<p class="rx-search__error" id="rx-lookup-error" role="alert">{{ reaction_invalid }}.</p>{% endif %}
         </form>
+    </section>
+
+    <!-- Results and filters (Figma 152:4047) -->
+    <div class="rx-search__body">
+        <aside class="app-panel rx-filters" aria-labelledby="rx-filters-title">
+            <form method="get" id="reaction-search-form" action="{% url 'reaction-search' %}">
+                {# DAL's Select2 needs jQuery, which base.html does not load #}
+                <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+                {{ filter.form.media }}
+                <div class="rx-filters__head">
+                    <h2 class="rx-filters__title" id="rx-filters-title"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="18" height="18">Filters</h2>
+                    <a class="rx-filters__reset" href="{% url 'reaction-search' %}">Reset</a>
+                </div>
+
+                {% if filter.form.non_field_errors %}<div class="rx-filters__error" role="alert">{{ filter.form.non_field_errors }}</div>{% endif %}
+
+                <fieldset class="rx-filter">
+                    <legend class="rx-filter__label">Reactants</legend>
+                    <label class="visually-hidden" for="{{ filter.form.reactant1.id_for_label }}">First reactant</label>
+                    {{ filter.form.reactant1 }}
+                    {% for error in filter.form.reactant1.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                    <label class="visually-hidden" for="{{ filter.form.reactant2.id_for_label }}">Second reactant</label>
+                    {{ filter.form.reactant2 }}
+                    {% for error in filter.form.reactant2.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </fieldset>
+
+                <fieldset class="rx-filter">
+                    <legend class="rx-filter__label">Products</legend>
+                    <label class="visually-hidden" for="{{ filter.form.product1.id_for_label }}">First product</label>
+                    {{ filter.form.product1 }}
+                    {% for error in filter.form.product1.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                    <label class="visually-hidden" for="{{ filter.form.product2.id_for_label }}">Second product</label>
+                    {{ filter.form.product2 }}
+                    {% for error in filter.form.product2.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </fieldset>
+
+                <hr class="rx-filters__divider">
+
+                {# The "reversible" filter, with direction labels in place of Unknown / Yes / No #}
+                <div class="rx-filter">
+                    <label class="rx-filter__label" for="{{ filter.form.reversible.id_for_label }}">Reaction direction</label>
+                    {% with direction=filter.form.reversible.value %}
+                    <select class="rx-select" name="{{ filter.form.reversible.html_name }}" id="{{ filter.form.reversible.id_for_label }}">
+                        <option value="unknown"{% if direction is None %} selected{% endif %}>All directions</option>
+                        <option value="true"{% if direction is True %} selected{% endif %}>Reversible (&lt;=&gt;)</option>
+                        <option value="false"{% if direction is False %} selected{% endif %}>Irreversible (-&gt;)</option>
+                    </select>
+                    {% endwith %}
+                    {% for error in filter.form.reversible.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </div>
+
+                <div class="rx-filter">
+                    <label class="rx-filter__label" for="{{ filter.form.prime_id.id_for_label }}">PrIMe ID</label>
+                    <input class="rx-text" type="text" name="{{ filter.form.prime_id.html_name }}" id="{{ filter.form.prime_id.id_for_label }}" value="{{ filter.form.prime_id.value|default_if_none:'' }}" placeholder="Any PrIMe ID">
+                    {% for error in filter.form.prime_id.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </div>
+
+                <p class="rx-filters__hint">Use reactant and product filters to narrow a reaction pathway.</p>
+                <button type="submit" class="app-btn rx-filters__apply">Apply filters</button>
+            </form>
+        </aside>
+
+        <section class="app-panel rx-results" aria-labelledby="rx-results-count">
+            <div class="rx-results__toolbar">
+                <p class="rx-results__count" id="rx-results-count"><strong>{{ page_obj.paginator.count|default:0|floatformat:"0g" }}</strong> {% if page_obj.paginator.count == 1 %}reaction{% else %}reactions{% endif %}</p>
+            </div>
+            <div class="rx-table-wrap">
+                <table class="rx-table rx-results__table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="rx-results__id">Reaction ID</th>
+                            <th scope="col">Reaction</th>
+                            <th scope="col" class="rx-results__count-col">Rates</th>
+                            <th scope="col" class="rx-results__count-col">Kinetic models</th>
+                            <th scope="col" class="rx-results__open"><span class="visually-hidden">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reaction in object_list %}
+                        <tr class="clickable-row" data-href="{% url 'reaction-detail' reaction.pk %}">
+                            <td class="is-mono rx-results__id">{{ reaction.pk }}</td>
+                            <td class="rx-results__equation">
+                                <a href="{% url 'reaction-detail' reaction.pk %}">{{ reaction.equation }}</a>
+                                {% if reaction.prime_id %}<span class="rx-results__prime">PrIMe ID {{ reaction.prime_id }}</span>{% endif %}
+                            </td>
+                            <td>{{ reaction.kinetics_count }}</td>
+                            <td>{{ reaction.kinetic_model_count }}</td>
+                            <td class="rx-results__open"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16"></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="rx-empty">No reactions found. Try adjusting your filters.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (Figma 152:4169) -->
+            {% if page_obj.paginator.count %}
+            <nav class="rx-pager" aria-label="Pagination">
+                <p class="rx-pager__range">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count|floatformat:"0g" }} reactions · {{ page_obj.paginator.per_page }} per page</p>
+                {% if page_obj.paginator.num_pages > 1 %}
+                {% with last=page_obj.paginator.num_pages %}
+                <div class="rx-pager__controls">
+                    {% if page_obj.has_previous %}
+                    <a class="rx-pager__step" href="?{% param_replace page=page_obj.previous_page_number %}">Previous</a>
+                    {% else %}
+                    <span class="rx-pager__step is-disabled" aria-disabled="true">Previous</span>
+                    {% endif %}
+                    {% if page_obj.number > 2 %}<a class="rx-pager__page" href="?{% param_replace page=1 %}">1</a>{% endif %}
+                    {% if page_obj.number > 3 %}<span class="rx-pager__gap" aria-hidden="true">…</span>{% endif %}
+                    {% if page_obj.has_previous %}<a class="rx-pager__page" href="?{% param_replace page=page_obj.previous_page_number %}">{{ page_obj.previous_page_number }}</a>{% endif %}
+                    <span class="rx-pager__page is-current" aria-current="page">{{ page_obj.number }}</span>
+                    {% if page_obj.has_next %}<a class="rx-pager__page" href="?{% param_replace page=page_obj.next_page_number %}">{{ page_obj.next_page_number }}</a>{% endif %}
+                    {% if page_obj.number < last|add:"-2" %}<span class="rx-pager__gap" aria-hidden="true">…</span>{% endif %}
+                    {% if page_obj.number < last|add:"-1" %}<a class="rx-pager__page" href="?{% param_replace page=last %}">{{ last }}</a>{% endif %}
+                    {% if page_obj.has_next %}
+                    <a class="rx-action rx-pager__next" href="?{% param_replace page=page_obj.next_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16">Next</a>
+                    {% else %}
+                    <span class="rx-action rx-pager__next is-disabled" aria-disabled="true"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16">Next</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% endif %}
+            </nav>
+            {% endif %}
+        </section>
     </div>
 </div>
-
-<!-- Results Table -->
-<div class="table-container">
-    {% if object_list %}
-    {{ object_list|render_reaction_list }}
-    {% else %}
-    <div class="text-center text-muted py-4">
-        <i class="bi bi-search me-1"></i>No reactions found. Try adjusting your filters.
-    </div>
-    {% endif %}
-</div>
-
-<!-- Pagination -->
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="pagination-compact">
-    {% render_pagination objects=page_obj page_name="page" %}
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/reaction_styles.html" %}
 <style>
-.page-header-compact {
-    padding: 1rem 0;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.rx-search {
+    gap: 24px;
 }
 
-.search-panel {
-    background: var(--color-gray-50);
+/* Hero: the shared dark workspace, with the breadcrumb inside it (Figma 187:3134) */
+.rx-search__intro {
+    display: grid;
+    gap: 10px;
+}
+
+.rx-search__intro .app-title {
+    margin: 0;
+}
+
+.rx-search__crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-white);
+}
+
+.rx-search__crumbs a {
+    color: var(--color-white);
+}
+
+.rx-search__crumbs [aria-current] {
+    font-weight: 600;
+}
+
+/* Lookup panel (Figma 187:3142) */
+.rx-search__lookup {
+    gap: 16px;
+}
+
+.rx-search__lookup-title {
+    font-size: 14px;
+    color: var(--color-gray-900);
+}
+
+.rx-search__clear {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.rx-search__lookup-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rx-search__input {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-}
-
-.table-container {
+    border-radius: 6px;
     background: var(--color-white);
+}
+
+.rx-search__input:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.rx-search__input input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.rx-search__input input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.rx-search__input input:focus {
+    outline: none;
+}
+
+.rx-search__error {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+/* Filters beside the results (Figma 152:4048) */
+.rx-search__body {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.rx-filters form {
+    display: grid;
+    gap: 22px;
+    padding: 20px;
+}
+
+.rx-filters__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.rx-filters__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--color-gray-900);
+}
+
+.rx-filters__reset {
+    font-size: 11px;
+}
+
+.rx-filter {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.rx-filter__label {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-gray-900);
+}
+
+.rx-filters__divider {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-gray-200);
+    opacity: 1;
+}
+
+.rx-filters__hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+.rx-filters__apply {
+    width: 100%;
+}
+
+.rx-filters__error,
+.rx-filters__error ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+/* The species pickers: DAL's Select2 boxes, drawn as the Figma 40 px inputs */
+/* DAL's select2.css gives every container a 20em minimum, wider than this column */
+.rx-filters .select2-container {
+    width: 100% !important;
+    min-width: 0;
+}
+
+.rx-filters .select2-container--default .select2-selection--single {
+    display: flex;
+    align-items: center;
+    height: 40px;
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
+    border-radius: 6px;
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 12px;
+    padding-right: 36px;
+    font-size: 13px;
+    line-height: 38px;
+    color: var(--color-gray-900);
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: var(--color-gray-500);
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__arrow {
+    top: 0;
+    right: 12px;
+    width: 16px;
+    height: 38px;
+    background: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}") center / 16px no-repeat;
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    display: none;
+}
+
+.rx-filters .select2-container--focus .select2-selection--single,
+.rx-filters .select2-container--open .select2-selection--single {
+    border-color: var(--color-primary-light);
+}
+
+/* The dropdown hangs off body; keep the species cards the search returns compact */
+.select2-container--open .select2-results__option .list-group-item {
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    color: inherit;
+}
+
+.select2-container--open .select2-dropdown {
+    border-color: var(--color-gray-200);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: var(--color-primary-bg);
+    color: var(--color-gray-900);
+}
+
+.select2-container--open .select2-results__option img {
+    max-width: 120px;
+    height: auto;
+}
+
+/* Results (Figma 152:4084) */
+.rx-results {
     overflow: hidden;
 }
 
-.table th {
-    background: var(--color-gray-50);
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-gray-600);
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.rx-results__toolbar {
+    display: flex;
+    align-items: center;
+    min-height: 58px;
+    padding: 12px 20px;
 }
 
-.table td {
-    padding: 0.5rem 0.75rem;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--color-gray-100);
+.rx-results__count {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-500);
 }
 
-.table tbody tr:last-child td {
-    border-bottom: none;
+.rx-results__count strong {
+    margin-right: 6px;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-gray-900);
 }
 
-.clickable-row {
+.rx-results__table td {
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+.rx-results__id {
+    width: 108px;
+}
+
+.rx-results__count-col {
+    width: 120px;
+}
+
+.rx-results__open {
+    width: 56px;
+    text-align: right;
+}
+
+/* break-word, not anywhere: the column keeps its width and lines break between species */
+.rx-results__equation a {
+    color: var(--color-primary);
+    overflow-wrap: break-word;
+}
+
+.rx-results__prime {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.rx-results .clickable-row {
     cursor: pointer;
-    transition: background-color 0.15s ease;
 }
 
-.clickable-row:hover {
-    background-color: var(--color-primary-bg) !important;
+.rx-results .clickable-row:hover td {
+    background: var(--rx-hover);
 }
 
-.reaction-equation {
-    font-family: var(--font-mono);
-    font-size: 0.9rem;
+/* Pagination footer */
+.rx-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    min-height: 62px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-gray-200);
 }
 
-.species-link {
+.rx-pager__range {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.rx-pager__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.rx-pager__step,
+.rx-pager__page {
+    color: var(--color-gray-500);
+}
+
+.rx-pager__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+
+.rx-pager__step:hover,
+.rx-pager__page:hover {
     color: var(--color-primary);
     text-decoration: none;
 }
 
-.species-link:hover {
-    text-decoration: underline;
+.rx-pager__page.is-current {
+    background: var(--rx-tint);
+    color: var(--color-primary);
 }
 
-.arrow {
+.rx-pager__gap {
     color: var(--color-gray-500);
 }
 
-.badge {
-    font-size: 0.7rem;
-    font-weight: 500;
+.rx-pager .rx-action {
+    height: 36px;
+    margin-left: 4px;
+    font-size: 12px;
 }
 
-.bg-success-subtle { background-color: #d1e7dd; }
-.bg-secondary-subtle { background-color: #e9ecef; }
+.rx-pager .is-disabled {
+    color: var(--color-gray-400);
+    pointer-events: none;
+}
 
-.pagination-compact {
-    padding: 0.75rem;
-    border-top: 1px solid var(--color-gray-200);
-    background: var(--color-gray-50);
+.rx-pager .rx-action.is-disabled {
+    opacity: 0.5;
+}
+
+@media (max-width: 991.98px) {
+    .rx-search__body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .rx-search__lookup-row {
+        flex-wrap: wrap;
+    }
+
+    .rx-search__lookup-row .app-btn {
+        width: 100%;
+    }
+
+    .rx-results__id {
+        width: auto;
+    }
+
+    .rx-results__count-col {
+        width: auto;
+    }
+
+    .rx-results__table th {
+        white-space: normal;
+    }
+
+    /* The whole row opens the reaction, so the arrow column can go */
+    .rx-results__open {
+        display: none;
+    }
 }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.querySelectorAll('.clickable-row').forEach(row => {
-    row.addEventListener('click', function() {
+document.querySelectorAll('.rx-search .clickable-row').forEach(row => {
+    row.addEventListener('click', function (event) {
+        if (event.target.closest('a')) return;
         window.location.href = this.dataset.href;
     });
 });
-
-{% if request.GET %}
-document.getElementById('searchPanel').classList.add('show');
-{% endif %}
 </script>
 {% endblock %}

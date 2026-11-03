@@ -1,0 +1,29 @@
+{% load utils %}
+{# Page links for the pages that use catalog_styles.html; pass page (a Page) and label. The links keep every other GET parameter. #}
+{% if page.has_other_pages %}
+<nav class="cat-pager" aria-label="{{ label|default:'Pages' }}">
+    <span>{{ page.paginator.per_page }} per page</span>
+    <div class="cat-pager__pages">
+        {% if page.has_previous %}
+        <a class="cat-pager__step" href="?{% param_replace page=page.previous_page_number %}">← Previous</a>
+        {% else %}
+        <span class="cat-pager__step is-disabled">← Previous</span>
+        {% endif %}
+        {% for n in page.paginator.page_range %}
+            {% if n == page.number %}
+            <span class="cat-pager__page is-current" aria-current="page">{{ n }}</span>
+            {% elif n == 1 or n == page.paginator.num_pages or n >= page.number|add:"-2" and n <= page.number|add:"2" %}
+            <a class="cat-pager__page" href="?{% param_replace page=n %}">{{ n }}</a>
+            {% elif n == page.number|add:"-3" or n == page.number|add:"3" %}
+            <span class="cat-pager__page" aria-hidden="true">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if page.has_next %}
+        <a class="cat-pager__step" href="?{% param_replace page=page.next_page_number %}">Next →</a>
+        {% else %}
+        <span class="cat-pager__step is-disabled">Next →</span>
+        {% endif %}
+    </div>
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+</nav>
+{% endif %}
