@@ -209,6 +209,35 @@ class ConsoleLoginTests(TestCase):
             self.assertIn("the SQL console stays off", out.getvalue())
 
 
+class RoleCommandWithoutCreateRoleTests(TestCase):
+    """On a server whose site login cannot create roles, a superuser makes the console login once."""
+
+    databases = {"default", LIVEQUERY_DB}
+    console = {"USER": "kms_livequery_unit", "PASSWORD": "it's-a-secret"}
+
+    def patched(self):
+        return mock.patch.dict(settings.DATABASES, {LIVEQUERY_DB: {**settings.DATABASES["default"], **self.console}})
+
+    def test_a_missing_login_asks_for_the_superuser_step(self):
+        with self.patched(), mock.patch(
+            "livequery.management.commands.livequery_role.Command.site_manages_roles", return_value=False
+        ):
+            with self.assertRaisesMessage(CommandError, "livequery_role --admin-sql | sudo -u postgres psql"):
+                call_command("livequery_role")
+
+    def test_admin_sql_creates_the_login_with_a_quoted_password(self):
+        out = io.StringIO()
+        with self.patched():
+            call_command("livequery_role", admin_sql=True, stdout=out)
+        sql = out.getvalue()
+        self.assertIn("\\set ON_ERROR_STOP on", sql)
+        self.assertIn('CREATE ROLE "kms_livequery_unit"', sql)
+        self.assertIn("PASSWORD 'it''s-a-secret' NOSUPERUSER", sql)
+        self.assertIn("SET default_transaction_read_only = 'on';", sql)
+        self.assertIn("SET statement_timeout = '10s';", sql)
+        self.assertIn('GRANT USAGE ON SCHEMA public TO "kms_livequery_unit";', sql)
+
+
 class GrantTests(SimpleTestCase):
     def test_private_tables_are_not_readable(self):
         for table in ("auth_user", "authtoken_token", "django_session", "django_admin_log",
