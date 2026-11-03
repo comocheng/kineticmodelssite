@@ -23,10 +23,12 @@ logger = logging.getLogger(__name__)
 COPY_PATH = Path(__file__).resolve().parent.parent / "content" / "landing.yaml"
 CITATION_PATH = Path(settings.BASE_DIR) / "CITATION.cff"
 CACHE_SECONDS = 600
+FLAME_SPECIES = 30  # species that rise from the 3D flame in the hero
 
 LIVE_KEYS = (
     "models", "species", "reactions", "sources", "datasets", "datapoints",
     "composition_entries", "linked_entries", "linked_percent", "shared_name_models",
+    "flame_species",
 )
 # Each scene molecule adds "<key>_names", "<key>_models" and "<key>_experiment_entries".
 SCENE_KEY_SUFFIXES = ("names", "models", "experiment_entries")
@@ -69,6 +71,25 @@ def scene_molecule(entry):
     }
 
 
+def flame_species(limit=FLAME_SPECIES):
+    """The species that the most models use, each under the name that most models give it."""
+    named = models.SpeciesName.objects.filter(kinetic_model__isnull=False).exclude(name="")
+    top = list(named.values("species").annotate(
+        models=Count("kinetic_model", distinct=True)).order_by("-models", "species")[:limit])
+    best = {}
+    names = named.filter(species__in=[row["species"] for row in top]).values("species", "name")
+    for row in names.annotate(
+            models=Count("kinetic_model", distinct=True)).order_by("-models", "name"):
+        best.setdefault(row["species"], row["name"])
+    labels, seen = [], set()
+    for row in top:
+        name = best.get(row["species"])
+        if name and name not in seen:
+            seen.add(name)
+            labels.append({"name": name, "models": row["models"]})
+    return labels
+
+
 def live_numbers(copy):
     """Database counts and the problem scene, cached for CACHE_SECONDS."""
     problem = copy.get("problem", {})
@@ -98,6 +119,8 @@ def _count(scene_config):
             name=shared_name, kinetic_model__isnull=False
         ).values("kinetic_model").distinct().count() if shared_name else 0,
     }
+    flame = flame_species()
+    numbers["flame_species"] = len(flame)
     scene = [scene_molecule(entry) for entry in scene_config["species"]]
     for molecule in scene:
         molecule["shared_name_models"] = next(
@@ -109,7 +132,7 @@ def _count(scene_config):
     # Round down, so that the page never claims more links than there are.
     text["linked_percent"] = (f"{int(1000 * linked_entries / composition_entries) / 10:.1f}%"
                               if composition_entries else "0%")
-    return {"numbers": text, "scene": scene}
+    return {"numbers": text, "scene": scene, "flame_species": flame}
 
 
 class _Numbers(dict):
@@ -178,5 +201,6 @@ def landing_context():
         "copy": filled,
         "numbers": live["numbers"],
         "scene": live["scene"],
+        "flame_species": live["flame_species"],
         "citation": citation(),
     }

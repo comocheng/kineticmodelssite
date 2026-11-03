@@ -87,8 +87,8 @@
     margin-left: 6px;
 }
 
-/* Nine nav items do not fit on one line between 992 and 1200 px; drop the icons there */
-@media (min-width: 992px) and (max-width: 1199.98px) {
+/* Nine nav items do not fit on one line between 992 and 1400 px; drop the icons there */
+@media (min-width: 992px) and (max-width: 1399.98px) {
     .landing .navbar .nav-link {
         padding-left: 8px !important;
         padding-right: 8px !important;
@@ -289,15 +289,94 @@
 }
 
 .lp-hero__art {
+    position: relative;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
 }
 
-.lp-hero__art img {
+/* Only true of the 3D flame, so it shows once landing-flame.js has drawn it */
+.lp-hero__flame-note {
+    max-width: 300px;
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--lp-on-dark-2);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.6s ease, visibility 0.6s;
+}
+
+.lp-flame.is-3d + .lp-hero__flame-note {
+    visibility: visible;
+    opacity: 1;
+}
+
+.lp-flame {
+    position: relative;
     width: 100%;
     max-width: 380px;
-    height: auto;
-    filter: drop-shadow(0 0 60px rgba(206, 72, 1, 0.45));
+    aspect-ratio: 420 / 690;
+}
+
+/* The glow behind the flame breathes on the 3.6 s beat of the SVG sway */
+.lp-flame::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 4%;
+    width: 90%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 122, 51, 0.5), rgba(206, 72, 1, 0.2) 45%, transparent 70%);
+    transform: translateX(-50%);
+    animation: lp-glow 3.6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.lp-flame picture,
+.lp-flame img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.6s ease;
+}
+
+/* landing-flame.js adds the canvas and .is-3d once the first 3D frame is drawn */
+.lp-flame__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.lp-flame.is-3d .lp-flame__canvas {
+    opacity: 1;
+}
+
+.lp-flame.is-3d picture {
+    opacity: 0;
+}
+
+@keyframes lp-glow {
+    0%, 100% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.06);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-flame::before {
+        animation: none;
+    }
 }
 
 /* ---------- Holdings strip ---------- */
@@ -945,10 +1024,14 @@
 
     .lp-hero__art {
         order: -1;
-        justify-content: flex-start;
+        align-items: flex-start;
     }
 
-    .lp-hero__art img {
+    .lp-hero__flame-note {
+        text-align: left;
+    }
+
+    .lp-flame {
         max-width: 140px;
     }
 
