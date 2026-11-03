@@ -8,13 +8,14 @@
 {# One row with Analysis and the research tools in it needs about 1350 px; below 1400 px the menu button shows #}
 {% block nav_expand %}navbar-expand-xxl{% endblock %}
 
-{# nginx gives static files no cache lifetime, so browsers may keep an old copy: raise v when either file changes #}
+{# nginx gives static files no cache lifetime, so browsers may keep an old copy: raise v when one of these files changes #}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'database/css/landing.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'database/css/landing.css' %}?v=3">
 {% endblock %}
 
 {% block extra_js %}
 <script type="module" src="{% static 'database/js/landing-flame.js' %}?v=2"></script>
+<script src="{% static 'database/js/landing-contribute.js' %}?v=1" defer></script>
 <script>
     // The header is clear over the hero and turns solid once the page scrolls under it
     (() => {
@@ -73,6 +74,75 @@
             <p class="lp-holdings__note">{{ copy.holdings.note }}</p>
         </div>
     </div>
+
+    {% with contribute=copy.contribute %}
+    <div class="lp-container">
+        {# The ways to contribute. Without JavaScript every route shows its full text; landing-contribute.js switches routes and types the terminals. #}
+        <section class="lp-contribute" id="contribute" aria-labelledby="lp-contribute-title">
+            <div class="lp-contribute__head">
+                <h2 class="lp-contribute__title" id="lp-contribute-title">{{ contribute.title }}</h2>
+                <p class="lp-contribute__intro">{{ contribute.intro }}</p>
+            </div>
+            <div class="lp-contribute__body">
+                <div class="lp-contribute__routes" role="tablist" aria-label="{{ contribute.title }}" aria-orientation="vertical">
+                    {% for route in contribute.routes %}
+                    <button class="lp-contribute__route" type="button" role="tab" id="lp-route-{{ route.key }}" aria-controls="lp-route-panel-{{ route.key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"{% if not forloop.first %} tabindex="-1"{% endif %}>
+                        <span class="lp-contribute__route-label">{{ route.label }}</span>
+                        <span class="lp-contribute__route-method">{{ route.method }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+                <div class="lp-contribute__panels">
+                {% for route in contribute.routes %}
+                <div class="lp-contribute__panel" role="tabpanel" id="lp-route-panel-{{ route.key }}" aria-labelledby="lp-route-{{ route.key }}" data-route="{{ forloop.counter0 }}" data-kind="{{ route.kind }}">
+                    <ol class="lp-contribute__steps">
+                        {% for step in route.steps %}
+                        <li class="lp-contribute__step" data-step="{{ forloop.counter0 }}">
+                            {% if route.kind == "terminal" %}
+                            <button class="lp-contribute__step-head" type="button"><span class="lp-contribute__num">{{ forloop.counter|stringformat:"02d" }}</span>{{ step.title }}</button>
+                            {% else %}
+                            <p class="lp-contribute__step-head"><span class="lp-contribute__num">{{ forloop.counter|stringformat:"02d" }}</span>{{ step.title }}</p>
+                            {% endif %}
+                            <p class="lp-contribute__step-text">{{ step.text }}</p>
+                            {% if step.href %}<a class="lp-contribute__link" href="{{ step.href }}" target="_blank" rel="noopener noreferrer">{{ step.link }} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ol>
+                    <div class="lp-contribute__side">
+                        {% if route.kind == "terminal" %}
+                        <div class="lp-terminal">
+                            <div class="lp-terminal__bar">
+                                <span class="lp-terminal__title">{{ route.terminal }}</span>
+                                <button class="lp-terminal__action" type="button" data-action="copy" hidden>Copy step</button>
+                                <button class="lp-terminal__action" type="button" data-action="replay" hidden>Replay</button>
+                            </div>
+<pre class="lp-terminal__screen" tabindex="0" aria-label="Commands: {{ route.label }}, {{ route.method }}"><code>{% for step in route.steps %}<span class="lp-terminal__comment"># {{ forloop.counter|stringformat:"02d" }} {{ step.title }}</span>
+{% for command in step.commands %}<span class="lp-terminal__prompt">$ </span>{{ command }}
+{% endfor %}{% for line in step.output %}<span class="lp-terminal__out">{{ line }}</span>
+{% endfor %}{% if not forloop.last %}
+{% endif %}{% endfor %}</code></pre>
+                        </div>
+                        {% if route.pull_request %}<a class="lp-btn lp-btn--primary lp-contribute__pr" href="{{ route.pull_request.href }}" target="_blank" rel="noopener noreferrer">{{ route.pull_request.label }} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
+                        {% if route.note %}<p class="lp-contribute__note">{{ route.note }}</p>{% endif %}
+                        {% else %}
+                        <div class="lp-contribute__links">
+                            {% for link in route.links %}
+                            <a class="lp-contribute__card" href="{{ link.href }}">
+                                <span class="lp-contribute__card-label">{{ link.label }} <span aria-hidden="true">→</span></span>
+                                <span class="lp-contribute__card-text">{{ link.text }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </section>
+    </div>
+    {{ contribute.routes|json_script:"lp-contribute-routes" }}
+    {% endwith %}
 </section>
 
 <!-- 01 Why -->
