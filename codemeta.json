@@ -4,7 +4,7 @@
     "name": "Pr.omethe.us Kinetic Models Database",
     "description": "A FAIR web platform and API for combustion kinetic models, experimental datasets, and model-data agreement analysis.",
     "codeRepository": "https://github.com/comocheng/kineticmodelssite",
-    "url": "https://dev.omethe.us",
+    "url": "https://pr.omethe.us",
     "programmingLanguage": "Python",
     "runtimePlatform": "Django",
     "license": "https://spdx.org/licenses/MIT",
