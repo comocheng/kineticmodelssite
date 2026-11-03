@@ -1,6 +1,6 @@
 """Dereferenceable IRI resolver for the minted Prometheus identifiers.
 
-Every SSSOM/provenance node is minted under ``https://dev.omethe.us/<kind>/<slug>``
+Every SSSOM/provenance node is minted under ``https://pr.omethe.us/<kind>/<slug>``
 (see the ``curie_map`` header in ``mappings/prometheus.sssom.tsv``). Those IRIs
 are globally-unique *names*; this module makes them *dereferenceable* so a client
 that follows one gets back a representation:
@@ -10,7 +10,7 @@ that follows one gets back a representation:
                               -> the node's SSSOM cross-references + provenance.
 
 Routing is host-agnostic, so ``http://127.0.0.1:8000/species/H2O`` (dev) and
-``https://dev.omethe.us/species/H2O`` (prod) resolve through the same code.
+``https://pr.omethe.us/species/H2O`` (prod) resolve through the same code.
 """
 
 import csv
@@ -33,7 +33,7 @@ from provenance.models import SemanticMapping
 # Namespaces for the numeric data layer (thermo / kinetics / transport values).
 QUDT = Namespace("http://qudt.org/schema/qudt/")
 UNIT = Namespace("http://qudt.org/vocab/unit/")
-PMTX = Namespace("https://dev.omethe.us/ontology/prometheus-exp#")
+PMTX = Namespace("https://pr.omethe.us/ontology/prometheus-exp#")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 
 # --- prefixes (kept in sync with mappings/prometheus.sssom.tsv curie_map) ----
@@ -43,21 +43,21 @@ PROV = Namespace("http://www.w3.org/ns/prov#")
 _CURIE_SAFE = "!$&'()*+,;=@%"
 
 CURIE_MAP = {
-    "prom": "https://dev.omethe.us/species/",
-    "promc": "https://dev.omethe.us/concept/",
-    "promref": "https://dev.omethe.us/reference/",
-    "promagent": "https://dev.omethe.us/agent/",
-    "promorg": "https://dev.omethe.us/institution/",
-    "promkm": "https://dev.omethe.us/kineticmodel/",
-    "promds": "https://dev.omethe.us/dataset/",
-    "promapp": "https://dev.omethe.us/apparatus/",
-    "promrxn": "https://dev.omethe.us/reaction/",
-    "promv": "https://dev.omethe.us/vocab/",
+    "prom": "https://pr.omethe.us/species/",
+    "promc": "https://pr.omethe.us/concept/",
+    "promref": "https://pr.omethe.us/reference/",
+    "promagent": "https://pr.omethe.us/agent/",
+    "promorg": "https://pr.omethe.us/institution/",
+    "promkm": "https://pr.omethe.us/kineticmodel/",
+    "promds": "https://pr.omethe.us/dataset/",
+    "promapp": "https://pr.omethe.us/apparatus/",
+    "promrxn": "https://pr.omethe.us/reaction/",
+    "promv": "https://pr.omethe.us/vocab/",
     # Data-record identities (each dereferences to its numeric values; see the
     # content-negotiated thermo/kinetics/transport detail views).
-    "promthermo": "https://dev.omethe.us/thermo/",
-    "promkin": "https://dev.omethe.us/kinetics/",
-    "promtrans": "https://dev.omethe.us/transport/",
+    "promthermo": "https://pr.omethe.us/thermo/",
+    "promkin": "https://pr.omethe.us/kinetics/",
+    "promtrans": "https://pr.omethe.us/transport/",
     "inchikey": "https://www.inchi-trust.org/inchikey/",
     "pubchem.compound": "https://pubchem.ncbi.nlm.nih.gov/compound/",
     "CHEBI": "http://purl.obolibrary.org/obo/CHEBI_",
@@ -67,11 +67,11 @@ CURIE_MAP = {
     "doi": "https://doi.org/",
     "orcid": "https://orcid.org/",
     "ror": "https://ror.org/",
-    "chemked": "https://dev.omethe.us/ontology/chemked#",
+    "chemked": "https://pr.omethe.us/ontology/chemked#",
     "ontokin": "http://www.theworldavatar.com/ontology/ontokin/OntoKin.owl#",
     "ontochemexp": "http://www.theworldavatar.com/ontology/ontochemexp/OntoChemExp.owl#",
     "ontospecies": "http://www.theworldavatar.com/ontology/ontospecies/OntoSpecies.owl#",
-    "pmtx": "https://dev.omethe.us/ontology/prometheus-exp#",
+    "pmtx": "https://pr.omethe.us/ontology/prometheus-exp#",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "semapv": "https://w3id.org/semapv/vocab/",
 }
@@ -111,13 +111,13 @@ DETAIL_VIEW = {
 
 # Provenance edge kind -> (predicate IRI, human label).
 PROV_PREDICATE = {
-    "uses": ("https://dev.omethe.us/vocab/usesSpecies", "uses species"),
-    "contains": ("https://dev.omethe.us/vocab/containsSpecies", "contains species"),
+    "uses": ("https://pr.omethe.us/vocab/usesSpecies", "uses species"),
+    "contains": ("https://pr.omethe.us/vocab/containsSpecies", "contains species"),
     "cites": ("http://purl.org/dc/terms/references", "references"),
     "from": ("http://purl.org/dc/terms/source", "derived from source"),
-    "locatedAt": ("https://dev.omethe.us/vocab/locatedAtInstitution", "located at institution"),
-    "usesApparatus": ("https://dev.omethe.us/vocab/usesApparatus", "uses apparatus"),
-    "usesReaction": ("https://dev.omethe.us/vocab/usesReaction", "uses reaction"),
+    "locatedAt": ("https://pr.omethe.us/vocab/locatedAtInstitution", "located at institution"),
+    "usesApparatus": ("https://pr.omethe.us/vocab/usesApparatus", "uses apparatus"),
+    "usesReaction": ("https://pr.omethe.us/vocab/usesReaction", "uses reaction"),
     "thermoFrom": ("http://www.w3.org/ns/prov#wasDerivedFrom", "thermo data from"),
     "kineticsFrom": ("http://www.w3.org/ns/prov#wasDerivedFrom", "kinetics data from"),
 }
@@ -127,7 +127,7 @@ PROV_PREDICATE = {
 SEMAPV_DOCS = "https://mapping-commons.github.io/semantic-mapping-vocabulary/"
 
 # Terms minted under the promv: vocabulary namespace.
-PROMV = "https://dev.omethe.us/vocab/"
+PROMV = "https://pr.omethe.us/vocab/"
 PROMV_TERMS = {
     "usesSpecies": (
         "uses species",

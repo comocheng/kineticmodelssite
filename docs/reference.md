@@ -10,9 +10,10 @@ The complete, always-current API reference is generated from the live OpenAPI sc
   (YAML), suitable for [client generation](clients.md).
 
 !!! note
-    These links resolve on the deployed server. From this docs site, use the same host
-    (e.g. `https://dev.omethe.us/api/docs/`); for local development they are at
-    `http://localhost:8000/api/docs/`.
+    The links open on the server that shows this guide, because the guide and the API
+    are on the same host. In **Swagger UI**, "Try it out" also sends each request to
+    that server ("This server" in the **Servers** list). The request samples in **ReDoc**
+    use the public address `https://pr.omethe.us`.
 
 ## Why use the schema?
 

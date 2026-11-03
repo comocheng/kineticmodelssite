@@ -147,5 +147,16 @@ List responses are paginated (50 per page). Follow the `next` link until it is
 ## Beyond REST — ad-hoc queries
 
 For arbitrary joins/aggregations the REST filters don't cover, the platform
-provides a sandboxed, read-only **SQL console** (`livequery`) against the live
-database — the right tool for one-off, fully custom analytical queries.
+provides a **SQL console** at [`/livequery/`](/livequery/) against the live
+database. It is the right tool for one-off, fully custom analytical queries.
+
+- It runs one `SELECT`, `WITH ... SELECT` or `EXPLAIN` statement at a time.
+- It connects with its own database login, which can read only the data tables
+  (species, reactions, kinetic models, experimental data, analysis and provenance).
+  It cannot read user accounts, API tokens or sessions.
+- Each statement runs in a read-only transaction, so the database refuses every
+  write. The transaction then rolls back.
+- A statement stops after 10 seconds, and the console shows at most 1,000 rows.
+- The sidebar lists the main tables and their columns. The example queries cover
+  kinetic models, species and kinetics, literature, experimental data (ignition
+  delay, laminar burning velocity and speciation) and simulation results.

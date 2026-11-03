@@ -20,9 +20,12 @@ TOKEN_PLACEHOLDER = "<your-api-token>"
 
 
 def _base_url():
+    """The first absolute server URL. A relative entry such as "/" only serves "Try it out"."""
     servers = (getattr(settings, "SPECTACULAR_SETTINGS", {}) or {}).get("SERVERS") or []
-    if servers and servers[0].get("url"):
-        return servers[0]["url"].rstrip("/")
+    for server in servers:
+        url = server.get("url") or ""
+        if "://" in url:
+            return url.rstrip("/")
     return "http://localhost:8000"
 
 
@@ -459,9 +462,9 @@ def add_flex_params(result, generator, request, public):
 # Namespaces used by the JSON-LD metadata endpoints (api.fair_metadata) and the
 # ontology artifacts (prometheus_chemked_ontology.ttl, prometheus-exp.ttl).
 _ONTOLOGY_CONTEXT = {
-    "prom": "https://dev.omethe.us/ontology/prometheus#",
-    "chemked": "https://dev.omethe.us/ontology/chemked#",
-    "pmtx": "https://dev.omethe.us/ontology/prometheus-exp#",
+    "prom": "https://pr.omethe.us/ontology/prometheus#",
+    "chemked": "https://pr.omethe.us/ontology/chemked#",
+    "pmtx": "https://pr.omethe.us/ontology/prometheus-exp#",
     "ontokin": "http://www.theworldavatar.com/ontology/ontokin/OntoKin.owl#",
     "ontochemexp": "http://www.theworldavatar.com/ontology/ontochemexp/OntoChemExp.owl#",
     "ontospecies": "http://www.theworldavatar.com/ontology/ontospecies/OntoSpecies.owl#",

@@ -29,7 +29,7 @@ hero:
       url: "kinetic-model-list"
       style: "primary"
     - label: "Read the API documentation"
-      url: "swagger-ui"
+      url: "docs"
       style: "ghost"
   note: "Read access through the API is public. You do not need an account to read data."
   # Shown under the 3D flame, which releases these species as rising labels
@@ -372,7 +372,7 @@ closing:
     - label: "Platform overview"
       href: "#why"
     - label: "API documentation"
-      url: "swagger-ui"
+      url: "docs"
     - label: "Kinetic models"
       url: "kinetic-model-list"
     - label: "ChemKED data standard"

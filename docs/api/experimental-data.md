@@ -44,7 +44,7 @@ file's value and unit in `<field>_quantity` and its SI value in `<field>`.
 ## Example: ignition-delay datapoints for a high-temperature window
 
 ```bash
-curl "https://dev.omethe.us/api/ignition-delay/?datapoint__temperature__gte=1200&ordering=datapoint__temperature"
+curl "https://pr.omethe.us/api/ignition-delay/?datapoint__temperature__gte=1200&ordering=datapoint__temperature"
 ```
 
 A response item (abridged):
@@ -63,7 +63,7 @@ A response item (abridged):
 ## Example: species measured in jet stirred reactors
 
 ```bash
-curl "https://dev.omethe.us/api/concentration-profile/?species__species_name=CH2O&measurement__datapoint__dataset__apparatus__kind=jet%20stirred%20reactor"
+curl "https://pr.omethe.us/api/concentration-profile/?species__species_name=CH2O&measurement__datapoint__dataset__apparatus__kind=jet%20stirred%20reactor"
 ```
 
 A response item (abridged). Each row of `values` holds one value per independent variable of
@@ -94,8 +94,8 @@ Repeat the parameter for blends, and add ranges that the same datapoint must mee
 [filtering](filtering.md#conditions-on-one-datapoint)):
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-dataset/?cas=74-82-8"
-curl "https://dev.omethe.us/api/experiment-dataset/?experiment_type=ignition+delay&inchi=1S/H3N/h1H3&inchi=1S/H2/h1H&pressure__gte=1013250"
+curl "https://pr.omethe.us/api/experiment-dataset/?cas=74-82-8"
+curl "https://pr.omethe.us/api/experiment-dataset/?experiment_type=ignition+delay&inchi=1S/H3N/h1H3&inchi=1S/H2/h1H&pressure__gte=1013250"
 ```
 
 `composition-species` lists the components themselves (by name, CAS, InChI, or SMILES).

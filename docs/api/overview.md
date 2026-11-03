@@ -21,6 +21,8 @@ reference is the live [Swagger UI and ReDoc](../reference.md).
 | `/api/kinetics/` | Rate-coefficient parameterizations |
 | `/api/thermo/` | NASA-polynomial thermochemistry |
 | `/api/transport/` | Transport properties |
+| `/api/thermo-record/` | Thermochemistry source records (ATcT, Burcat, group additivity); see [Thermochemistry sources](../thermochemistry.md) |
+| `/api/thermo-enrichment/` | Status of the thermochemistry source lookups |
 | `/api/kineticmodel/` | Assembled kinetic models |
 
 ### Bibliography (`tags: bibliography`)
@@ -63,3 +65,13 @@ reference is the live [Swagger UI and ReDoc](../reference.md).
 | `GET /api/contribute/status/{pr_number}/` | Check contribution CI status |
 
 See [Contributing data](../contributing-data.md).
+
+### Provenance & FAIR metadata (`tags: provenance`, `metadata`, read-only)
+| Endpoint | Description |
+|----------|-------------|
+| `/api/institution/`, `/api/person/`, `/api/license/` | Institutions (ROR), persons (ORCID) and licenses (SPDX) |
+| `/api/external-identifier/` | Identifiers of a record in other schemes (InChI, InChIKey) |
+| `/api/semantic-mapping/` | SSSOM mappings to other vocabularies and databases |
+| `/api/metadata/`, `/api/{resource}/{id}/metadata/` | JSON-LD for the catalog, a source, a kinetic model or a dataset |
+
+See [Provenance & FAIR metadata](provenance.md).

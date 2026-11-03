@@ -9,7 +9,7 @@ every contribution reviewed and provenance-tracked.
 ## Upload a file
 
 ```bash
-curl -X POST "https://dev.omethe.us/api/contribute/" \
+curl -X POST "https://pr.omethe.us/api/contribute/" \
   -H "Authorization: Token <your-token>" \
   -F "contributor_name=Ada Lovelace" \
   -F "contributor_orcid=0000-0002-1825-0097" \
@@ -41,7 +41,7 @@ updates that file instead of adding a copy.
 
 ```bash
 curl -H "Authorization: Token <your-token>" \
-  "https://dev.omethe.us/api/contribute/status/123/"
+  "https://pr.omethe.us/api/contribute/status/123/"
 ```
 
 Returns the CI check-run statuses for the contribution's pull request.

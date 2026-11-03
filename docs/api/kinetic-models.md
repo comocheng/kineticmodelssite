@@ -22,13 +22,13 @@ an admin token.
 Find a kinetic model by name:
 
 ```bash
-curl "https://dev.omethe.us/api/kineticmodel/?search=GRI-Mech"
+curl "https://pr.omethe.us/api/kineticmodel/?search=GRI-Mech"
 ```
 
 Find a species by CAS number:
 
 ```bash
-curl "https://dev.omethe.us/api/species/?cas_number=74-82-8"
+curl "https://pr.omethe.us/api/species/?cas_number=74-82-8"
 ```
 
 Find the models that contain a set of species: look up each species record (by InChI, CAS
@@ -36,19 +36,19 @@ number or name), then pass its `id` as `species`, once per species. A model is r
 if its species list contains every species given:
 
 ```bash
-curl "https://dev.omethe.us/api/species/?search=InChI=1S/H3N/h1H3"   # -> id of NH3
-curl "https://dev.omethe.us/api/kineticmodel/?species=<H2 id>&species=<NH3 id>"
+curl "https://pr.omethe.us/api/species/?search=InChI=1S/H3N/h1H3"   # -> id of NH3
+curl "https://pr.omethe.us/api/kineticmodel/?species=<H2 id>&species=<NH3 id>"
 ```
 
 List a model with its assembled components (the detail view nests species names and
 thermo/transport/kinetics comments):
 
 ```bash
-curl "https://dev.omethe.us/api/kineticmodel/1/"
+curl "https://pr.omethe.us/api/kineticmodel/1/"
 ```
 
 Look up the literature source behind a model:
 
 ```bash
-curl "https://dev.omethe.us/api/source/?search=10.1016/j.combustflame"
+curl "https://pr.omethe.us/api/source/?search=10.1016/j.combustflame"
 ```

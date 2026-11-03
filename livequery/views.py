@@ -1,10 +1,14 @@
+import logging
 import time
 
-from django.contrib.auth.decorators import login_required
-from django.db import connections, OperationalError, ProgrammingError
+from django.conf import settings
+from django.db import DatabaseError, connections, transaction
 from django.shortcuts import render
 
 from .forms import QueryForm
+from .grants import LIVEQUERY_DB
+
+logger = logging.getLogger(__name__)
 
 # Tables surfaced in the schema sidebar, grouped by app
 SCHEMA_GROUPS = {
@@ -12,27 +16,31 @@ SCHEMA_GROUPS = {
         "database_kineticmodel",
         "database_source",
         "database_author",
+        "database_authorship",
         "database_species",
-        "database_reaction",
-        "database_transport",
-        "database_thermo",
         "database_speciesname",
+        "database_reaction",
+        "database_stoichiometry",
+        "database_kinetics",
+        "database_kineticscomment",
+        "database_thermo",
+        "database_thermocomment",
+        "database_transport",
     ],
     "chemked_database": [
         "chemked_datasets",
         "chemked_datapoints",
-        "chemked_ignition_delay",
-        "chemked_flame_speed",
         "chemked_apparatus",
+        "chemked_ignition_delay",
+        "chemked_laminar_burning_velocity_measurement",
+        "chemked_speciation_measurement",
+        "chemked_concentration_profiles",
         "chemked_compositions",
         "chemked_composition_species",
     ],
-    "importer_dashboard": [
-        "importer_dashboard_importtask",
-        "importer_dashboard_importedfile",
-    ],
     "analysis": [
         "analysis_simulation_run",
+        "analysis_simulation_result",
     ],
 }
 
@@ -49,7 +57,7 @@ QUERY_EXAMPLES = [
             "SELECT km.id, km.model_name, s.source_title, s.publication_year, s.journal_name\n"
             "FROM database_kineticmodel km\n"
             "LEFT JOIN database_source s ON km.source_id = s.id\n"
-            "ORDER BY s.publication_year DESC\n"
+            "ORDER BY s.publication_year DESC NULLS LAST\n"
             "LIMIT 50"
         ),
     },
@@ -84,12 +92,11 @@ QUERY_EXAMPLES = [
         "label": "Models with both thermo and kinetics imported",
         "sql": (
             "SELECT km.model_name,\n"
-            "       COUNT(DISTINCT tc.thermo_id)   AS thermo_entries,\n"
-            "       COUNT(DISTINCT kc.kinetics_id) AS kinetics_entries\n"
+            "       (SELECT COUNT(DISTINCT tc.thermo_id) FROM database_thermocomment tc\n"
+            "         WHERE tc.kinetic_model_id = km.id) AS thermo_entries,\n"
+            "       (SELECT COUNT(DISTINCT kc.kinetics_id) FROM database_kineticscomment kc\n"
+            "         WHERE kc.kinetic_model_id = km.id) AS kinetics_entries\n"
             "FROM database_kineticmodel km\n"
-            "LEFT JOIN database_thermocomment   tc ON tc.kinetic_model_id = km.id\n"
-            "LEFT JOIN database_kineticscomment kc ON kc.kinetic_model_id = km.id\n"
-            "GROUP BY km.id, km.model_name\n"
             "ORDER BY kinetics_entries DESC\n"
             "LIMIT 30"
         ),
@@ -236,6 +243,35 @@ QUERY_EXAMPLES = [
     },
     {
         "category": "Experimental Data",
+        "label": "Speciation measurements by apparatus kind",
+        "sql": (
+            "SELECT a.kind,\n"
+            "       COUNT(DISTINCT sm.id) AS measurements,\n"
+            "       COUNT(cp.id)          AS species_profiles\n"
+            "FROM chemked_speciation_measurement sm\n"
+            "JOIN chemked_datapoints dp ON sm.datapoint_id = dp.id\n"
+            "JOIN chemked_datasets   ds ON dp.dataset_id = ds.id\n"
+            "JOIN chemked_apparatus   a ON ds.apparatus_id = a.id\n"
+            "LEFT JOIN chemked_concentration_profiles cp ON cp.measurement_id = sm.id\n"
+            "GROUP BY a.kind\n"
+            "ORDER BY measurements DESC"
+        ),
+    },
+    {
+        "category": "Experimental Data",
+        "label": "Species with the most speciation profiles",
+        "sql": (
+            "SELECT cs.species_name,\n"
+            "       COUNT(*) AS profile_count\n"
+            "FROM chemked_concentration_profiles cp\n"
+            "JOIN chemked_composition_species cs ON cp.species_id = cs.id\n"
+            "GROUP BY cs.species_name\n"
+            "ORDER BY profile_count DESC\n"
+            "LIMIT 30"
+        ),
+    },
+    {
+        "category": "Experimental Data",
         "label": "Datasets by reference year and DOI",
         "sql": (
             "SELECT reference_doi, reference_year, experiment_type,\n"
@@ -336,10 +372,18 @@ for _ex in QUERY_EXAMPLES:
     QUERY_EXAMPLES_BY_CATEGORY.setdefault(_ex["category"], []).append(_ex)
 
 
+def console_available():
+    """The console runs queries only through its read-only login, never the site's own."""
+    return LIVEQUERY_DB in settings.DATABASES
+
+
 def _get_table_columns(table_name: str):
-    """Return column names for *table_name*, empty list on any error."""
+    """Return column names for *table_name*, empty list on any error.
+
+    The console login sees only the columns of the tables it may read.
+    """
     try:
-        with connections["default"].cursor() as cur:
+        with connections[LIVEQUERY_DB].cursor() as cur:
             cur.execute(
                 "SELECT column_name FROM information_schema.columns "
                 "WHERE table_name = %s ORDER BY ordinal_position",
@@ -350,9 +394,10 @@ def _get_table_columns(table_name: str):
         return []
 
 
-# @login_required
 def query_console(request):
+    """Public. Every query runs as the console login, which reads only the data tables."""
     form = QueryForm(request.POST or None)
+    available = console_available()
     columns: list[str] = []
     rows: list[tuple] = []
     row_count = None
@@ -360,34 +405,45 @@ def query_console(request):
     error = None
     sql_executed = None
 
-    if request.method == "POST" and form.is_valid():
+    if request.method == "POST" and form.is_valid() and available:
         sql = form.cleaned_data["sql"]
         row_limit = form.cleaned_data["row_limit"]
         sql_executed = sql
+        console = connections[LIVEQUERY_DB]
 
         try:
-            with connections["default"].cursor() as cursor:
-                # Enforce a 10-second server-side timeout for the single statement
-                cursor.execute("SET LOCAL statement_timeout = '10s'")
+            console.ensure_connection()
+        except DatabaseError:
+            # The message names the login and the host, so it goes to the log, not the page
+            logger.exception("The SQL console cannot connect with its login")
+            error = "The SQL console cannot reach the database. Try again later."
+        else:
+            try:
+                # SET LOCAL lasts only inside a transaction; in autocommit it does nothing. The
+                # transaction is read-only, so the database refuses every write, and it rolls back.
+                with transaction.atomic(using=LIVEQUERY_DB), console.cursor() as cursor:
+                    cursor.execute("SET TRANSACTION READ ONLY")
+                    cursor.execute("SET LOCAL statement_timeout = '10s'")
 
-                t0 = time.perf_counter()
-                cursor.execute(sql)
-                elapsed = time.perf_counter() - t0
-                execution_time_ms = round(elapsed * 1000, 2)
+                    t0 = time.perf_counter()
+                    cursor.execute(sql)
+                    elapsed = time.perf_counter() - t0
+                    execution_time_ms = round(elapsed * 1000, 2)
 
-                if cursor.description:
-                    columns = [col.name for col in cursor.description]
-                    rows = cursor.fetchmany(row_limit)
-                    row_count = len(rows)
+                    if cursor.description:
+                        columns = [col.name for col in cursor.description]
+                        rows = cursor.fetchmany(row_limit)
+                        row_count = len(rows)
+                    transaction.set_rollback(True, using=LIVEQUERY_DB)
 
-        except (OperationalError, ProgrammingError) as exc:
-            error = str(exc).strip()
-        except Exception as exc:
-            error = f"Unexpected error: {exc}"
+            except DatabaseError as exc:
+                error = str(exc).strip()
+            except Exception as exc:
+                error = f"Unexpected error: {exc}"
 
-    # Build schema sidebar: only include tables that actually exist in the DB
+    # Build schema sidebar: only include tables that exist and that the console can read
     schema = {}
-    for group, tables in SCHEMA_GROUPS.items():
+    for group, tables in (SCHEMA_GROUPS.items() if available else ()):
         group_data = {}
         for table in tables:
             cols = _get_table_columns(table)
@@ -406,5 +462,6 @@ def query_console(request):
         "sql_executed": sql_executed,
         "schema": schema,
         "query_examples": QUERY_EXAMPLES_BY_CATEGORY,
+        "available": available,
     }
     return render(request, "livequery/query_console.html", context)

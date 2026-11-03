@@ -17,9 +17,9 @@ documented REST API.
 
 | Interface | Path | Use |
 |-----------|------|-----|
-| **Swagger UI** | `/api/docs/` | Interactive "try it out" console |
-| **ReDoc** | `/api/redoc/` | Reference with cURL / Python / R / MATLAB / JS / Java samples |
-| **OpenAPI schema** | `/api/schema/` | Machine-readable spec for [client generation](clients.md) |
+| **Swagger UI** | [`/api/docs/`](/api/docs/) | Interactive "try it out" console |
+| **ReDoc** | [`/api/redoc/`](/api/redoc/) | Reference with cURL / Python / R / MATLAB / JS / Java samples |
+| **OpenAPI schema** | [`/api/schema/`](/api/schema/) | Machine-readable spec for [client generation](clients.md) |
 
 ## Next steps
 

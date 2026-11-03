@@ -120,6 +120,15 @@ DATABASES = {
     }
 }
 
+# The read-only login of the SQL console (manage.py livequery_role). Without it the console
+# runs no queries: it never uses the login above, which can read users, tokens and files.
+if os.getenv("LIVEQUERY_DB_USER") and os.getenv("LIVEQUERY_DB_PASSWORD"):
+    DATABASES["livequery"] = {
+        **DATABASES["default"],
+        "USER": os.getenv("LIVEQUERY_DB_USER"),
+        "PASSWORD": os.getenv("LIVEQUERY_DB_PASSWORD"),
+    }
+
 # DATABASES = {
 #     "default": dj_database_url.config(
 #         default=os.getenv("DATABASE_URL"),
@@ -163,6 +172,10 @@ STATIC_URL = "/static/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
 
+# The MkDocs build of docs/ (bin/build-docs.sh), served at /docs/. Behind nginx, nginx
+# serves /docs/ itself from the build that bin/entrypoint.sh makes.
+DOCS_ROOT = os.getenv("DOCS_ROOT", os.path.join(BASE_DIR, "docs_site"))
+
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 REST_FRAMEWORK = {
@@ -202,15 +215,17 @@ SPECTACULAR_SETTINGS = {
         "authentication."
     ),
     "VERSION": "1.0.0",
-    # The first SERVERS entry is the base URL used in the generated code samples
-    # and as the Swagger "Servers" default. (Optionally add a LICENSE entry.)
+    # The relative entry comes first, so "Try it out" in Swagger UI sends each request to
+    # the server that shows the page. The first absolute entry is the base URL of the
+    # generated code samples and the FAIR metadata (api.schema_hooks._base_url).
     "SERVERS": [
-        {"url": "https://dev.omethe.us", "description": "Production"},
+        {"url": "/", "description": "This server"},
+        {"url": "https://pr.omethe.us", "description": "Production"},
         {"url": "http://localhost:8000", "description": "Local development"},
     ],
     "CONTACT": {
         "name": "Prometheus Cyberinfrastructure",
-        "url": "https://dev.omethe.us",
+        "url": "https://pr.omethe.us",
     },
     "LICENSE": {
         "name": "MIT License",
@@ -218,7 +233,8 @@ SPECTACULAR_SETTINGS = {
     },
     "EXTERNAL_DOCS": {
         "description": "Platform & API documentation",
-        "url": "https://dev.omethe.us/docs/",
+        # Relative to the server, so the link opens the guide on the same host
+        "url": "/docs/",
     },
     "POSTPROCESSING_HOOKS": [
         # Keep the default enum hook, then append our additions.
@@ -237,6 +253,24 @@ SPECTACULAR_SETTINGS = {
         "filter": True,
         "tryItOutEnabled": True,
         "requestSnippetsEnabled": True,
+    },
+    # ReDoc in the colours and fonts of the site (database/static/database/css/scientific.css)
+    "REDOC_UI_SETTINGS": {
+        # The height of the stuck site header (.app-header), so a heading is not hidden under it
+        "scrollYOffset": 76,
+        "expandResponses": "200",
+        "theme": {
+            "colors": {"primary": {"main": "#ce4801"}, "text": {"primary": "#172b43"}},
+            "typography": {
+                "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                "fontSize": "15px",
+                "headings": {"fontFamily": "'Instrument Sans', Inter, sans-serif", "fontWeight": "600"},
+                "code": {"fontFamily": "'IBM Plex Mono', 'JetBrains Mono', monospace"},
+                "links": {"color": "#b23e00", "hover": "#ce4801", "visited": "#b23e00"},
+            },
+            "sidebar": {"backgroundColor": "#f4f6f9", "textColor": "#172b43", "activeTextColor": "#ce4801"},
+            "rightPanel": {"backgroundColor": "#181818"},
+        },
     },
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
@@ -262,6 +296,8 @@ SPECTACULAR_SETTINGS = {
         {"name": "experimental-data", "description": "ChemKED experimental datasets and datapoints (read-only)."},
         {"name": "analysis", "description": "Simulation runs, results, and model-vs-data agreement (read-only)."},
         {"name": "contribute", "description": "Authenticated data-contribution endpoints."},
+        {"name": "provenance", "description": "Institutions, persons, licenses, external identifiers and SSSOM semantic mappings (read-only)."},
+        {"name": "metadata", "description": "FAIR JSON-LD descriptions of the catalog, sources, kinetic models and datasets (read-only)."},
     ],
 }
 

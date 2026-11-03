@@ -65,7 +65,7 @@ DEFAULT_TTL = MAPPINGS_DIR / "rdf" / "prometheus.provenance.ttl"
 DEFAULT_RXN = MAPPINGS_DIR / "sssom" / "prometheus.reactions.json"
 
 # Local domain predicates for the RDF (knowledge-graph) serialization.
-PROMV = "https://dev.omethe.us/vocab/"
+PROMV = "https://pr.omethe.us/vocab/"
 PROV = "http://www.w3.org/ns/prov#"
 # OntoKin / OntoCAPE reaction-mechanism predicates for the reaction <-> species
 # structural links (reaction has these reactants / products).

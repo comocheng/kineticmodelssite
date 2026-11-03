@@ -1,26 +1,44 @@
 /* Match the main Kinetic Models Database site theme (database/static/database/css/scientific.css).
-   Primary #1a56db, footer slate #1f2937, Inter / JetBrains Mono fonts. */
+   A white header with dark ink and the orange brand, a charcoal footer, Inter / IBM Plex Mono fonts.
+   mkdocs.yml sets the palette to "custom", so Material reads these variables. */
 
-:root {
-  --md-primary-fg-color:        #1a56db;
-  --md-primary-fg-color--light: #3b82f6;
-  --md-primary-fg-color--dark:  #1e40af;
-  --md-accent-fg-color:         #3b82f6;
+:root > * {
+  --md-primary-fg-color:        #ffffff;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark:  #f4f6f9;
+  --md-primary-bg-color:        #172b43;
+  --md-primary-bg-color--light: #4a5866;
+  --md-accent-fg-color:         #ce4801;
 
-  /* Dark slate footer, like the main site footer (--color-gray-800 / -900). */
-  --md-footer-bg-color:         #1f2937;
-  --md-footer-bg-color--dark:   #111827;
+  /* The header colour above is white, so links take the brand orange explicitly. */
+  --md-typeset-a-color:         #b23e00;
+
+  /* Charcoal footer, like the main site footer (--color-footer). */
+  --md-footer-bg-color:         #181818;
+  --md-footer-bg-color--dark:   #0f0f0f;
 }
 
-/* Keep the brand blue as the link/accent color in dark (slate) mode too. */
+/* Dark (slate) mode: a charcoal header, and the lighter orange for text on dark. */
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color:        #1a56db;
-  --md-primary-fg-color--light: #3b82f6;
-  --md-primary-fg-color--dark:  #1e40af;
-  --md-accent-fg-color:         #60a5fa;
+  --md-primary-fg-color:        #181818;
+  --md-primary-fg-color--light: #181818;
+  --md-primary-fg-color--dark:  #0f0f0f;
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.78);
+  --md-accent-fg-color:         #ff7a33;
+  --md-typeset-a-color:         #ff7a33;
 }
 
-/* The flame logo sits on a white header; give it a little breathing room. */
+/* A thin rule under the white header, like the site navigation. */
+.md-header {
+  border-bottom: 1px solid #dce3ec;
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  border-bottom-color: rgba(255, 255, 255, 0.13);
+}
+
+/* The flame logo sits on the header; give it a little breathing room. */
 .md-header__button.md-logo img {
   height: 1.6rem;
   width: auto;

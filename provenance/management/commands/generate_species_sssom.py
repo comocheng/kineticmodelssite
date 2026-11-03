@@ -76,7 +76,7 @@ def _curie_local(text: str) -> str:
     return urllib.parse.quote(text or "", safe="!$&'()*+,;=@%")
 
 
-USER_AGENT = "Prometheus-SSSOM-generator/1.0 (https://dev.omethe.us)"
+USER_AGENT = "Prometheus-SSSOM-generator/1.0 (https://pr.omethe.us)"
 HTTP_TIMEOUT = 20
 POLITE_DELAY = 0.2
 

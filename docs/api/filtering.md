@@ -23,25 +23,25 @@ rows match a filter (for example a dataset with many datapoints that contain the
 Ignition-delay datapoints measured between 1000 K and 1500 K:
 
 ```bash
-curl "https://dev.omethe.us/api/ignition-delay/?datapoint__temperature__gte=1000&datapoint__temperature__lte=1500"
+curl "https://pr.omethe.us/api/ignition-delay/?datapoint__temperature__gte=1000&datapoint__temperature__lte=1500"
 ```
 
 Datapoints near stoichiometric (φ ≈ 1) above 10 atm (≈ 1.0e6 Pa):
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-datapoint/?equivalence_ratio__gte=0.9&equivalence_ratio__lte=1.1&pressure__gte=1000000"
+curl "https://pr.omethe.us/api/experiment-datapoint/?equivalence_ratio__gte=0.9&equivalence_ratio__lte=1.1&pressure__gte=1000000"
 ```
 
 Datasets for a given paper:
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-dataset/?reference_doi=10.1016/j.combustflame.2014.03.006"
+curl "https://pr.omethe.us/api/experiment-dataset/?reference_doi=10.1016/j.combustflame.2014.03.006"
 ```
 
 Completed simulation runs for a model:
 
 ```bash
-curl "https://dev.omethe.us/api/simulation-run/?status=completed&kinetic_model=5"
+curl "https://pr.omethe.us/api/simulation-run/?status=completed&kinetic_model=5"
 ```
 
 !!! note "Choice fields are validated"
@@ -75,7 +75,7 @@ components. An excited-state record (OH*) selects only the components linked to 
 Repeat a parameter to require every value in the same mixture. NH3/H2 blends:
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-datapoint/?inchi=1S/H3N/h1H3&inchi=1S/H2/h1H"
+curl "https://pr.omethe.us/api/experiment-datapoint/?inchi=1S/H3N/h1H3&inchi=1S/H2/h1H"
 ```
 
 An InChI can contain commas, so these parameters are repeated, not comma-separated.
@@ -88,13 +88,13 @@ datapoint: a dataset is listed when one of its datapoints meets every condition 
 Ignition-delay datasets with NH3 and a datapoint at 10 atm (1013250 Pa) or more:
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-dataset/?experiment_type=ignition+delay&inchi=1S/H3N/h1H3&pressure__gte=1013250"
+curl "https://pr.omethe.us/api/experiment-dataset/?experiment_type=ignition+delay&inchi=1S/H3N/h1H3&pressure__gte=1013250"
 ```
 
 The datapoints of those datasets, in one request:
 
 ```bash
-curl "https://dev.omethe.us/api/experiment-datapoint/?dataset__in=910,912,916&page_size=1000"
+curl "https://pr.omethe.us/api/experiment-datapoint/?dataset__in=910,912,916&page_size=1000"
 ```
 
 ## Search
@@ -102,8 +102,8 @@ curl "https://dev.omethe.us/api/experiment-datapoint/?dataset__in=910,912,916&pa
 `?search=` runs a case-insensitive search across the endpoint's text fields:
 
 ```bash
-curl "https://dev.omethe.us/api/composition-species/?search=methanol"
-curl "https://dev.omethe.us/api/kineticmodel/?search=GRI"
+curl "https://pr.omethe.us/api/composition-species/?search=methanol"
+curl "https://pr.omethe.us/api/kineticmodel/?search=GRI"
 ```
 
 ## Ordering
@@ -113,8 +113,8 @@ endpoints can also be ordered by `datapoint__temperature`, `datapoint__pressure`
 `datapoint__equivalence_ratio`:
 
 ```bash
-curl "https://dev.omethe.us/api/ignition-delay/?ordering=ignition_delay"
-curl "https://dev.omethe.us/api/experiment-datapoint/?ordering=-temperature"
+curl "https://pr.omethe.us/api/ignition-delay/?ordering=ignition_delay"
+curl "https://pr.omethe.us/api/experiment-datapoint/?ordering=-temperature"
 ```
 
 ## Pages
