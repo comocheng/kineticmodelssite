@@ -1,8 +1,10 @@
 /*
  * Home page (database/templates/database/home.html).
  *
- * Colours are sampled from the Figma design "dev.omethe.us", node 77-2521:
- * ink #05060b (hero), charcoal #181818, orange #ce4801, grey #d9d9d9, mist #f5f6fa.
+ * Tokens come from the Figma file "dev.omethe.us": the landing frame (235:2355) and the research
+ * database home (77:2495). Brand-primary #ce4801 is the file's one colour variable; the others are
+ * the fills and text colours of those frames. Display type is Instrument Sans, interface type Inter,
+ * and counts and identifiers IBM Plex Mono, as in the database overview of the research home.
  * The scene states follow the Prosper Storyboard kit: orange for lost, green for kept,
  * blue for the experiment actor. Every rule is scoped to body.landing.
  */
@@ -15,10 +17,15 @@
     --lp-orange-dark: #b23e00;
     --lp-orange-on-dark: #ff7a33;   /* 6.8:1 on charcoal, for small text */
     --lp-grey: #d9d9d9;
-    --lp-mist: #f5f6fa;
-    --lp-line: #e3e5ea;
-    --lp-text: #181818;
-    --lp-text-2: #4a4f57;
+    --lp-mist: #f4f6f9;
+    --lp-line: #dfe6ef;
+    --lp-text: #212121;
+    --lp-text-2: #515151;
+    --lp-text-3: #616161;
+    --lp-footer-label: #b8c8db;
+    --lp-footer-line: rgba(255, 255, 255, 0.13);
+    --lp-font-display: "Instrument Sans", var(--font-sans);
+    --lp-font-mono: "IBM Plex Mono", var(--font-mono);
     --lp-on-dark: rgba(255, 255, 255, 0.78);
     --lp-on-dark-2: rgba(255, 255, 255, 0.6);
     --lp-lost: #c2410c;
@@ -26,7 +33,7 @@
     --lp-kept: #1f7a4d;
     --lp-kept-bg: #eef8f2;
     --lp-actor: #2f6f8f;
-    --lp-radius: 12px;
+    --lp-radius: 10px;
     --lp-gutter: 24px;
     --lp-section-y: 96px;
     background: #fff;
@@ -37,16 +44,24 @@
     max-width: none;
     margin: 0;
     padding: 0;
+    font-family: var(--lp-font-display);
+}
+
+/* scientific.css sets the sans face on h1-h6 directly, so headings do not inherit from main */
+.landing main h1,
+.landing main h2,
+.landing main h3 {
+    font-family: var(--lp-font-display);
 }
 
 .landing .site-footer {
     margin-top: 0;
     background: var(--lp-char);
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* The Figma frames are 1600 px wide with 64 px side margins: 1472 px of content */
 .lp-container {
-    max-width: 1200px;
+    max-width: calc(1472px + 2 * var(--lp-gutter));
     margin: 0 auto;
     padding: 0 var(--lp-gutter);
 }
@@ -119,10 +134,9 @@
 /* ---------- Type ---------- */
 .lp-eyebrow {
     margin: 0 0 12px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+    font-weight: 400;
+    line-height: 1.333;
     color: var(--lp-orange);
 }
 
@@ -134,10 +148,10 @@
     margin: 0 0 16px;
     padding-bottom: 0;
     border-bottom: 0;
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
-    font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
+    font-size: clamp(1.75rem, 2.8vw, 2.375rem);
+    font-weight: 600;
+    line-height: 1.263;
+    letter-spacing: -0.01em;
     color: var(--lp-text);
     text-wrap: balance;
 }
@@ -148,7 +162,7 @@
 
 .lp-h3 {
     margin: 0 0 8px;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     font-weight: 600;
     line-height: 1.3;
     color: inherit;
@@ -161,9 +175,13 @@
 .lp-intro,
 .lp-body {
     margin: 0 0 16px;
-    font-size: 1.0625rem;
-    line-height: 1.65;
+    font-size: 1.125rem;
+    line-height: 1.6;
     color: var(--lp-text-2);
+}
+
+.lp-intro {
+    font-size: clamp(1.125rem, 1.5vw, 1.25rem);
 }
 
 .lp-body--light {
@@ -187,7 +205,7 @@
 }
 
 .lp-mono {
-    font-family: var(--font-mono);
+    font-family: var(--lp-font-mono);
     font-size: 0.875em;
 }
 
@@ -211,11 +229,11 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 20px;
+    padding: 15px 24px;
     border: 1px solid transparent;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    font-weight: 600;
+    border-radius: 8px;
+    font-size: 1.0625rem;
+    font-weight: 500;
     line-height: 1.2;
     text-decoration: none;
     transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
@@ -249,12 +267,24 @@
     overflow: hidden;
     padding: 88px 0 0;
     color: #fff;
-    background-color: var(--lp-ink);
-    background-image:
-        radial-gradient(circle at 82% 38%, rgba(206, 72, 1, 0.28), transparent 42%),
-        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-    background-size: auto, 56px 56px, 56px 56px;
+    /* The Figma hero ("Landing page v1" fill), anchored right so its shard sits behind the flame */
+    background: var(--lp-ink) url("../images/landing/figma/hero-bg.png") right center / cover no-repeat;
+}
+
+/* The soft light of the Figma hero (Ellipse 124), at its place in the 1600 px frame */
+.lp-hero::before {
+    content: "";
+    position: absolute;
+    top: 56px;
+    left: 0.3%;
+    width: 54.7%;
+    aspect-ratio: 1;
+    background: url("../images/landing/figma/glow.svg") center / contain no-repeat;
+    pointer-events: none;
+}
+
+.lp-hero > .lp-container {
+    position: relative;
 }
 
 .lp-hero__grid {
@@ -266,19 +296,19 @@
 
 .lp-hero__title {
     margin: 0 0 24px;
-    font-size: clamp(2.4rem, 5.2vw, 4.25rem);
-    font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.03em;
+    font-size: clamp(2.5rem, 5.6vw, 4.875rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
     color: #fff;
     text-wrap: balance;
 }
 
 .lp-hero__lede {
-    max-width: 38rem;
+    max-width: 49rem;
     margin: 0;
-    font-size: 1.125rem;
-    line-height: 1.65;
+    font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+    line-height: 1.333;
     color: var(--lp-on-dark);
 }
 
@@ -413,8 +443,9 @@
 }
 
 .lp-holding__value {
+    font-family: var(--lp-font-mono);
     font-size: clamp(1.5rem, 2.6vw, 2.125rem);
-    font-weight: 700;
+    font-weight: 500;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: #fff;
@@ -466,6 +497,100 @@
 
 .lp-split--even {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* The wave lines of the Figma statement frame (229:2337). The box is the 1600 x 366 px band
+   at the bottom of that frame; landing_waves.html places each line in it in percent. */
+.lp-section--waves {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: calc(var(--lp-section-y) + 12vw);
+}
+
+.lp-section--waves > .lp-container {
+    position: relative;
+    z-index: 1;
+}
+
+.lp-waves {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    aspect-ratio: 1600 / 366;
+    pointer-events: none;
+}
+
+.lp-wave {
+    position: absolute;
+}
+
+.lp-wave__box {
+    position: absolute;
+}
+
+.lp-wave img {
+    display: block;
+    max-width: none;
+    width: 100%;
+    height: 100%;
+}
+
+/* ---------- Footer, as in the Figma "Research resources footer" ---------- */
+.landing .site-footer {
+    padding: 32px 64px 24px;
+    color: var(--lp-footer-label);
+}
+
+.landing .footer-content,
+.landing .footer-bottom {
+    max-width: 1472px;
+}
+
+.landing .footer-content {
+    gap: 64px;
+}
+
+.landing .footer-section h4 {
+    margin-bottom: 18px;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--lp-footer-label);
+}
+
+.landing .footer-section p {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--lp-footer-label) !important;
+}
+
+.landing .footer-section a {
+    padding: 0 0 12px;
+    font-size: 12px;
+    color: #fff;
+}
+
+.landing .footer-section a:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.landing .nsf-badge {
+    font-size: 11px;
+    color: var(--lp-footer-label);
+}
+
+.landing .footer-bottom {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top-color: var(--lp-footer-line);
+    text-align: left;
+    font-size: 11px;
+    color: var(--lp-footer-label);
+}
+
+.landing .footer-bottom .small {
+    font-size: 10px;
 }
 
 /* ---------- 01 Why: note cards ---------- */
@@ -573,7 +698,7 @@
     border: 1px solid #cfd3da;
     border-radius: 6px;
     background: var(--lp-mist);
-    font-family: var(--font-mono);
+    font-family: var(--lp-font-mono);
     font-size: 0.8125rem;
     line-height: 1.3;
     color: var(--lp-text);
@@ -583,7 +708,7 @@
     padding: 0 5px;
     border-radius: 4px;
     background: var(--lp-line);
-    font-family: var(--font-sans);
+    font-family: var(--lp-font-display);
     font-size: 0.6875rem;
     font-weight: 600;
     color: var(--lp-text-2);
@@ -799,10 +924,16 @@
     text-decoration: none;
 }
 
+.lp-card .lp-h3 {
+    font-size: clamp(1.375rem, 1.9vw, 1.75rem);
+    line-height: 1.3;
+    letter-spacing: -0.6px;
+}
+
 .lp-card p {
     margin: 0 0 20px;
-    font-size: 0.9375rem;
-    line-height: 1.6;
+    font-size: 1.0625rem;
+    line-height: 1.5;
     color: var(--lp-text-2);
 }
 
@@ -819,8 +950,12 @@
     background: var(--lp-grey);
 }
 
+.lp-card--1 .lp-h3 {
+    color: #151f00;
+}
+
 .lp-card--1 p {
-    color: #33363b;
+    color: #2b2b2b;
 }
 
 .lp-card--1 .lp-card__link {
@@ -993,17 +1128,59 @@
 }
 
 .lp-closing .lp-h2 {
-    max-width: 40rem;
+    max-width: 63rem;
+    font-size: clamp(1.75rem, 3.2vw, 3rem);
+    font-weight: 500;
+    line-height: 1.083;
+}
+
+.lp-closing__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 48px;
+    align-items: start;
+}
+
+/* The link list of the Figma closing frame: orange squares, the active link in orange */
+.lp-squares {
+    display: grid;
+    gap: 9px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-squares a {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.16;
+    color: #fff;
+    text-decoration: none;
+}
+
+.lp-squares a::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    background: var(--lp-orange);
+}
+
+.lp-squares a:hover {
+    color: var(--lp-orange-on-dark);
+    text-decoration: none;
 }
 
 .lp-wordmark {
     margin: 72px 0 0;
-    font-size: clamp(3.5rem, 15vw, 13rem);
-    font-weight: 800;
-    line-height: 0.9;
-    letter-spacing: -0.05em;
+    font-size: clamp(3.5rem, 15vw, 15rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
     white-space: nowrap;
-    background: linear-gradient(90deg, #6c2700, var(--lp-orange));
+    background: linear-gradient(266.33deg, var(--lp-orange) 2.35%, #682401 97.98%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -1020,6 +1197,15 @@
     .lp-split--even {
         grid-template-columns: minmax(0, 1fr);
         gap: 40px;
+    }
+
+    /* The stacked hero is tall: keep the shard at the top, by the flame, and fade it out
+       before the headline so the text stays on plain ink */
+    .lp-hero {
+        background:
+            linear-gradient(to bottom, rgba(5, 6, 11, 0) 160px, var(--lp-ink) 420px),
+            url("../images/landing/figma/hero-bg.png") 80% 0 / auto 420px no-repeat,
+            var(--lp-ink);
     }
 
     .lp-hero__art {
@@ -1057,9 +1243,18 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .lp-points {
+    .lp-points,
+    .lp-closing__grid {
         grid-template-columns: minmax(0, 1fr);
         gap: 0;
+    }
+
+    .lp-closing__grid {
+        gap: 32px;
+    }
+
+    .landing .site-footer {
+        padding: 32px var(--lp-gutter) 24px;
     }
 
     .lp-point {

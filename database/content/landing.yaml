@@ -65,10 +65,6 @@ why:
     - "Engineers use kinetic models to design engines, gas turbines and new fuels. A kinetic model lists the species and reactions of a fuel, with a rate for each reaction."
     - "Experiments test the models. Shock tubes and rapid compression machines measure ignition delay. Flame experiments measure the laminar burning velocity. Jet-stirred and flow reactors give species profiles."
     - "Each research group publishes its model and its data in its own files, with its own names for the same molecules. Thus, each comparison of a model with data starts with manual work. Other people cannot easily repeat it."
-  term:
-    label: "New word"
-    title: "Kinetic model"
-    text: "A set of species and elementary reactions, with rate parameters, thermochemistry and transport data. CHEMKIN and Cantera YAML are two common file formats."
   name:
     label: "Why the name"
     title: "Prometheus"
@@ -219,6 +215,17 @@ community:
 
 closing:
   title: "Start with a species, a model or a dataset."
+  # The square-bullet list of the Figma closing frame
+  links_label: "Platform"
+  links:
+    - label: "Platform overview"
+      href: "#why"
+    - label: "API documentation"
+      url: "swagger-ui"
+    - label: "Kinetic models"
+      url: "kinetic-model-list"
+    - label: "ChemKED data standard"
+      url: "chemked_database:home"
   actions:
     - label: "Search species"
       url: "species-search"

@@ -8,6 +8,8 @@
 {% block brand_logo %}{% static 'database/images/landing/prometheus-logo-transparent.png' %}{% endblock %}
 
 {% block extra_css %}
+{# Instrument Sans and IBM Plex Mono are the display and number faces of the Figma file #}
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'database/css/landing.css' %}">
 {% endblock %}
 
@@ -64,7 +66,8 @@
 </section>
 
 <!-- 01 Why -->
-<section class="lp-section lp-section--char" id="why" aria-labelledby="lp-why-title">
+<section class="lp-section lp-section--char lp-section--waves" id="why" aria-labelledby="lp-why-title">
+    {% include "database/landing_waves.html" %}
     <div class="lp-container lp-split">
         <div>
             <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.why.eyebrow }}</p>
@@ -79,11 +82,6 @@
                 <p class="lp-note-card__label">{{ copy.why.name.label }}</p>
                 <p class="lp-note-card__title">{{ copy.why.name.title }}</p>
                 <p class="lp-note-card__text">{{ copy.why.name.text }}</p>
-            </div>
-            <div class="lp-note-card">
-                <p class="lp-note-card__label">{{ copy.why.term.label }}</p>
-                <p class="lp-note-card__title">{{ copy.why.term.title }}</p>
-                <p class="lp-note-card__text">{{ copy.why.term.text }}</p>
             </div>
         </aside>
     </div>
@@ -309,11 +307,22 @@
 <!-- Closing -->
 <section class="lp-closing" aria-labelledby="lp-closing-title">
     <div class="lp-container">
-        <h2 id="lp-closing-title" class="lp-h2 lp-h2--light">{{ copy.closing.title }}</h2>
-        <div class="lp-actions">
-            {% for action in copy.closing.actions %}
-            <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}</a>
-            {% endfor %}
+        <div class="lp-closing__grid">
+            <nav aria-label="{{ copy.closing.links_label }}">
+                <ul class="lp-squares">
+                    {% for link in copy.closing.links %}
+                    <li><a href="{{ link.href }}">{{ link.label }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            <div>
+                <h2 id="lp-closing-title" class="lp-h2 lp-h2--light">{{ copy.closing.title }}</h2>
+                <div class="lp-actions">
+                    {% for action in copy.closing.actions %}
+                    <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
         <p class="lp-wordmark" aria-hidden="true">Pr.omethe.us</p>
     </div>

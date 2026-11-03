@@ -184,7 +184,7 @@ function labelTexture(THREE, name) {
     // A glowing species name on a transparent canvas. A digit after a letter, ")" or another
     // subscript digit is a subscript, so CH3OH reads as CH₃OH and a leading digit stays full size.
     const px = 64;
-    const font = (size) => `600 ${size}px Inter, "Helvetica Neue", Arial, sans-serif`;
+    const font = (size) => `600 ${size}px "Instrument Sans", Inter, "Helvetica Neue", Arial, sans-serif`;
     const runs = [];
     for (const ch of name) {
         const previous = runs[runs.length - 1];
@@ -265,7 +265,7 @@ async function start(mount) {
     const THREE = await import(mount.dataset.three);
     const list = document.getElementById("lp-flame-species");
     const names = list ? JSON.parse(list.textContent).map((species) => species.name) : [];
-    await document.fonts.load('600 64px Inter').catch(() => {});
+    await document.fonts.load('600 64px "Instrument Sans"').catch(() => {});
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
     renderer.setClearColor(0x000000, 0);
     renderer.domElement.className = "lp-flame__canvas";
