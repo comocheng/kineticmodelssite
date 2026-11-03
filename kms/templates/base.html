@@ -16,7 +16,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <!-- Professional Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- The faces of the Figma file: Inter for the interface, Instrument Sans for titles, IBM Plex Mono for numbers -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <!-- Bootstrap 5 (upgraded from 4) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -49,109 +50,72 @@
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="sr-only sr-only-focusable">Skip to main content</a>
     
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+    <!-- Navigation: the Figma "Application navigation" (nodes 185:2568 and 193:2314) -->
+    <header class="app-header">
+        <nav class="navbar {% block nav_expand %}navbar-expand-lg{% endblock %} app-nav" aria-label="Main">
+            <a class="app-brand" href="{% url 'home' %}">
                 <span>Pr.omethe.us</span>
-                <img src="{% block brand_logo %}{% static 'database/images/prometheus-logo.png' %}{% endblock %}" alt="Prometheus: Combustion chemical Kinetics model and experimental data" srcset="" style="max-width: 50px;">
+                <img src="{% block brand_logo %}{% static 'database/images/landing/prometheus-logo-transparent.png' %}{% endblock %}" alt="" width="43" height="38">
             </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" 
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
                     aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
-            <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.namespace == 'home' %}active{% endif %}" href="{% url 'home' %}">
-                            <i class="bi bi-house-door me-1"></i>Home
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.namespace == 'chemked_database' %}active{% endif %}" href="{% url 'chemked_database:home' %}">
-                            <i class="bi bi-fire me-1"></i>ChemKED
-                        </a>
-                    </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.namespace == 'analysis' %}active{% endif %}" href="{% url 'analysis:dashboard' %}">
-                            <i class="bi bi-graph-up me-1"></i>Analysis
-                        </a>
-                    </li>
-                    
+            <div class="collapse navbar-collapse" id="mainNav">
+                {% with url_name=request.resolver_match.url_name namespace=request.resolver_match.namespace %}
+                {# The data collections sit in the top row; Analysis has the row below #}
+                <ul class="app-nav__primary">
+                    <li><a class="app-nav__link{% if url_name == 'home' and not namespace %} is-active{% endif %}" href="{% url 'home' %}">Home</a></li>
+                    <li><a class="app-nav__link{% if not namespace and url_name != 'home' and url_name != 'login' and url_name != 'register' %} is-active{% endif %}" href="{% url 'database-home' %}">Kinetic Models Database</a></li>
+                    <li><a class="app-nav__link{% if namespace == 'chemked_database' %} is-active{% endif %}" href="{% url 'chemked_database:home' %}">ChemKED</a></li>
                 </ul>
-                
-                <!-- Right-side items -->
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://github.com/comocheng/kineticmodelssite/issues/new" target="_blank" rel="noopener noreferrer">
-                            <i class="bi bi-github me-1" aria-hidden="true"></i>Report an issue
-                            <span class="visually-hidden">on GitHub (opens in a new tab)</span>
-                        </a>
-                    </li>
-                    {% if site_access_allowed %}
-                    <!-- Importer Dashboard -->
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'importer' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'importer_dashboard:index' %}">
-                            <i class="bi bi-cloud-upload me-1"></i>Importer
-                        </a>
-                    </li>
-                    <!-- SQL Console -->
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'livequery' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'livequery:query_console' %}">
-                            <i class="bi bi-terminal me-1"></i>SQL Console
-                        </a>
-                    </li>
-                    <!-- Data Management Menu -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="dataDropdown" role="button" 
-                           data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-plus-circle me-1"></i>Add Data
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li class="dropdown-header">Create New</li>
-                            <li><a class="dropdown-item" href="{% url 'source-create' %}"><i class="bi bi-journal-plus me-2"></i>Source</a></li>
-                            <li><a class="dropdown-item" href="{% url 'kinetic-model-create' %}"><i class="bi bi-diagram-3 me-2"></i>Kinetic Model</a></li>
-                            <li><a class="dropdown-item" href="{% url 'author-create' %}"><i class="bi bi-person-plus me-2"></i>Author</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li class="dropdown-header">Manage</li>
-                            <li><a class="dropdown-item" href="{% url 'author-list' %}"><i class="bi bi-people me-2"></i>Authors</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
+                {% endwith %}
+
+                {# The phone menu (and the one-row landing header) has no tools row, so Analysis joins the tools here #}
+                <ul class="app-tools__links app-tools__links--menu">
+                    <li><a class="app-tool{% if request.resolver_match.namespace == 'analysis' %} is-active{% endif %}" href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+                    {% include "partials/research_tools.html" with in_menu=True %}
+                </ul>
+
+                <div class="app-nav__account">
                     {% if user.is_authenticated %}
-                    <!-- User Menu -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
-                           data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
-                        </a>
+                    <div class="dropdown">
+                        <a class="app-nav__strong dropdown-toggle" href="#" id="userDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">{{ user.username }}</a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-gear me-2"></i>Admin</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
-                    </li>
+                    </div>
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-outline-primary btn-sm ms-2" href="{% url 'register' %}">
-                            Register
-                        </a>
-                    </li>
+                    <a class="app-nav__strong" href="{% url 'login' %}">Login</a>
+                    <a class="app-btn-secondary" href="{% url 'register' %}">Register</a>
                     {% endif %}
-                </ul>
+                </div>
             </div>
+        </nav>
+
+        <div class="app-tools">
+            {# Analysis on every page, as in the Figma tools row (node 193:2330) #}
+            <div class="app-tools__section">
+                {% block section_nav %}
+                {% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace %}
+                <a class="app-tools__label{% if ns == 'analysis' and url_name == 'dashboard' %} is-active{% endif %}" href="{% url 'analysis:dashboard' %}">Analysis</a>
+                <a class="app-tab{% if ns == 'analysis' and url_name == 'fuel-map' or ns == 'analysis' and url_name == 'fuel-detail' %} is-active{% endif %}" href="{% url 'analysis:fuel-map' %}">Fuel–Model Map</a>
+                <a class="app-tab{% if ns == 'analysis' and url_name == 'coverage-matrix' %} is-active{% endif %}" href="{% url 'analysis:coverage-matrix' %}">Coverage Matrix</a>
+                <a class="app-tab{% if ns == 'analysis' and url_name == 'run-list' or ns == 'analysis' and url_name == 'run-detail' or ns == 'analysis' and url_name == 'run-create' %} is-active{% endif %}" href="{% url 'analysis:run-list' %}">Simulations</a>
+                {% endwith %}
+                {% endblock %}
+            </div>
+            <ul class="app-tools__links app-tools__links--row">
+                {% include "partials/research_tools.html" %}
+            </ul>
         </div>
-    </nav>
-    
+    </header>
+
     <!-- Messages -->
     {% if messages %}
     <div class="container mt-3">
@@ -183,7 +147,7 @@
         <div class="footer-content">
             <div class="footer-section">
                 <h4>About</h4>
-                <p class="small mb-3" style="color: #adb5bd;">
+                <p class="small mb-3">
                     Prometheus is an open cyberinfrastructure for combustion kinetics. It links kinetic models
                     and experimental data through one identity for each molecule.
                 </p>

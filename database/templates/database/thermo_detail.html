@@ -1,65 +1,197 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# One thermo record, laid out after the Figma "Prometheus · CO thermo data" (node 161:5914) #}
+
+{% block title %}{{ thermo.species.formula }} thermo {{ thermo.pk }} | Prometheus{% endblock %}
 
 {% block content %}
-<h1>
-    {% if thermo.source %}
-    <a href="{% url 'source-detail' source.pk %}">{{ thermo.source.name }}</a> |
-    {% endif %}
-    <a href="{% url 'species-detail' thermo.species.pk %}">{{ thermo.species.formula }}</a>
-    Thermo Data
-</h1>
+{% with species=thermo.species record=thermo.provider_record %}
+<div class="th">
 
-{% if thermo.prime_id %}
-<h2>PrIMe ID: {{ thermo.prime_id }}</h2>
-{% endif %}
+    <!-- Page heading (Figma 161:5954) -->
+    <header class="th-heading">
+        <nav class="th-crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'database-home' %}">Kinetic Models Database</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <a href="{% url 'species-search' %}">Species</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <a href="{% url 'species-detail' species.pk %}">{{ species.formula }}</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <span aria-current="page">Thermo {{ thermo.pk }}</span>
+        </nav>
+        <div class="th-title-row">
+            <div class="th-identity">
+                <span class="th-symbol" aria-hidden="true">{{ species.formula }}</span>
+                <div>
+                    <h1 class="th-title">{{ species.formula }} thermo data</h1>
+                    <p class="th-sub">Thermo {{ thermo.pk }}{% if record %} · {{ record.get_provider_display }}{% endif %}{% if thermo.source %} · <a href="{% url 'source-detail' thermo.source.pk %}">{{ thermo.source.source_title|truncatechars:90 }}</a>{% endif %}</p>
+                </div>
+            </div>
+            <div class="th-actions">
+                <a class="th-action" href="{% url 'species-detail' species.pk %}"><img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">View species</a>
+                {% if record %}
+                <a class="th-action" href="{% url 'api-thermo-record-detail' record.pk %}"><img class="app-icon" src="{% static 'database/images/icons/link.svg' %}" alt="" width="17" height="17">Source record</a>
+                {% elif thermo.source %}
+                <a class="th-action" href="{% url 'source-detail' thermo.source.pk %}"><img class="app-icon" src="{% static 'database/images/icons/book-open-sm.svg' %}" alt="" width="18" height="18">View source</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
 
-<h2>NASA Polynomials</h2>
-{% if thermo.provider_record %}
-<p><strong>{{ thermo.provider_record.get_provider_display }}</strong>
-    {% if thermo.provider_record.provider == 'group_additivity' %} — estimated and fitted with RMG{% endif %}
-    {% if thermo.provider_record.provider == 'atct_constrained' %} — ΔfH°298 from ATcT; Cp and S from {{ thermo.provider_record.heat_capacity_source.get_provider_display }}. The ATcT uncertainty covers ΔfH°298 only.{% endif %}
-    · <a href="{% url 'api-thermo-record-detail' thermo.provider_record.pk %}">Source record and provenance</a>
-    <br><small class="text-break">Version: {{ thermo.provider_record.source_version }}</small>
-</p>
-{% endif %}
-$$\frac{C_p^\circ \left(T\right)}{R} = a_0 + a_1T + a_2T^2 + a_3T^3 + a_4T^4$$
-$$\frac{H^\circ \left(T\right)}{RT} = a_0 + \frac{1}{2}a_1T + \frac{1}{3}a_2T^2 + \frac{1}{4}a_3T^3 + \frac{1}{5}a_4T^4 + \frac{a_5}{T}$$
-$$\frac{S^\circ \left(T\right)}{R} = a_0\ln T + a_1T + \frac{1}{2}a_2T^2 + \frac{1}{3}a_3T^3 + \frac{1}{4}a_4T^4 + a_6$$
-{{ thermo|render_thermo_table }}
-{% include 'database/thermo_plot.html' %}
+    <!-- Properties overview (Figma 161:5972) -->
+    <dl class="th-props">
+        <div class="app-panel th-prop">
+            <dt>Enthalpy at 298 K</dt>
+            <dd><span class="th-value">{{ thermo.enthalpy298|floatformat:"1g" }}</span><span class="th-unit">J/mol</span></dd>
+            <dd class="th-note">From the NASA polynomial</dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Entropy at 298 K</dt>
+            <dd><span class="th-value">{{ thermo.entropy298|floatformat:"1g" }}</span><span class="th-unit">J/(mol·K)</span></dd>
+            <dd class="th-note">From the NASA polynomial</dd>
+        </div>
+        {% if thermo.enthalpy_formation %}
+        <div class="app-panel th-prop">
+            <dt>Heat of formation</dt>
+            <dd><span class="th-value">{{ thermo.enthalpy_formation|floatformat:"1g" }}</span><span class="th-unit">J/mol</span></dd>
+            <dd class="th-note">As stored with this record</dd>
+        </div>
+        {% endif %}
+        <div class="app-panel th-prop">
+            <dt>Reference temperature</dt>
+            {% if thermo.reference_temp %}
+            <dd><span class="th-value">{{ thermo.reference_temp }}</span><span class="th-unit">K</span></dd>
+            {% else %}
+            <dd class="th-empty">Not specified by source</dd>
+            {% endif %}
+            <dd class="th-note">Reference state</dd>
+        </div>
+    </dl>
 
-<h4>Reference State Information</h4>
-<ul class="list-group">
-    <li class="list-group-item"><b>Reference Temperature:</b> {{ thermo.reference_temp }} $K$</li>
-    <li class="list-group-item"><b>Reference Pressure:</b> {% if thermo.reference_pressure %}{{ thermo.reference_pressure }} $Pa${% else %}Not specified by source{% endif %}</li>
-    {% if thermo.enthalpy_formation %}
-    <li class="list-group-item"><b>Heat of Formation</b>: {{ thermo.enthalpy_formation }} $\frac{J}{mol}$</li>
-    {% endif %}
-</ul>
-<br>
+    <!-- Chart and source (Figma 161:5997) -->
+    <section class="th-split{% if not thermo_plot.curves %} th-split--single{% endif %}" aria-label="Thermo against temperature and source">
+        {% include 'database/thermo_plot.html' %}
+        <aside class="app-panel th-source" aria-labelledby="th-source-title">
+            <h2 id="th-source-title" class="app-panel__title">Source and reference state</h2>
+            {% if record %}
+            <span class="th-badge">{{ record.get_provider_display }}</span>
+            {% if record.provider == 'group_additivity' %}<p>Estimated and fitted with RMG.</p>{% endif %}
+            {% if record.provider == 'atct_constrained' %}
+            <p>ΔfH°298 from ATcT; Cp and S from {{ record.heat_capacity_source.get_provider_display }}.</p>
+            <div class="th-callout">
+                <strong>Uncertainty</strong>
+                <p>The ATcT uncertainty covers ΔfH°298 only.</p>
+            </div>
+            {% endif %}
+            {% elif thermo_comments %}
+            <p>Imported with {{ thermo_comments|length|pluralize:"kinetic model" }}.</p>
+            {% endif %}
+            <dl class="th-fields">
+                {% if record %}
+                <div><dt>Version</dt><dd class="text-break">{{ record.source_version }}</dd></div>
+                {% endif %}
+                {% if thermo.source %}
+                <div><dt>Source publication</dt><dd><a href="{% url 'source-detail' thermo.source.pk %}">{{ thermo.source.source_title }}</a></dd></div>
+                {% endif %}
+                {% if thermo.prime_id %}
+                <div><dt>PrIMe ID</dt><dd>{{ thermo.prime_id }}</dd></div>
+                {% endif %}
+                <div><dt>Reference pressure</dt><dd>{% if thermo.reference_pressure %}{{ thermo.reference_pressure }} Pa{% else %}Not specified by source{% endif %}</dd></div>
+            </dl>
+            {% if record %}
+            <a class="app-link" href="{% url 'api-thermo-record-detail' record.pk %}">Source record and provenance <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a>
+            {% endif %}
+        </aside>
+    </section>
 
-<h4>Properties at 298 K</h4>
-<ul class="list-group">
-    <li class="list-group-item"><b>Enthalpy</b>:</b> {{ thermo.enthalpy298|floatformat:1 }} $\frac{J}{mol}$</li>
-    <li class="list-group-item"><b>Entropy</b>: {{ thermo.entropy298|floatformat:1 }} $\frac{J}{mol-K}$</li>
-</ul>
-<br>
+    <!-- NASA polynomial ranges (Figma 161:6079) -->
+    <section class="app-panel th-panel" aria-labelledby="th-poly-title">
+        <div class="th-panel__head">
+            <h2 id="th-poly-title" class="app-panel__title">NASA polynomials</h2>
+            <span>2 temperature ranges, 7 coefficients each</span>
+        </div>
+        <div class="th-scroll" tabindex="0" role="region" aria-label="NASA polynomial coefficients">
+            {# One column per temperature range, so all seven coefficients fit without scrolling sideways #}
+            <table class="app-table th-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Quantity</th>
+                        <th scope="col" class="is-end">Range 1</th>
+                        <th scope="col" class="is-end">Range 2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">T<sub>min</sub> (K)</th>
+                        <td class="is-end th-mono">{{ thermo.temp_min_1 }}</td>
+                        <td class="is-end th-mono">{{ thermo.temp_min_2 }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">T<sub>max</sub> (K)</th>
+                        <td class="is-end th-mono">{{ thermo.temp_max_1 }}</td>
+                        <td class="is-end th-mono">{{ thermo.temp_max_2 }}</td>
+                    </tr>
+                    {% for coefficient in thermo.coeffs_poly1 %}
+                    <tr>
+                        <th scope="row">a<sub>{{ forloop.counter0 }}</sub></th>
+                        <td class="is-end th-mono">{{ coefficient|stringformat:"r" }}</td>
+                        <td class="is-end th-mono">{% for other in thermo.coeffs_poly2 %}{% if forloop.counter0 == forloop.parentloop.counter0 %}{{ other|stringformat:"r" }}{% endif %}{% endfor %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
-<h2>Kinetic Models</h2>
-<div class="list-group">
-    {% for tc in thermo_comments %}
-    <a href="{% url 'kinetic-model-detail' tc.kinetic_model.pk %}" class="list-group-item list-group-item-action flex-column align-items-start">
-      <div class="d-flex w-100 justify-content-between">
-        <h5 class="mb-1">{{tc.kinetic_model.model_name}}</h5>
-        <small>ID: {{tc.kinetic_model.pk}}</small>
-    </div>
-    <p class="mb-1">{{tc.comment}}</p>
-    </a>
-    {% endfor %}
+    <!-- Additional details (Figma 161:6106) -->
+    <section class="th-more" aria-label="Additional thermo details">
+        <details class="app-panel th-collapse">
+            <summary>
+                <img class="app-icon" src="{% static 'database/images/icons/code.svg' %}" alt="" width="17" height="17">
+                <strong>Polynomial equations</strong>
+                <span>How Cp, H and S follow from the coefficients a<sub>0</sub> to a<sub>6</sub></span>
+                <img class="app-icon th-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+            </summary>
+            <div class="th-collapse__body">
+                $$\frac{C_p^\circ \left(T\right)}{R} = a_0 + a_1T + a_2T^2 + a_3T^3 + a_4T^4$$
+                $$\frac{H^\circ \left(T\right)}{RT} = a_0 + \frac{1}{2}a_1T + \frac{1}{3}a_2T^2 + \frac{1}{4}a_3T^3 + \frac{1}{5}a_4T^4 + \frac{a_5}{T}$$
+                $$\frac{S^\circ \left(T\right)}{R} = a_0\ln T + a_1T + \frac{1}{2}a_2T^2 + \frac{1}{3}a_3T^3 + \frac{1}{4}a_4T^4 + a_6$$
+            </div>
+        </details>
+        <details class="app-panel th-collapse">
+            <summary>
+                <img class="app-icon" src="{% static 'database/images/icons/box-sm.svg' %}" alt="" width="18" height="18">
+                <strong>Kinetic models</strong>
+                <span>{% if thermo_comments %}{{ thermo_comments|length|pluralize:"model" }} use this thermo{% else %}No kinetic model uses this thermo{% endif %}</span>
+                <img class="app-icon th-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+            </summary>
+            <div class="th-collapse__body">
+                {% if thermo_comments %}
+                <ul class="th-models">
+                    {% for tc in thermo_comments %}
+                    <li>
+                        <a href="{% url 'kinetic-model-detail' tc.kinetic_model.pk %}">
+                            <strong>{{ tc.kinetic_model.model_name }}</strong>
+                            <small>ID: {{ tc.kinetic_model.pk }}</small>
+                            <p>{{ tc.comment }}</p>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="th-empty">No kinetic model uses this thermo.</p>
+                {% endif %}
+            </div>
+        </details>
+    </section>
 </div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/thermo_plot_styles.html" %}
+{% include "database/thermo_record_styles.html" %}
 {% endblock %}
 
 {% block extra_js %}

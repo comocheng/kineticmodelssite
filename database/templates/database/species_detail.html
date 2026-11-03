@@ -1,261 +1,1018 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load renders %}
 {% load utils %}
+{# A species record, laid out after the Figma "Prometheus · Carbon monoxide detail" (node 100:1916) #}
+
+{% block title %}{{ species.formula }} | Species | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Header -->
-<div class="detail-header">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'species-search' %}">Species</a></li>
-            <li class="breadcrumb-item active">{{ species.formula }}</li>
-        </ol>
-    </nav>
-    <div class="d-flex align-items-center gap-3">
-        <h1 class="h4 mb-0 font-monospace">{{ species.formula }}</h1>
-        <span class="badge bg-secondary">ID: {{ species.pk }}</span>
-        {% if species.molecular_weight %}<span class="text-muted small">MW: {{ species.molecular_weight }} g/mol</span>{% endif %}
-    </div>
-</div>
+{% with structure=structures.0 %}
+<div class="spd">
 
-<div class="row g-3">
-    <!-- Main Content -->
-    <div class="col-lg-8">
-        <!-- Structure -->
-        {% if structures %}
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#structureSection">
-                <h6 class="mb-0"><i class="bi bi-diagram-2 me-2"></i>Structure ({{ structures|length }})</h6>
-                <i class="bi bi-chevron-down"></i>
+    <!-- Species identity and provenance (Figma 100:1940) -->
+    <section class="spd-identity" id="spd-overview" aria-labelledby="spd-title">
+        <nav class="spd-crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'database-home' %}">Kinetic Models Database</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <a href="{% url 'species-search' %}">Species</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <span aria-current="page">{{ species.formula }}</span>
+        </nav>
+
+        <div class="spd-heading">
+            <div class="spd-heading__title">
+                <p class="spd-context">
+                    <img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">
+                    Species record
+                    <span class="spd-badge">ID {{ species.pk }}</span>
+                </p>
+                <h1 id="spd-title" class="spd-name">
+                    {% if structure.iupac_name %}{{ structure.iupac_name|capfirst }} <span class="spd-formula">{{ species.formula }}</span>{% else %}<span class="spd-name__formula">{{ species.formula }}</span>{% endif %}
+                </h1>
             </div>
-            <div class="collapse show" id="structureSection">
-                <div class="section-body p-0">
-                    {% for structure in structures %}
-                    <div class="d-flex border-bottom">
-                        <div class="structure-thumb p-2">
-                            <img src="{% url 'draw-structure' structure.pk %}" alt="{{ species.formula }}">
-                        </div>
-                        <div class="flex-grow-1 p-2">
-                            <table class="table table-sm table-borderless mb-0">
-                                {% if structure.iupac_name %}
-                                <tr><td class="text-muted small">IUPAC name</td><td class="small">{{ structure.iupac_name }}</td></tr>
-                                {% endif %}
-                                {% if structure.pubchem_cid %}
-                                <tr><td class="text-muted small">Names source</td><td class="small"><a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{ structure.pubchem_cid }}" target="_blank" rel="noopener noreferrer">PubChem CID {{ structure.pubchem_cid }}<span class="visually-hidden"> (opens in a new tab)</span></a></td></tr>
-                                {% endif %}
-                                {% if structure.isomer.inchi %}
-                                <tr><td class="text-muted small" style="width:80px;">InChI</td><td><code class="small text-break">{{ structure.isomer.inchi }}</code>
-                                    <button class="btn btn-sm btn-link p-0 ms-1 copy-btn" data-copy="{{ structure.isomer.inchi }}"><i class="bi bi-clipboard"></i></button>
-                                </td></tr>
-                                {% endif %}
-                                {% if structure.smiles %}
-                                <tr><td class="text-muted small">SMILES</td><td><code class="small">{{ structure.smiles }}</code></td></tr>
-                                {% endif %}
-                                <tr><td class="text-muted small">Multiplicity</td><td class="small">{{ structure.multiplicity }}</td></tr>
-                                {% if structure.adjacency_list %}
-                                <tr><td class="text-muted small">Adj. List</td><td><details class="small"><summary class="text-primary">View</summary><pre class="mb-0 small">{{ structure.adjacency_list }}</pre></details></td></tr>
-                                {% endif %}
-                            </table>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+            <a class="spd-action" href="{% url 'species-search' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to search</a>
         </div>
-        {% endif %}
 
-        <!-- Thermodynamic Data -->
-        <div class="data-section">
-            <div class="section-header"><h6 class="mb-0">Thermochemistry sources</h6></div>
-            <div class="section-body p-0">
-                {% include 'database/thermo_records.html' %}
+        <nav class="spd-sections" aria-label="Sections of this record">
+            <a href="#spd-overview">Overview</a>
+            <a href="#spd-thermo">Thermochemistry</a>
+            {% if thermo_list %}<a href="#spd-datasets">Thermo datasets</a>{% endif %}
+            {% if transport_list %}<a href="#spd-transport">Transport</a>{% endif %}
+            <a href="#spd-reactions">Reactions ({{ reactions.paginator.count|default:0|floatformat:"0g" }})</a>
+        </nav>
+
+        <div class="spd-cards{% if not structures %} spd-cards--single{% endif %}">
+            <!-- Properties (Figma 100:1973) -->
+            <div class="app-panel spd-card">
+                <h2 class="app-panel__title">Properties</h2>
+                <dl class="spd-props">
+                    <div>
+                        <dt>Formula</dt>
+                        <dd class="spd-value">{{ species.formula }}</dd>
+                    </div>
+                    {% if sidebar_enthalpy %}
+                    <div>
+                        <dt>ΔH°f (298.15 K)</dt>
+                        <dd><span class="spd-value">{{ sidebar_enthalpy }}</span> <span class="spd-unit">J/mol</span></dd>
+                        <dd class="spd-note"><a href="{% url 'thermo-detail' sidebar_thermo.pk %}"{% if sidebar_thermo_models %} title="{{ sidebar_thermo_models }}"{% endif %}>{{ sidebar_thermo_source }}</a></dd>
+                    </div>
+                    {% endif %}
+                    {% if species.molecular_weight %}
+                    <div>
+                        <dt>Molecular weight</dt>
+                        <dd><span class="spd-value">{{ species.molecular_weight }}</span> <span class="spd-unit">g/mol</span></dd>
+                    </div>
+                    {% endif %}
+                </dl>
+                <ul class="spd-more">
+                    <li>Database ID <strong>{{ species.pk }}</strong></li>
+                    {% if structures %}<li>Structures <strong>{{ structures|length }}</strong></li>{% endif %}
+                    {% if species.prime_id %}<li>PrIMe ID <strong>{{ species.prime_id }}</strong></li>{% endif %}
+                    {% if species.cas_number %}<li>CAS <strong>{{ species.cas_number }}</strong></li>{% endif %}
+                </ul>
             </div>
+
+            <!-- Structure and provenance (Figma 100:1987) -->
+            {% if structures %}
+            <div class="app-panel spd-card">
+                <div class="spd-card__head">
+                    <h2 class="app-panel__title">Structure and identifiers</h2>
+                    <span class="app-panel__meta">{{ structures|length|pluralize:"structure" }}</span>
+                </div>
+                {% for structure in structures %}
+                <div class="spd-structure">
+                    <div class="spd-structure__preview">
+                        <img src="{% url 'draw-structure' structure.pk %}" alt="{{ species.formula }}">
+                    </div>
+                    <dl class="spd-ids">
+                        {% if structure.iupac_name %}
+                        <div><dt>IUPAC name</dt><dd>{{ structure.iupac_name }}</dd></div>
+                        {% endif %}
+                        {% if structure.pubchem_cid %}
+                        <div><dt>Names source</dt><dd><a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{ structure.pubchem_cid }}" target="_blank" rel="noopener noreferrer">PubChem CID {{ structure.pubchem_cid }} <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"><span class="visually-hidden"> (opens in a new tab)</span></a></dd></div>
+                        {% endif %}
+                        {% if structure.smiles %}
+                        <div><dt>SMILES</dt><dd><code>{{ structure.smiles }}</code></dd></div>
+                        {% endif %}
+                        <div><dt>Multiplicity</dt><dd>{{ structure.multiplicity }}</dd></div>
+                        {% if structure.isomer.inchi %}
+                        <div class="spd-ids__wide"><dt>InChI</dt><dd><code class="text-break">{{ structure.isomer.inchi }}</code>
+                            <button type="button" class="copy-btn" data-copy="{{ structure.isomer.inchi }}" aria-label="Copy InChI"><i class="bi bi-clipboard"></i></button>
+                        </dd></div>
+                        {% endif %}
+                        {% if structure.adjacency_list %}
+                        <div class="spd-ids__wide"><dt>Adj. list</dt><dd><details><summary>View</summary><pre>{{ structure.adjacency_list }}</pre></details></dd></div>
+                        {% endif %}
+                    </dl>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Thermochemistry comparison (Figma 100:2009) -->
+    <section class="spd-split{% if not thermo_plot.curves %} spd-split--single{% endif %}" id="spd-thermo" aria-label="Thermochemistry">
+        <div class="app-panel spd-sources">
+            <div class="spd-panel-head">
+                <img class="app-icon" src="{% static 'database/images/icons/book-open-sm.svg' %}" alt="" width="18" height="18">
+                <div class="spd-panel-head__text">
+                    <h2 class="app-panel__title">Thermochemistry sources</h2>
+                    <p>Records imported from reference thermochemistry sources, compared at 298.15 K.</p>
+                </div>
+                <span class="spd-badge">{{ thermo_records|length }}</span>
+            </div>
+            {% include 'database/thermo_records.html' %}
+            <p class="spd-guide">
+                <img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="14" height="14">
+                “Estimate” marks group-additivity values. “Derived” marks an ATcT ΔfH° combined with Cp and S from another source. ± values are the uncertainties each source reports.
+            </p>
         </div>
         {% include 'database/thermo_plot.html' %}
+    </section>
+
+    <!-- Thermodynamic datasets and names (Figma 100:2340) -->
+    <section class="spd-datasets" aria-label="Thermo datasets and names">
         {% if thermo_list %}
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#thermoSection">
-                <h6 class="mb-0"><i class="bi bi-thermometer-half me-2"></i>Thermodynamic Data</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="thermoSection">
-                <div class="section-body">
-                    {{ thermo_list|render_thermo_list }}
-                </div>
+        <div class="spd-section-head" id="spd-datasets">
+            <img class="app-icon" src="{% static 'database/images/icons/box-sm.svg' %}" alt="" width="18" height="18">
+            <div>
+                <h2 class="app-section-title">Thermo datasets</h2>
+                <p>Every NASA-polynomial thermo entry stored for this species, with the kinetic models that use it.</p>
             </div>
         </div>
         {% endif %}
-
-        <!-- Transport Properties -->
-        {% if transport_list %}
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#transportSection">
-                <h6 class="mb-0"><i class="bi bi-arrows-move me-2"></i>Transport Properties</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="transportSection">
-                <div class="section-body">
-                    {{ transport_list|render_transport_list }}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Reactions -->
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#reactionsSection">
-                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Reactions ({{ reactions.paginator.count|default:0 }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="reactionsSection">
-                <div class="section-body">
-                    {% if reactions %}
-                    <div class="d-flex justify-content-between align-items-center mb-2 small">
-                        <span class="text-muted">{{ reactions.paginator.count }} reactions</span>
-                        {% render_pagination objects=reactions page_name="page" %}
-                    </div>
-                    {{ reactions|render_reaction_list }}
-                    <div class="mt-2">
-                        {% render_pagination objects=reactions page_name="page" %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted mb-0 small">No reactions found.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Quick Info -->
-        <div class="data-section">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Properties</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tr><td class="text-muted">Database ID</td><td class="text-end fw-medium">{{ species.pk }}</td></tr>
-                    <tr><td class="text-muted">Formula</td><td class="text-end font-monospace fw-medium">{{ species.formula }}</td></tr>
-                    {% if species.molecular_weight %}<tr><td class="text-muted">Molecular Weight</td><td class="text-end">{{ species.molecular_weight }} g/mol</td></tr>{% endif %}
-                    {% if sidebar_enthalpy %}
-                    <tr><td class="text-muted">ΔH°f (298.15 K)</td><td class="text-end">{{ sidebar_enthalpy }} J/mol
-                        <div class="small"><a href="{% url 'thermo-detail' sidebar_thermo.pk %}"{% if sidebar_thermo_models %} title="{{ sidebar_thermo_models }}"{% endif %}>{{ sidebar_thermo_source }}</a></div>
-                    </td></tr>
-                    {% endif %}
-                    {% if structures %}<tr><td class="text-muted">Structures</td><td class="text-end">{{ structures|length }}</td></tr>{% endif %}
-                </table>
-            </div>
-        </div>
-
-        <!-- Names -->
-        {% if names_models %}
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#namesSection">
-                <h6 class="mb-0"><i class="bi bi-tags me-2"></i>Known Names ({{ names_models|length }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="namesSection">
-                <div class="section-body p-0">
-                    <table class="table table-sm table-hover mb-0">
-                        {% for name, models in names_models %}
-                        <tr>
-                            <td>
-                                <details class="name-detail">
-                                    <summary class="d-flex justify-content-between align-items-center">
-                                        <span>{{ name }}</span>
-                                        <span class="badge bg-secondary-subtle text-secondary small">{{ models|length }}</span>
-                                    </summary>
-                                    <div class="ps-3 pt-1 small">
-                                        {% for model_name, model_id in models %}
-                                        {% if model_id %}
-                                        <a href="{% url 'kinetic-model-detail' model_id %}" class="d-block text-muted py-1">{{ model_name }}</a>
-                                        {% else %}<span class="text-muted">Species reference name</span>{% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </details>
-                            </td>
-                        </tr>
-                        {% endfor %}
+        <div class="spd-split{% if not thermo_list or not names_models %} spd-split--single{% endif %}">
+            {% if thermo_list %}
+            <div class="app-panel spd-table">
+                <div class="spd-scroll" tabindex="0" role="region" aria-label="Thermo datasets">
+                    <table class="app-table spd-grid">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col" class="is-end tr-sci">ΔfH° (298 K)<br><span class="tr-unit">J/mol</span></th>
+                                <th scope="col" class="is-end tr-sci">S° (298 K)<br><span class="tr-unit">J/(mol·K)</span></th>
+                                <th scope="col">Kinetic models</th>
+                                <th scope="col" class="spd-col-action"><span class="visually-hidden">Open</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for thermo in thermo_list %}
+                            {% with models=thermo.kineticmodel_set.all %}
+                            <tr>
+                                <td><a class="spd-mono" href="{% url 'thermo-detail' thermo.pk %}">{{ thermo.pk }}</a></td>
+                                <td class="is-end spd-mono">{{ thermo.enthalpy298|floatformat:"1g" }}</td>
+                                <td class="is-end spd-mono">{{ thermo.entropy298|floatformat:"1g" }}</td>
+                                <td>
+                                    {% if models|length == 1 %}
+                                    <a href="{% url 'kinetic-model-detail' models.0.pk %}">{{ models.0.model_name }}</a>
+                                    {% elif models %}
+                                    <details class="spd-models">
+                                        <summary>{{ models.0.model_name }}{% if models|length > 1 %} <span class="spd-alias">+{{ models|length|add:"-1" }}</span>{% endif %}</summary>
+                                        <ul>
+                                            {% for model in models %}
+                                            <li><a href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </details>
+                                    {% else %}<span class="tr-faint">No kinetic model</span>{% endif %}
+                                </td>
+                                <td class="spd-col-action"><a href="{% url 'thermo-detail' thermo.pk %}" aria-label="Open thermo {{ thermo.pk }}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"></a></td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
                     </table>
                 </div>
             </div>
+            {% endif %}
+
+            {% if names_models %}
+            <!-- Names in kinetic models (Figma 100:2430) -->
+            <div class="app-panel spd-names">
+                <div class="spd-card__head">
+                    <h2 class="app-panel__title">Known names</h2>
+                    <span class="spd-badge">{{ names_models|length }}</span>
+                </div>
+                <ul class="spd-names__list">
+                    {% for name, models in names_models %}
+                    <li>
+                        <details class="name-detail">
+                            <summary><span>{{ name }}</span><span class="spd-alias">{{ models|length }}</span></summary>
+                            <ul>
+                                {% for model_name, model_id in models %}
+                                {% if model_id %}
+                                <li><a href="{% url 'kinetic-model-detail' model_id %}">{{ model_name }}<img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></a></li>
+                                {% else %}<li class="tr-faint">Species reference name</li>{% endif %}
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
+        {% if thermo_list %}
+        <p class="spd-guide">
+            <img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="14" height="14">
+            Open an entry to see its NASA polynomials, reference state and the models that use it.
+        </p>
         {% endif %}
-    </div>
+    </section>
+
+    <!-- Transport properties -->
+    {% if transport_list %}
+    <section class="app-panel spd-block" id="spd-transport" aria-labelledby="spd-transport-title">
+        <div class="spd-card__head">
+            <h2 id="spd-transport-title" class="app-panel__title">Transport properties</h2>
+        </div>
+        {{ transport_list|render_transport_list }}
+    </section>
+    {% endif %}
+
+    <!-- Reactions -->
+    <section class="app-panel spd-block spd-reactions" id="spd-reactions" aria-labelledby="spd-reactions-title">
+        <div class="spd-card__head">
+            <div class="spd-card__title">
+                <img class="app-icon" src="{% static 'database/images/icons/arrow-left-right-sm.svg' %}" alt="" width="18" height="18">
+                <h2 id="spd-reactions-title" class="app-panel__title">Reactions</h2>
+                <span class="spd-badge">{{ reactions.paginator.count|default:0|floatformat:"0g" }}</span>
+            </div>
+            {% if reactions %}{% render_pagination objects=reactions page_name="page" %}{% endif %}
+        </div>
+        {% if reactions %}
+        {{ reactions|render_reaction_list }}
+        <div class="spd-reactions__foot">
+            {% render_pagination objects=reactions page_name="page" %}
+        </div>
+        {% else %}
+        <p class="tr-faint spd-empty">No reactions found.</p>
+        {% endif %}
+    </section>
 </div>
+{% endwith %}
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/thermo_plot_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
+.spd {
+    --sp-tint: #edf3ff;
+    --sp-head: #eef2f7;
+    --sp-faint: #8390a0;
+    --sp-alias: #eff2f6;
+    display: grid;
+    gap: 28px;
+}
+
+.spd .app-section-title {
+    margin: 0;
+    font-size: 20px;
+}
+
+/* Identity */
+.spd-identity {
+    display: grid;
+    gap: 20px;
+    scroll-margin-top: 90px;
+}
+
+.spd-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--color-gray-600);
+}
+
+.spd-crumbs a {
+    color: inherit;
+}
+
+.spd-crumbs a:hover {
+    color: var(--color-primary);
+}
+
+.spd-crumbs [aria-current] {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.spd-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.spd-heading__title {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.spd-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-gray-600);
+}
+
+.spd-badge {
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--sp-tint);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.spd-name {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.spd-formula,
+.spd-name__formula {
+    font-family: var(--font-mono);
+    font-weight: 500;
+}
+
+.spd-formula {
+    margin-left: 6px;
+    font-size: 26px;
+    color: var(--color-gray-500);
+}
+
+.spd-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.spd-action:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.spd-sections {
+    display: flex;
+    gap: 28px;
+    overflow-x: auto;
     border-bottom: 1px solid var(--color-gray-200);
 }
 
-.data-section {
-    background: var(--color-white);
+.spd-sections a {
+    flex-shrink: 0;
+    padding: 12px 0;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.spd-sections a:first-child,
+.spd-sections a:hover {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.spd-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 540px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.spd-cards--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.spd-card {
+    display: grid;
+    gap: 20px;
+    padding: 24px;
+}
+
+.spd-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.spd-card__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.spd-props {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    margin: 0;
+}
+
+.spd-props dt,
+.spd-ids dt {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.spd-props dd {
+    margin: 4px 0 0;
+}
+
+.spd-value {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.spd-unit {
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-note {
+    font-size: 13px;
+}
+
+.spd-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--color-gray-200);
+    list-style: none;
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-more strong {
+    margin-left: 4px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.spd-structure {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.spd-structure + .spd-structure {
+    padding-top: 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.spd-structure__preview {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 110px;
+    height: 100px;
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    background: var(--color-white);
+}
+
+.spd-structure__preview img {
+    max-width: 96px;
+    max-height: 86px;
+}
+
+.spd-ids {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px 24px;
+    min-width: 0;
+    margin: 0;
+}
+
+.spd-ids__wide {
+    grid-column: 1 / -1;
+}
+
+.spd-ids dd {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.spd-ids dd a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spd-ids code {
+    font-size: 13px;
+    color: var(--color-gray-800);
+}
+
+.spd-ids pre {
+    max-height: 240px;
+    margin: 6px 0 0;
+    padding: 10px;
+    overflow: auto;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+    font-size: 12px;
+}
+
+.spd-ids summary {
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.copy-btn {
+    margin-left: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-gray-600);
+}
+
+.copy-btn:hover {
+    color: var(--color-primary);
+}
+
+/* Two-column sections: a wide table and a 600 px side panel */
+.spd-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 600px);
+    gap: 24px;
+    align-items: start;
+    scroll-margin-top: 90px;
+}
+
+.spd-split--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.spd-sources,
+.spd-table,
+.spd-names {
+    min-width: 0;
     overflow: hidden;
 }
 
-.section-header {
+.spd-panel-head {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
-    cursor: pointer;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 24px;
 }
 
-.section-header h6 {
-    font-size: 0.8rem;
+.spd-panel-head .app-icon {
+    margin-top: 3px;
+}
+
+.spd-panel-head__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.spd-panel-head p,
+.spd-section-head p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.spd-guide {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.spd-sources .spd-guide {
+    padding: 14px 24px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.spd-guide .app-icon {
+    margin-top: 1px;
+}
+
+/* Tables: thermochemistry sources (thermo_records.html) and thermo datasets */
+.tr-scroll,
+.spd-scroll {
+    position: relative;
+    overflow-x: auto;
+}
+
+.tr-table,
+.spd-grid {
+    min-width: 640px;
+}
+
+.tr-table th,
+.spd-grid th {
+    padding: 10px 12px;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--sp-head);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--color-gray-600);
+}
+
+.spd-grid th {
+    border-top: 0;
+}
+
+.tr-unit,
+.app-table th.tr-sci {
+    text-transform: none;
+}
+
+.tr-table td,
+.spd-grid td {
+    padding: 14px 12px;
+    font-size: 13px;
+    font-weight: 400;
+    vertical-align: top;
+}
+
+.tr-table th:first-child,
+.tr-table td:first-child,
+.spd-grid th:first-child,
+.spd-grid td:first-child {
+    padding-left: 24px;
+}
+
+.tr-table th:last-child,
+.tr-table td:last-child,
+.spd-grid th:last-child,
+.spd-grid td:last-child {
+    padding-right: 24px;
+}
+
+.tr-table tr:last-child td {
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.tr-table tbody:last-child tr:last-child td {
+    border-bottom: 0;
+}
+
+.tr-col-value { width: 150px; }
+.tr-col-model { width: 170px; }
+.tr-col-range { width: 110px; }
+.tr-col-action,
+.spd-col-action { width: 40px; }
+
+.tr-source {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.tr-source strong {
     font-weight: 600;
 }
 
-.section-body {
-    padding: 0.75rem;
+.tr-badge {
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: var(--sp-tint);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
 }
 
-.table {
-    font-size: 0.85rem;
+/* Name on its own line, then the label and the source disclosure; library rows keep all three on one line */
+.tr-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 12px;
 }
 
-.table td {
-    padding: 0.4rem 0.75rem;
-    vertical-align: middle;
+.tr-cell > .tr-source,
+.tr-cell > .tr-derivation,
+.tr-details[open] {
+    flex-basis: 100%;
 }
 
-.structure-thumb {
-    width: 120px;
-    flex-shrink: 0;
+.is-library .tr-cell > .tr-source {
+    flex-basis: auto;
+}
+
+.tr-meta {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.tr-value .tr-meta {
+    margin-top: 2px;
+}
+
+.tr-details {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.tr-details summary {
+    width: max-content;
+    cursor: pointer;
+}
+
+.tr-provenance {
+    margin: 4px 0 0;
+    white-space: pre-wrap;
+}
+
+.tr-value,
+.spd-mono {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.tr-range {
+    white-space: nowrap;
+}
+
+.tr-faint {
+    font-size: 12px;
+    color: var(--sp-faint);
+}
+
+.tr-group th {
+    padding-top: 12px;
+    padding-bottom: 12px;
     background: var(--color-gray-50);
-    border-right: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: none;
+    color: var(--color-gray-900);
 }
 
-.structure-thumb img {
-    max-width: 100%;
-    max-height: 80px;
+.tr-group th span {
+    margin-left: 10px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.tr-table tr.is-library td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.tr-action a,
+.spd-col-action a {
     display: block;
-    margin: 0 auto;
+    width: 16px;
+    margin-left: auto;
+}
+
+/* Datasets */
+.spd-datasets {
+    display: grid;
+    gap: 16px;
+}
+
+.spd-section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    scroll-margin-top: 90px;
+}
+
+.spd-section-head .app-icon {
+    margin-top: 4px;
+}
+
+.spd-grid tbody tr:nth-child(even) {
+    background: var(--color-gray-50);
+}
+
+.spd-models summary {
+    width: max-content;
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.spd-models ul,
+.spd-names__list ul {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.spd-models li + li {
+    margin-top: 4px;
+}
+
+.spd-alias {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--sp-alias);
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.spd-names .spd-card__head {
+    padding: 24px 24px 16px;
+}
+
+.spd-names__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.spd-names__list > li {
+    border-top: 1px solid var(--color-gray-200);
 }
 
 .name-detail summary {
-    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 24px;
     list-style: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-900);
 }
 
 .name-detail summary::-webkit-details-marker {
     display: none;
 }
 
-.copy-btn:hover { color: var(--color-primary); }
+.name-detail summary:hover {
+    background: var(--color-gray-50);
+}
+
+.name-detail ul {
+    max-height: 288px;
+    margin: 0;
+    padding: 0 24px 12px;
+    overflow-y: auto;
+}
+
+.name-detail li a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-gray-100);
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.name-detail li a:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.name-detail li.tr-faint {
+    padding: 8px 0;
+}
+
+/* Reactions and transport: render_reaction_list and render_pagination markup */
+.spd-block {
+    display: grid;
+    gap: 16px;
+    padding: 24px;
+    scroll-margin-top: 90px;
+}
+
+.spd-block .list-group {
+    margin: 0;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.spd-block .list-group-item {
+    padding: 12px 16px;
+    border: 0;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-block .list-group-item:last-child {
+    border-bottom: 0;
+}
+
+.spd-block .list-group-item:hover {
+    background: var(--color-primary-bg);
+}
+
+.spd-block .list-group-item h5 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.spd-block .list-group-item small {
+    flex-shrink: 0;
+    margin-left: 12px;
+    font-family: var(--font-mono);
+}
+
+.spd-reactions nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-reactions .pagination {
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.spd-reactions__foot nav {
+    justify-content: flex-end;
+}
+
+.spd-empty {
+    margin: 0;
+}
+
+@media (max-width: 1199.98px) {
+    .spd-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 991.98px) {
+    .spd-cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .spd-name {
+        font-size: 26px;
+    }
+
+    .spd-formula {
+        font-size: 20px;
+    }
+
+    .spd-card,
+    .spd-block {
+        padding: 18px 14px;
+    }
+
+    .spd-props {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .spd-structure {
+        flex-direction: column;
+    }
+
+    .spd-panel-head,
+    .spd-names .spd-card__head {
+        padding: 18px 14px;
+    }
+}
 </style>
 {% endblock %}
 

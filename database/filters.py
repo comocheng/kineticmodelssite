@@ -117,6 +117,9 @@ class ReactionFilter(django_filters.FilterSet):
 
 
 class SourceFilter(django_filters.FilterSet):
+    # A title search finds any part of the title, so a few words are enough
+    source_title = django_filters.CharFilter(lookup_expr="icontains", label="Source title")
+
     class Meta:
         model = models.Source
         fields = ["prime_id", "publication_year", "source_title", "journal_name", "doi"]

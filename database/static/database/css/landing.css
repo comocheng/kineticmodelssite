@@ -66,53 +66,100 @@
     padding: 0 var(--lp-gutter);
 }
 
-/* ---------- Navbar on the dark hero ---------- */
-.landing .navbar {
-    background: var(--lp-ink) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: none;
+/* ---------- The application header on the dark hero ---------- */
+/* One row, clear over the hero: the hero runs up under it (see .lp-hero), so the header shows
+   the hero's own background. It turns solid when the page scrolls or the phone menu is open. */
+.landing .app-header {
+    top: 0;
+    background: transparent;
+    backdrop-filter: none;
+    transition: background-color 0.25s ease;
 }
 
-.landing .navbar-brand,
-.landing .navbar-brand:hover {
-    color: var(--lp-orange-on-dark) !important;
+.landing .app-header.is-scrolled,
+.landing .app-header:has(.navbar-collapse.show),
+.landing .app-header:has(.navbar-collapse.collapsing) {
+    background: rgba(5, 6, 11, 0.9);
+    backdrop-filter: saturate(1.4) blur(10px);
 }
 
-.landing .navbar .nav-link {
-    color: var(--lp-on-dark) !important;
+.landing .app-nav {
+    border-bottom-color: transparent;
+    transition: border-color 0.25s ease;
 }
 
-.landing .navbar .nav-link:hover,
-.landing .navbar .nav-link.active {
-    color: #fff !important;
-    background-color: rgba(255, 255, 255, 0.06);
+.landing .app-header.is-scrolled .app-nav {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.landing .navbar .btn-outline-primary {
-    color: #fff;
-    border-color: var(--lp-orange);
+/* The tools row of the application pages: its links join the single row instead */
+.landing .app-tools {
+    display: none;
 }
 
-.landing .navbar .btn-outline-primary:hover {
-    background: var(--lp-orange);
-    border-color: var(--lp-orange);
+@media (min-width: 1400px) {
+    .landing .app-tools__links--menu {
+        display: flex;
+        flex-direction: row;
+    }
 }
 
-.landing .navbar-brand img {
-    margin-left: 6px;
-}
-
-/* Nine nav items do not fit on one line between 992 and 1400 px; drop the icons there */
+/* Between 992 and 1400 px the landing menu is collapsed; lay it out as on a phone */
 @media (min-width: 992px) and (max-width: 1399.98px) {
-    .landing .navbar .nav-link {
-        padding-left: 8px !important;
-        padding-right: 8px !important;
-        white-space: nowrap;
+    .landing .app-nav .navbar-collapse {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 8px 0 16px;
     }
 
-    .landing .navbar .nav-link > .bi {
-        display: none;
+    .landing .app-nav .navbar-collapse.show,
+    .landing .app-nav .navbar-collapse.collapsing {
+        display: flex;
     }
+
+    .landing .app-nav__primary,
+    .landing .app-tools__links--menu {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+}
+
+.landing .app-brand,
+.landing .app-brand:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.landing .app-nav__link,
+.landing .app-tool,
+.landing .app-tools__label {
+    color: var(--lp-on-dark-2);
+}
+
+.landing .app-nav__link:hover,
+.landing .app-nav__link.is-active,
+.landing .app-nav__strong,
+.landing .app-tool:hover {
+    color: #fff;
+}
+
+.landing .app-tool--accent,
+.landing .app-tool--accent:hover,
+.landing .app-nav__strong:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.landing .app-btn-secondary {
+    border-color: var(--lp-orange);
+    background: transparent;
+    color: #fff;
+}
+
+.landing .app-btn-secondary:hover {
+    background: var(--lp-orange);
+    color: #fff;
 }
 
 .landing .navbar-toggler {
@@ -121,14 +168,6 @@
 
 .landing .navbar-toggler-icon {
     filter: invert(1);
-}
-
-@media (max-width: 991.98px) {
-    .landing .navbar-collapse {
-        background: var(--lp-ink);
-        margin: 0 calc(-1 * var(--space-6));
-        padding: var(--space-2) var(--space-6) var(--space-4);
-    }
 }
 
 /* ---------- Type ---------- */
@@ -265,10 +304,12 @@
 .lp-hero {
     position: relative;
     overflow: hidden;
-    padding: 88px 0 0;
+    /* Pull the hero up under the clear header */
+    margin-top: calc(-1 * var(--navbar-height));
+    padding: calc(88px + var(--navbar-height)) 0 0;
     color: #fff;
-    /* The Figma hero ("Landing page v1" fill), anchored right so its shard sits behind the flame */
-    background: var(--lp-ink) url("../images/landing/figma/hero-bg.png") right center / cover no-repeat;
+    /* The Figma hero ("Landing page v1" fill, WebP at quality 88), anchored right so its shard sits behind the flame */
+    background: var(--lp-ink) url("../images/landing/figma/hero-bg.webp") right center / cover no-repeat;
 }
 
 /* The soft light of the Figma hero (Ellipse 124), at its place in the 1600 px frame */
@@ -534,63 +575,6 @@
     max-width: none;
     width: 100%;
     height: 100%;
-}
-
-/* ---------- Footer, as in the Figma "Research resources footer" ---------- */
-.landing .site-footer {
-    padding: 32px 64px 24px;
-    color: var(--lp-footer-label);
-}
-
-.landing .footer-content,
-.landing .footer-bottom {
-    max-width: 1472px;
-}
-
-.landing .footer-content {
-    gap: 64px;
-}
-
-.landing .footer-section h4 {
-    margin-bottom: 18px;
-    font-size: 10px;
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--lp-footer-label);
-}
-
-.landing .footer-section p {
-    font-size: 12px;
-    line-height: 1.8;
-    color: var(--lp-footer-label) !important;
-}
-
-.landing .footer-section a {
-    padding: 0 0 12px;
-    font-size: 12px;
-    color: #fff;
-}
-
-.landing .footer-section a:hover {
-    color: var(--lp-orange-on-dark);
-}
-
-.landing .nsf-badge {
-    font-size: 11px;
-    color: var(--lp-footer-label);
-}
-
-.landing .footer-bottom {
-    margin-top: 28px;
-    padding-top: 20px;
-    border-top-color: var(--lp-footer-line);
-    text-align: left;
-    font-size: 11px;
-    color: var(--lp-footer-label);
-}
-
-.landing .footer-bottom .small {
-    font-size: 10px;
 }
 
 /* ---------- 01 Why: note cards ---------- */
@@ -1204,7 +1188,7 @@
     .lp-hero {
         background:
             linear-gradient(to bottom, rgba(5, 6, 11, 0) 160px, var(--lp-ink) 420px),
-            url("../images/landing/figma/hero-bg.png") 80% 0 / auto 420px no-repeat,
+            url("../images/landing/figma/hero-bg.webp") 80% 0 / auto 420px no-repeat,
             var(--lp-ink);
     }
 
@@ -1253,10 +1237,6 @@
         gap: 32px;
     }
 
-    .landing .site-footer {
-        padding: 32px var(--lp-gutter) 24px;
-    }
-
     .lp-point {
         padding: 20px 0;
     }
@@ -1269,7 +1249,7 @@
     }
 
     .lp-hero {
-        padding-top: 48px;
+        padding-top: calc(48px + var(--navbar-height));
     }
 
     .lp-holdings__grid {

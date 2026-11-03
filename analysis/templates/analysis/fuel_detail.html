@@ -1,320 +1,795 @@
 {% extends "base.html" %}
 {% load static %}
+{# One fuel and the models that contain it, from the Figma "Pr.omethe.us · AR fuel detail" (node 198:3432) #}
 
-{% block title %}{{ fuel.common_name|default:fuel.smiles }} — Fuel Detail{% endblock %}
+{% block title %}{{ fuel.common_name|default:fuel.smiles }} | Fuel–Model Map | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="detail-header mb-4">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'analysis:fuel-map' %}">Fuel-Model Map</a></li>
-            <li class="breadcrumb-item active">{{ fuel.common_name|default:fuel.smiles }}</li>
+<div class="an-maps an-fuel">
+
+    <!-- Breadcrumb (Figma 198:3467) -->
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:fuel-map' %}">Fuel–Model Map</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{{ fuel.common_name|default:fuel.smiles }}</span></li>
         </ol>
     </nav>
-    <div class="d-flex align-items-center justify-content-between">
-        <div>
-            <h1 class="h4 mb-0">
-                <i class="bi bi-fuel-pump me-2 text-primary"></i>
-                {{ fuel.common_name|default:fuel.smiles }}
-            </h1>
-            <p class="text-muted mb-0 mt-1">Compatibility details and species mapping preview</p>
+
+    <!-- Page heading (Figma 198:3475) -->
+    <header class="an-heading">
+        <div class="an-fuel__identity">
+            <div class="an-fuel__symbol{% if fuel.formula|length > 4 %} is-long{% endif %}" aria-hidden="true">
+                {% if fuel.formula %}{{ fuel.formula }}{% else %}<i class="bi bi-fuel-pump"></i>{% endif %}
+            </div>
+            <div class="an-heading__intro">
+                <div class="an-heading__title">
+                    <h1>{{ fuel.common_name|default:fuel.smiles }}</h1>
+                    <span class="an-pill">Fuel species</span>
+                </div>
+                <p class="an-lede">Compatibility details and species mapping preview</p>
+            </div>
         </div>
-        <a href="{% url 'analysis:fuel-map' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i>Back to Map
+        <a href="{% url 'analysis:fuel-map' %}" class="an-btn">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>Back to map
         </a>
-    </div>
-</div>
+    </header>
 
-<!-- Fuel Info Card -->
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Fuel Identifiers</h6>
-            </div>
-            <div class="section-body">
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        <label class="form-label text-muted small mb-0">Common Name</label>
-                        <div class="fw-medium">{{ fuel.common_name|default:"—" }}</div>
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label text-muted small mb-0">Formula</label>
-                        <div>
-                            {% if fuel.formula %}
-                            <span class="badge bg-light text-dark border fs-6">{{ fuel.formula }}</span>
-                            {% else %}—{% endif %}
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label text-muted small mb-0">SMILES</label>
-                        <div><code>{{ fuel.smiles|default:"—" }}</code></div>
-                    </div>
-                    <div class="col-sm-6">
-                        <label class="form-label text-muted small mb-0">InChI</label>
-                        <div><code class="small" style="word-break: break-all;">{{ fuel.inchi }}</code></div>
-                    </div>
-                    {% if fuel.name_variants %}
-                    <div class="col-12">
-                        <label class="form-label text-muted small mb-0">Known Names</label>
-                        <div>
-                            {% for name in fuel.name_variants %}
-                            <span class="badge bg-secondary-subtle text-secondary me-1">{{ name }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if fuel.group %}
-                    <div class="col-12">
-                        <label class="form-label text-muted small mb-0">Group</label>
-                        <div>
-                            <a href="{% url 'analysis:fuel-map' %}?group={{ fuel.group.pk }}">
-                                <span class="badge bg-info-subtle text-info">{{ fuel.group.name }}</span>
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
+    <!-- Identifiers and summary (Figma 198:3487) -->
+    <div class="an-fuel__summary">
+        <section class="app-panel an-fuel__ids" aria-labelledby="an-fuel-ids-title">
+            <h2 class="an-fuel__section-title" id="an-fuel-ids-title">Fuel identifiers</h2>
+            <dl class="an-fuel__id-grid">
+                <div>
+                    <dt>Common name</dt>
+                    <dd>{{ fuel.common_name|default:"—" }}</dd>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Summary</h6>
-            </div>
-            <div class="section-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-muted">Datasets</span>
-                    <span class="badge bg-primary-subtle text-primary fs-6">{{ dataset_count }}</span>
+                <div>
+                    <dt>Formula</dt>
+                    <dd class="an-mono">{{ fuel.formula|default:"—" }}</dd>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-muted">Compatible Models</span>
-                    <span class="badge bg-success-subtle text-success fs-6">{{ compatible_count }}</span>
+                <div>
+                    <dt>SMILES</dt>
+                    <dd class="an-mono">{{ fuel.smiles|default:"—" }}</dd>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted">Incompatible Models</span>
-                    <span class="badge bg-danger-subtle text-danger fs-6">{{ incompatible_count }}</span>
+                <div class="an-fuel__id-wide">
+                    <dt>InChI</dt>
+                    <dd class="an-mono">{{ fuel.inchi }}</dd>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Compatible Models -->
-<div class="data-section mb-4">
-    <div class="section-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">
-            <i class="bi bi-check-circle text-success me-2"></i>
-            Compatible Models
-            <span class="badge bg-success-subtle text-success ms-2">{{ compatible_count }}</span>
-        </h6>
-    </div>
-    <div class="section-body p-0">
-        {% if compatible_models %}
-        <table class="table table-sm table-hover mb-0" id="compatible-table">
-            <thead>
-                <tr>
-                    <th style="width: 30px;"></th>
-                    <th>Model Name</th>
-                    <th>Matched As</th>
-                    <th class="text-center">Species</th>
-                    <th class="text-center">Reactions</th>
-                    <th class="text-center">Simulated?</th>
-                    <th style="width: 80px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for compat in compatible_models %}
-                <tr class="model-row" data-fuel-pk="{{ fuel.pk }}" data-model-pk="{{ compat.kinetic_model.pk }}">
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-link p-0 toggle-mapping" title="Show species mapping">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                    </td>
-                    <td>
-                        <strong>{{ compat.kinetic_model.model_name }}</strong>
-                    </td>
-                    <td>
-                        <code>{{ compat.matched_model_species }}</code>
-                        <span class="badge bg-primary-subtle text-primary ms-1">{{ compat.get_match_method_display }}</span>
-                    </td>
-                    <td class="text-center">{{ compat.model_total_species }}</td>
-                    <td class="text-center">{{ compat.model_total_reactions }}</td>
-                    <td class="text-center">
-                        {% if compat.latest_coverage and compat.latest_coverage.has_successful_run %}
-                        <span class="badge bg-success-subtle text-success" title="Error: {{ compat.latest_coverage.latest_error_function|floatformat:1 }}">
-                            <i class="bi bi-check-circle me-1"></i>
-                            {{ compat.latest_coverage.latest_error_function|floatformat:1 }}
-                        </span>
-                        {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary">Not yet</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'analysis:run-create' %}?model={{ compat.kinetic_model.pk }}&fuel={{ fuel.pk }}"
-                           class="btn btn-outline-primary btn-sm" title="Run simulation with all datasets for this fuel">
-                            <i class="bi bi-play-circle"></i>
-                        </a>
-                    </td>
-                </tr>
-                <!-- Expandable mapping preview row (hidden by default) -->
-                <tr class="mapping-preview-row d-none" id="mapping-{{ compat.kinetic_model.pk }}">
-                    <td colspan="7" class="bg-light p-3">
-                        <div class="mapping-content">
-                            <div class="text-center text-muted py-2">
-                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                                Loading species mapping…
-                            </div>
-                        </div>
-                    </td>
-                </tr>
+                {% if fuel.group %}
+                <div>
+                    <dt>Group</dt>
+                    <dd><a href="{% url 'analysis:fuel-map' %}?group={{ fuel.group.pk }}">{{ fuel.group.name }}</a></dd>
+                </div>
+                {% endif %}
+            </dl>
+            {% if fuel.name_variants %}
+            <div class="an-fuel__names">
+                <span>Known names</span>
+                {% for name in fuel.name_variants %}
+                <span class="an-pill">{{ name }}</span>
                 {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="text-center text-muted py-4">
-            <i class="bi bi-x-circle display-6 d-block mb-2"></i>
-            No kinetic models contain this fuel species.
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- Summary metrics (Figma 198:3506) -->
+        <div class="app-panel an-fuel__metric">
+            <span class="an-fuel__metric-value">{{ dataset_count }}</span>
+            <div class="an-fuel__metric-copy">
+                <span>Experiment datasets</span>
+                <a class="app-link" href="#an-fuel-datasets">View datasets</a>
+            </div>
         </div>
+        <div class="app-panel an-fuel__metric">
+            <span class="an-fuel__metric-value is-good">{{ compatible_count }}</span>
+            <div class="an-fuel__metric-copy">
+                <span>Compatible models</span>
+                <a class="app-link" href="#an-fuel-compatible">View models</a>
+            </div>
+        </div>
+        <div class="app-panel an-fuel__metric">
+            <span class="an-fuel__metric-value is-bad">{{ incompatible_count }}</span>
+            <div class="an-fuel__metric-copy">
+                <span>Incompatible models</span>
+                {% if incompatible_models %}
+                <a class="app-link" href="#an-fuel-incompatible" data-an-expand="#incompatible-section">View list</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Model compatibility workspace (Figma 198:3524) -->
+    <div class="an-fuel__workspace{% if not compatible_models %} is-single{% endif %}">
+        <section class="app-panel an-fuel__models" id="an-fuel-compatible" aria-labelledby="an-fuel-compatible-title">
+            <div class="app-panel__head">
+                <div class="an-panel__heading">
+                    <i class="bi bi-check-circle an-fuel__ok" aria-hidden="true"></i>
+                    <h2 class="app-panel__title" id="an-fuel-compatible-title">Compatible models</h2>
+                    <span class="an-pill an-pill--count">{{ compatible_count }}</span>
+                </div>
+                {% if compatible_models %}<span class="an-panel__meta">Select a model to preview its species mapping</span>{% endif %}
+            </div>
+            {% if compatible_models %}
+            <div class="an-table-wrap">
+                <table class="an-table" id="compatible-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Model</th>
+                            <th scope="col">Matched as</th>
+                            <th scope="col" class="is-end">Species</th>
+                            <th scope="col" class="is-end">Reactions</th>
+                            <th scope="col">Simulated</th>
+                            <th scope="col"><span class="visually-hidden">Run</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for compat in compatible_models %}
+                        <tr class="model-row" data-fuel-pk="{{ fuel.pk }}" data-model-pk="{{ compat.kinetic_model.pk }}"
+                            data-mapping-url="{% url 'analysis:api-fuel-model-mapping' fuel.pk compat.kinetic_model.pk %}">
+                            <td>
+                                <button type="button" class="an-fuel__pick toggle-mapping" aria-controls="an-fuel-inspector" aria-pressed="false" title="Show species mapping">{{ compat.kinetic_model.model_name }}</button>
+                            </td>
+                            <td>
+                                <span class="an-fuel__match">
+                                    <code>{{ compat.matched_model_species }}</code>
+                                    <span class="an-pill an-pill--brand">{{ compat.get_match_method_display }}</span>
+                                </span>
+                            </td>
+                            <td class="is-number">{{ compat.model_total_species }}</td>
+                            <td class="is-number">{{ compat.model_total_reactions }}</td>
+                            <td>
+                                {% if compat.latest_coverage and compat.latest_coverage.has_successful_run %}
+                                <span class="an-pill an-pill--success" title="Error: {{ compat.latest_coverage.latest_error_function|floatformat:1 }}">
+                                    <i class="bi bi-check-circle" aria-hidden="true"></i>
+                                    {{ compat.latest_coverage.latest_error_function|floatformat:1 }}
+                                </span>
+                                {% else %}
+                                <span class="an-pill">Not yet</span>
+                                {% endif %}
+                            </td>
+                            <td class="is-end">
+                                <a href="{% url 'analysis:run-create' %}?model={{ compat.kinetic_model.pk }}&fuel={{ fuel.pk }}"
+                                   class="an-icon-btn" title="Run simulation with all datasets for this fuel"
+                                   aria-label="Run {{ compat.kinetic_model.model_name }} with all datasets for this fuel">
+                                    <i class="bi bi-play-fill" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="an-empty">
+                <i class="bi bi-x-circle d-block mb-2 fs-4" aria-hidden="true"></i>
+                No kinetic models contain this fuel species.
+            </p>
+            {% endif %}
+
+            <!-- Incompatible models disclosure (Figma 198:3601), collapsed by default -->
+            {% if incompatible_models %}
+            <div class="an-fuel__disclosure" id="an-fuel-incompatible">
+                <button class="an-fuel__disclosure-toggle collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#incompatible-section"
+                        aria-expanded="false" aria-controls="incompatible-section">
+                    <i class="bi bi-x-circle an-fuel__bad" aria-hidden="true"></i>
+                    <span class="an-fuel__disclosure-title">Incompatible models</span>
+                    <span class="an-pill an-pill--danger">{{ incompatible_count }}</span>
+                    <span class="an-fuel__disclosure-note">No species in these models matches this fuel</span>
+                    <i class="bi bi-chevron-down an-fuel__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="collapse" id="incompatible-section">
+                    <div class="an-table-wrap">
+                        <table class="an-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Model</th>
+                                    <th scope="col" class="is-end">Species</th>
+                                    <th scope="col" class="is-end">Reactions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for compat in incompatible_models %}
+                                <tr>
+                                    <td class="is-muted">{{ compat.kinetic_model.model_name }}</td>
+                                    <td class="is-number is-muted">{{ compat.model_total_species }}</td>
+                                    <td class="is-number is-muted">{{ compat.model_total_reactions }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </section>
+
+        {% if compatible_models %}
+        <!-- Species mapping inspector (Figma 198:3608); the script loads the selected model's mapping -->
+        <aside class="app-panel an-fuel__inspector" id="an-fuel-inspector" aria-labelledby="an-fuel-inspector-title">
+            <div class="app-panel__head">
+                <div class="an-panel__heading">
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                    <h2 class="app-panel__title" id="an-fuel-inspector-title">Species mapping</h2>
+                    <span class="an-pill an-pill--count an-fuel__inspector-model" id="an-fuel-inspector-model" hidden></span>
+                </div>
+            </div>
+            <div class="an-fuel__inspector-body mapping-content" aria-live="polite">
+                <p class="an-empty">Select a compatible model to preview how this fuel's dataset species map to it.</p>
+            </div>
+        </aside>
         {% endif %}
     </div>
-</div>
 
-<!-- Incompatible Models (collapsed by default) -->
-{% if incompatible_models %}
-<div class="data-section mb-4">
-    <div class="section-header">
-        <h6 class="mb-0">
-            <button class="btn btn-link text-decoration-none p-0" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#incompatible-section">
-                <i class="bi bi-x-circle text-danger me-2"></i>
-                Incompatible Models
-                <span class="badge bg-danger-subtle text-danger ms-2">{{ incompatible_count }}</span>
-                <i class="bi bi-chevron-down ms-2 small"></i>
-            </button>
-        </h6>
-    </div>
-    <div class="collapse" id="incompatible-section">
-        <div class="section-body p-0">
-            <table class="table table-sm mb-0">
+    <!-- Experiment datasets (Figma 198:3665) -->
+    <section class="app-panel" id="an-fuel-datasets" aria-labelledby="an-fuel-datasets-title">
+        <div class="app-panel__head">
+            <div class="an-panel__heading">
+                <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                <h2 class="app-panel__title" id="an-fuel-datasets-title">Experiment datasets</h2>
+                <span class="an-pill an-pill--count">{{ dataset_count }}</span>
+            </div>
+            <span class="an-panel__meta">Datasets whose composition includes this fuel</span>
+        </div>
+        {% if datasets %}
+        <div class="an-table-wrap">
+            <table class="an-table an-fuel__datasets">
                 <thead>
                     <tr>
-                        <th>Model Name</th>
-                        <th class="text-center">Species</th>
-                        <th class="text-center">Reactions</th>
+                        <th scope="col">Dataset</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" class="is-end">Datapoints</th>
+                        <th scope="col"><span class="visually-hidden">Open</span></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for compat in incompatible_models %}
-                    <tr class="text-muted">
-                        <td>{{ compat.kinetic_model.model_name }}</td>
-                        <td class="text-center">{{ compat.model_total_species }}</td>
-                        <td class="text-center">{{ compat.model_total_reactions }}</td>
+                    {% for ds in datasets %}
+                    <tr>
+                        <td>
+                            <a class="an-table__name" href="{% url 'chemked_database:dataset-detail' ds.pk %}">{{ ds.short_name }}</a>
+                            <span class="an-table__sub">{{ ds.chemked_file_path }}</span>
+                        </td>
+                        <td><span class="an-pill an-pill--brand">{{ ds.experiment_type }}</span></td>
+                        <td class="is-number">{{ ds.datapoints.count }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'chemked_database:dataset-detail' ds.pk %}" aria-label="Open {{ ds.short_name }}">Open</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Datasets using this fuel -->
-<div class="data-section mb-4">
-    <div class="section-header">
-        <h6 class="mb-0">
-            <i class="bi bi-file-earmark-text me-2 text-primary"></i>
-            Experiment Datasets
-            <span class="badge bg-primary-subtle text-primary ms-2">{{ dataset_count }}</span>
-        </h6>
-    </div>
-    <div class="section-body p-0">
-        {% if datasets %}
-        <table class="table table-sm table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Dataset</th>
-                    <th>Type</th>
-                    <th class="text-end">Datapoints</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ds in datasets %}
-                <tr>
-                    <td>
-                        <a href="{% url 'chemked_database:dataset-detail' ds.pk %}">
-                            {{ ds.short_name }}
-                        </a>
-                        <br><small class="text-muted">{{ ds.chemked_file_path }}</small>
-                    </td>
-                    <td>
-                        <span class="badge bg-secondary-subtle text-secondary">{{ ds.experiment_type }}</span>
-                    </td>
-                    <td class="text-end">{{ ds.datapoints.count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
         {% else %}
-        <div class="text-center text-muted py-4">No datasets found for this fuel.</div>
+        <p class="an-empty">No datasets found for this fuel.</p>
         {% endif %}
-    </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_maps_styles.html" %}
+<style>
+/* Heading: a formula tile beside the title */
+.an-fuel__identity {
+    display: flex;
+    flex: 1 1 420px;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.an-fuel__symbol {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--color-primary-bg);
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
+    color: var(--color-primary);
+    overflow-wrap: anywhere;
+}
+
+.an-fuel__symbol.is-long {
+    font-size: 12px;
+}
+
+/* Summary: identifiers (700) and three 252 px metric cards */
+.an-fuel__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 700fr) repeat(3, minmax(0, 252fr));
+    gap: 16px;
+}
+
+.an-fuel__ids {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 14px 20px 18px;
+}
+
+.an-maps .an-fuel__section-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.an-fuel__id-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px 16px;
+    margin: 0;
+}
+
+.an-fuel__id-grid > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.an-fuel__id-wide {
+    grid-column: span 2;
+}
+
+.an-fuel__id-grid dt {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.an-fuel__id-grid dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.an-fuel__id-grid dd.an-mono {
+    font-size: 12px;
+}
+
+.an-fuel__names {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.an-fuel__names > span:first-child {
+    margin-right: 4px;
+    font-weight: 500;
+}
+
+.an-fuel__metric {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 20px;
+}
+
+.an-fuel__metric-value {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    height: 60px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: var(--an-tint);
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-fuel__metric-value.is-good {
+    background: var(--color-success-bg);
+    color: var(--an-good-ink);
+}
+
+.an-fuel__metric-value.is-bad {
+    background: var(--color-error-bg);
+    color: var(--an-bad-ink);
+}
+
+.an-fuel__metric-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Workspace: the model table (856) beside the species mapping inspector (624) */
+.an-fuel__workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 856fr) minmax(0, 624fr);
+    align-items: start;
+    gap: 24px;
+}
+
+.an-fuel__workspace.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.an-fuel__models {
+    overflow: hidden;
+}
+
+#compatible-table {
+    min-width: 640px;
+}
+
+.an-panel__heading > .an-fuel__ok {
+    color: var(--an-good-ink);
+}
+
+.an-fuel__bad {
+    color: var(--an-bad-ink);
+}
+
+.an-fuel__pick {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-weight: 600;
+    text-align: left;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.an-fuel__pick:hover {
+    color: var(--color-primary);
+}
+
+.model-row {
+    cursor: pointer;
+}
+
+.model-row:hover td {
+    background: var(--color-gray-50);
+}
+
+.model-row.is-selected td {
+    background: var(--color-primary-bg);
+}
+
+.model-row.is-selected td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.model-row.is-selected .an-fuel__pick {
+    color: var(--color-primary);
+}
+
+.an-fuel__match {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 7px;
+}
+
+.an-fuel__match code {
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+/* Incompatible models disclosure */
+.an-fuel__disclosure {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.an-fuel__disclosure-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    width: 100%;
+    padding: 18px 20px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.an-fuel__disclosure-toggle:hover {
+    background: var(--color-gray-50);
+}
+
+.an-fuel__disclosure-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-fuel__disclosure-note {
+    flex: 1 1 200px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.an-fuel__chevron {
+    transition: transform var(--transition-fast);
+}
+
+.an-fuel__disclosure-toggle:not(.collapsed) .an-fuel__chevron {
+    transform: rotate(180deg);
+}
+
+/* Inspector: stays in view beside a long model list */
+.an-fuel__inspector {
+    position: sticky;
+    top: calc(var(--navbar-height) + 16px);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - var(--navbar-height) - 32px);
+    overflow: hidden;
+}
+
+.an-fuel__inspector .app-panel__head {
+    flex: 0 0 auto;
+}
+
+.an-fuel__inspector-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.an-fuel__inspector-model {
+    max-width: 100%;
+    font-family: var(--font-sans);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.an-fuel__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 20px;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.an-fuel__error {
+    margin: 0;
+    padding: 20px;
+    font-size: 13px;
+    color: var(--an-bad-ink);
+}
+
+.an-fuel__coverage {
+    display: grid;
+    gap: 10px;
+    padding: 0 20px 16px;
+}
+
+.an-fuel__coverage-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-fuel__coverage-bar {
+    height: 5px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: var(--color-gray-200);
+}
+
+.an-fuel__coverage-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 5px;
+}
+
+.an-fuel__coverage-bar .is-good {
+    background: var(--color-success);
+}
+
+.an-fuel__coverage-bar .is-fair {
+    background: var(--color-warning);
+}
+
+.an-fuel__coverage-bar .is-poor {
+    background: var(--color-error);
+}
+
+.an-fuel__mapping {
+    min-width: 520px;
+    font-size: 12px;
+}
+
+.an-fuel__mapping td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.an-fuel__mapping code {
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.an-fuel__mapping .is-muted code {
+    color: var(--color-gray-500);
+}
+
+.an-fuel__datasets {
+    min-width: 560px;
+}
+
+#an-fuel-compatible,
+#an-fuel-datasets,
+#an-fuel-incompatible {
+    scroll-margin-top: calc(var(--navbar-height) + 16px);  /* clear the sticky header */
+}
+
+@media (max-width: 1399.98px) {
+    .an-fuel__summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .an-fuel__ids {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .an-fuel__workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-fuel__inspector {
+        position: static;
+        max-height: none;
+        scroll-margin-top: calc(var(--navbar-height) + 16px);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .an-fuel__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-fuel__metric {
+        padding: 14px 16px;
+    }
+
+    .an-fuel__id-wide {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-fuel__identity {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .an-fuel__symbol {
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+    }
+
+    .an-fuel__disclosure-toggle {
+        padding: 16px 14px;
+    }
+
+    .an-fuel__coverage {
+        padding: 0 14px 14px;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle species mapping preview on row click
-    document.querySelectorAll('.toggle-mapping').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const row = btn.closest('tr');
-            const fuelPk = row.dataset.fuelPk;
-            const modelPk = row.dataset.modelPk;
-            const previewRow = document.getElementById('mapping-' + modelPk);
-            const icon = btn.querySelector('i');
-
-            if (previewRow.classList.contains('d-none')) {
-                // Show
-                previewRow.classList.remove('d-none');
-                icon.classList.remove('bi-chevron-right');
-                icon.classList.add('bi-chevron-down');
-
-                // Load mapping via AJAX if not already loaded
-                const content = previewRow.querySelector('.mapping-content');
-                if (content.querySelector('.spinner-border')) {
-                    fetch(`/analysis/api/fuel-map/${fuelPk}/model/${modelPk}/mapping/`)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.error) {
-                                content.innerHTML = '<div class="text-danger p-2">Error: ' + data.error + '</div>';
-                                return;
-                            }
-                            renderMappingPreview(content, data);
-                        })
-                        .catch(err => {
-                            content.innerHTML = '<div class="text-danger p-2">Failed to load mapping</div>';
-                        });
-                }
-            } else {
-                // Hide
-                previewRow.classList.add('d-none');
-                icon.classList.remove('bi-chevron-down');
-                icon.classList.add('bi-chevron-right');
-            }
+    // "View list" opens the incompatible models before the page jumps to them
+    document.querySelectorAll('[data-an-expand]').forEach(function(link) {
+        link.addEventListener('click', function() {
+            var target = document.querySelector(link.dataset.anExpand);
+            if (target && window.bootstrap) bootstrap.Collapse.getOrCreateInstance(target, {toggle: false}).show();
         });
     });
 
-    function renderMappingPreview(container, data) {
+    // Species mapping inspector: a model button loads that model's mapping preview
+    const inspector = document.getElementById('an-fuel-inspector');
+    if (!inspector) return;
+    const content = inspector.querySelector('.mapping-content');
+    const modelPill = document.getElementById('an-fuel-inspector-model');
+    const runCreateUrl = "{% url 'analysis:run-create' %}";
+    const narrow = window.matchMedia('(max-width: 1199.98px)');
+    const cache = {};      // model pk -> rendered preview, so each mapping loads once
+    let current = null;
+
+    function esc(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function(c) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+    }
+
+    function selectModel(btn, scroll) {
+        const row = btn.closest('tr');
+        const fuelPk = row.dataset.fuelPk;
+        const modelPk = row.dataset.modelPk;
+
+        document.querySelectorAll('.model-row').forEach(function(r) {
+            const selected = r === row;
+            r.classList.toggle('is-selected', selected);
+            const b = r.querySelector('.toggle-mapping');
+            if (b) b.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+        modelPill.textContent = btn.textContent.trim();
+        modelPill.hidden = false;
+        current = modelPk;
+        if (scroll && narrow.matches) inspector.scrollIntoView({behavior: 'smooth', block: 'start'});
+
+        if (cache[modelPk]) {
+            content.innerHTML = cache[modelPk];
+            return;
+        }
+        content.innerHTML = '<div class="an-fuel__loading"><div class="spinner-border spinner-border-sm" role="status"></div>Loading species mapping…</div>';
+        const url = row.dataset.mappingUrl || `/analysis/api/fuel-map/${fuelPk}/model/${modelPk}/mapping/`;
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                let html;
+                if (data.error) {
+                    html = '<p class="an-fuel__error">Error: ' + esc(data.error) + '</p>';
+                } else {
+                    html = renderMappingPreview(data);
+                    cache[modelPk] = html;
+                }
+                if (current === modelPk) content.innerHTML = html;
+            })
+            .catch(err => {
+                if (current === modelPk) content.innerHTML = '<p class="an-fuel__error">Failed to load mapping</p>';
+            });
+    }
+
+    document.querySelectorAll('.toggle-mapping').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            selectModel(btn, true);
+        });
+    });
+    // The whole row selects too, except its own links
+    document.querySelectorAll('.model-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            const btn = row.querySelector('.toggle-mapping');
+            if (btn) selectModel(btn, true);
+        });
+    });
+
+    function renderMappingPreview(data) {
         const datasets = data.datasets || [];
         if (datasets.length === 0) {
-            container.innerHTML = '<div class="text-muted p-2">No mapping data available.</div>';
-            return;
+            return '<p class="an-empty">No mapping data available.</p>';
         }
 
         // Merge all datasets into one distinct species list (keyed by name)
@@ -351,54 +826,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const matchedCount = speciesList.filter(s => s.matched).length;
         const totalCount = speciesList.length;
         const pct = totalCount > 0 ? Math.round(matchedCount / totalCount * 100) : 0;
-        const barColor = pct === 100 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger';
+        const level = pct === 100 ? 'good' : pct >= 50 ? 'fair' : 'poor';
+        const pillClass = {good: 'an-pill--success', fair: 'an-pill--warning', poor: 'an-pill--danger'}[level];
+        const runUrl = runCreateUrl + '?model=' + encodeURIComponent(data.model_pk || '') + '&fuel=' + encodeURIComponent(data.fuel_pk || '');
 
         let html = `
-            <div class="small mb-2">
-                <strong>Species Mapping Preview</strong> for
-                <a href="/analysis/run/create/?model=${data.model_pk || ''}&fuel=${data.fuel_pk || ''}"
-                   class="text-primary fw-medium">${data.model}</a>
-                <span class="text-muted ms-2">(${totalDatasets} dataset${totalDatasets > 1 ? 's' : ''})</span>
+            <div class="an-fuel__coverage">
+                <div class="an-fuel__coverage-row">
+                    <span>${matchedCount} of ${totalCount} distinct species matched</span>
+                    <span class="an-pill ${pillClass}">${pct}%</span>
+                </div>
+                <div class="an-fuel__coverage-bar"><span class="is-${level}" style="width: ${pct}%"></span></div>
             </div>
-            <div class="d-flex align-items-center justify-content-between mb-1">
-                <span class="small text-muted">
-                    ${matchedCount} of ${totalCount} distinct species matched
-                </span>
-                <span class="badge ${pct === 100 ? 'bg-success-subtle text-success' : pct >= 50 ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'}">
-                    ${pct}%
-                </span>
-            </div>
-            <div class="progress mb-3" style="height: 4px;">
-                <div class="progress-bar ${barColor}" style="width: ${pct}%"></div>
-            </div>
-            <table class="table table-sm table-bordered mb-0" style="font-size: 0.85rem;">
-                <thead class="table-light">
+            <div class="an-table-wrap">
+            <table class="an-table an-fuel__mapping">
+                <thead>
                     <tr>
-                        <th>Dataset Species</th>
-                        <th>Model Species</th>
-                        <th class="text-center">Status</th>
-                        <th>SMILES</th>
+                        <th scope="col">Dataset species</th>
+                        <th scope="col">Model species</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">SMILES</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
         speciesList.forEach(function(sp) {
             const statusBadge = sp.matched
-                ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Matched</span>'
-                : '<span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-circle me-1"></i>Missing</span>';
+                ? '<span class="an-pill an-pill--success"><i class="bi bi-check-circle" aria-hidden="true"></i>Matched</span>'
+                : '<span class="an-pill an-pill--danger"><i class="bi bi-x-circle" aria-hidden="true"></i>Missing</span>';
 
             html += `
                 <tr>
-                    <td><strong>${sp.name}</strong></td>
-                    <td><code>${sp.model_name || '—'}</code></td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td><code class="text-muted">${sp.smiles || '—'}</code></td>
+                    <td><strong>${esc(sp.name)}</strong></td>
+                    <td><code>${esc(sp.model_name) || '—'}</code></td>
+                    <td>${statusBadge}</td>
+                    <td class="is-muted"><code>${esc(sp.smiles) || '—'}</code></td>
                 </tr>`;
         });
 
-        html += '</tbody></table>';
-        container.innerHTML = html;
+        html += `</tbody></table></div>
+            <div class="an-panel__foot">
+                <span>${totalCount} distinct species from ${totalDatasets} dataset${totalDatasets > 1 ? 's' : ''}</span>
+                <a class="app-link" href="${esc(runUrl)}">Run ${esc(data.model)} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+            </div>`;
+        return html;
     }
+
+    // Open the first compatible model, as the design shows one selected
+    const first = document.querySelector('.model-row .toggle-mapping');
+    if (first) selectModel(first, false);
 });
 </script>
 {% endblock %}

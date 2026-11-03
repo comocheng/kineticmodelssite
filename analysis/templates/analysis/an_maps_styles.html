@@ -1,0 +1,660 @@
+{% load static %}
+{% comment %}
+Shared look of the analysis comparison and coverage pages, from the Figma frames "Compare models"
+(180:2733), "Fuel–Model Compatibility Map" (191:4810), "AR fuel detail" (198:3432) and
+"Model–Dataset Coverage Matrix" (191:5034). Include it in extra_css; every rule is scoped under
+.an-maps, the wrapper each of these pages uses.
+{% endcomment %}
+<style>
+.an-maps {
+    --an-tint: #edf3ff;      /* the Figma blue tint: count chips, active filters, guidance boxes */
+    --an-good-ink: #047857;  /* darker status inks keep 11-12 px chip text readable on the tints */
+    --an-warn-ink: #b45309;
+    --an-bad-ink: #b91c1c;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    min-width: 0;
+}
+
+.an-maps > * {
+    min-width: 0;
+}
+
+.an-maps h1,
+.an-maps h2,
+.an-maps h3 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Breadcrumb */
+.an-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.an-crumbs a {
+    color: var(--color-primary);
+}
+
+.an-crumbs [aria-current] {
+    overflow-wrap: anywhere;
+}
+
+/* Title row */
+.an-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.an-heading__intro {
+    display: grid;
+    flex: 1 1 420px;
+    gap: 7px;
+    min-width: 0;
+}
+
+.an-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.an-heading h1 {
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.an-lede {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.an-actions form {
+    margin: 0;
+}
+
+/* Buttons: .app-btn is the orange one, .an-btn the white one */
+.an-maps .app-btn {
+    height: 40px;
+    padding: 0 16px;
+    cursor: pointer;
+}
+
+.an-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.an-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+/* Square icon button for table row actions */
+.an-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.an-icon-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.an-maps .app-link {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Status and count chips */
+.an-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 30px;
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.an-pill--success {
+    background: var(--color-success-bg);
+    color: var(--an-good-ink);
+}
+
+.an-pill--warning {
+    background: var(--color-warning-bg);
+    color: var(--an-warn-ink);
+}
+
+.an-pill--danger {
+    background: var(--color-error-bg);
+    color: var(--an-bad-ink);
+}
+
+.an-pill--danger-strong {
+    background: var(--an-bad-ink);
+    color: var(--color-white);
+}
+
+.an-pill--brand {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+}
+
+.an-pill--count {
+    padding: 2px 8px;
+    background: var(--an-tint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.an-pill--tag {
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+/* Error values, coloured by each page's existing thresholds */
+.an-err {
+    font-family: var(--font-mono);
+    font-weight: 500;
+}
+
+.an-err--good {
+    color: var(--an-good-ink);
+}
+
+.an-err--fair {
+    color: var(--an-warn-ink);
+}
+
+.an-err--poor {
+    color: var(--an-bad-ink);
+}
+
+.an-err--worst {
+    font-weight: 700;
+    color: var(--an-bad-ink);
+}
+
+/* Summary metrics: one panel, cells split by 1 px rules in any arrangement */
+.an-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-gray-200);
+}
+
+.an-metrics--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.an-metrics > div {
+    display: grid;
+    align-content: start;
+    gap: 5px;
+    min-width: 0;
+    padding: 21px 24px;
+    background: var(--color-white);
+}
+
+.an-metrics dt {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.an-metrics dd {
+    margin: 0;
+}
+
+.an-metrics__value {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 36px;
+    color: var(--color-gray-900);
+}
+
+.an-metrics__note {
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--color-gray-500);
+}
+
+/* Panels: 16 px titles and a 20 px gutter, as in the design */
+.an-maps .app-panel {
+    min-width: 0;
+}
+
+.an-maps .app-panel__head {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 18px 20px;
+}
+
+.an-maps .app-panel__title {
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.an-panel__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    min-width: 0;
+}
+
+.an-panel__heading > .bi {
+    font-size: 18px;
+    line-height: 1;
+    color: var(--color-gray-900);
+}
+
+.an-panel__desc {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-panel__meta {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.an-panel__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+/* Tables scroll inside their panel; position: relative keeps hidden text inside the scroller */
+.an-table-wrap {
+    position: relative;
+    overflow-x: auto;
+}
+
+.an-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-table th {
+    padding: 10px 12px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.an-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+}
+
+.an-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.an-table th:first-child,
+.an-table td:first-child {
+    padding-left: 20px;
+}
+
+.an-table th:last-child,
+.an-table td:last-child {
+    padding-right: 20px;
+}
+
+.an-table .is-number {
+    font-family: var(--font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.an-table .is-center {
+    text-align: center;
+}
+
+.an-table .is-end {
+    text-align: right;
+}
+
+.an-table .is-mono,
+.an-mono {
+    font-family: var(--font-mono);
+}
+
+.an-table .is-muted,
+.an-muted {
+    color: var(--color-gray-500);
+}
+
+.an-table__name {
+    font-weight: 600;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+a.an-table__name:hover {
+    color: var(--color-primary);
+}
+
+.an-table__sub {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+.an-empty {
+    margin: 0;
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+/* Search and select fields (Figma "Search field", 40 px) */
+.an-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.an-field:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.an-field > .bi {
+    font-size: 15px;
+    color: var(--color-gray-600);
+}
+
+.an-field input,
+.an-field select {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-field input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.an-field input:focus,
+.an-field select:focus {
+    outline: none;
+}
+
+.an-field select {
+    padding-right: 22px;
+    appearance: none;
+    background: transparent url("{% static 'database/images/icons/chevron-down.svg' %}") right center / 14px no-repeat;
+    cursor: pointer;
+}
+
+.an-field button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.an-field button:hover {
+    background: var(--color-primary-bg);
+}
+
+.an-label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Small bars beside counts (Figma "Dataset volume", "Compatibility track") */
+.an-bar {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 85px;
+    height: 5px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: var(--color-gray-200);
+}
+
+.an-bar__fill {
+    display: block;
+    height: 100%;
+    border-radius: 5px;
+    background: var(--color-primary);
+}
+
+.an-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.an-count .an-pill {
+    font-family: var(--font-sans);
+}
+
+/* Counts share one width so the bars after them line up */
+.an-count__n {
+    min-width: 3ch;
+    text-align: right;
+}
+
+/* Error scale keys (Figma "Error scale") */
+.an-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.an-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.an-legend__key {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+}
+
+/* Guidance box with an info icon */
+.an-guide {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--an-tint);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-guide h2,
+.an-guide h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-guide p {
+    margin: 0;
+}
+
+@media (max-width: 991.98px) {
+    .an-metrics--4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .an-metrics:not(.an-metrics--4) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-metrics > div {
+        padding: 16px 18px;
+    }
+
+    .an-metrics__value {
+        font-size: 26px;
+        line-height: 32px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-heading h1 {
+        font-size: 26px;
+    }
+
+    .an-maps .app-panel__head {
+        padding: 16px 14px;
+    }
+
+    .an-table th:first-child,
+    .an-table td:first-child {
+        padding-left: 14px;
+    }
+
+    .an-table th:last-child,
+    .an-table td:last-child {
+        padding-right: 14px;
+    }
+
+    .an-panel__foot {
+        padding: 12px 14px;
+    }
+}
+</style>

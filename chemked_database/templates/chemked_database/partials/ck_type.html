@@ -1,0 +1,2 @@
+{# An experiment type badge; pass type, the stored experiment_type value #}
+<span class="ck-type{% if type == 'ignition delay' %} ck-type--ignition{% elif type == 'laminar burning velocity measurement' %} ck-type--flame{% elif type == 'speciation measurement' %} ck-type--speciation{% endif %}">{% if type %}{{ type|capfirst }}{% else %}Not given{% endif %}</span>

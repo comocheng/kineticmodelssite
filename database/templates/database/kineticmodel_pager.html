@@ -1,0 +1,32 @@
+{% comment %}
+Page links for the kinetic model pages (Figma 161:6436). Pass page (a Page), param (its query
+name) and label; optionally other and other_value (a second pager's query name and value, kept
+in every link) and anchor (a #fragment).
+{% endcomment %}
+{% if page.has_other_pages %}
+<nav class="km-pager" aria-label="{{ label }}">
+    <span>{{ page.paginator.per_page }} per page</span>
+    <div class="km-pager__pages">
+        {% if page.has_previous %}
+        <a class="km-pager__step" href="?{% if other %}{{ other }}={{ other_value|urlencode }}&amp;{% endif %}{{ param }}={{ page.previous_page_number }}{{ anchor }}">← Previous</a>
+        {% else %}
+        <span class="km-pager__step is-disabled">← Previous</span>
+        {% endif %}
+        {% for n in page.paginator.page_range %}
+            {% if n == page.number %}
+            <span class="km-pager__page is-current" aria-current="page">{{ n }}</span>
+            {% elif n == 1 or n == page.paginator.num_pages or n >= page.number|add:"-2" and n <= page.number|add:"2" %}
+            <a class="km-pager__page" href="?{% if other %}{{ other }}={{ other_value|urlencode }}&amp;{% endif %}{{ param }}={{ n }}{{ anchor }}">{{ n }}</a>
+            {% elif n == page.number|add:"-3" or n == page.number|add:"3" %}
+            <span class="km-pager__page" aria-hidden="true">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if page.has_next %}
+        <a class="km-pager__step" href="?{% if other %}{{ other }}={{ other_value|urlencode }}&amp;{% endif %}{{ param }}={{ page.next_page_number }}{{ anchor }}">Next →</a>
+        {% else %}
+        <span class="km-pager__step is-disabled">Next →</span>
+        {% endif %}
+    </div>
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+</nav>
+{% endif %}

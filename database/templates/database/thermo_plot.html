@@ -1,19 +1,27 @@
+{% load static %}
+{# The temperature chart panel (Figma 100:2228 and 161:5998); plots.js draws into #thermo-plot and toggles .active on the buttons #}
 {% if thermo_plot.curves %}
-<div class="data-section mb-3" data-plot-section>
-    <div class="section-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Thermo against temperature</h6>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Quantity to plot" id="thermo-plot-controls">
-            <button type="button" class="btn btn-outline-secondary active" data-quantity="Cp" aria-pressed="true">Cₚ</button>
-            <button type="button" class="btn btn-outline-secondary" data-quantity="H" aria-pressed="false">H</button>
-            <button type="button" class="btn btn-outline-secondary" data-quantity="S" aria-pressed="false">S</button>
-            <button type="button" class="btn btn-outline-secondary" data-quantity="G" aria-pressed="false">G</button>
+<section class="app-panel tp-panel" data-plot-section aria-labelledby="thermo-plot-title">
+    <div class="tp-head">
+        <div class="tp-intro">
+            <span class="tp-icon" aria-hidden="true"><i class="bi bi-graph-up"></i></span>
+            <div>
+                <h2 id="thermo-plot-title" class="app-panel__title">Thermo against temperature</h2>
+                <p class="tp-lede">Each source over its own temperature range.</p>
+            </div>
+        </div>
+        <div class="tp-segment" role="group" aria-label="Quantity to plot" id="thermo-plot-controls">
+            <button type="button" class="tp-option active" data-quantity="Cp" aria-pressed="true">Cₚ</button>
+            <button type="button" class="tp-option" data-quantity="H" aria-pressed="false">H</button>
+            <button type="button" class="tp-option" data-quantity="S" aria-pressed="false">S</button>
+            <button type="button" class="tp-option" data-quantity="G" aria-pressed="false">G</button>
         </div>
     </div>
-    <div class="section-body">
-        <div id="thermo-plot" style="height: 470px;" role="img" aria-label="Thermo of each source against temperature"></div>
-        <p class="small text-muted mb-1">Each source over its own temperature range. Identical polynomials used by several models are drawn once; points are ATcT ΔfH°298 and the group-additivity Cp table.</p>
-        <details class="small"><summary>Values table</summary><div id="thermo-plot-table" class="table-responsive mt-2"></div></details>
+    <div id="thermo-plot" class="tp-plot" role="img" aria-label="Thermo of each source against temperature"></div>
+    <div class="tp-foot">
+        <p>Identical polynomials used by several models are drawn once; points are ATcT ΔfH°298 and the group-additivity Cp table.</p>
+        <details class="tp-values"><summary>Values table</summary><div id="thermo-plot-table" class="table-responsive"></div></details>
     </div>
-</div>
+</section>
 {{ thermo_plot|json_script:"thermo-plot-data" }}
 {% endif %}

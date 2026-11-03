@@ -5,16 +5,25 @@
 {% block title %}{{ copy.meta.title }}{% endblock %}
 {% block meta_description %}{{ copy.meta.description }}{% endblock %}
 {% block body_class %} class="landing"{% endblock %}
-{% block brand_logo %}{% static 'database/images/landing/prometheus-logo-transparent.png' %}{% endblock %}
+{# One row with Analysis and the research tools in it needs about 1350 px; below 1400 px the menu button shows #}
+{% block nav_expand %}navbar-expand-xxl{% endblock %}
 
 {% block extra_css %}
-{# Instrument Sans and IBM Plex Mono are the display and number faces of the Figma file #}
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'database/css/landing.css' %}">
 {% endblock %}
 
 {% block extra_js %}
 <script type="module" src="{% static 'database/js/landing-flame.js' %}"></script>
+<script>
+    // The header is clear over the hero and turns solid once the page scrolls under it
+    (() => {
+        const header = document.querySelector(".app-header");
+        if (!header) return;
+        const update = () => header.classList.toggle("is-scrolled", window.scrollY > 8);
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+    })();
+</script>
 {% endblock %}
 
 {% block content %}

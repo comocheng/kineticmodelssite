@@ -1,111 +1,65 @@
-{% if datasets %}
-<table class="table table-sm table-hover mb-0">
-    <thead>
-        <tr>
-            <th>Dataset</th>
-            <th>Type</th>
-            <th>Apparatus</th>
-            <th>Year</th>
-            <th class="text-end">Points</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for dataset in datasets %}
-        <tr>
-            <td>
-                <a href="{% url 'chemked_database:dataset-detail' dataset.pk %}" class="fw-medium">
-                    {{ dataset.chemked_file_path|truncatechars:40 }}
-                </a>
-                {% if dataset.reference_doi %}
-                <br><small class="text-muted">DOI: {{ dataset.reference_doi|truncatechars:30 }}</small>
-                {% endif %}
-            </td>
-            <td>
-                {% if dataset.experiment_type == 'ignition delay' %}
-                <span class="badge bg-warning-subtle text-warning">
-                    <i class="bi bi-lightning me-1"></i>Ignition Delay
-                </span>
-                {% elif dataset.experiment_type == 'laminar flame speed' %}
-                <span class="badge bg-danger-subtle text-danger">
-                    <i class="bi bi-fire me-1"></i>Flame Speed
-                </span>
-                {% else %}
-                <span class="badge bg-info-subtle text-info">
-                    {{ dataset.experiment_type|title }}
-                </span>
-                {% endif %}
-            </td>
-            <td>
-                {% if dataset.apparatus %}
-                <small>{{ dataset.apparatus.kind|title }}</small>
-                {% if dataset.apparatus.institution %}
-                <br><small class="text-muted">{{ dataset.apparatus.institution|truncatechars:20 }}</small>
-                {% endif %}
-                {% else %}
-                <small class="text-muted">—</small>
-                {% endif %}
-            </td>
-            <td>{{ dataset.reference_year|default:"—" }}</td>
-            <td class="text-end">
-                <span class="badge bg-secondary">{{ dataset.datapoint_count }}</span>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<!-- Pagination -->
-{% if is_paginated %}
-<div class="p-3 border-top">
-    <nav aria-label="Dataset pagination">
-        <ul class="pagination pagination-sm mb-0 justify-content-center">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link ajax-page" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">
-                    <i class="bi bi-chevron-double-left"></i>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link ajax-page" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
-                    <i class="bi bi-chevron-left"></i>
-                </a>
-            </li>
-            {% endif %}
-
-            <li class="page-item disabled">
-                <span class="page-link">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-            </li>
-
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link ajax-page" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
-                    <i class="bi bi-chevron-right"></i>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link ajax-page" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
-                    <i class="bi bi-chevron-double-right"></i>
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-</div>
-{% endif %}
-
-<!-- Result count -->
-<div class="px-3 py-2 border-top bg-light small text-muted">
-    Showing {{ datasets|length }} of {{ page_obj.paginator.count|default:datasets|length }} datasets
+{% load static %}
+{# The dataset results (Figma 182:4446): count, active filters, guidance and the table; the list page includes it, and its AJAX filter requests get it alone #}
+<div class="ck-dsr__summary">
+    <h2 class="ck-dsr__count" id="ck-results-count">{{ page_obj.paginator.count|default:0 }} dataset{{ page_obj.paginator.count|default:0|pluralize }}</h2>
+    {% if filter.form.has_changed %}
+    <div class="ck-dsr__active">
+        {% for field in filter.form %}{% if field.value %}<span class="ck-chip">{{ field.label }}: {{ field.value }}</span>{% endif %}{% endfor %}
+        <a href="{% url 'chemked_database:dataset-list' %}">Clear filters</a>
+    </div>
+    {% endif %}
 </div>
 
-{% else %}
-<div class="p-4 text-center text-muted">
-    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-    <p class="mb-0">No datasets found matching your criteria.</p>
-    <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-primary btn-sm mt-2">
-        Clear filters
-    </a>
+<!-- Guidance (Figma 182:4460) -->
+<div class="app-panel ck-dsr__guide">
+    <p class="ck-dsr__guide-title"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="16" height="16">About these records</p>
+    <p class="ck-dsr__guide-text">Each row is one ChemKED file. The filters match its experiment type, reference and apparatus; the species search matches part of a species name in its common or per-datapoint mixture.</p>
+    <a class="ck-dsr__guide-link" href="https://github.com/pr-omethe-us/ChemKED" target="_blank" rel="noopener">ChemKED format <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a>
 </div>
-{% endif %}
+
+<!-- Records (Figma 182:4467) -->
+<div class="app-panel ck-dsr__records">
+    <div class="ck-dsr__records-head">
+        <i class="bi bi-table" aria-hidden="true"></i>
+        <span>Datasets</span>
+    </div>
+    {% if datasets %}
+    <div class="ck-table-wrap">
+        <table class="ck-table ck-dsr__table">
+            <thead>
+                <tr>
+                    <th scope="col">Dataset file</th>
+                    <th scope="col">Experiment type</th>
+                    <th scope="col" class="is-end">Year</th>
+                    <th scope="col" class="is-end">Points</th>
+                    <th scope="col"><span class="visually-hidden">Open</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dataset in datasets %}
+                <tr>
+                    <td>
+                        <a class="ck-dsr__file" href="{% url 'chemked_database:dataset-detail' dataset.pk %}">{{ dataset.chemked_file_path }}</a>
+                        {% if dataset.apparatus or dataset.reference_doi %}
+                        <span class="ck-sub">{% if dataset.apparatus %}{{ dataset.apparatus.kind|capfirst }}{% if dataset.apparatus.institution %} · {{ dataset.apparatus.institution|truncatechars:48 }}{% endif %}{% endif %}{% if dataset.apparatus and dataset.reference_doi %} · {% endif %}{% if dataset.reference_doi %}DOI {{ dataset.reference_doi }}{% endif %}</span>
+                        {% endif %}
+                    </td>
+                    <td>{% include "chemked_database/partials/ck_type.html" with type=dataset.experiment_type %}</td>
+                    <td class="is-number">{{ dataset.reference_year|default:"—" }}</td>
+                    <td class="is-number">{{ dataset.datapoint_count }}</td>
+                    <td class="is-end"><a href="{% url 'chemked_database:dataset-detail' dataset.pk %}" aria-label="Open dataset {{ dataset.pk }}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="18" height="18"></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "chemked_database/partials/ck_pager.html" with page=page_obj noun="datasets" label="Dataset pages" ajax=True %}
+    {% else %}
+    <p class="ck-empty">
+        <i class="bi bi-inbox" aria-hidden="true"></i>
+        No datasets found matching your criteria.
+        <a href="{% url 'chemked_database:dataset-list' %}">Clear filters</a>
+    </p>
+    {% endif %}
+</div>
+

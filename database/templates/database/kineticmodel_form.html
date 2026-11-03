@@ -1,193 +1,520 @@
 {% extends "base.html" %}
 {% load static %}
-{% load crispy_forms_tags %}
+{# Add or edit a kinetic model, from the Figma "Prometheus · Edit kinetic model CH2F2" (node 170:7072) #}
+
+{% block title %}{{ form_title }}{% if object %} {{ object.model_name }}{% endif %} | Prometheus{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-list' %}">Kinetic Models</a></li>
+<div class="km-page km-form">
+
+    <!-- Breadcrumb (Figma 170:7108) -->
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-list' %}">Kinetic models</a></li>
             {% if object %}
-            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-detail' object.pk %}">{{ object.model_name|truncatechars:30 }}</a></li>
-            <li class="breadcrumb-item active">Edit</li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-detail' object.pk %}">{{ object.model_name|truncatechars:30 }}</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Edit</span></li>
             {% else %}
-            <li class="breadcrumb-item active">Create</li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Create</span></li>
             {% endif %}
         </ol>
     </nav>
 
-    <div class="row">
-        <div class="col-lg-10">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-diagram-3 me-2"></i>
-                        {{ form_title }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data" novalidate>
-                        {% csrf_token %}
-                        
-                        <!-- Basic Information Section -->
-                        <div class="mb-4">
-                            <h6 class="text-muted border-bottom pb-2 mb-3">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Basic Information
-                            </h6>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-8">
-                                    <label for="id_model_name" class="form-label">Model Name <span class="text-danger">*</span></label>
-                                    {{ form.model_name }}
-                                    {% if form.model_name.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.model_name.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <label for="id_prime_id" class="form-label">PrIMe ID</label>
-                                    {{ form.prime_id }}
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label for="id_source" class="form-label">Source Publication</label>
-                                    {{ form.source }}
-                                    <div class="form-text">
-                                        Select the publication that describes this kinetic model.
-                                        <a href="{% url 'source-create' %}" class="ms-2" target="_blank">
-                                            <i class="bi bi-plus-circle me-1"></i>Create new source
-                                        </a>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label for="id_info" class="form-label">Description</label>
-                                    {{ form.info }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- CHEMKIN Files Section -->
-                        <div class="mb-4">
-                            <h6 class="text-muted border-bottom pb-2 mb-3">
-                                <i class="bi bi-file-earmark-code me-1"></i>
-                                CHEMKIN Files
-                            </h6>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label for="id_chemkin_reactions_file" class="form-label">
-                                        <i class="bi bi-file-text me-1"></i>
-                                        Reactions File
-                                    </label>
-                                    {{ form.chemkin_reactions_file }}
-                                    {% if object.chemkin_reactions_file %}
-                                    <div class="form-text text-success">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Current: {{ object.chemkin_reactions_file.name|default:"Uploaded" }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label for="id_chemkin_thermo_file" class="form-label">
-                                        <i class="bi bi-thermometer-half me-1"></i>
-                                        Thermo File
-                                    </label>
-                                    {{ form.chemkin_thermo_file }}
-                                    {% if object.chemkin_thermo_file %}
-                                    <div class="form-text text-success">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Current: {{ object.chemkin_thermo_file.name|default:"Uploaded" }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="col-md-12">
-                                    <label for="id_chemkin_transport_file" class="form-label">
-                                        <i class="bi bi-arrow-left-right me-1"></i>
-                                        Transport File
-                                    </label>
-                                    {{ form.chemkin_transport_file }}
-                                    {% if object.chemkin_transport_file %}
-                                    <div class="form-text text-success">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Current: {{ object.chemkin_transport_file.name|default:"Uploaded" }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Form Actions -->
-                        <div class="d-flex gap-2 pt-3 border-top">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>
-                                {{ submit_text }}
-                            </button>
-                            {% if object %}
-                            <a href="{% url 'kinetic-model-detail' object.pk %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i>
-                                Cancel
-                            </a>
-                            <a href="{% url 'kinetic-model-delete' object.pk %}" class="btn btn-outline-danger ms-auto">
-                                <i class="bi bi-trash me-1"></i>
-                                Delete
-                            </a>
-                            {% else %}
-                            <a href="{% url 'kinetic-model-list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i>
-                                Cancel
-                            </a>
-                            {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Edit heading (Figma 170:7120) -->
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <h1>{{ form_title }}{% if object %} <span class="app-title__accent">{{ object.model_name }}</span>{% endif %}</h1>
+            <p class="km-lede">{% if object %}Update model information and replace CHEMKIN files.{% else %}Add model information and upload its CHEMKIN files.{% endif %}</p>
         </div>
-        
-        <!-- Sidebar Help -->
-        <div class="col-lg-2">
-            <div class="card bg-light border-0">
-                <div class="card-body small">
-                    <h6 class="card-title">
-                        <i class="bi bi-lightbulb me-1"></i>
-                        Tips
-                    </h6>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="bi bi-check text-success me-1"></i>
-                            Use a descriptive model name
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check text-success me-1"></i>
-                            Link to the source publication
-                        </li>
-                        <li>
-                            <i class="bi bi-check text-success me-1"></i>
-                            CHEMKIN files should be in standard format
-                        </li>
-                    </ul>
-                    
+        {% if object %}
+        <a class="app-link" href="{% url 'kinetic-model-detail' object.pk %}">← Back to model</a>
+        {% else %}
+        <a class="app-link" href="{% url 'kinetic-model-list' %}">← Back to kinetic models</a>
+        {% endif %}
+    </header>
+
+    <div class="km-form__layout">
+        <!-- Model form (Figma 170:7126) -->
+        <form class="km-form__main" method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <section class="app-panel km-form__section" aria-labelledby="km-basic-title">
+                <div class="km-form__section-head">
+                    <h2 class="app-panel__title" id="km-basic-title">Basic information</h2>
+                    <span class="km-form__required">* Required field</span>
+                </div>
+
+                <div class="km-form__row">
+                    <div class="km-form__field km-form__field--grow">
+                        <label for="{{ form.model_name.id_for_label }}">Model name <span class="km-form__star">*</span></label>
+                        {{ form.model_name }}
+                        {% if form.model_name.errors %}<div class="invalid-feedback d-block">{{ form.model_name.errors }}</div>{% endif %}
+                    </div>
+                    <div class="km-form__field km-form__field--prime">
+                        <label for="{{ form.prime_id.id_for_label }}">PrIMe ID</label>
+                        {{ form.prime_id }}
+                        {% if form.prime_id.errors %}<div class="invalid-feedback d-block">{{ form.prime_id.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="km-form__field">
+                    <label for="{{ form.source.id_for_label }}">Source publication</label>
+                    {{ form.source }}
+                    <div class="km-form__hint">
+                        <span>Link the publication that describes this kinetic model.</span>
+                        <a href="{% url 'source-create' %}" target="_blank">+ Create new source</a>
+                    </div>
+                    {% if form.source.errors %}<div class="invalid-feedback d-block">{{ form.source.errors }}</div>{% endif %}
+                </div>
+
+                <div class="km-form__field">
+                    <label for="{{ form.info.id_for_label }}">Description</label>
+                    {{ form.info }}
+                    {% if form.info.errors %}<div class="invalid-feedback d-block">{{ form.info.errors }}</div>{% endif %}
+                </div>
+            </section>
+
+            <section class="app-panel km-form__section km-form__files" aria-labelledby="km-files-title">
+                <div class="km-form__section-head">
+                    <h2 class="app-panel__title" id="km-files-title">CHEMKIN files</h2>
+                    <span class="km-pill">{% if object %}Optional replacements{% else %}Optional{% endif %}</span>
+                </div>
+                <p class="km-form__guidance">
+                    <img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="16" height="16">
+                    {% if object %}Existing files are kept unless you choose replacements. Use standard CHEMKIN format.{% else %}Upload the model's files in standard CHEMKIN format.{% endif %}
+                </p>
+                <div class="km-form__uploads">
+                    {% include "database/kineticmodel_file_field.html" with field=form.chemkin_reactions_file title="Reactions file" purpose="Chemical reaction mechanism" %}
+                    {% include "database/kineticmodel_file_field.html" with field=form.chemkin_thermo_file title="Thermo file" purpose="Thermodynamic data" %}
+                    {% include "database/kineticmodel_file_field.html" with field=form.chemkin_transport_file title="Transport file" purpose="Transport properties" %}
+                </div>
+            </section>
+
+            <div class="km-form__actions">
+                <p>{% if object %}Changes are applied when you save.{% else %}The model is created when you save.{% endif %}</p>
+                <div class="km-actions">
                     {% if object %}
-                    <hr>
-                    <h6 class="card-title">
-                        <i class="bi bi-bar-chart me-1"></i>
-                        Statistics
-                    </h6>
-                    <ul class="list-unstyled mb-0">
-                        <li><strong>{{ object.species.count }}</strong> Species</li>
-                        <li><strong>{{ object.kinetics.count }}</strong> Kinetics</li>
-                        <li><strong>{{ object.thermo.count }}</strong> Thermo</li>
-                        <li><strong>{{ object.transport.count }}</strong> Transport</li>
-                    </ul>
+                    <a class="km-btn" href="{% url 'kinetic-model-detail' object.pk %}">Cancel</a>
+                    {% else %}
+                    <a class="km-btn" href="{% url 'kinetic-model-list' %}">Cancel</a>
                     {% endif %}
+                    <button type="submit" class="app-btn">{{ submit_text }}</button>
                 </div>
             </div>
-        </div>
+        </form>
+
+        <!-- Edit support (Figma 170:7209) -->
+        <aside class="km-form__aside">
+            {% if object %}
+            <section class="app-panel km-form__card" aria-labelledby="km-current-title">
+                <div class="km-form__current">
+                    <p>Current model</p>
+                    <h2 id="km-current-title">{{ object.model_name }}</h2>
+                </div>
+                <dl class="km-form__stats">
+                    <div><dt>Species</dt><dd>{{ object.species.count }}</dd></div>
+                    <div><dt>Kinetics</dt><dd>{{ object.kinetics.count }}</dd></div>
+                    <div><dt>Thermo</dt><dd>{{ object.thermo.count }}</dd></div>
+                    <div><dt>Transport</dt><dd>{{ object.transport.count }}</dd></div>
+                </dl>
+            </section>
+            {% endif %}
+
+            <section class="app-panel km-form__card" aria-labelledby="km-tips-title">
+                <h2 class="km-form__card-title" id="km-tips-title">Before you save</h2>
+                <ul class="km-form__tips">
+                    <li><img class="app-icon" src="{% static 'database/images/icons/check-circle-111827-24.svg' %}" alt="" width="16" height="16">Use a descriptive model name.</li>
+                    <li><img class="app-icon" src="{% static 'database/images/icons/check-circle-111827-24.svg' %}" alt="" width="16" height="16">Link the source publication.</li>
+                    <li><img class="app-icon" src="{% static 'database/images/icons/check-circle-111827-24.svg' %}" alt="" width="16" height="16">Check that uploaded files use standard CHEMKIN format.</li>
+                </ul>
+            </section>
+
+            {% if object %}
+            <section class="km-form__card km-form__delete" aria-labelledby="km-delete-title">
+                <h2 class="km-form__card-title" id="km-delete-title">Delete this model</h2>
+                <p>Permanently remove {{ object.model_name }} from the database. You confirm on the next page; this cannot be undone.</p>
+                <a class="km-btn km-form__danger" href="{% url 'kinetic-model-delete' object.pk %}"><img class="app-icon" src="{% static 'database/images/icons/trash-2-ba3f4d-16.svg' %}" alt="" width="16" height="16">Delete model</a>
+            </section>
+            {% endif %}
+        </aside>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
+<style>
+.km-form {
+    --km-danger: #ba3f4d;  /* the Figma delete action, the colour of its trash icon */
+}
+
+.km-form__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    align-items: start;
+}
+
+.km-form__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    min-width: 0;
+}
+
+.km-form__section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 24px;
+}
+
+.km-form__files {
+    gap: 14px;
+    padding-bottom: 8px;
+}
+
+.km-form__section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.km-form .km-form__section-head .app-panel__title {
+    font-size: 17px;
+}
+
+.km-form__required {
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-form__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* minmax(0, 1fr): a select is as wide as its longest option otherwise */
+.km-form__field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+}
+
+.km-form__field--grow {
+    flex: 1 1 320px;
+}
+
+.km-form__field--prime {
+    flex: 0 1 288px;
+}
+
+.km-form__field > label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__star {
+    color: var(--color-gray-900);
+}
+
+.km-form .form-control,
+.km-form .form-select {
+    min-height: 42px;
+    padding: 11px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-900);
+}
+
+.km-form .form-select {
+    padding-right: 40px;
+    background-color: var(--color-white);
+    background-image: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}");
+    background-position: right 12px center;
+    background-size: 16px 16px;
+}
+
+.km-form .form-control::placeholder {
+    color: var(--color-gray-500);
+}
+
+.km-form textarea.form-control {
+    min-height: 82px;
+}
+
+.km-form__hint {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-form__hint a {
+    font-weight: 600;
+}
+
+.km-form__guidance {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--km-tint);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+/* File upload rows (Figma 170:7165) */
+.km-upload {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 15px 0;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.km-upload__symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+}
+
+.km-upload__purpose {
+    display: grid;
+    flex: 1 1 220px;
+    gap: 5px;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-upload__purpose > label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-upload__current {
+    overflow-wrap: anywhere;
+}
+
+.km-upload__clear .form-check-label {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-upload__chosen {
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+/* The native input stays focusable; its label is the visible button */
+.km-upload__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.km-upload__input:focus-visible + .km-upload__button {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.km-upload__button {
+    margin: 0;
+}
+
+.km-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 4px 0;
+}
+
+.km-form__actions p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+/* Support column */
+.km-form__aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-width: 0;
+}
+
+.km-form__card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 22px;
+}
+
+.km-form__current p {
+    margin: 0 0 7px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.km-form__current h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 23px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.km-form__stats {
+    display: grid;
+    gap: 15px;
+    margin: 4px 0 0;
+}
+
+.km-form__stats > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.km-form__stats dt {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-form__stats dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__card-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__tips {
+    display: grid;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.km-form__tips li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-form__tips .app-icon {
+    margin-top: 2px;
+}
+
+.km-form__delete {
+    gap: 12px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+}
+
+.km-form__delete .km-form__card-title {
+    font-size: 13px;
+}
+
+.km-form__delete p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-form__danger {
+    justify-self: start;
+    color: var(--km-danger);
+}
+
+.km-form__danger:hover {
+    border-color: var(--km-danger);
+    color: var(--km-danger);
+}
+
+@media (max-width: 991.98px) {
+    .km-form__layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .km-form__section {
+        padding: 18px;
+    }
+
+    .km-form__files {
+        padding-bottom: 4px;
+    }
+
+    .km-form__field--prime {
+        flex-basis: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show the chosen file's name beside its button
+    document.querySelectorAll('.km-upload__input').forEach((input) => {
+        const chosen = input.closest('.km-upload').querySelector('[data-file-name]');
+        input.addEventListener('change', () => {
+            chosen.textContent = input.files.length ? input.files[0].name : 'No file chosen';
+        });
+    });
+</script>
 {% endblock %}

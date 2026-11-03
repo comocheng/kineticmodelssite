@@ -126,6 +126,19 @@ class BaseView(TemplateView):
         context.update(landing.landing_context())
         return context
 
+class DatabaseHomeView(TemplateView):
+    """The Kinetic Models Database home: search, collections and live counts (Figma node 77:2495)."""
+    template_name = "database/database_home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        copy = landing.load_copy()
+        context["numbers"] = landing.live_numbers(copy)["numbers"]
+        context["community"] = copy.get("community", {})
+        context["citation"] = landing.citation()
+        return context
+
+
 class KineticModelFilterView(ListView):
     model = KineticModel
     paginate_by = 25

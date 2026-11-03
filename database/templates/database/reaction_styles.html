@@ -1,0 +1,450 @@
+{% load static %}
+{% comment %}
+The shared look of the reaction pages, from the Figma frames "Reaction search" (152:3985) and
+"Prometheus · Reaction detail" (161:5716). Include it in extra_css; every rule is scoped under
+.rx-page, the wrapper that reaction_filter, reaction_detail and kinetics_detail use.
+{% endcomment %}
+<style>
+.rx-page {
+    --rx-tint: #edf3ff;   /* the Figma blue tint: the current page and identifier pills */
+    --rx-rule: #e8edf3;   /* the Figma row rule, lighter than the panel border */
+    --rx-hover: rgba(206, 72, 1, 0.11);   /* the Figma hovered row */
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.rx-page > * {
+    min-width: 0;
+}
+
+/* Breadcrumb (Figma 161:5757) */
+.rx-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.rx-crumbs li {
+    min-width: 0;
+}
+
+.rx-crumbs [aria-current] {
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+/* Title row (Figma 161:5758) */
+.rx-heading {
+    display: grid;
+    gap: 12px;
+}
+
+.rx-heading__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.rx-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    min-width: 0;
+}
+
+.rx-heading h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+.rx-heading__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Identifier pill and type tag */
+.rx-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: var(--rx-tint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-primary);
+    white-space: nowrap;
+}
+
+.rx-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 100px;
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-500);
+    white-space: nowrap;
+}
+
+/* Secondary action: white, bordered, 38 px (Figma 161:5762) */
+.rx-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.rx-action:hover {
+    border-color: var(--color-primary);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+/* Panel heading: title on the left, a count or control on the right */
+.rx-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 20px 20px 0;
+}
+
+.rx-page .app-panel__title {
+    font-size: 16px;
+}
+
+.rx-panel-body {
+    padding: 16px 20px 20px;
+}
+
+/* Field label and value (Figma 161:5873) */
+.rx-label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.rx-value {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.rx-value + .rx-value {
+    margin-top: 4px;
+}
+
+.rx-muted {
+    color: var(--color-gray-500);
+}
+
+.rx-mono {
+    font-family: var(--font-mono);
+}
+
+.rx-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rx-empty {
+    margin: 0;
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+/* Data table (Figma 152:4093 and 161:6196); wide tables scroll inside the wrapper */
+/* relative, so visually-hidden cells stay inside the scroll box instead of widening the page */
+.rx-table-wrap {
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.rx-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.rx-table th {
+    padding: 11px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-500);
+}
+
+.rx-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--rx-rule);
+    vertical-align: middle;
+    color: var(--color-gray-900);
+}
+
+.rx-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.rx-table .is-mono {
+    font-family: var(--font-mono);
+}
+
+.rx-table .is-end {
+    text-align: right;
+}
+
+/* Rate-parameter table: compact, numbers in mono, MathJax heads kept in case */
+.rx-params {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+}
+
+.rx-params .rx-table th {
+    padding: 8px 12px;
+    border-top: 0;
+    text-transform: none;
+    font-size: 12px;
+}
+
+.rx-params .rx-table td,
+.rx-params .rx-table tbody th {
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.rx-params .rx-table tbody th {
+    border-top: 0;
+    border-bottom: 1px solid var(--rx-rule);
+    background: var(--color-white);
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.rx-params .rx-table tbody tr:last-child th {
+    border-bottom: 0;
+}
+
+/* Collapsed detail rows (Figma 161:5886) */
+.rx-disclosure > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 12px 18px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.rx-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+.rx-disclosure__title {
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.rx-disclosure__summary {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-gray-500);
+}
+
+.rx-disclosure__chevron {
+    margin-left: auto;
+    transition: transform var(--transition-fast);
+}
+
+.rx-disclosure[open] .rx-disclosure__chevron {
+    transform: rotate(180deg);
+}
+
+.rx-disclosure__body {
+    padding: 0 18px 18px;
+}
+
+/* Note box (Figma 161:5882) */
+.rx-note {
+    margin: 0;
+    padding: 12px;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.rx-note strong {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Rate-coefficient chart (rate_plot.html, Figma 161:5798) */
+.rx-plot__pressure {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.rx-plot__pressure .rx-select {
+    width: auto;
+    height: 34px;
+}
+
+.rx-plot__body {
+    display: grid;
+    gap: 10px;
+}
+
+.rx-plot__canvas {
+    min-width: 0;
+    height: 420px;
+}
+
+.rx-plot__note {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.rx-plot__values > summary {
+    width: fit-content;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.rx-plot__values .rx-table-wrap {
+    margin-top: 8px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+}
+
+.rx-plot__values .table {
+    font-size: 12px;
+}
+
+.rx-plot__values .table th {
+    background: var(--color-gray-50);
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+/* Form controls */
+.rx-select,
+.rx-text {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background-color: var(--color-white);
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.rx-select {
+    padding-right: 36px;
+    appearance: none;
+    background-image: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}");
+    background-position: right 12px center;
+    background-size: 16px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+.rx-text::placeholder {
+    color: var(--color-gray-500);
+}
+
+.rx-select:focus,
+.rx-text:focus {
+    border-color: var(--color-primary-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+@media (max-width: 575.98px) {
+    .rx-heading h1 {
+        font-size: 26px;
+    }
+
+    .rx-plot__canvas {
+        height: 340px;
+    }
+
+    .rx-table th,
+    .rx-table td {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .rx-disclosure > summary {
+        flex-wrap: wrap;
+    }
+
+    .rx-disclosure__summary {
+        flex-basis: 100%;
+        order: 3;
+        white-space: normal;
+    }
+}
+</style>

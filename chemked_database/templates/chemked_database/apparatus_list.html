@@ -1,137 +1,209 @@
 {% extends "base.html" %}
 {% load static %}
+{# ChemKED apparatus, from the Figma "Prometheus · Experimental apparatus" (node 182:4152) #}
+
+{% block title %}Experimental apparatus | ChemKED | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="detail-header mb-3">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
-            <li class="breadcrumb-item active">Apparatus Types</li>
+<div class="ck-page ck-apparatus">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li aria-current="page">Apparatus</li>
         </ol>
     </nav>
-    <h1 class="h4 mb-0"><i class="bi bi-gear me-2 text-primary"></i>Experimental Apparatus</h1>
-    <p class="text-muted small mb-0">Browse experiments by apparatus type</p>
-</div>
 
-<!-- Apparatus Grid -->
-<div class="row g-3">
-    {% for apparatus in apparatus_list %}
-    <div class="col-md-6 col-lg-4">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0">
-                    <i class="bi bi-gear me-2"></i>
-                    {% if apparatus.kind == 'shock tube' %}
-                        Shock Tube
-                    {% elif apparatus.kind == 'rapid compression machine' %}
-                        RCM
-                    {% elif apparatus.kind == 'flow reactor' %}
-                        Flow Reactor
-                    {% elif apparatus.kind == 'jet stirred reactor' %}
-                        JSR
-                    {% elif apparatus.kind == 'static reactor' %}
-                        Static Reactor
-                    {% elif apparatus.kind == 'flame burner' %}
-                        Burner
-                    {% else %}
-                        {{ apparatus.kind|title }}
-                    {% endif %}
-                </h6>
+    <!-- Page heading (Figma 182:4184) -->
+    <header class="ck-heading ck-heading--lg">
+        <div class="ck-heading__intro">
+            <h1>Experimental apparatus</h1>
+            <p class="ck-lede">Browse experiments by apparatus type</p>
+        </div>
+        <a class="ck-btn" href="{% url 'chemked_database:dataset-list' %}"><img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="18" height="18">Browse all datasets</a>
+    </header>
+
+    <!-- Browse navigation and summary (Figma 182:4194) -->
+    <div class="ck-browse">
+        <nav class="ck-tabs" aria-label="Experimental data">
+            <a class="ck-tab is-active" href="{% url 'chemked_database:apparatus-list' %}" aria-current="page">Apparatus</a>
+            <a class="ck-tab" href="{% url 'chemked_database:dataset-list' %}">Datasets</a>
+        </nav>
+        {% if apparatus_list %}
+        {% regroup apparatus_list|dictsort:"kind" by kind as kinds %}
+        <span class="ck-browse__summary">
+            <span><strong>{{ apparatus_list|length }}</strong> apparatus records</span>
+            <span><strong>{{ kinds|length }}</strong> kind{{ kinds|length|pluralize }}</span>
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Apparatus cards (Figma 182:4218) -->
+    {% if apparatus_list %}
+    <ul class="ck-apparatus__grid">
+        {% for apparatus in apparatus_list %}
+        <li class="app-panel ck-apparatus__card">
+            <div class="ck-apparatus__identity">
+                <span class="ck-apparatus__marker"><i class="bi bi-gear" aria-hidden="true"></i></span>
+                <div class="ck-apparatus__name">
+                    <h2>{{ apparatus.kind|capfirst }}</h2>
+                    {% if apparatus.get_mode_display %}<span class="ck-tag">{{ apparatus.get_mode_display }}</span>{% endif %}
+                </div>
             </div>
-            <div class="section-body">
+            <div class="ck-apparatus__place">
                 {% if apparatus.institution %}
-                <p class="small text-muted mb-2">
-                    <i class="bi bi-building me-1"></i>{{ apparatus.institution }}
-                </p>
+                <p class="ck-apparatus__institution"><i class="bi bi-building" aria-hidden="true"></i><span>{{ apparatus.institution }}</span></p>
+                {% else %}
+                <p class="ck-apparatus__institution ck-faint"><i class="bi bi-building" aria-hidden="true"></i><span>Institution not given</span></p>
                 {% endif %}
-                
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge bg-primary">{{ apparatus.dataset_count }} dataset{{ apparatus.dataset_count|pluralize }}</span>
-                    <a href="{% url 'chemked_database:dataset-list' %}?apparatus_kind={{ apparatus.kind|urlencode }}" 
-                       class="btn btn-sm btn-outline-primary">
-                        View Datasets <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-                </div>
+                {% if apparatus.facility %}<p class="ck-apparatus__facility">{{ apparatus.facility }}</p>{% endif %}
             </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="data-section">
-            <div class="section-body text-center py-4">
-                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
-                <p class="text-muted mb-0">No apparatus records found.</p>
+            <div class="ck-apparatus__foot">
+                <p class="ck-apparatus__count"><strong>{{ apparatus.dataset_count }}</strong><span>dataset{{ apparatus.dataset_count|pluralize }}</span></p>
+                {# Kind and institution are the two dataset filters an apparatus has; the facility is not one #}
+                <a class="ck-open" href="{% url 'chemked_database:dataset-list' %}?apparatus_kind={{ apparatus.kind|urlencode }}{% if apparatus.institution %}&amp;institution={{ apparatus.institution|urlencode }}{% endif %}">Browse datasets<img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="16" height="16"></a>
             </div>
-        </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="app-panel">
+        <p class="ck-empty"><i class="bi bi-inbox" aria-hidden="true"></i>No apparatus records found.</p>
     </div>
-    {% endfor %}
+    {% endif %}
 </div>
-
-<!-- Summary Stats -->
-{% if apparatus_list %}
-<div class="mt-4">
-    <div class="data-section">
-        <div class="section-header">
-            <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Summary</h6>
-        </div>
-        <div class="section-body">
-            <div class="row text-center">
-                <div class="col-sm-4">
-                    <span class="h4 fw-bold text-primary">{{ apparatus_list|length }}</span>
-                    <p class="small text-muted mb-0">Apparatus Types</p>
-                </div>
-                <div class="col-sm-4">
-                    <span class="h4 fw-bold text-success">
-                        {% with total=apparatus_list|length %}
-                        {% widthratio total 1 1 as dummy %}
-                        {% endwith %}
-                        {{ apparatus_list.count }}
-                    </span>
-                    <p class="small text-muted mb-0">Unique Facilities</p>
-                </div>
-                <div class="col-sm-4">
-                    <a href="{% url 'chemked_database:dataset-list' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-arrow-right me-1"></i>Browse All Datasets
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+.ck-apparatus__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    transition: box-shadow 0.15s ease;
+
+.ck-apparatus__card {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+    padding: 20px;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
-.data-section:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+.ck-apparatus__card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 6px 16px rgba(23, 43, 67, 0.08);
 }
-.section-header {
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
+
+.ck-apparatus__identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
 }
-.section-header h6 {
-    font-size: 0.85rem;
+
+.ck-apparatus__marker {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--color-primary-bg);
+    font-size: 18px;
+    color: var(--color-primary);
+}
+
+.ck-apparatus__name {
+    display: grid;
+    justify-items: start;
+    gap: 4px;
+    min-width: 0;
+    padding-top: 6px;
+}
+
+.ck-apparatus__name h2 {
+    font-size: 17px;
     font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.ck-apparatus__place {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ck-apparatus__place p {
     margin: 0;
 }
-.section-body {
-    padding: 0.75rem;
+
+.ck-apparatus__institution {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-700);
+    overflow-wrap: anywhere;
+}
+
+.ck-apparatus__institution .bi {
+    flex-shrink: 0;
+    color: var(--color-gray-400);
+}
+
+.ck-apparatus__facility {
+    padding-left: 22px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+.ck-apparatus__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-gray-100);
+}
+
+.ck-apparatus__count {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.ck-apparatus__count strong {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-gray-900);
+}
+
+@media (max-width: 1199.98px) {
+    .ck-apparatus__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ck-apparatus__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 </style>
 {% endblock %}

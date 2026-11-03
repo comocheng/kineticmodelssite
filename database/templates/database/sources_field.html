@@ -1,0 +1,6 @@
+{# One labelled form field with its errors; pass field, and label to replace the form's own label #}
+<div class="src-field{% if field.errors %} has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{% firstof label field.label %}{% if field.field.required %} <span class="src-field__required" aria-hidden="true">*</span>{% endif %}</label>
+    {{ field }}
+    {% for error in field.errors %}<p class="invalid-feedback d-block">{{ error }}</p>{% endfor %}
+</div>

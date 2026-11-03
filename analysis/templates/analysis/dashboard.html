@@ -1,284 +1,452 @@
 {% extends "base.html" %}
 {% load static %}
+{# The analysis home, from the Figma "Prometheus · Model Analysis Dashboard" (node 69:3165) #}
 
-{% block title %}Analysis Dashboard{% endblock %}
+{% block title %}Model analysis | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="detail-header mb-4">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item active">Model Analysis</li>
-        </ol>
-    </nav>
-    <div class="d-flex align-items-center justify-content-between">
-        <div>
-            <h1 class="h4 mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Model Analysis Dashboard</h1>
-            <p class="text-muted mb-0 mt-1">Validate kinetic models against experimental data</p>
-        </div>
-        <a href="{% url 'analysis:run-create' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-play-circle me-1"></i>New Simulation
-        </a>
-    </div>
-</div>
+<div class="an-runs an-dash">
 
-<!-- Quick Actions Section -->
-<section class="mb-4">
-    <div class="data-section">
-        <div class="section-header">
-            <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
-        </div>
-        <div class="section-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <a href="{% url 'analysis:run-create' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-primary-subtle text-primary">
-                                <i class="bi bi-play-circle"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Run Simulation</strong>
-                                <small class="d-block text-muted">Evaluate model against data</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'analysis:fuel-map' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-info-subtle text-info">
-                                <i class="bi bi-fuel-pump"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Fuel-Model Map</strong>
-                                <small class="d-block text-muted">Fuel → model compatibility</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'analysis:coverage-matrix' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-success-subtle text-success">
-                                <i class="bi bi-grid-3x3"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Coverage Matrix</strong>
-                                <small class="d-block text-muted">Model × Dataset heatmap</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'analysis:compare-models' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-warning-subtle text-warning">
-                                <i class="bi bi-bar-chart-line"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Compare Models</strong>
-                                <small class="d-block text-muted">Side-by-side comparison</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
+    <!-- Analysis workspace (Figma 69:3165 "Search workspace") -->
+    <section class="app-workspace" aria-labelledby="an-dash-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="an-dash__top">
+            <div class="app-workspace__intro">
+                <p class="app-eyebrow">Model analysis</p>
+                <h1 id="an-dash-title" class="app-title">Model Analysis <span class="app-title__accent">Dashboard</span></h1>
+                <p class="app-lede">Validate kinetic models against experimental data with PyTeCK simulations.</p>
             </div>
+            <a class="app-pill" href="{% url 'analysis:run-create' %}">
+                <span class="app-pill__plus"><img class="app-icon" src="{% static 'database/images/icons/plus.svg' %}" alt="" width="12" height="12"></span>New simulation
+            </a>
         </div>
-    </div>
-</section>
+        <nav class="app-collections" aria-label="Analysis tools">
+            <a class="app-collection" href="{% url 'analysis:run-list' %}">
+                <span class="app-collection__head"><i class="bi bi-list-check an-dash__tool-icon" aria-hidden="true"></i><span>Simulation runs</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>All PyTeCK simulation runs</p>
+            </a>
+            <a class="app-collection" href="{% url 'analysis:fuel-map' %}">
+                <span class="app-collection__head"><i class="bi bi-fuel-pump an-dash__tool-icon" aria-hidden="true"></i><span>Fuel–Model Map</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Fuel → model compatibility</p>
+            </a>
+            <a class="app-collection" href="{% url 'analysis:coverage-matrix' %}">
+                <span class="app-collection__head"><i class="bi bi-grid-3x3 an-dash__tool-icon" aria-hidden="true"></i><span>Coverage Matrix</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Model × dataset heatmap</p>
+            </a>
+            <a class="app-collection" href="{% url 'analysis:compare-models' %}">
+                <span class="app-collection__head"><i class="bi bi-bar-chart-line an-dash__tool-icon" aria-hidden="true"></i><span>Compare Models</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Side-by-side comparison</p>
+            </a>
+        </nav>
+    </section>
 
-<!-- Stats Overview -->
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Analysis Statistics</h6>
+    <!-- Analysis statistics (Figma 69:3165 "Analysis Statistics") -->
+    <section class="an-dash__stats-block" aria-labelledby="an-stats-title">
+        <h2 class="an-label" id="an-stats-title">Analysis statistics</h2>
+        <dl class="app-panel an-dash__stats">
+            <div class="an-dash__stat">
+                <dt>Kinetic models <a class="an-dash__stat-link" href="{% url 'kinetic-model-list' %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="19" height="19"><span class="visually-hidden">Browse kinetic models</span></a></dt>
+                <dd><span class="an-dash__value">{{ total_models|default:"—" }}</span><span class="an-dash__context">All models in the database</span></dd>
             </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
+            {# The view counts ignition delay datasets only, so the label says so #}
+            <div class="an-dash__stat">
+                <dt>Ignition delay datasets <a class="an-dash__stat-link" href="{% url 'chemked_database:dataset-list' %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="19" height="19"><span class="visually-hidden">Browse experiment datasets</span></a></dt>
+                <dd><span class="an-dash__value">{{ total_datasets|default:"—" }}</span><span class="an-dash__context">Browse all datasets</span></dd>
+            </div>
+            <div class="an-dash__stat">
+                <dt>Successful runs <a class="an-dash__stat-link" href="{% url 'analysis:run-list' %}?status=completed"><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="19" height="19"><span class="visually-hidden">View completed runs</span></a></dt>
+                <dd><span class="an-dash__value">{{ successful_runs|default:"—" }}</span><span class="an-dash__context">of {{ total_runs|default:0 }} runs</span></dd>
+            </div>
+            <div class="an-dash__stat">
+                <dt>Coverage <a class="an-dash__stat-link" href="{% url 'analysis:coverage-matrix' %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="19" height="19"><span class="visually-hidden">Open the coverage matrix</span></a></dt>
+                <dd><span class="an-dash__value">{{ coverage_percent|default:"0" }}%</span><span class="an-dash__context">{{ coverage_stats.evaluated_pairs|default:0 }} pairs evaluated</span></dd>
+            </div>
+        </dl>
+    </section>
+
+    <div class="an-dash__main">
+        <!-- Recent simulation runs (Figma 69:3165 "Recent Simulation Runs") -->
+        <section class="an-dash__recent" aria-labelledby="an-recent-title">
+            <div class="an-dash__intro">
+                <div class="an-panel-intro">
+                    <h2 class="app-section-title an-dash__section-title" id="an-recent-title">Recent simulation runs</h2>
+                    <p>The ten newest runs, with their status and average error function.</p>
+                </div>
+                <a class="app-link" href="{% url 'analysis:run-list' %}">All runs <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a>
+            </div>
+
+            <div class="app-panel">
+                {# Filters run on the run list, which supports status and model filters #}
+                <form class="an-dash__tools" method="get" action="{% url 'analysis:run-list' %}">
+                    <label class="visually-hidden" for="an-recent-status">Run status</label>
+                    <select class="form-select" id="an-recent-status" name="status">
+                        <option value="">All statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="running">Running</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                    <button type="submit" class="an-btn"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="16" height="16">Filter runs</button>
+                </form>
+                <div class="an-table-wrap" tabindex="0" role="region" aria-label="Recent simulation runs">
+                    <table class="an-table an-dash__runs">
+                        <thead>
+                            <tr>
+                                <th scope="col">Model</th>
+                                <th scope="col">Dataset</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="is-end">Error</th>
+                                <th scope="col" class="is-end">Created</th>
+                                <th scope="col"><span class="visually-hidden">Open</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for run in recent_runs %}
+                            <tr>
+                                <td><a href="{% url 'analysis:run-detail' run.pk %}">{{ run.kinetic_model.model_name }}</a></td>
+                                <td class="is-muted an-dash__dataset">{% if run.dataset %}{{ run.dataset.short_name }}{% else %}<span class="an-faint">Dataset removed</span>{% endif %}</td>
+                                <td>{% include "analysis/an_runs_status.html" with status=run.status label=run.get_status_display %}</td>
+                                <td class="is-end">
+                                    {% if run.result and run.result.average_error_function %}
+                                    <span class="an-error {% if run.result.average_error_function < 1 %}is-good{% elif run.result.average_error_function < 2 %}is-fair{% else %}is-poor{% endif %}">{{ run.result.average_error_function|floatformat:1 }}</span>
+                                    {% else %}<span class="an-faint">—</span>{% endif %}
+                                </td>
+                                <td class="is-end is-muted an-dash__time"><time datetime="{{ run.created_at|date:'c' }}">{{ run.created_at|timesince }} ago</time></td>
+                                <td class="is-end"><a class="an-open" href="{% url 'analysis:run-detail' run.pk %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"><span class="visually-hidden">Open run #{{ run.pk }}</span></a></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="an-empty">No simulation runs yet. <a href="{% url 'analysis:run-create' %}">Create your first run</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if recent_runs %}
+                <div class="an-panel-foot">
+                    <span>Showing {{ recent_runs|length }} of {{ total_runs }} run{{ total_runs|pluralize }}</span>
+                    <a class="app-link" href="{% url 'analysis:run-list' %}">View all simulation runs <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Model insights (Figma 69:3165 "Model insights") -->
+        <div class="an-dash__insights">
+            <section class="app-panel" aria-labelledby="an-top-title">
+                <div class="app-panel__head">
+                    <div class="an-panel-intro">
+                        <h2 class="app-panel__title" id="an-top-title">Top models</h2>
+                        <p>Ranked by datasets with a successful run</p>
+                    </div>
+                </div>
+                <table class="an-table an-dash__rank">
                     <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th class="text-end">Count</th>
-                            <th style="width:150px;"></th>
-                        </tr>
+                        <tr><th scope="col">Model</th><th scope="col" class="is-end">Datasets</th></tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-box text-primary me-2"></i>Kinetic Models</td>
-                            <td class="text-end fw-medium">{{ total_models|default:"—" }}</td>
-                            <td><a href="{% url 'kinetic-model-list' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-file-earmark-text text-danger me-2"></i>Experiment Datasets</td>
-                            <td class="text-end fw-medium">{{ total_datasets|default:"—" }}</td>
-                            <td><a href="{% url 'chemked_database:dataset-list' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-check-circle text-success me-2"></i>Successful Runs</td>
-                            <td class="text-end fw-medium">{{ successful_runs|default:"—" }}</td>
-                            <td><a href="{% url 'analysis:run-list' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-grid-3x3 text-info me-2"></i>Coverage</td>
-                            <td class="text-end fw-medium">{{ coverage_percent|default:"0" }}%</td>
-                            <td><span class="small text-muted">{{ coverage_stats.evaluated_pairs|default:0 }} pairs</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Top Models</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
                     <tbody>
                         {% for model in top_models %}
                         <tr>
-                            <td>{{ model.model_name }}</td>
-                            <td class="text-end">
-                                <span class="badge bg-primary-subtle text-primary">{{ model.coverage_count }} datasets</span>
-                            </td>
+                            <td><a href="{% url 'kinetic-model-detail' model.pk %}">{{ model.model_name }}</a></td>
+                            <td class="is-end"><span class="an-chip an-chip--count">{{ model.coverage_count }}</span></td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="2" class="text-muted text-center py-3">No coverage data yet</td>
-                        </tr>
+                        <tr><td colspan="2" class="an-empty">No coverage data yet</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-</div>
+                <div class="an-panel-foot">
+                    <a class="app-link" href="{% url 'analysis:compare-models' %}">Compare models <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a>
+                </div>
+            </section>
 
-<!-- Recent Runs -->
-<div class="row g-3">
-    <div class="col-lg-8">
-        <div class="data-section">
-            <div class="section-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Simulation Runs</h6>
-                <a href="{% url 'analysis:run-list' %}" class="small">View All →</a>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm table-hover mb-0">
+            <section class="app-panel" aria-labelledby="an-best-title">
+                <div class="app-panel__head">
+                    <div class="an-panel-intro">
+                        <h2 class="app-panel__title" id="an-best-title">Best performers</h2>
+                        <p>Model and dataset pairs with the lowest latest error function</p>
+                    </div>
+                </div>
+                <table class="an-table an-dash__rank">
                     <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Dataset</th>
-                            <th>Status</th>
-                            <th class="text-end">Error</th>
-                            <th class="text-end">Time</th>
-                        </tr>
+                        <tr><th scope="col">Model and dataset</th><th scope="col" class="is-end">Error</th></tr>
                     </thead>
-                    <tbody>
-                        {% for run in recent_runs %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'analysis:run-detail' run.pk %}">{{ run.kinetic_model.model_name }}</a>
-                            </td>
-                            <td><small class="text-muted">{{ run.dataset.short_name }}</small></td>
-                            <td>
-                                {% if run.status == 'completed' %}
-                                    <span class="badge bg-success-subtle text-success">Completed</span>
-                                {% elif run.status == 'running' %}
-                                    <span class="badge bg-warning-subtle text-warning">Running</span>
-                                {% elif run.status == 'failed' %}
-                                    <span class="badge bg-danger-subtle text-danger">Failed</span>
-                                {% else %}
-                                    <span class="badge bg-secondary-subtle text-secondary">{{ run.status }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                {% if run.result and run.result.average_error_function %}
-                                    {{ run.result.average_error_function|floatformat:1 }}
-                                {% else %}—{% endif %}
-                            </td>
-                            <td class="text-end"><small class="text-muted">{{ run.created_at|timesince }} ago</small></td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-3">
-                                No simulation runs yet. <a href="{% url 'analysis:run-create' %}">Create your first run</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <!-- Best Performers -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-star me-2"></i>Best Performers</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
                     <tbody>
                         {% for cov in best_performers|slice:":5" %}
                         <tr>
                             <td>
-                                <small>
-                                    <strong>{{ cov.kinetic_model.model_name }}</strong><br>
-                                    <span class="text-muted">{{ cov.dataset.short_name }}</span>
-                                </small>
+                                <span class="an-dash__pair">
+                                    <strong>{{ cov.kinetic_model.model_name }}</strong>
+                                    <span>{{ cov.dataset.short_name|default:"Dataset removed" }}</span>
+                                </span>
                             </td>
-                            <td class="text-end">
-                                <span class="badge bg-success-subtle text-success">{{ cov.latest_error_function|floatformat:1 }}</span>
-                            </td>
+                            <td class="is-end"><span class="an-chip {% if cov.latest_error_function < 1 %}is-good{% elif cov.latest_error_function < 2 %}is-fair{% else %}is-poor{% endif %}">{{ cov.latest_error_function|floatformat:1 }}</span></td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="2" class="text-muted text-center py-3">No completed runs yet</td>
-                        </tr>
+                        <tr><td colspan="2" class="an-empty">No completed runs yet</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-        </div>
+            </section>
 
-        <!-- Needs Attention -->
-        {% if needs_attention %}
-        <div class="data-section">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Needs Attention</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
+            {% if needs_attention %}
+            <section class="app-panel" aria-labelledby="an-attention-title">
+                <div class="app-panel__head">
+                    <div class="an-panel-intro">
+                        <h2 class="app-panel__title" id="an-attention-title"><i class="bi bi-exclamation-triangle an-dash__warn" aria-hidden="true"></i> Needs attention</h2>
+                        <p>Pairs that are outdated or due for a re-run</p>
+                    </div>
+                </div>
+                <table class="an-table an-dash__rank">
+                    <thead>
+                        <tr><th scope="col">Model and dataset</th><th scope="col" class="is-end">Reason</th></tr>
+                    </thead>
                     <tbody>
                         {% for cov in needs_attention|slice:":5" %}
                         <tr>
                             <td>
-                                <small>
-                                    {{ cov.kinetic_model.model_name }}<br>
-                                    <span class="text-muted">{{ cov.dataset.short_name }}</span>
-                                </small>
+                                <span class="an-dash__pair">
+                                    <strong>{{ cov.kinetic_model.model_name }}</strong>
+                                    <span>{{ cov.dataset.short_name|default:"Dataset removed" }}</span>
+                                </span>
                             </td>
-                            <td class="text-end">
-                                {% if cov.is_outdated %}
-                                    <span class="badge bg-warning-subtle text-warning">Outdated</span>
-                                {% endif %}
+                            <td class="is-end">
+                                {% if cov.is_outdated %}<span class="an-status an-status--running">Outdated</span>{% elif cov.needs_rerun %}<span class="an-status an-status--pending">Re-run due</span>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
+            </section>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_runs_styles.html" %}
+<style>
+.an-dash {
+    gap: 26px;
+}
+
+.an-dash__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px 24px;
+    margin-bottom: 24px;
+}
+
+.an-dash .app-workspace__intro {
+    margin-bottom: 0;
+}
+
+.an-dash__tool-icon {
+    font-size: 20px;
+    line-height: 1;
+    color: var(--color-gray-900);
+}
+
+/* Statistics: one panel, four cells split by 1 px rules (Figma "Database statistics") */
+.an-dash__stats-block {
+    display: grid;
+    gap: 12px;
+}
+
+.an-dash__stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-gray-200);
+}
+
+.an-dash__stat {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 20px 24px;
+    background: var(--color-white);
+}
+
+.an-dash__stat dt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.an-dash__stat-link {
+    display: inline-flex;
+    border-radius: 4px;
+}
+
+.an-dash__stat-link:hover {
+    background: var(--color-gray-50);
+}
+
+.an-dash__stat dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin: 0;
+}
+
+.an-dash__value {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.an-dash__context {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+/* Runs table and the model insights column (Figma 996 + 484 px) */
+.an-dash__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 484px;
+    gap: 24px;
+    align-items: start;
+}
+
+.an-dash__recent {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.an-dash__intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.an-dash__section-title {
+    margin: 0;
+    font-size: 18px;
+}
+
+.an-dash__intro p {
+    font-size: 13px;
+}
+
+.an-dash__tools {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px;
+}
+
+.an-dash__tools .form-select {
+    width: auto;
+    min-width: 160px;
+}
+
+.an-dash__runs {
+    min-width: 720px;
+}
+
+.an-dash__runs td {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.an-dash__dataset {
+    max-width: 285px;
+    overflow-wrap: anywhere;
+}
+
+.an-dash__time {
+    white-space: nowrap;
+}
+
+.an-dash__insights {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.an-dash__insights .app-panel {
+    overflow: hidden;
+}
+
+.an-dash__rank td {
+    padding-top: 15px;
+    padding-bottom: 15px;
+    overflow-wrap: anywhere;
+}
+
+.an-dash__pair {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.an-dash__pair strong {
+    font-weight: 600;
+}
+
+.an-dash__pair span {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.an-dash__warn {
+    color: var(--color-warning);
+}
+
+@media (max-width: 1199.98px) {
+    .an-dash__main {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-dash__insights {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        align-items: start;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .an-dash__stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-dash__top {
+        flex-direction: column;
+    }
+
+    .an-dash__stats {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-dash__insights {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-dash__tools {
+        padding: 14px;
+    }
+
+    .an-dash__tools .form-select {
+        flex: 1 1 160px;
+    }
+}
+</style>
 {% endblock %}

@@ -1,0 +1,2 @@
+{# The short code of a dataset's experiment type, with the full name as its title; pass type. #}
+{% if type == 'ignition delay' %}<span class="an-type" title="Ignition delay">IDT</span>{% elif type == 'laminar burning velocity measurement' or type == 'laminar flame speed' %}<span class="an-type" title="{{ type|capfirst }}">LFS</span>{% elif type == 'speciation measurement' or type == 'speciation' %}<span class="an-type" title="{{ type|capfirst }}">SR</span>{% elif type %}<span class="an-type">{{ type }}</span>{% else %}<span class="an-faint">—</span>{% endif %}

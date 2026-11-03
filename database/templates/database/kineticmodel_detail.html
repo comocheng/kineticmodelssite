@@ -1,252 +1,237 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% load utils %}
 {% load renders %}
+{# A kinetic model, from the Figma "Prometheus · CH2F2 kinetic model" (node 170:6885) #}
+
+{% block title %}{{ kinetic_model.model_name }} | Kinetic models | Prometheus{% endblock %}
 
 {% block content %}
-<!-- Compact Header -->
-<div class="detail-header">
-    <nav aria-label="breadcrumb" class="small mb-1">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'kinetic-model-list' %}">Models</a></li>
-            <li class="breadcrumb-item active">{{ kinetic_model.model_name }}</li>
+<div class="km-page km-detail">
+
+    <!-- Breadcrumb (Figma 170:6921) -->
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-list' %}">Kinetic models</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{{ kinetic_model.model_name }}</span></li>
         </ol>
     </nav>
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-        <h1 class="h4 mb-0">{{ kinetic_model.model_name }}</h1>
-        <span class="badge bg-secondary">ID: {{ kinetic_model.pk }}</span>
-        {% if thermo_transport.paginator.count %}<span class="badge bg-primary-subtle text-primary"><i class="bi bi-droplet me-1"></i>{{ thermo_transport.paginator.count }} species</span>{% endif %}
-        {% if kinetics_data.paginator.count %}<span class="badge bg-success-subtle text-success"><i class="bi bi-arrow-left-right me-1"></i>{{ kinetics_data.paginator.count }} reactions</span>{% endif %}
-        {% if site_access_allowed %}
-        <a href="{% url 'kinetic-model-update' kinetic_model.pk %}" class="btn btn-outline-primary btn-sm ms-auto" title="Edit">
-            <i class="bi bi-pencil me-1"></i>Edit
-        </a>
-        {% endif %}
-    </div>
-</div>
 
-<div class="row g-3">
-    <!-- Main Content -->
-    <div class="col-lg-8">
-        <!-- Downloads -->
-    {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file or kinetics_data.paginator.count or thermo_transport.paginator.count %}
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h6 class="mb-0"><i class="bi bi-download me-2"></i>Downloads</h6>
+    <!-- Model heading (Figma 170:6930) -->
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <div class="km-heading__title">
+                <h1>{{ kinetic_model.model_name }}</h1>
+                <span class="km-pill">Model #{{ kinetic_model.pk }}</span>
+            </div>
+            <p class="km-lede">Kinetic model · Model information, files and chemical data</p>
+        </div>
+        <div class="km-actions">
+            {% if site_access_allowed %}
+            <a class="km-btn" href="{% url 'kinetic-model-update' kinetic_model.pk %}"><img class="app-icon" src="{% static 'database/images/icons/pencil-172b45-16.svg' %}" alt="" width="16" height="16">Edit model</a>
+            {% endif %}
+            <a class="app-btn" href="{% url 'analysis:run-create' %}?model={{ kinetic_model.pk }}"><img class="app-icon" src="{% static 'database/images/icons/play-ffffff-16.svg' %}" alt="" width="16" height="16">New simulation</a>
+        </div>
+    </header>
+
+    <!-- Model summary (Figma 170:6944) -->
+    <div class="km-detail__summary">
+        <section class="app-panel km-detail__glance" aria-labelledby="km-glance-title">
+            <div class="km-detail__glance-head">
+                <h2 class="app-panel__title" id="km-glance-title">Model at a glance</h2>
+                <span class="app-panel__meta">Database ID <strong>{{ kinetic_model.pk }}</strong></span>
+            </div>
+            <dl class="km-detail__metrics">
+                <div><dt>Species</dt><dd>{{ kinetic_model.species.count }}</dd></div>
+                <div><dt>Reactions</dt><dd>{{ kinetics_data.paginator.count }}</dd></div>
+                <div><dt>Thermo entries</dt><dd>{{ kinetic_model.thermo.count }}</dd></div>
+                <div><dt>Transport entries</dt><dd>{{ kinetic_model.transport.count }}</dd></div>
+            </dl>
+            <dl class="km-detail__meta">
+                <div>
+                    <dt>PrIMe ID</dt>
+                    <dd>{% if kinetic_model.prime_id %}<span class="km-detail__mono">{{ kinetic_model.prime_id }}</span>{% else %}<span class="km-detail__faint">Not provided</span>{% endif %}</dd>
+                </div>
+                <div class="km-detail__source">
+                    <dt>Source publication</dt>
+                    <dd>
+                        {% if source %}
+                        <a href="{% url 'source-detail' source.pk %}">{{ source.source_title|titlecase|truncatewords_html:12 }}</a>
+                        {% if source.author_line %}<span class="km-detail__faint">{{ source.author_line|truncatewords:8 }}</span>{% endif %}
+                        {% if source.pub_info %}<span class="km-detail__faint km-detail__pub">{{ source.pub_info|truncatewords:10 }}</span>{% endif %}
+                        {% else %}
+                        <span class="km-detail__faint">Not linked</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="app-panel km-detail__files" aria-labelledby="km-files-title">
+            <h2 class="app-panel__title" id="km-files-title">Model files</h2>
+            {% if kinetic_model.chemkin_reactions_file or kinetic_model.chemkin_transport_file or kinetic_model.chemkin_thermo_file or kinetics_data.paginator.count or thermo_transport.paginator.count %}
+            <ul class="km-detail__file-list">
+                <li>
+                    <a class="km-detail__file" href="{% url 'kinetic-model-download' kinetic_model.pk 'chemkin' %}" data-download-base="{% url 'kinetic-model-download' kinetic_model.pk 'chemkin' %}">
+                        <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                        <span class="km-detail__file-name"><strong>CHEMKIN bundle</strong><small>.zip</small></span>
+                        <img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="Download" width="18" height="18">
+                    </a>
+                </li>
+                {% if kinetic_model.chemkin_reactions_file or kinetics_data.paginator.count %}
+                <li>
+                    <a class="km-detail__file" href="{% url 'kinetic-model-download' kinetic_model.pk 'cantera' %}" data-download-base="{% url 'kinetic-model-download' kinetic_model.pk 'cantera' %}">
+                        <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                        <span class="km-detail__file-name"><strong>Cantera</strong><small>YAML</small></span>
+                        <img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="Download" width="18" height="18">
+                    </a>
+                </li>
+                {% endif %}
+                {% if kinetic_model.chemkin_reactions_file %}
+                <li>
+                    <a class="km-detail__file" href="{{ kinetic_model.chemkin_reactions_file.url }}" download>
+                        <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                        <span class="km-detail__file-name"><strong>CHEMKIN reactions file</strong><small>Uploaded file</small></span>
+                        <img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="Download" width="18" height="18">
+                    </a>
+                </li>
+                {% endif %}
+                {% if kinetic_model.chemkin_thermo_file %}
+                <li>
+                    <a class="km-detail__file" href="{{ kinetic_model.chemkin_thermo_file.url }}" download>
+                        <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                        <span class="km-detail__file-name"><strong>CHEMKIN thermo file</strong><small>Uploaded file</small></span>
+                        <img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="Download" width="18" height="18">
+                    </a>
+                </li>
+                {% endif %}
+                {% if kinetic_model.chemkin_transport_file %}
+                <li>
+                    <a class="km-detail__file" href="{{ kinetic_model.chemkin_transport_file.url }}" download>
+                        <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19">
+                        <span class="km-detail__file-name"><strong>CHEMKIN transport file</strong><small>Uploaded file</small></span>
+                        <img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="Download" width="18" height="18">
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {# The switch adds ?strict=1 to the generated downloads; the Figma shows it as a bar (170:7057) #}
+            <div class="km-detail__strict">
+                <img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="18" height="18">
+                <div>
                     <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="strictDownloadToggle">
-                        <label class="form-check-label small" for="strictDownloadToggle">Strict RMG validation</label>
+                        <input class="form-check-input" type="checkbox" id="strictDownloadToggle" aria-describedby="km-strict-help">
+                        <label class="form-check-label" for="strictDownloadToggle">Strict RMG validation</label>
                     </div>
+                    <p id="km-strict-help">Bundle and YAML downloads fail with an error instead of leaving out species without thermo data and unbalanced reactions.</p>
                 </div>
             </div>
-            <div class="section-body p-0">
-                <table class="table table-sm table-hover mb-0">
-                    <tr>
-                        <td><i class="bi bi-file-zip text-secondary me-2"></i>Chemkin Bundle (.zip)</td>
-                        <td class="text-end">
-                            <a href="{% url 'kinetic-model-download' kinetic_model.pk 'chemkin' %}" data-download-base="{% url 'kinetic-model-download' kinetic_model.pk 'chemkin' %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> Download
-                            </a>
-                        </td>
-                    </tr>
-                    {% if kinetic_model.chemkin_reactions_file or kinetics_data.paginator.count %}
-                    <tr>
-                        <td><i class="bi bi-filetype-yml text-success me-2"></i>Cantera YAML</td>
-                        <td class="text-end">
-                            <a href="{% url 'kinetic-model-download' kinetic_model.pk 'cantera' %}" data-download-base="{% url 'kinetic-model-download' kinetic_model.pk 'cantera' %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download"></i> Download
-                            </a>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% if kinetic_model.chemkin_reactions_file %}
-                    <tr>
-                        <td><i class="bi bi-file-code text-primary me-2"></i>Chemkin Reactions File</td>
-                        <td class="text-end"><a href="{{ kinetic_model.chemkin_reactions_file.url }}" download class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Download</a></td>
-                    </tr>
-                    {% endif %}
-                    {% if kinetic_model.chemkin_thermo_file %}
-                    <tr>
-                        <td><i class="bi bi-thermometer-half text-warning me-2"></i>Chemkin Thermo File</td>
-                        <td class="text-end"><a href="{{ kinetic_model.chemkin_thermo_file.url }}" download class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Download</a></td>
-                    </tr>
-                    {% endif %}
-                    {% if kinetic_model.chemkin_transport_file %}
-                    <tr>
-                        <td><i class="bi bi-arrows-move text-info me-2"></i>Chemkin Transport File</td>
-                        <td class="text-end"><a href="{{ kinetic_model.chemkin_transport_file.url }}" download class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Download</a></td>
-                    </tr>
-                    {% endif %}
-                </table>
-            </div>
+            {% else %}
+            <p class="km-detail__no-files">This model has no reactions, species or uploaded files to download.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Chemical data navigation (Figma 170:6983) -->
+    <div class="km-detail__tabs">
+        <div class="km-detail__tablist" role="tablist" aria-label="Chemical data">
+            <button class="km-detail__tab active" id="km-species-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#km-species" aria-controls="km-species" aria-selected="true">Species <span>{{ thermo_transport.paginator.count }}</span></button>
+            <button class="km-detail__tab" id="km-reactions-tab" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#km-reactions" aria-controls="km-reactions" aria-selected="false" tabindex="-1">Reactions <span>{{ kinetics_data.paginator.count }}</span></button>
         </div>
-        <script>
-            (() => {
-                const toggle = document.getElementById('strictDownloadToggle');
-                const links = document.querySelectorAll('[data-download-base]');
-                if (!toggle || !links.length) return;
+        <span class="km-detail__tabs-hint">Explore one dataset at a time</span>
+    </div>
 
-                const updateLinks = () => {
-                    links.forEach((link) => {
-                        const base = link.getAttribute('data-download-base');
-                        if (!base) return;
-                        link.href = toggle.checked ? `${base}?strict=1` : base;
-                    });
-                };
-
-                toggle.addEventListener('change', updateLinks);
-                updateLinks();
-            })();
-        </script>
-        {% endif %}
-
-        {% include 'database/model_counterparts.html' %}
-        {% include 'database/model_shared_chemistry.html' %}
-
-        <!-- Species (Thermo & Transport) -->
-        {% if thermo_transport %}
-        <div class="data-section mb-3">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#speciesSection">
-                <h6 class="mb-0"><i class="bi bi-droplet me-2"></i>Species ({{ thermo_transport.paginator.count }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="speciesSection">
-                <div class="section-body">
-                    <table class="table table-sm table-hover mb-0">
+    <!-- Data previews (Figma 170:6994) -->
+    <div class="km-detail__data">
+        <div class="tab-content km-detail__panes">
+            <section class="tab-pane active app-panel" id="km-species" role="tabpanel" aria-labelledby="km-species-tab" tabindex="0">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title">Species</h2>
+                    <span class="app-panel__meta">{% if thermo_transport %}{{ thermo_transport.start_index }}–{{ thermo_transport.end_index }} of {{ thermo_transport.paginator.count }} {% endif %}with thermo or transport data</span>
+                </div>
+                {% if thermo_transport %}
+                <div class="km-table-wrap">
+                    <table class="km-table km-detail__species">
                         <thead>
                             <tr>
-                                <th>Formula</th>
-                                <th>ID</th>
-                                <th>Notes</th>
-                                <th>Thermo</th>
-                                <th>Transport</th>
+                                <th scope="col">Formula</th>
+                                <th scope="col">ID</th>
+                                <th scope="col">Notes</th>
+                                <th scope="col">Thermodynamics</th>
+                                <th scope="col">Transport</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for thermo_comment, transport_comment in thermo_transport %}
                             <tr>
-                                <td class="font-monospace fw-medium">
+                                <td class="km-detail__formula">
                                     {% if thermo_comment %}
                                     <a href="{% url 'species-detail' thermo_comment.thermo.species.pk %}">{{ thermo_comment.thermo.species.formula }}</a>
                                     {% elif transport_comment %}
                                     <a href="{% url 'species-detail' transport_comment.transport.species.pk %}">{{ transport_comment.transport.species.formula }}</a>
                                     {% endif %}
                                 </td>
-                                <td class="text-muted">
-                                    {% firstof thermo_comment.thermo.species.pk transport_comment.transport.species.pk %}
-                                </td>
-                                <td class="text-muted small">
+                                <td class="is-mono km-detail__id">{% firstof thermo_comment.thermo.species.pk transport_comment.transport.species.pk %}</td>
+                                <td class="is-muted">
                                     {% firstof thermo_comment.comment transport_comment.comment as species_comment %}
-                                    {% if species_comment %}
-                                        {{ species_comment|truncatewords:6 }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
+                                    {% if species_comment %}{{ species_comment|truncatewords:6 }}{% else %}—{% endif %}
                                 </td>
                                 <td>
                                     {% if thermo_comment %}
-                                    <a href="{% url 'thermo-detail' thermo_comment.thermo.pk %}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-thermometer-half me-1"></i>View Thermo
-                                    </a>
-                                    {% else %}
-                                    <span class="text-muted">—</span>
-                                    {% endif %}
+                                    <a href="{% url 'thermo-detail' thermo_comment.thermo.pk %}">View thermo ↗</a>
+                                    {% else %}<span class="is-muted">—</span>{% endif %}
                                 </td>
                                 <td>
                                     {% if transport_comment %}
-                                    <a href="{% url 'transport-detail' transport_comment.transport.pk %}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-arrows-move me-1"></i>View Transport
-                                    </a>
-                                    {% else %}
-                                    <span class="text-muted">—</span>
-                                    {% endif %}
+                                    <a href="{% url 'transport-detail' transport_comment.transport.pk %}">View transport ↗</a>
+                                    {% else %}<span class="is-muted">—</span>{% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    
-                    <!-- Species Pagination -->
-                    <div class="pagination-container mt-3">
-                        <span class="step-links">
-                            {% if thermo_transport.has_previous %}
-                                <a href="?page1=1&page2={{ page2 }}" class="btn btn-sm btn-outline-secondary">&laquo; First</a>
-                                <a href="?page1={{ thermo_transport.previous_page_number }}&page2={{ page2 }}" class="btn btn-sm btn-outline-secondary">Previous</a>
-                            {% endif %}
-
-                            <span class="mx-2 text-muted">
-                                Page {{ thermo_transport.number }} of {{ thermo_transport.paginator.num_pages }}
-                            </span>
-
-                            {% if thermo_transport.has_next %}
-                                <a href="?page1={{ thermo_transport.next_page_number }}&page2={{ page2 }}" class="btn btn-sm btn-outline-secondary">Next</a>
-                                <a href="?page1={{ thermo_transport.paginator.num_pages }}&page2={{ page2 }}" class="btn btn-sm btn-outline-secondary">Last &raquo;</a>
-                            {% endif %}
-                        </span>
-                    </div>
                 </div>
-            </div>
-        </div>
-        {% endif %}
+                {% include "database/kineticmodel_pager.html" with page=thermo_transport param="page1" other="page2" other_value=page2 anchor="#km-species" label="Species pages" %}
+                {% else %}
+                <p class="km-empty">No species in this model have thermo or transport data.</p>
+                {% endif %}
+            </section>
 
-        <!-- Reactions (Kinetics) -->
-        {% if kinetics_data %}
-        <div class="data-section">
-            <div class="section-header" data-bs-toggle="collapse" data-bs-target="#reactionsSection">
-                <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Reactions ({{ kinetics_data.paginator.count }})</h6>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="collapse show" id="reactionsSection">
-                <div class="section-body">
-                    <table class="table table-sm table-hover mb-0">
+            <section class="tab-pane app-panel" id="km-reactions" role="tabpanel" aria-labelledby="km-reactions-tab" tabindex="0">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title">Reactions</h2>
+                    {% if kinetics_data %}<span class="app-panel__meta">{{ kinetics_data.start_index }}–{{ kinetics_data.end_index }} of {{ kinetics_data.paginator.count }}</span>{% endif %}
+                </div>
+                {% if kinetics_data %}
+                <div class="km-table-wrap">
+                    <table class="km-table km-detail__reactions">
                         <thead>
                             <tr>
-                                <th>Reaction</th>
-                                <th>ID</th>
-                                <th>Type</th>
-                                <th>Notes</th>
-                                <th>Kinetics</th>
+                                <th scope="col">Reaction</th>
+                                <th scope="col">ID</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Notes</th>
+                                <th scope="col">Kinetics</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for kinetics_comment in kinetics_data %}
-                            <tr>
-                                <td class="font-monospace">
+                            <tr class="km-detail__reaction">
+                                <td class="km-detail__equation">
                                     <a href="{% url 'reaction-detail' kinetics_comment.kinetics.reaction.pk %}">{{ kinetics_comment.kinetics.reaction }}</a>
                                 </td>
-                                <td class="text-muted">
-                                    {{ kinetics_comment.kinetics.reaction.pk }}
-                                </td>
-                                <td class="text-muted">
-                                    {% if kinetics_comment.kinetics.data %}
-                                        {{ kinetics_comment.kinetics.data.kinetics_type }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </td>
-                                <td class="text-muted small">
-                                    {% if kinetics_comment.comment %}
-                                        {{ kinetics_comment.comment|truncatewords:6 }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'kinetics-detail' kinetics_comment.kinetics.pk %}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-graph-up me-1"></i>View Kinetics
-                                    </a>
-                                </td>
+                                <td class="is-mono km-detail__id">{{ kinetics_comment.kinetics.reaction.pk }}</td>
+                                <td class="is-muted">{% if kinetics_comment.kinetics.data %}{{ kinetics_comment.kinetics.data.kinetics_type }}{% else %}—{% endif %}</td>
+                                <td class="is-muted">{% if kinetics_comment.comment %}{{ kinetics_comment.comment|truncatewords:6 }}{% else %}—{% endif %}</td>
+                                <td><a href="{% url 'kinetics-detail' kinetics_comment.kinetics.pk %}">View kinetics ↗</a></td>
                             </tr>
-                            <tr class="table-light">
-                                <td colspan="6" class="small">
+                            <tr class="km-detail__inline">
+                                <td colspan="5">
                                     <details>
-                                        <summary class="fw-semibold">Inline kinetics</summary>
-                                        <div class="mt-2">
-                                            {% if kinetics_comment.comment %}
-                                                <div class="text-muted mb-2">{{ kinetics_comment.comment }}</div>
-                                            {% endif %}
+                                        <summary>Inline kinetics</summary>
+                                        <div class="km-detail__inline-body">
+                                            {% if kinetics_comment.comment %}<p>{{ kinetics_comment.comment }}</p>{% endif %}
                                             {{ kinetics_comment.kinetics|render_kinetics_table }}
                                         </div>
                                     </details>
@@ -255,105 +240,541 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                    
-                    <!-- Reactions Pagination -->
-                    <div class="pagination-container mt-3">
-                        <span class="step-links">
-                            {% if kinetics_data.has_previous %}
-                                <a href="?page2=1&page1={{ page1 }}" class="btn btn-sm btn-outline-secondary">&laquo; First</a>
-                                <a href="?page2={{ kinetics_data.previous_page_number }}&page1={{ page1 }}" class="btn btn-sm btn-outline-secondary">Previous</a>
-                            {% endif %}
-
-                            <span class="mx-2 text-muted">
-                                Page {{ kinetics_data.number }} of {{ kinetics_data.paginator.num_pages }}
-                            </span>
-
-                            {% if kinetics_data.has_next %}
-                                <a href="?page2={{ kinetics_data.next_page_number }}&page1={{ page1 }}" class="btn btn-sm btn-outline-secondary">Next</a>
-                                <a href="?page2={{ kinetics_data.paginator.num_pages }}&page1={{ page1 }}" class="btn btn-sm btn-outline-secondary">Last &raquo;</a>
-                            {% endif %}
-                        </span>
-                    </div>
                 </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Model Info -->
-        <div class="data-section mb-3">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Model Info</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <tr><td class="text-muted">Database ID</td><td class="text-end fw-medium">{{ kinetic_model.pk }}</td></tr>
-                    <tr><td class="text-muted">Model Name</td><td class="text-end">{{ kinetic_model.model_name }}</td></tr>
-                    {% if thermo_transport.paginator.count %}<tr><td class="text-muted">Species</td><td class="text-end">{{ thermo_transport.paginator.count }}</td></tr>{% endif %}
-                    {% if kinetics_data.paginator.count %}<tr><td class="text-muted">Reactions</td><td class="text-end">{{ kinetics_data.paginator.count }}</td></tr>{% endif %}
-                </table>
-            </div>
+                {% include "database/kineticmodel_pager.html" with page=kinetics_data param="page2" other="page1" other_value=page1 anchor="#km-reactions" label="Reaction pages" %}
+                {% else %}
+                <p class="km-empty">This model has no reactions.</p>
+                {% endif %}
+            </section>
         </div>
 
-        <!-- Source -->
-        {% if source %}
-        <div class="data-section">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Source</h6>
-            </div>
-            <div class="section-body">
-                <a href="{% url 'source-detail' source.pk %}" class="text-decoration-none d-block">
-                    <strong class="d-block mb-1">{{ source.source_title|titlecase|truncatewords:12 }}</strong>
-                    {% if source.pub_info %}<div class="text-muted fst-italic small">{{ source.pub_info|truncatewords:10 }}</div>{% endif %}
-                    {% if source.author_line %}<div class="text-muted small">{{ source.author_line|truncatewords:8 }}</div>{% endif %}
-                </a>
-            </div>
-        </div>
-        {% endif %}
+        {% include 'database/model_counterparts.html' %}
     </div>
+
+    {% include 'database/model_shared_chemistry.html' %}
 </div>
 {% endblock %}
 
 {% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
 <style>
-.detail-header {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-gray-200);
+/* Summary: the glance panel and a 320 px files panel */
+.km-detail .km-heading h1 {
+    font-size: 32px;
 }
 
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+.km-detail__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    align-items: stretch;
 }
 
-.section-header {
+/* When the files panel is taller, the metadata row moves to the bottom */
+.km-detail__glance {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 20px;
+    padding: 24px;
+}
+
+.km-detail__glance-head {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.km-detail__glance-head strong {
+    font-weight: 600;
+}
+
+.km-detail__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    margin: 0;
+}
+
+/* The count reads above its label, as in the design; dt stays first for screen readers */
+.km-detail__metrics > div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 5px;
+    min-width: 0;
+}
+
+.km-detail__metrics dt {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-detail__metrics dd {
+    margin: 0;
+    font-size: 29px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.km-detail__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-self: end;
+    gap: 10px 28px;
+    margin: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.km-detail__meta > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
+}
+
+.km-detail__meta dt {
+    font-weight: 400;
+}
+
+.km-detail__meta dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.km-detail__source {
+    flex: 1 1 320px;
+}
+
+.km-detail__source dd {
+    display: grid;
+    gap: 2px;
+}
+
+.km-detail__faint {
+    color: var(--color-gray-500);
+}
+
+.km-detail__pub {
+    font-style: italic;
+}
+
+.km-detail__mono {
+    font-family: var(--font-mono);
+    color: var(--color-gray-900);
+}
+
+/* Model files (Figma 170:6965) */
+.km-detail__files {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 14px;
+    padding: 22px;
+}
+
+.km-detail__file-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.km-detail__file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
     border-bottom: 1px solid var(--color-gray-200);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.km-detail__file:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.km-detail__file-name {
+    display: grid;
+    flex: 1;
+    gap: 4px;
+    min-width: 0;
+}
+
+.km-detail__file-name strong {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.km-detail__file-name small {
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.km-detail__strict {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding-top: 2px;
+}
+
+.km-detail__strict .app-icon {
+    margin-top: 2px;
+}
+
+.km-detail__strict .form-check-label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-detail__strict p {
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.km-detail__no-files {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+/* Chemical data tabs */
+.km-detail__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 28px;
+    border-bottom: 1px solid var(--color-gray-200);
+    scroll-margin-top: calc(var(--navbar-height) + 16px);  /* clear the sticky header */
+}
+
+.km-detail__tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 28px;
+}
+
+.km-detail__tab {
+    height: 49px;
+    margin-bottom: -1px;
+    padding: 0;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-600);
     cursor: pointer;
 }
 
-.section-header h6 { font-size: 0.8rem; font-weight: 600; }
-.section-body { padding: 0.75rem; }
-
-.table td, .table th { padding: 0.4rem 0.75rem; vertical-align: middle; }
-
-.pagination-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
+.km-detail__tab span {
+    margin-left: 6px;
 }
 
-.bg-primary-subtle { background-color: #cfe2ff; }
-.bg-success-subtle { background-color: #d1e7dd; }
+.km-detail__tab:hover {
+    color: var(--color-primary);
+}
+
+.km-detail__tab.active {
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.km-detail__tabs-hint {
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+/* Data: the open table beside a 550 px counterparts panel */
+.km-detail__data {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.km-detail__panes {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.km-detail__panes > .tab-pane {
+    overflow: hidden;
+}
+
+.km-detail__formula a {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.km-detail__id {
+    color: var(--color-gray-600);
+}
+
+.km-detail__species,
+.km-detail__reactions {
+    min-width: 600px;
+}
+
+.km-detail__species td,
+.km-detail__reactions td {
+    height: 45px;
+}
+
+.km-detail__equation a {
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.km-detail__reaction td {
+    border-bottom: 0;
+}
+
+.km-detail__reactions .km-detail__inline td {
+    height: auto;
+    padding-top: 0;
+}
+
+.km-detail__inline summary {
+    width: max-content;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-gray-600);
+    cursor: pointer;
+}
+
+.km-detail__inline-body {
+    margin-top: 8px;
+}
+
+.km-detail__inline-body p {
+    margin: 0 0 8px;
+    color: var(--color-gray-600);
+}
+
+/* RMG-database counterparts (Figma 170:7031) */
+.km-counterparts {
+    flex: 0 0 550px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    gap: 16px;
+    padding: 20px 0 20px;
+}
+
+.km-counterparts__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 20px;
+}
+
+.km-counterparts__head p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.km-counterparts__table th {
+    padding-top: 4px;
+    padding-bottom: 8px;
+    border-top: 0;
+    background: none;
+    white-space: normal;
+}
+
+.km-counterparts__table td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 11px;
+}
+
+.km-counterparts__table tr:last-child td {
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.km-counterparts__table a {
+    overflow-wrap: anywhere;
+}
+
+.km-counterparts__kind {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--color-gray-500);
+}
+
+.km-counterparts__match {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.km-counterparts__ratio {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.km-counterparts__note {
+    margin: 0;
+    padding: 0 20px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+/* Shared chemistry */
+.km-shared {
+    padding-bottom: 8px;
+}
+
+.km-shared__head {
+    flex-wrap: wrap;
+}
+
+.km-shared__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+}
+
+.km-shared__note {
+    margin: 0;
+    padding: 0 20px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-shared__block {
+    padding: 20px 20px 0;
+}
+
+.km-shared__subtitle {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+h3.km-shared__subtitle.km-shared__block {
+    margin: 0;
+    padding-bottom: 10px;
+}
+
+.km-shared__list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.km-shared__table {
+    min-width: 640px;
+}
+
+.km-shared__table tr:last-child td {
+    border-bottom: 0;
+}
+
+@media (max-width: 1299.98px) {
+    .km-detail__data {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .km-counterparts {
+        flex-basis: auto;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .km-detail__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .km-detail__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .km-detail .km-heading h1 {
+        font-size: 26px;
+    }
+
+    .km-detail__glance,
+    .km-detail__files {
+        padding: 18px;
+    }
+
+    .km-detail__metrics dd {
+        font-size: 24px;
+    }
+
+    .km-detail__tabs-hint {
+        display: none;
+    }
+}
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Strict RMG validation: point the generated downloads at their strict versions
+    (() => {
+        const toggle = document.getElementById('strictDownloadToggle');
+        const links = document.querySelectorAll('[data-download-base]');
+        if (!toggle || !links.length) return;
+
+        const updateLinks = () => {
+            links.forEach((link) => {
+                const base = link.getAttribute('data-download-base');
+                if (!base) return;
+                link.href = toggle.checked ? `${base}?strict=1` : base;
+            });
+        };
+
+        toggle.addEventListener('change', updateLinks);
+        updateLinks();
+    })();
+
+    // Open the tab a page link points at (#km-reactions), and keep the open tab in the address
+    (() => {
+        const tabs = [...document.querySelectorAll('.km-detail__tab')];
+        if (!tabs.length || !window.bootstrap) return;
+        const fromHash = tabs.find((tab) => tab.dataset.bsTarget === location.hash);
+        if (fromHash) {
+            bootstrap.Tab.getOrCreateInstance(fromHash).show();
+            document.querySelector('.km-detail__tabs').scrollIntoView();
+        }
+        tabs.forEach((tab) => {
+            tab.addEventListener('shown.bs.tab', () => {
+                history.replaceState(null, '', tab.dataset.bsTarget);
+            });
+        });
+    })();
+</script>
 {% endblock %}

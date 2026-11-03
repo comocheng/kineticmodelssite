@@ -1,0 +1,637 @@
+{% load static %}
+{% comment %}
+The shared look of the analysis dashboard and simulation run pages, from the Figma frames
+"Model Analysis Dashboard" (69:3165), "New simulation" (67:2922), "Simulation runs" (184:2304) and
+"Simulation run details" (73:3529). Include it in extra_css; every rule is scoped under .an-runs,
+the wrapper each of these pages uses.
+{% endcomment %}
+<style>
+.an-runs {
+    --an-tint: #edf3ff;  /* the Figma blue tint: count chips, the current page, step markers */
+    --an-faint: #8390a0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    min-width: 0;
+}
+
+.an-runs > * {
+    min-width: 0;
+}
+
+/* Breadcrumb */
+.an-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.an-crumbs a {
+    color: var(--color-primary);
+}
+
+.an-crumbs [aria-current] {
+    overflow-wrap: anywhere;
+}
+
+/* Title row */
+.an-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.an-heading__intro {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.an-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    min-width: 0;
+}
+
+.an-heading h1 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.an-lede {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+    overflow-wrap: anywhere;
+}
+
+.an-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.an-actions form {
+    margin: 0;
+}
+
+/* White secondary button; .app-btn is the orange one */
+.an-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.an-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.an-btn--danger {
+    color: var(--color-error);
+}
+
+.an-btn--danger:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.an-btn .bi,
+.an-runs .app-btn .bi {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.an-runs .app-btn {
+    height: 38px;
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+.an-runs .app-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.an-runs .app-btn:disabled:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+}
+
+.an-runs .app-link {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Identifier and count chips */
+.an-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 30px;
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.an-pill--count {
+    padding: 4px 9px;
+    border-radius: 100px;
+    background: var(--an-tint);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+/* Run status (Figma "Run status") */
+.an-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 30px;
+    background: var(--color-gray-100);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.an-status .bi {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.an-status--completed {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.an-status--failed {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+.an-status--running {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.an-status--pending,
+.an-status--queued {
+    background: var(--an-tint);
+    color: var(--color-gray-700);
+}
+
+/* Error function values: < 1 good, < 2 fair, otherwise poor (the thresholds the pages always used) */
+.an-error {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.an-error.is-good {
+    color: var(--color-success);
+}
+
+.an-error.is-fair {
+    color: var(--color-warning);
+}
+
+.an-error.is-poor {
+    color: var(--color-error);
+}
+
+.an-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+}
+
+.an-chip.is-good {
+    background: var(--color-success-bg);
+}
+
+.an-chip.is-fair {
+    background: var(--color-warning-bg);
+}
+
+.an-chip.is-poor {
+    background: var(--color-error-bg);
+}
+
+.an-chip--count {
+    background: var(--an-tint);
+    color: var(--color-primary);
+}
+
+/* Experiment type codes (IDT, LFS, SR) */
+.an-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--an-tint);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--color-gray-700);
+}
+
+/* Panels: the design's panel titles are 16 px and heads line up with the 20 px table gutter */
+.an-runs .app-panel {
+    min-width: 0;
+}
+
+.an-runs .app-panel__title {
+    font-size: 16px;
+}
+
+.an-runs .app-panel__head {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 20px;
+}
+
+.an-panel-intro {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.an-panel-intro p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+/* Small section labels; often an h2 or h3, so drop the global heading rule and margins */
+.an-label {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+/* Tables scroll inside their panel; position: relative keeps hidden link text in the scroller */
+.an-table-wrap {
+    position: relative;
+    overflow-x: auto;
+}
+
+.an-table-wrap:focus-visible {
+    outline-offset: -2px;
+}
+
+.an-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-table th {
+    padding: 12px 10px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.an-table td {
+    padding: 13px 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+}
+
+.an-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.an-table th:first-child,
+.an-table td:first-child {
+    padding-left: 20px;
+}
+
+.an-table th:last-child,
+.an-table td:last-child {
+    padding-right: 20px;
+}
+
+.an-table .is-number {
+    font-family: var(--font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.an-table .is-end {
+    text-align: right;
+}
+
+.an-table .is-mono {
+    font-family: var(--font-mono);
+}
+
+.an-table .is-muted {
+    color: var(--color-gray-500);
+}
+
+.an-table a {
+    color: var(--color-gray-900);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.an-table a:hover {
+    color: var(--color-primary);
+}
+
+.an-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+}
+
+.an-open:hover {
+    background: var(--color-gray-50);
+}
+
+.an-faint {
+    color: var(--an-faint);
+}
+
+.an-empty {
+    margin: 0;
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+.an-runs .an-empty a {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* Panel footers: a count on the left, a link on the right */
+.an-panel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+/* One-line guidance with an info icon */
+.an-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-note .app-icon {
+    margin-top: 2px;
+}
+
+/* Labelled form controls */
+.an-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+}
+
+.an-field > label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-runs .form-control,
+.an-runs .form-select {
+    min-height: 40px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-runs .form-select {
+    padding-right: 38px;
+    background-color: var(--color-white);
+    background-image: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}");
+    background-position: right 12px center;
+    background-size: 16px 16px;
+}
+
+.an-runs .form-control::placeholder {
+    color: var(--color-gray-500);
+}
+
+/* A search input with its icon inside the border */
+.an-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.an-search:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.an-search input {
+    flex: 1;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-search input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.an-search input:focus {
+    outline: none;
+}
+
+/* Field errors */
+.an-error-text {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+.an-error-text ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+/* Pagination (Figma 184:2304 "Pagination") */
+.an-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-pager__pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.an-pager__size {
+    margin-right: 10px;
+    font-size: 11px;
+}
+
+.an-pager__page,
+.an-pager__step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 4px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+.an-pager__page:hover,
+.an-pager__step:hover {
+    background: var(--color-gray-50);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.an-pager__page.is-current {
+    background: var(--an-tint);
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.an-pager__step.is-disabled {
+    opacity: 0.4;
+}
+
+@media (max-width: 575.98px) {
+    .an-heading h1 {
+        font-size: 26px;
+    }
+
+    .an-table th:first-child,
+    .an-table td:first-child {
+        padding-left: 14px;
+    }
+
+    .an-table th:last-child,
+    .an-table td:last-child {
+        padding-right: 14px;
+    }
+
+    .an-runs .app-panel__head,
+    .an-panel-foot,
+    .an-pager {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+</style>
