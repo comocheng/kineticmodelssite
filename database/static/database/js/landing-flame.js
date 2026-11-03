@@ -180,18 +180,21 @@ function flameGeometry(THREE, seed) {
     return geometry;
 }
 
-function labelTexture(THREE, name) {
-    // A glowing species name on a transparent canvas. A digit after a letter, ")" or another
-    // subscript digit is a subscript, so CH3OH reads as CH₃OH and a leading digit stays full size.
+function labelTexture(THREE, name, subscripts) {
+    // A glowing species name on a transparent canvas. When the server found that the letters and
+    // digits that start the name are the species' atoms (database/services/landing.py), a digit
+    // after a letter or another subscript digit there is a subscript, so CH3OH reads as CH₃OH and
+    // C3H5-A as C₃H₅-A. Other names, such as C4H71-4 with its locants, are drawn as written.
     const px = 64;
     const font = (size) => `600 ${size}px "Instrument Sans", Inter, "Helvetica Neue", Arial, sans-serif`;
+    const formulaEnd = subscripts ? (name.match(/^[A-Za-z0-9]+/) || [""])[0].length : 0;
     const runs = [];
-    for (const ch of name) {
+    [...name].forEach((ch, i) => {
         const previous = runs[runs.length - 1];
-        const sub = /\d/.test(ch) && previous && (/[A-Za-z)\]]$/.test(previous.text) || previous.sub);
+        const sub = i < formulaEnd && /\d/.test(ch) && previous && (/[A-Za-z]$/.test(previous.text) || previous.sub);
         if (previous && previous.sub === Boolean(sub)) previous.text += ch;
         else runs.push({ text: ch, sub: Boolean(sub) });
-    }
+    });
     const ctx = document.createElement("canvas").getContext("2d");
     const pad = 24;
     let width = 0;
@@ -219,15 +222,16 @@ function labelTexture(THREE, name) {
     return { texture, aspect: ctx.canvas.width / ctx.canvas.height };
 }
 
-function speciesParticles(THREE, names) {
+function speciesParticles(THREE, species) {
     // Each particle is one species record of the database (see database/services/landing.py),
-    // released from the tips in turn and fading as it rises
+    // released from the tips in turn and fading as it rises. A name is drawn when it leaves the
+    // flame and freed when its slot takes the next one, so the page holds LABELS_IN_AIR textures
+    // (about 1 MB) however many species it lists, and draws one name (about 1 ms) per release.
     const rand = random(42);
-    const labels = names.map((name) => labelTexture(THREE, name));
     const group = new THREE.Group();
     group.userData.scale = 1;
     let next = 0;
-    const slots = Array.from({ length: Math.min(LABELS_IN_AIR, labels.length) }, () => {
+    const slots = Array.from({ length: Math.min(LABELS_IN_AIR, species.length) }, () => {
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
             transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
         }));
@@ -237,7 +241,9 @@ function speciesParticles(THREE, names) {
     // One name leaves every LABEL_LIFE / slots seconds, alternating sides, so names rarely overlap
     const release = (p, age) => {
         const side = next % 2 ? 1 : -1;
-        p.label = labels[next++ % labels.length];
+        const { name, subscripts } = species[next++ % species.length];
+        if (p.label) p.label.texture.dispose();
+        p.label = labelTexture(THREE, name, subscripts);
         p.sprite.material.map = p.label.texture;
         Object.assign(p, {
             x: side * (0.1 + rand() * 0.35), y: 1.55 + rand() * 0.25, z: (rand() - 0.5) * 0.3,
@@ -264,7 +270,7 @@ function speciesParticles(THREE, names) {
 async function start(mount) {
     const THREE = await import(mount.dataset.three);
     const list = document.getElementById("lp-flame-species");
-    const names = list ? JSON.parse(list.textContent).map((species) => species.name) : [];
+    const listed = list ? JSON.parse(list.textContent) : [];
     await document.fonts.load('600 64px "Instrument Sans"').catch(() => {});
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
     renderer.setClearColor(0x000000, 0);
@@ -297,7 +303,7 @@ async function start(mount) {
         return mesh;
     });
     scene.add(flame);
-    const species = speciesParticles(THREE, names);
+    const species = speciesParticles(THREE, listed);
     scene.add(species);
 
     const resize = () => {

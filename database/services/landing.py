@@ -6,6 +6,8 @@ A "{key}" in the copy is a number from the database; LIVE_KEYS lists the keys.
 import hashlib
 import json
 import logging
+import re
+from collections import Counter, defaultdict
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,7 +25,7 @@ logger = logging.getLogger(__name__)
 COPY_PATH = Path(__file__).resolve().parent.parent / "content" / "landing.yaml"
 CITATION_PATH = Path(settings.BASE_DIR) / "CITATION.cff"
 CACHE_SECONDS = 600
-FLAME_SPECIES = 30  # species that rise from the 3D flame in the hero
+FLAME_SPECIES = 100  # species that rise from the 3D flame in the hero
 
 LIVE_KEYS = (
     "models", "species", "reactions", "sources", "datasets", "datapoints",
@@ -71,22 +73,61 @@ def scene_molecule(entry):
     }
 
 
+@lru_cache(maxsize=1)
+def _elements():
+    from rdkit import Chem
+
+    table = Chem.GetPeriodicTable()
+    return frozenset(table.GetElementSymbol(number) for number in range(1, 119))
+
+
+def atom_counts(text, strict=True):
+    """The element counts of a formula such as CH3OH, or None for text that is not one. Strict
+    counts refuse a written 1 or a leading 0, which a formula never has and a locant (C2H4O1-2) can."""
+    if not re.fullmatch(r"(?:[A-Z][a-z]?\d*)+", text):
+        return None
+    counts = Counter()
+    for element, number in re.findall(r"([A-Z][a-z]?)(\d*)", text):
+        if element not in _elements() or (strict and (number == "1" or number.startswith("0"))):
+            return None
+        counts[element] += int(number or 1)
+    return counts
+
+
+def name_spells_formula(name, formulas):
+    """Whether the letters and digits that start a model's name are the atoms of the species, so
+    that the digits are counts to draw as subscripts: CH3OH and C3H5-A, but not C4H612 or C4H71-4."""
+    start = re.match(r"[A-Za-z0-9]+", name)
+    counts = atom_counts(start.group()) if start else None
+    return bool(counts) and any(counts == atom_counts(formula, strict=False) for formula in formulas)
+
+
 def flame_species(limit=FLAME_SPECIES):
     """The species that the most models use, each under the name that most models give it."""
     named = models.SpeciesName.objects.filter(kinetic_model__isnull=False).exclude(name="")
     top = list(named.values("species").annotate(
         models=Count("kinetic_model", distinct=True)).order_by("-models", "species")[:limit])
+    ids = [row["species"] for row in top]
     best = {}
-    names = named.filter(species__in=[row["species"] for row in top]).values("species", "name")
+    names = named.filter(species__in=ids).values("species", "name")
     for row in names.annotate(
             models=Count("kinetic_model", distinct=True)).order_by("-models", "name"):
         best.setdefault(row["species"], row["name"])
+    formulas = defaultdict(set)
+    for species, formula in models.Species.objects.filter(pk__in=ids).values_list(
+            "pk", "isomers__formula__formula"):
+        if formula:
+            formulas[species].add(formula)
     labels, seen = [], set()
     for row in top:
         name = best.get(row["species"])
         if name and name not in seen:
             seen.add(name)
-            labels.append({"name": name, "models": row["models"]})
+            labels.append({
+                "name": name,
+                "models": row["models"],
+                "subscripts": name_spells_formula(name, formulas[row["species"]]),
+            })
     return labels
 
 
@@ -97,7 +138,9 @@ def live_numbers(copy):
         "species": problem.get("species", []),
         "shared_name": problem.get("shared_name", ""),
     }
-    digest = hashlib.sha1(json.dumps(scene_config, sort_keys=True).encode()).hexdigest()[:12]
+    # The flame size is in the key too, so a new size does not wait for the old numbers to expire
+    key_config = {**scene_config, "flame_species": FLAME_SPECIES}
+    digest = hashlib.sha1(json.dumps(key_config, sort_keys=True).encode()).hexdigest()[:12]
     return cache.get_or_set(
         f"landing:numbers:{digest}", lambda: _count(scene_config), CACHE_SECONDS)
 

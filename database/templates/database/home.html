@@ -8,12 +8,13 @@
 {# One row with Analysis and the research tools in it needs about 1350 px; below 1400 px the menu button shows #}
 {% block nav_expand %}navbar-expand-xxl{% endblock %}
 
+{# nginx gives static files no cache lifetime, so browsers may keep an old copy: raise v when either file changes #}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'database/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'database/css/landing.css' %}?v=2">
 {% endblock %}
 
 {% block extra_js %}
-<script type="module" src="{% static 'database/js/landing-flame.js' %}"></script>
+<script type="module" src="{% static 'database/js/landing-flame.js' %}?v=2"></script>
 <script>
     // The header is clear over the hero and turns solid once the page scrolls under it
     (() => {

@@ -324,8 +324,29 @@
     pointer-events: none;
 }
 
+/* The line grid of the Figma hero, measured from its 1600 x 1024 frame: 1 px white lines at 11 %
+   every 60.2 px across and 76.6 px down (rounded to whole pixels so no line blurs), brightest
+   27 % across and 44 % down, half as bright 195 px from there and gone by 440 px */
+.lp-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.11) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+    background-position: 37px 56px;
+    background-size: 60px 77px;
+    -webkit-mask-image: radial-gradient(circle 440px at 27% 44%, #000 0%, rgba(0, 0, 0, 0.85) 20%,
+        rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.28) 60%, rgba(0, 0, 0, 0.1) 80%, transparent 100%);
+    mask-image: radial-gradient(circle 440px at 27% 44%, #000 0%, rgba(0, 0, 0, 0.85) 20%,
+        rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.28) 60%, rgba(0, 0, 0, 0.1) 80%, transparent 100%);
+    pointer-events: none;
+}
+
+/* Above the grid, which comes later in the hero */
 .lp-hero > .lp-container {
     position: relative;
+    z-index: 1;
 }
 
 .lp-hero__grid {
