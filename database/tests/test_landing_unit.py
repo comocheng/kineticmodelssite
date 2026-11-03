@@ -111,12 +111,26 @@ class LandingSceneTests(TestCase):
 
     def test_flame_species_are_the_most_used_under_their_most_common_name(self):
         # Propyne is in both models; the tie between its two names goes to the first in order
+        # C3H4-P and C3H4 spell the atoms of C3H4, so their digits are subscripts; CC#C is SMILES
         self.assertEqual(landing.flame_species(), [
-            {"name": "C3H4-P", "models": 2},
-            {"name": "CC#C", "models": 1},
-            {"name": "C3H4", "models": 1},
+            {"name": "C3H4-P", "models": 2, "subscripts": True},
+            {"name": "CC#C", "models": 1, "subscripts": False},
+            {"name": "C3H4", "models": 1, "subscripts": True},
         ])
-        self.assertEqual(landing.flame_species(limit=1), [{"name": "C3H4-P", "models": 2}])
+        self.assertEqual(landing.flame_species(limit=1), [{"name": "C3H4-P", "models": 2, "subscripts": True}])
+
+    def test_only_digits_that_count_atoms_become_subscripts(self):
+        cases = {
+            ("CH3OH", "CH4O"): True, ("C3H5-A", "C3H5"): True, ("CH2(S)", "CH2"): True,
+            ("HOCHO", "CH2O2"): True, ("C10H22", "C10H22"): True, ("Ar", "Ar"): True,
+            # Locants, isomer prefixes and other mnemonics keep their digits full size
+            ("C4H71-4", "C4H7"): False, ("C2H4O1-2", "C2H4O"): False, ("C4H612", "C4H6"): False,
+            ("NC3H7", "C3H7"): False, ("IC4H9", "C4H9"): False, ("C3KET21", "C3H5O3"): False,
+            ("AR", "Ar"): False, ("nC3H7", "C3H7"): False,
+        }
+        for (name, formula), expected in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(landing.name_spells_formula(name, {formula}), expected)
 
     def test_home_page_shows_live_numbers(self):
         response = self.client.get(reverse("home"))
