@@ -49,4 +49,4 @@ Returns the CI check-run statuses for the contribution's pull request.
 ## The ChemKED format
 
 For the dataset schema and how experiments are represented, see
-[`chemked_database/README.md`](https://github.com/LekiaAnonim/kineticmodelssite/blob/master/chemked_database/README.md).
+[`chemked_database/README.md`](https://github.com/comocheng/kineticmodelssite/blob/main/chemked_database/README.md).

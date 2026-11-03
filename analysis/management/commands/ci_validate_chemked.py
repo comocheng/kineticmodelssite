@@ -9,7 +9,7 @@ Usage::
 
     python manage.py ci_validate_chemked \
         --files-dir /tmp/pyked_ci_files \
-        --pr-repo LekiaAnonim/ChemKED-database \
+        --pr-repo pr-omethe-us/ChemKED-database \
         --pr-number 1 \
         --commit-sha abc123def456
 """
@@ -185,7 +185,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--pr-repo",
             required=True,
-            help="GitHub repo in owner/name format (e.g. LekiaAnonim/ChemKED-database).",
+            help="GitHub repo in owner/name format (e.g. pr-omethe-us/ChemKED-database).",
         )
         parser.add_argument(
             "--pr-number",

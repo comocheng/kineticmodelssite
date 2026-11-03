@@ -33,5 +33,5 @@ documented REST API.
     contribute data or perform administrative writes — see [Authentication](authentication.md).
 
 For platform setup and the underlying data schema, see the repository docs:
-[`README-local-setup.md`](https://github.com/LekiaAnonim/kineticmodelssite/blob/master/README-local-setup.md)
-and [`chemked_database/README.md`](https://github.com/LekiaAnonim/kineticmodelssite/blob/master/chemked_database/README.md).
+[`README-local-setup.md`](https://github.com/comocheng/kineticmodelssite/blob/main/README-local-setup.md)
+and [`chemked_database/README.md`](https://github.com/comocheng/kineticmodelssite/blob/main/chemked_database/README.md).

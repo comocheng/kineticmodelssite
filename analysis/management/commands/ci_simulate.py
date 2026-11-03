@@ -9,7 +9,7 @@ Usage::
 
     python manage.py ci_simulate \
         --chemked-yaml /tmp/methane_Smith_2020.yaml \
-        --pr-repo LekiaAnonim/ChemKED-database \
+        --pr-repo pr-omethe-us/ChemKED-database \
         --pr-number 42 \
         --commit-sha abc123def456
 
@@ -357,7 +357,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--pr-repo",
             required=True,
-            help="GitHub repo in owner/name format (e.g. LekiaAnonim/ChemKED-database).",
+            help="GitHub repo in owner/name format (e.g. pr-omethe-us/ChemKED-database).",
         )
         parser.add_argument(
             "--pr-number",
@@ -674,9 +674,9 @@ def _build_comment(filename, results_table):
         lines.append("</details>\n")
 
     lines.append(
-        "*Simulated on [kineticmodelssite](https://github.com/"
-        f"{os.getenv('GITHUB_REPO_OWNER', 'LekiaAnonim')}/kineticmodelssite) "
-        f"using auto-detected compatible models.*"
+        # GITHUB_REPO_OWNER names the ChemKED-database owner, not the home of this site
+        "*Simulated on [kineticmodelssite](https://github.com/comocheng/kineticmodelssite) "
+        "using auto-detected compatible models.*"
     )
 
     return "\n".join(lines)
