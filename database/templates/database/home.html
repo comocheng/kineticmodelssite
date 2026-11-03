@@ -1,219 +1,311 @@
 {% extends "base.html" %}
 {% load static %}
+{# The words come from database/content/landing.yaml; this template only lays them out. #}
 
-{% block content %}
-<!-- Quick Search Section -->
-<section class="mb-4">
-    <div class="data-section">
-        <div class="section-header">
-            <h6 class="mb-0"><i class="bi bi-search me-2"></i>Quick Search</h6>
-        </div>
-        <div class="section-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <a href="{% url 'species-search' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-primary-subtle text-primary">
-                                <i class="bi bi-droplet-half"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Species</strong>
-                                <small class="d-block text-muted">Formula, SMILES, structure</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-4">
-                    <a href="{% url 'reaction-search' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-success-subtle text-success">
-                                <i class="bi bi-arrow-left-right"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Reactions</strong>
-                                <small class="d-block text-muted">Reactants, products, kinetics</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-4">
-                    <a href="{% url 'source-search' %}" class="search-link">
-                        <div class="d-flex align-items-center">
-                            <div class="search-icon bg-warning-subtle text-warning">
-                                <i class="bi bi-journal-text"></i>
-                            </div>
-                            <div class="ms-3">
-                                <strong>Sources</strong>
-                                <small class="d-block text-muted">Publications, references</small>
-                            </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats & Features -->
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Database Overview</h6>
-            </div>
-            <div class="section-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th class="text-end">Count</th>
-                            <th style="width:150px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-droplet-half text-primary me-2"></i>Species</td>
-                            <td class="text-end fw-medium">{{ species_count|default:"—" }}</td>
-                            <td><a href="{% url 'species-search' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-arrow-left-right text-success me-2"></i>Reactions</td>
-                            <td class="text-end fw-medium">{{ reaction_count|default:"—" }}</td>
-                            <td><a href="{% url 'reaction-search' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-journal-text text-warning me-2"></i>Sources</td>
-                            <td class="text-end fw-medium">{{ source_count|default:"—" }}</td>
-                            <td><a href="{% url 'source-search' %}" class="small">Browse →</a></td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-box text-info me-2"></i>Kinetic Models</td>
-                            <td class="text-end fw-medium">{{ model_count|default:"—" }}</td>
-                            <td><a href="{% url 'kinetic-model-list' %}" class="small">Browse →</a></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4">
-        <div class="data-section h-100">
-            <div class="section-header">
-                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Features</h6>
-            </div>
-            <div class="section-body p-0">
-                <ul class="feature-list">
-                    <li><i class="bi bi-check-circle text-success me-2"></i>Validated kinetic data</li>
-                    <li><i class="bi bi-download text-primary me-2"></i>CHEMKIN export</li>
-                    <li><i class="bi bi-link-45deg text-info me-2"></i>Linked species & reactions</li>
-                    <li><i class="bi bi-code-slash text-secondary me-2"></i>RESTful API access</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- How to Cite -->
-<section class="mb-4">
-    <div class="data-section">
-        <div class="section-header" data-bs-toggle="collapse" data-bs-target="#citeSection">
-            <h6 class="mb-0"><i class="bi bi-quote me-2"></i>How to Cite</h6>
-            <i class="bi bi-chevron-down"></i>
-        </div>
-        <div class="collapse" id="citeSection">
-            <div class="section-body">
-                <p class="small mb-2">When using data from this database, please cite:</p>
-                <div class="p-2 bg-light rounded small">
-                    <strong>Kinetic Modeling Database</strong><br>
-                    <span class="text-muted">CoMoChEng Laboratory, Northeastern University</span><br>
-                    <span class="text-muted">URL: {{ request.get_host }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- NSF Attribution -->
-<section class="mb-4">
-    <div class="alert alert-light border d-flex align-items-center small mb-0">
-        <i class="bi bi-info-circle text-primary me-2"></i>
-        <span>This project is supported by the <strong>National Science Foundation (NSF)</strong>. 
-        Data provided for scientific research use.</span>
-    </div>
-</section>
-{% endblock %}
+{% block title %}{{ copy.meta.title }}{% endblock %}
+{% block meta_description %}{{ copy.meta.description }}{% endblock %}
+{% block body_class %} class="landing"{% endblock %}
+{% block brand_logo %}{% static 'database/images/landing/prometheus-logo-transparent.png' %}{% endblock %}
 
 {% block extra_css %}
-<style>
-.data-section {
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
+<link rel="stylesheet" href="{% static 'database/css/landing.css' %}">
+{% endblock %}
 
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50);
-    border-bottom: 1px solid var(--color-gray-200);
-    cursor: pointer;
-}
+{% block content %}
+{% with problem=copy.problem fix=copy.fix shared=copy.problem.shared_name %}
 
-.section-header h6 { font-size: 0.8rem; font-weight: 600; }
-.section-body { padding: 0.75rem; }
+<!-- Hero: the goal and the reason -->
+<section class="lp-hero" aria-labelledby="lp-hero-title">
+    <div class="lp-container lp-hero__grid">
+        <div class="lp-hero__text">
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.hero.eyebrow }}</p>
+            <h1 id="lp-hero-title" class="lp-hero__title">
+                {{ copy.hero.title }}<br><span class="lp-accent">{{ copy.hero.title_highlight }}</span>
+            </h1>
+            <p class="lp-hero__lede">{{ copy.hero.lede }}</p>
+            <div class="lp-actions">
+                {% for action in copy.hero.actions %}
+                <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}{% if forloop.first %} <i class="bi bi-arrow-right" aria-hidden="true"></i>{% endif %}</a>
+                {% endfor %}
+            </div>
+            <p class="lp-hero__note"><i class="bi bi-unlock me-1" aria-hidden="true"></i>{{ copy.hero.note }}</p>
+        </div>
+        <div class="lp-hero__art" aria-hidden="true">
+            <img src="{% static 'database/images/landing/flame.svg' %}" alt="" width="420" height="600">
+        </div>
+    </div>
 
-.search-link {
-    display: block;
-    padding: 0.75rem;
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-md);
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
+    <div class="lp-container">
+        <div class="lp-holdings" aria-label="{{ copy.holdings.title }}">
+            <p class="lp-holdings__title">{{ copy.holdings.title }}</p>
+            <div class="lp-holdings__grid">
+                {% for item in copy.holdings.items %}
+                <a class="lp-holding" href="{{ item.href }}">
+                    <span class="lp-holding__value">{{ item.value }}</span>
+                    <span class="lp-holding__label">{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            <p class="lp-holdings__note">{{ copy.holdings.note }}</p>
+        </div>
+    </div>
+</section>
 
-.search-link:hover {
-    border-color: var(--color-primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+<!-- 01 Why -->
+<section class="lp-section lp-section--char" id="why" aria-labelledby="lp-why-title">
+    <div class="lp-container lp-split">
+        <div>
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.why.eyebrow }}</p>
+            <h2 id="lp-why-title" class="lp-h2 lp-h2--light">{{ copy.why.title }}</h2>
+            {% for paragraph in copy.why.paragraphs %}
+            <p class="lp-body lp-body--light">{{ paragraph }}</p>
+            {% endfor %}
+        </div>
+        <aside class="lp-cards-aside">
+            <div class="lp-note-card lp-note-card--name">
+                <img src="{% static 'database/images/landing/prometheus-gift.png' %}" alt="{{ copy.why.name.image_alt }}" class="lp-note-card__gift" width="720" height="631">
+                <p class="lp-note-card__label">{{ copy.why.name.label }}</p>
+                <p class="lp-note-card__title">{{ copy.why.name.title }}</p>
+                <p class="lp-note-card__text">{{ copy.why.name.text }}</p>
+            </div>
+            <div class="lp-note-card">
+                <p class="lp-note-card__label">{{ copy.why.term.label }}</p>
+                <p class="lp-note-card__title">{{ copy.why.term.title }}</p>
+                <p class="lp-note-card__text">{{ copy.why.term.text }}</p>
+            </div>
+        </aside>
+    </div>
+</section>
 
-.search-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-}
+<!-- 02 The problem scene -->
+<section class="lp-section" id="problem" aria-labelledby="lp-problem-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ problem.eyebrow }}</p>
+            <h2 id="lp-problem-title" class="lp-h2">{{ problem.title }}</h2>
+            <p class="lp-intro">{{ problem.intro }}</p>
+        </header>
 
-.bg-primary-subtle { background-color: #cfe2ff; }
-.bg-success-subtle { background-color: #d1e7dd; }
-.bg-warning-subtle { background-color: #fff3cd; }
+        <figure class="lp-scene lp-scene--problem">
+            {% for molecule in scene %}
+            {% if forloop.counter == 2 %}
+            <div class="lp-scene__middle">
+                <span class="lp-tag lp-tag--lost">{{ shared }}</span>
+                <p>{{ problem.shared_name_note }}</p>
+                <span class="lp-pill lp-pill--lost">{{ problem.shared_name_pill }}</span>
+            </div>
+            {% endif %}
+            <div class="lp-molecule">
+                <div class="lp-molecule__head">
+                    <span class="lp-molecule__name">{{ molecule.name }}</span>
+                    <span class="lp-mono">{{ molecule.condensed }}</span>
+                </div>
+                <ul class="lp-tags">
+                    {% for row in molecule.names %}{% if row.name != shared %}
+                    <li class="lp-tag">{{ row.name }}<span class="lp-tag__count" title="models">{{ row.models }}</span></li>
+                    {% endif %}{% endfor %}
+                </ul>
+                <p class="lp-molecule__foot">{{ molecule.names|length }} names in {{ molecule.models }} models</p>
+            </div>
+            {% endfor %}
+            <figcaption class="lp-scene__caption">{{ problem.caption }}</figcaption>
+        </figure>
 
-.table td, .table th { padding: 0.5rem 0.75rem; vertical-align: middle; }
+        <ol class="lp-steps">
+            {% for step in problem.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+    </div>
+</section>
 
-.feature-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
+<!-- 03 The fix scene: the same objects in the same places -->
+<section class="lp-section lp-section--mist" id="fix" aria-labelledby="lp-fix-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ fix.eyebrow }}</p>
+            <h2 id="lp-fix-title" class="lp-h2">{{ fix.title }}</h2>
+            <p class="lp-intro">{{ fix.intro }}</p>
+        </header>
 
-.feature-list li {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--color-gray-100);
-    font-size: 0.85rem;
-}
+        <figure class="lp-scene lp-scene--fix">
+            {% for molecule in scene %}
+            {% if forloop.counter == 2 %}
+            <div class="lp-scene__middle">
+                <span class="lp-tag lp-tag--kept">{{ shared }}</span>
+                <p>{{ fix.shared_name_note }}</p>
+                <ul class="lp-scene__targets">
+                    {% for target in scene %}{% if target.shared_name_models %}
+                    <li><i class="bi bi-arrow-right" aria-hidden="true"></i> {{ target.name }}, {{ target.shared_name_models }} model{{ target.shared_name_models|pluralize }}</li>
+                    {% endif %}{% endfor %}
+                </ul>
+                <span class="lp-pill lp-pill--kept">{{ fix.shared_name_pill }}</span>
+            </div>
+            {% endif %}
+            <div class="lp-molecule lp-molecule--resolved">
+                <div class="lp-molecule__head">
+                    <span class="lp-molecule__name">{{ molecule.name }}</span>
+                    <span class="lp-mono">{{ molecule.condensed }}</span>
+                </div>
+                <ul class="lp-tags">
+                    {% for row in molecule.names %}
+                    <li class="lp-tag{% if row.name == shared %} lp-tag--kept{% endif %}">{{ row.name }}<span class="lp-tag__count" title="models">{{ row.models }}</span></li>
+                    {% endfor %}
+                </ul>
+                <div class="lp-record" aria-label="Species record">
+                    <p class="lp-record__label"><i class="bi bi-link-45deg" aria-hidden="true"></i> {{ fix.record_label }}</p>
+                    <dl>
+                        <dt>InChI</dt><dd class="lp-mono">{{ molecule.inchi }}</dd>
+                        {% if molecule.smiles %}<dt>SMILES</dt><dd class="lp-mono">{{ molecule.smiles }}</dd>{% endif %}
+                        <dt>Models</dt><dd>{{ molecule.models }}</dd>
+                        <dt>Experiments</dt>
+                        <dd>{% for row in molecule.experiment_names %}<span class="lp-tag lp-tag--exp"><i class="bi bi-eyedropper" aria-hidden="true"></i>{{ row.species_name }}<span class="lp-tag__count" title="mixture entries">{{ row.entries }}</span></span>{% empty %}{{ fix.no_experiments }}{% endfor %}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endfor %}
+            <figcaption class="lp-scene__caption">{{ fix.caption }}</figcaption>
+        </figure>
 
-.feature-list li:last-child {
-    border-bottom: none;
-}
-</style>
+        <ol class="lp-steps">
+            {% for step in fix.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+    </div>
+</section>
+
+<!-- 04 How it works -->
+<section class="lp-section" id="how" aria-labelledby="lp-how-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.how.eyebrow }}</p>
+            <h2 id="lp-how-title" class="lp-h2">{{ copy.how.title }}</h2>
+        </header>
+        <ol class="lp-pipeline">
+            {% for step in copy.how.steps %}
+            <li class="lp-pipeline__step">
+                <span class="lp-pipeline__num">{{ forloop.counter|stringformat:"02d" }}</span>
+                <h3 class="lp-h3">{{ step.title }}</h3>
+                <p>{{ step.text }}</p>
+            </li>
+            {% endfor %}
+        </ol>
+    </div>
+</section>
+
+<!-- 05 Use it today -->
+<section class="lp-section lp-section--mist" id="explore" aria-labelledby="lp-cap-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.capabilities.eyebrow }}</p>
+            <h2 id="lp-cap-title" class="lp-h2">{{ copy.capabilities.title }}</h2>
+        </header>
+        <div class="lp-cards">
+            {% for card in copy.capabilities.cards %}
+            <a class="lp-card lp-card--{{ forloop.counter }}" href="{{ card.href }}">
+                <h3 class="lp-h3">{{ card.title }}</h3>
+                <p>{{ card.text }}</p>
+                <span class="lp-card__link">{{ card.link_label }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
+            {% endfor %}
+        </div>
+        {% with band=copy.capabilities.contribute %}
+        <div class="lp-band">
+            <div>
+                <h3 class="lp-h3">{{ band.title }}</h3>
+                <p>{{ band.text }}</p>
+            </div>
+            <a class="lp-btn lp-btn--primary" href="{{ band.href }}">{{ band.link_label }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        </div>
+        {% endwith %}
+    </div>
+</section>
+
+<!-- 06 What it means -->
+<section class="lp-section" id="impact" aria-labelledby="lp-impact-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.impact.eyebrow }}</p>
+            <h2 id="lp-impact-title" class="lp-h2">{{ copy.impact.title }}</h2>
+            <p class="lp-lead">{{ copy.impact.lead }}</p>
+        </header>
+        <div class="lp-points">
+            {% for point in copy.impact.points %}
+            <div class="lp-point">
+                <h3 class="lp-h3">{{ point.title }}</h3>
+                <p>{{ point.text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- 07 What comes next -->
+<section class="lp-section lp-section--char" id="next" aria-labelledby="lp-next-title">
+    <div class="lp-container lp-split">
+        <div>
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.next.eyebrow }}</p>
+            <h2 id="lp-next-title" class="lp-h2 lp-h2--light">{{ copy.next.title }}</h2>
+            <p class="lp-body lp-body--light">{{ copy.next.intro }}</p>
+        </div>
+        <ul class="lp-roadmap">
+            {% for item in copy.next.items %}
+            <li>
+                <span class="lp-pill lp-pill--status">{{ copy.next.status_label }}</span>
+                <h3 class="lp-h3 lp-h3--light">{{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<!-- 08 Who builds it -->
+<section class="lp-section" id="community" aria-labelledby="lp-community-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.community.eyebrow }}</p>
+            <h2 id="lp-community-title" class="lp-h2">{{ copy.community.title }}</h2>
+            <p class="lp-intro">{{ copy.community.intro }}</p>
+        </header>
+        <div class="lp-split lp-split--even">
+            <div>
+                <ul class="lp-tools">
+                    {% for tool in copy.community.tools %}
+                    <li><span class="lp-tools__name">{{ tool.name }}</span><span class="lp-tools__role">{{ tool.role }}</span></li>
+                    {% endfor %}
+                </ul>
+                <p class="lp-small">{{ copy.community.prior_art }}</p>
+            </div>
+            <div>
+                <ul class="lp-team">
+                    {% for member in copy.community.team %}
+                    <li><span class="lp-team__group">{{ member.group }}</span><span class="lp-team__lead">{{ member.lead }}</span></li>
+                    {% endfor %}
+                </ul>
+                <p class="lp-funding"><i class="bi bi-award" aria-hidden="true"></i> {{ copy.community.funding }}{% if copy.community.award %} {{ copy.community.award }}.{% endif %}</p>
+                {% if citation %}
+                <div class="lp-cite" id="cite">
+                    <p class="lp-cite__title">{{ copy.community.cite_title }}</p>
+                    <p class="lp-small">{{ copy.community.cite_intro }}</p>
+                    <p class="lp-cite__text">{{ citation.authors }} <em>{{ citation.title }}</em>.{% if citation.url %} <a href="{{ citation.url }}">{{ citation.url }}</a>{% endif %}</p>
+                    {% if citation.repository %}<p class="lp-small mb-0">{{ copy.community.code_label }} <a href="{{ citation.repository }}" target="_blank" rel="noopener">{{ citation.repository }}</a>{% if citation.license %} ({{ citation.license }} license){% endif %}</p>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Closing -->
+<section class="lp-closing" aria-labelledby="lp-closing-title">
+    <div class="lp-container">
+        <h2 id="lp-closing-title" class="lp-h2 lp-h2--light">{{ copy.closing.title }}</h2>
+        <div class="lp-actions">
+            {% for action in copy.closing.actions %}
+            <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}</a>
+            {% endfor %}
+        </div>
+        <p class="lp-wordmark" aria-hidden="true">Pr.omethe.us</p>
+    </div>
+</section>
+
+{% endwith %}
 {% endblock %}

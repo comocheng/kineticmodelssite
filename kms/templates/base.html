@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Combustion Kinetic Models & Experimental Data Database - A comprehensive database of chemical kinetic models and experimental data for combustion and atmospheric chemistry research.">
+    <meta name="description" content="{% block meta_description %}Prometheus links kinetic models and experimental data for combustion kinetics in one open database, with a documented API.{% endblock %}">
     <meta name="keywords" content="kinetics, experimental data, chemical reactions, combustion, thermodynamics, RMG, kinetic models, ChemKED, chemical kinetics database">
 
     <!-- Favicon -->
@@ -43,9 +43,9 @@
     
     {% block extra_css %}{% endblock %}
     
-    <title>{% if title %}{{ title }} | {% endif %}Kinetic Models Database</title>
+    <title>{% block title %}{% if title %}{{ title }} | {% endif %}Kinetic Models Database{% endblock %}</title>
 </head>
-<body>
+<body{% block body_class %}{% endblock %}>
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="sr-only sr-only-focusable">Skip to main content</a>
     
@@ -54,7 +54,7 @@
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
                 <span>Pr.omethe.us</span>
-                <img src="{% static 'database/images/prometheus-logo.png' %}" alt="Prometheus: Combustion chemical Kinetics model and experimental data" srcset="" style="max-width: 50px;">
+                <img src="{% block brand_logo %}{% static 'database/images/prometheus-logo.png' %}{% endblock %}" alt="Prometheus: Combustion chemical Kinetics model and experimental data" srcset="" style="max-width: 50px;">
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" 
@@ -184,8 +184,8 @@
             <div class="footer-section">
                 <h4>About</h4>
                 <p class="small mb-3" style="color: #adb5bd;">
-                    The Kinetic Models Database is a comprehensive repository of validated chemical kinetic models 
-                    for combustion and atmospheric chemistry research.
+                    Prometheus is an open cyberinfrastructure for combustion kinetics. It links kinetic models
+                    and experimental data through one identity for each molecule.
                 </p>
                 <div class="nsf-badge">
                     <i class="bi bi-award"></i>
@@ -219,7 +219,7 @@
                 <a href="#">
                     <i class="bi bi-envelope me-1"></i>Contact Us
                 </a>
-                <a href="#">
+                <a href="{% url 'home' %}#cite">
                     <i class="bi bi-file-text me-1"></i>Cite This Database
                 </a>
             </div>
