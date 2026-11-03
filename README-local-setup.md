@@ -304,6 +304,29 @@ python manage.py loaddata fixtures/full_database.json
 
 ---
 
+## Deploying an Update
+
+On the server, in the checkout that gunicorn serves, with the `kms` environment active:
+
+```bash
+git pull
+bin/deploy.sh
+```
+
+Then restart gunicorn. `bin/deploy.sh` does these steps:
+
+1. It applies the migrations.
+2. It collects the static files.
+3. It grants the SQL console login the tables of those migrations (`livequery_role`). If the
+   checks of the login fail, the script stops. Do not restart gunicorn until they pass.
+4. It rebuilds the guide into `DOCS_ROOT` (default `docs_site/`). A restart of gunicorn does
+   not rebuild the guide. nginx serves `/docs/` from a folder, so its `location /docs/` must
+   point to `DOCS_ROOT`, or `DOCS_ROOT` in `.env` must name the folder that nginx serves.
+5. It checks the `mappings/` folder next to the checkout, which the identifier pages read.
+   That folder is not in this repository, so copy it to the server when it changes.
+
+The Docker image does the same steps in `bin/entrypoint.sh` each time the container starts.
+
 ## Temporary Public Access
 
 The site's web pages and tools, including importer job controls and data editing,

@@ -1,3 +1,4 @@
+import io
 import re
 from unittest import mock
 
@@ -202,6 +203,10 @@ class ConsoleLoginTests(TestCase):
             del settings.DATABASES[LIVEQUERY_DB]
             with self.assertRaisesMessage(CommandError, "LIVEQUERY_DB_USER"):
                 call_command("livequery_role")
+            # bin/deploy.sh: a server without the login deploys, with the console off
+            out = io.StringIO()
+            call_command("livequery_role", if_configured=True, stdout=out)
+            self.assertIn("the SQL console stays off", out.getvalue())
 
 
 class GrantTests(SimpleTestCase):

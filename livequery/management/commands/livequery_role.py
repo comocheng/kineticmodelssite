@@ -24,8 +24,17 @@ MUST_NOT_READ = ("auth_user", "authtoken_token", "django_session", "chemked_subm
 class Command(BaseCommand):
     help = "Create or update the read-only PostgreSQL login of the SQL console and grant it the data tables."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--if-configured", action="store_true",
+            help="Do nothing when the server has no console login, instead of failing (bin/deploy.sh).",
+        )
+
     def handle(self, *args, **options):
         conf = settings.DATABASES.get(LIVEQUERY_DB)
+        if not conf and options["if_configured"]:
+            self.stdout.write("No LIVEQUERY_DB_USER and LIVEQUERY_DB_PASSWORD, so the SQL console stays off.")
+            return
         if not conf:
             raise CommandError("Set LIVEQUERY_DB_USER and LIVEQUERY_DB_PASSWORD in the environment first.")
         if conf["USER"] == settings.DATABASES["default"]["USER"]:
@@ -56,7 +65,7 @@ class Command(BaseCommand):
         if problems:
             raise CommandError("The console login can do more than it should:\n  " + "\n  ".join(problems))
         self.stdout.write(self.style.SUCCESS(
-            f"{verb.title()}d the login {conf['USER']}: it reads {len(granted)} tables, "
+            f"{'Created' if verb == 'CREATE' else 'Updated'} the login {conf['USER']}: it reads {len(granted)} tables, "
             f"and the checks found no access to {', '.join(MUST_NOT_READ)} or to files on the server."
         ))
 
