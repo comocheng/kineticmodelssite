@@ -29,8 +29,9 @@ python manage.py collectstatic --noinput
 
 step "SQL console login"
 if ! python manage.py livequery_role --if-configured; then
-  echo "The SQL console login failed its checks. Do not restart gunicorn until it passes," >&2
-  echo "or remove LIVEQUERY_DB_USER and LIVEQUERY_DB_PASSWORD from .env to turn the console off." >&2
+  echo "The SQL console login is not ready: do the step in the message above. Do not restart" >&2
+  echo "gunicorn until it passes, or remove LIVEQUERY_DB_USER and LIVEQUERY_DB_PASSWORD from .env" >&2
+  echo "to turn the console off." >&2
   exit 1
 fi
 

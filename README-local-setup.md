@@ -133,6 +133,18 @@ python manage.py livequery_role
 read the data tables and nothing else: not users, API tokens, sessions, importer settings or
 files on the server. Run it again after each `migrate`, so the console can read new tables.
 
+If the login of the site cannot create roles (on a server it should not), a PostgreSQL superuser
+creates the console login once. The command writes the SQL for this step. The SQL holds the
+password from `.env`, so pipe it into `psql` instead of showing it:
+
+```bash
+python manage.py livequery_role --admin-sql | sudo -u postgres psql
+python manage.py livequery_role
+```
+
+The second command grants the tables, which the login of the site owns. Run the first command
+again only to change the password.
+
 ---
 
 ## 7. Load Pre-existing Data (Optional)
