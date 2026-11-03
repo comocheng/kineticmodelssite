@@ -11,6 +11,10 @@
 <link rel="stylesheet" href="{% static 'database/css/landing.css' %}">
 {% endblock %}
 
+{% block extra_js %}
+<script type="module" src="{% static 'database/js/landing-flame.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 {% with problem=copy.problem fix=copy.fix shared=copy.problem.shared_name %}
 
@@ -30,8 +34,16 @@
             </div>
             <p class="lp-hero__note"><i class="bi bi-unlock me-1" aria-hidden="true"></i>{{ copy.hero.note }}</p>
         </div>
-        <div class="lp-hero__art" aria-hidden="true">
-            <img src="{% static 'database/images/landing/flame.svg' %}" alt="" width="420" height="600">
+        <div class="lp-hero__art">
+            {# landing-flame.js draws a 3D flame over the SVG; the SVG stays for no WebGL or reduced motion #}
+            <div class="lp-flame" id="lp-flame" aria-hidden="true" data-three="{% static 'database/vendor/three-0.160.0/three.module.min.js' %}">
+                <picture>
+                    <source srcset="{% static 'database/images/landing/flame-static.svg' %}" media="(prefers-reduced-motion: reduce)">
+                    <img src="{% static 'database/images/landing/flame.svg' %}" alt="" width="420" height="690">
+                </picture>
+            </div>
+            {% if flame_species %}<p class="lp-hero__flame-note">{{ copy.hero.flame_note }}</p>{% endif %}
+            {{ flame_species|json_script:"lp-flame-species" }}
         </div>
     </div>
 

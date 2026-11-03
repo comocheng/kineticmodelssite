@@ -108,6 +108,15 @@ class LandingSceneTests(TestCase):
         self.assertEqual(molecule["models"], 2)
         self.assertEqual(molecule["smiles"], "C#CC")
 
+    def test_flame_species_are_the_most_used_under_their_most_common_name(self):
+        # Propyne is in both models; the tie between its two names goes to the first in order
+        self.assertEqual(landing.flame_species(), [
+            {"name": "C3H4-P", "models": 2},
+            {"name": "CC#C", "models": 1},
+            {"name": "C3H4", "models": 1},
+        ])
+        self.assertEqual(landing.flame_species(limit=1), [{"name": "C3H4-P", "models": 2}])
+
     def test_home_page_shows_live_numbers(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
@@ -119,3 +128,5 @@ class LandingSceneTests(TestCase):
         self.assertEqual(allene["shared_name_models"], 1)
         self.assertContains(response, "The models in Prometheus use 3 names for propyne and 1 names for allene.")
         self.assertNotContains(response, "{propyne_names}")
+        self.assertContains(response, 'id="lp-flame-species"')
+        self.assertContains(response, "is one of the 3 species that the most models in Prometheus use.")
