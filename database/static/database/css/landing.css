@@ -529,6 +529,363 @@
     color: var(--lp-on-dark-2);
 }
 
+/* ---------- Contribute (the bottom of the hero) ---------- */
+/* The same rule and title as the holdings above; the routes are the square list of the Figma
+   hero frame, with the chosen route in orange */
+.lp-contribute {
+    padding: 32px 0 80px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lp-contribute__head {
+    display: grid;
+    gap: 10px;
+    max-width: 46rem;
+    margin-bottom: 32px;
+}
+
+.landing main .lp-contribute__title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__intro {
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.5;
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__body {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+}
+
+.lp-contribute__routes {
+    display: grid;
+    gap: 18px;
+}
+
+.lp-contribute__route {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: #fff;
+    cursor: pointer;
+}
+
+.lp-contribute__route::before {
+    content: "";
+    grid-row: 1;
+    align-self: center;
+    width: 9px;
+    height: 9px;
+    background: var(--lp-orange);
+}
+
+.lp-contribute__route-label {
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.16;
+}
+
+.lp-contribute__route-method {
+    grid-column: 2;
+    font-size: 0.875rem;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__route:hover .lp-contribute__route-label,
+.lp-contribute__route[aria-selected="true"] .lp-contribute__route-label {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__route[aria-selected="true"] .lp-contribute__route-method {
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__route:focus-visible,
+.lp-contribute__step-head:focus-visible,
+.lp-terminal__action:focus-visible,
+.lp-terminal__screen:focus-visible {
+    outline: 2px solid var(--lp-orange-on-dark);
+    outline-offset: 4px;
+}
+
+/* The script shows one route at a time; without it every route stays in the page */
+.lp-contribute__panels {
+    display: grid;
+    gap: 48px;
+    min-width: 0;
+}
+
+.lp-contribute__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+    gap: 32px;
+    align-items: start;
+}
+
+.lp-contribute__steps {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-contribute__step {
+    padding: 12px 0 14px 18px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.lp-contribute__step.is-current {
+    border-left-color: var(--lp-orange);
+}
+
+.lp-contribute__step-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: left;
+    color: #fff;
+}
+
+button.lp-contribute__step-head {
+    cursor: pointer;
+}
+
+button.lp-contribute__step-head:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__num {
+    font-family: var(--lp-font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__step.is-current .lp-contribute__num {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__step-text {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__link:hover {
+    color: #fff;
+}
+
+.lp-contribute__pr {
+    margin-top: 16px;
+}
+
+.lp-contribute__note {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--lp-on-dark-2);
+}
+
+/* The terminal: a plain dark panel with the Figma card radius, in the monospace face */
+.lp-terminal {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--lp-radius);
+    background: #090b11;
+}
+
+.lp-terminal__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lp-terminal__title {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--lp-font-mono);
+    font-size: 0.75rem;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-terminal__action {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.lp-terminal__action:hover {
+    border-color: #fff;
+}
+
+/* position: relative makes the screen the offset parent, so a step's offsetTop is its place in it */
+.lp-terminal__screen {
+    position: relative;
+    height: 25rem;
+    margin: 0;
+    padding: 18px 20px;
+    overflow: auto;
+    border: 0;
+    background: transparent;
+    font-family: var(--lp-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    color: #e8ecf3;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.lp-terminal__screen code {
+    font: inherit;
+    color: inherit;
+}
+
+.lp-terminal__prompt {
+    color: var(--lp-orange-on-dark);
+    user-select: none;
+}
+
+.lp-terminal__comment {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.lp-terminal__out {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+/* Text for the contributor to replace, such as <fuel> */
+.lp-terminal__fill {
+    color: #ffb27f;
+}
+
+.lp-terminal__caret {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.15em;
+    vertical-align: -0.2em;
+    background: var(--lp-orange-on-dark);
+    animation: lp-caret 1s steps(1) infinite;
+}
+
+@keyframes lp-caret {
+    50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-terminal__caret {
+        animation: none;
+    }
+}
+
+/* The pages of the web route */
+.lp-contribute__links {
+    display: grid;
+    gap: 12px;
+}
+
+.lp-contribute__card {
+    display: grid;
+    gap: 4px;
+    padding: 20px 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--lp-radius);
+    background: rgba(255, 255, 255, 0.03);
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+
+.lp-contribute__card:hover {
+    border-color: var(--lp-orange);
+    text-decoration: none;
+}
+
+.lp-contribute__card-label {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.lp-contribute__card:hover .lp-contribute__card-label {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__card-text {
+    font-size: 0.875rem;
+    color: var(--lp-on-dark);
+}
+
+@media (max-width: 991.98px) {
+    .lp-contribute__body {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 32px;
+    }
+
+    .lp-contribute__routes {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lp-contribute__panel {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* The terminal first, so it is in view while it types; the steps follow it */
+    .lp-contribute__side {
+        order: -1;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .lp-contribute__routes {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .lp-terminal__screen {
+        height: 21rem;
+        padding: 14px;
+        font-size: 0.75rem;
+    }
+}
+
 /* ---------- Sections ---------- */
 .lp-section {
     padding: var(--lp-section-y) 0;

@@ -58,6 +58,157 @@ holdings:
       label: "Sources"
       url: "source-search"
 
+# The contribution band at the bottom of the hero. Each route is one way to send
+# models or data; a "terminal" route types its commands, a "web" route links to
+# the pages of this site. "pull_request" is the button under a terminal.
+# - "commands" and "output" are what a terminal shows. They are not prose, so the
+#   STE check skips them. A command with double quotes goes in single quotes.
+# - Write {{ and }} for a brace that the page must show.
+# - Text in angle brackets, for example <model>, is for the contributor to replace.
+contribute:
+  title: "Contribute to Prometheus"
+  intro: "Send your kinetic models and experimental data to Prometheus. Open a pull request on GitHub, or upload the files on this site."
+  routes:
+    - key: "model-git"
+      label: "Kinetic model"
+      method: "Pull request on GitHub"
+      kind: "terminal"
+      terminal: "RMG-models"
+      pull_request:
+        label: "Open a pull request to RMG-models"
+        href: "https://github.com/comocheng/RMG-models/compare"
+      steps:
+        - title: "Fork and clone"
+          text: "Fork the RMG-models repository of the CoMoChEng group on GitHub. Then clone your fork and make a branch."
+          link: "Fork the repository"
+          href: "https://github.com/comocheng/RMG-models/fork"
+          commands:
+            - "git clone https://github.com/<your-username>/RMG-models.git"
+            - "cd RMG-models"
+            - "git switch -c add-<model>"
+        - title: "Add the model files"
+          text: "Make a folder for the model. Put the mechanism file and the thermo file in it, and the transport file if the model has one."
+          commands:
+            - "mkdir <model>"
+            - "cp <path>/<mechanism file> <model>/<model>_kinetics.txt"
+            - "cp <path>/<thermo file> <model>/<model>_thermo.txt"
+            - "cp <path>/<transport file> <model>/<model>_transport.txt"
+          output:
+            - "# Leave out the transport file if the model has none."
+        - title: "Describe the source and the species"
+          text: "In source.txt, give the citation of the model and where you got it. In SMILES.txt, give each species that you know, one for each line."
+          commands:
+            - |-
+              cat > <model>/source.txt <<'EOF'
+              <authors> (<year>). <title>. <journal>. https://doi.org/<doi>
+              Obtained from <address of the model files>
+              EOF
+            - |-
+              cat > <model>/SMILES.txt <<'EOF'
+              <species name in the mechanism> <SMILES>
+              C2H2 C#C
+              EOF
+        - title: "Write import.sh"
+          text: "import.sh tells the importer which file has the species, the reactions and the thermo. The importer gives each run a free port, so you do not set one."
+          commands:
+            - |-
+              cat > <model>/import.sh <<'EOF'
+              #!/bin/bash
+              python $RMGpy/importChemkin.py \
+                  --species <model>_kinetics.txt \
+                  --reactions <model>_kinetics.txt \
+                  --thermo <model>_thermo.txt \
+                  --known SMILES.txt
+              EOF
+        - title: "Open a pull request"
+          text: "Push the branch to your fork and open a pull request to the master branch. After the merge, the Prometheus importer runs import.sh."
+          link: "Open a pull request"
+          href: "https://github.com/comocheng/RMG-models/compare"
+          commands:
+            - "git add <model>"
+            - 'git commit -m "Add the <model> kinetic model"'
+            - "git push -u origin add-<model>"
+            - "gh pr create --repo comocheng/RMG-models --base master --fill"
+          output:
+            - "# gh is the GitHub CLI. You can also open the pull request on GitHub."
+    - key: "model-web"
+      label: "Kinetic model"
+      method: "Web upload"
+      kind: "web"
+      steps:
+        - title: "Add the source"
+          text: "Add the paper of the model as a source, if Prometheus does not have it yet."
+        - title: "Fill in the model form"
+          text: "Give the name of the model and select its source. Upload the mechanism file, the thermo file and the transport file if the model has one."
+        - title: "Save the model"
+          text: "Save the form. The site then opens the page of the new model."
+      links:
+        - label: "Add a source"
+          text: "The paper or the report of the model"
+          url: "source-create"
+        - label: "Add a kinetic model"
+          text: "Mechanism, thermo and transport files"
+          url: "kinetic-model-create"
+    - key: "data-git"
+      label: "Experimental data"
+      method: "Pull request on GitHub"
+      kind: "terminal"
+      terminal: "ChemKED-database"
+      pull_request:
+        label: "Open a pull request to ChemKED-database"
+        href: "https://github.com/pr-omethe-us/ChemKED-database/compare"
+      steps:
+        - title: "Fork and clone"
+          text: "Fork the ChemKED-database repository of the Prometheus organization on GitHub. Then clone your fork and make a branch."
+          link: "Fork the repository"
+          href: "https://github.com/pr-omethe-us/ChemKED-database/fork"
+          commands:
+            - "git clone https://github.com/<your-username>/ChemKED-database.git"
+            - "cd ChemKED-database"
+            - "git switch -c add-<author>-<year>"
+        - title: "Add your file"
+          text: "Put each ChemKED file in the folder of its fuel, in a subfolder Author_Year for the paper."
+          commands:
+            - "mkdir -p <fuel>/<Author>_<Year>"
+            - "cp <path>/<file>.yaml <fuel>/<Author>_<Year>/"
+        - title: "Check the file"
+          text: "Check the file with the PyKED version and the script that the CI uses. Each file needs a DOI and at least one file author."
+          commands:
+            - 'pip install "pyked @ git+https://github.com/pr-omethe-us/PyKED@main" pyyaml cerberus pint habanero'
+            - "python scripts/validate_chemked.py <fuel>/<Author>_<Year>/<file>.yaml"
+          output:
+            - "  [PASS] <fuel>/<Author>_<Year>/<file>.yaml"
+            - "Results: 1 passed, 0 failed out of 1 file(s)"
+        - title: "Open a pull request"
+          text: "Push the branch to your fork and open a pull request to the main branch. The CI checks the PyKED schema and the ORCID iDs of the file authors."
+          link: "Open a pull request"
+          href: "https://github.com/pr-omethe-us/ChemKED-database/compare"
+          commands:
+            - "git add <fuel>/<Author>_<Year>"
+            - 'git commit -m "Add <Author> <Year> data for <fuel>"'
+            - "git push -u origin add-<author>-<year>"
+            - "gh pr create --repo pr-omethe-us/ChemKED-database --base main --fill"
+          output:
+            - "# gh is the GitHub CLI. You can also open the pull request on GitHub."
+    - key: "data-web"
+      label: "Experimental data"
+      method: "Web upload"
+      kind: "web"
+      steps:
+        - title: "Choose files and contributor"
+          text: "Choose ChemKED YAML or ReSpecTh XML files. Give your name and your ORCID iD, which the pull request credits."
+        - title: "Preview and duplicate check"
+          text: "Check the preview. It shows the folder for each file and any file in the repository with the same data."
+        - title: "Submit for review"
+          text: "Submit the files. The site checks each file with PyKED and opens a pull request. Nothing enters the database before the merge."
+      links:
+        - label: "Upload files"
+          text: "ChemKED YAML or ReSpecTh XML files"
+          url: "chemked_database:dataset-upload"
+        - label: "Enter data in a form"
+          text: "One experiment, field by field"
+          url: "chemked_database:dataset-create"
+
 why:
   eyebrow: "01 · Why"
   title: "Why do models and experiments need one shared record?"

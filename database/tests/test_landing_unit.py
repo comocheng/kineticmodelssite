@@ -16,7 +16,9 @@ def strings(value):
     """Every string in the copy, except identifiers that are not prose."""
     if isinstance(value, dict):
         for key, item in value.items():
-            if key not in {"url", "href", "style", "key", "inchi", "condensed", "shared_name"}:
+            # Commands and their output are what a terminal shows, not prose
+            if key not in {"url", "href", "style", "key", "kind", "inchi", "condensed", "shared_name",
+                           "commands", "output"}:
                 yield from strings(item)
     elif isinstance(value, list):
         for item in value:
@@ -145,3 +147,16 @@ class LandingSceneTests(TestCase):
         self.assertNotContains(response, "{propyne_names}")
         self.assertContains(response, 'id="lp-flame-species"')
         self.assertContains(response, "is one of the 3 species that the most models in Prometheus use.")
+
+    def test_contribution_routes_link_to_their_pull_requests_and_pages(self):
+        response = self.client.get(reverse("home"))
+        self.assertContains(response, 'id="contribute"')
+        for href in ("https://github.com/comocheng/RMG-models/compare",
+                     "https://github.com/pr-omethe-us/ChemKED-database/compare",
+                     reverse("source-create"), reverse("kinetic-model-create"),
+                     reverse("chemked_database:dataset-upload"), reverse("chemked_database:dataset-create")):
+            with self.subTest(href=href):
+                self.assertContains(response, f'href="{href}"')
+        # The importer reserves the port of each run, so the import.sh of the page sets none
+        self.assertContains(response, "importChemkin.py")
+        self.assertNotContains(response, "--port")
