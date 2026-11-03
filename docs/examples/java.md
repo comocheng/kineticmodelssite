@@ -10,7 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 public class PrometheusExample {
-    static final String BASE = "https://dev.omethe.us"; // replace
+    static final String BASE = "https://pr.omethe.us"; // replace
 
     public static void main(String[] args) throws Exception {
         HttpClient client = HttpClient.newHttpClient();

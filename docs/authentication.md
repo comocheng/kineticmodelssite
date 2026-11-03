@@ -12,14 +12,9 @@ Read access is open so anyone can query the platform. Writes are restricted.
 
 ## Obtaining a token
 
-Tokens use DRF's token authentication. An administrator can issue one from the Django
-admin, or via the token endpoint if enabled:
-
-```bash
-curl -X POST "https://dev.omethe.us/api-token-auth/" \
-  -d "username=<user>&password=<password>"
-# -> {"token": "9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b"}
-```
+Tokens use DRF's token authentication. Each account gets a token when the account is
+created. This server has no endpoint that issues a token, so ask an administrator for
+yours. An administrator finds it in the Django admin under **Auth Token > Tokens**.
 
 ## Using a token
 
@@ -27,7 +22,7 @@ Send it in the `Authorization` header as `Token <your-token>`:
 
 ```bash
 curl -H "Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b" \
-  "https://dev.omethe.us/api/contribute/status/123/"
+  "https://pr.omethe.us/api/contribute/status/123/"
 ```
 
 In Swagger UI (`/api/docs/`), click **Authorize** and paste `Token <your-token>`; it is

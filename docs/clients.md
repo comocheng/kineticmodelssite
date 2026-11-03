@@ -28,7 +28,7 @@ You can also point the generator straight at the live schema:
 
 ```bash
 npx @openapitools/openapi-generator-cli generate \
-  -i https://dev.omethe.us/api/schema/ \
+  -i https://pr.omethe.us/api/schema/ \
   -g python -o clients/python
 ```
 
@@ -42,7 +42,7 @@ pip install -e clients/python
 import prometheus_client
 from prometheus_client.api import experimental_data_api  # generated module names vary
 
-config = prometheus_client.Configuration(host="https://dev.omethe.us")
+config = prometheus_client.Configuration(host="https://pr.omethe.us")
 # config.api_key["tokenAuth"] = "<your-token>"   # only for writes
 with prometheus_client.ApiClient(config) as api:
     ...

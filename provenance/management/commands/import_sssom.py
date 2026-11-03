@@ -9,7 +9,7 @@ from provenance.models import SemanticMapping
 # The SSSOM file lives at the workspace root (one level above the Django
 # project), at Prometheus/mappings/prometheus.sssom.tsv.
 DEFAULT = Path(__file__).resolve().parents[4] / "mappings" / "sssom" / "prometheus.sssom.tsv"
-SET_ID = "https://dev.omethe.us/mappings/prometheus.sssom.tsv"
+SET_ID = "https://pr.omethe.us/mappings/prometheus.sssom.tsv"
 
 
 class Command(BaseCommand):

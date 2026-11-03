@@ -42,7 +42,7 @@ MAPPINGS_DIR = Path(__file__).resolve().parents[4] / "mappings"
 DEFAULT_TTL = MAPPINGS_DIR / "rdf" / "prometheus.data.ttl"
 DEFAULT_JSON = MAPPINGS_DIR / "sssom" / "prometheus.data.json"
 
-PMTX = "https://dev.omethe.us/ontology/prometheus-exp#"
+PMTX = "https://pr.omethe.us/ontology/prometheus-exp#"
 PROV = "http://www.w3.org/ns/prov#"
 
 # (record kind) -> (link predicate CURIE, record type CURIE, record prefix)

@@ -100,6 +100,11 @@ RMGMODELSPATH=/path/to/RMG-models
 # ChemKED-database clone (for sync_chemked and the chemked-ingest workflow).
 # Default: ../ChemKED-database next to this project.
 CHEMKED_DATABASE_PATH=/path/to/ChemKED-database
+
+# Read-only login of the SQL console at /livequery/ (see step 6). Without it the
+# console runs no queries. Use a new password, not the one of POSTGRES_USER.
+LIVEQUERY_DB_USER=kms_livequery
+LIVEQUERY_DB_PASSWORD=<a long random password>
 ```
 
 ---
@@ -121,7 +126,12 @@ Update `RMGMODELSPATH` in `.env.dev` to point to this directory.
 ```bash
 conda activate kms
 python manage.py migrate
+python manage.py livequery_role
 ```
+
+`livequery_role` creates the PostgreSQL login of the SQL console, or updates it. The login can
+read the data tables and nothing else: not users, API tokens, sessions, importer settings or
+files on the server. Run it again after each `migrate`, so the console can read new tables.
 
 ---
 

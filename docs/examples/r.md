@@ -6,7 +6,7 @@ Using `httr2` and `jsonlite`.
 library(httr2)
 library(jsonlite)
 
-base <- "https://dev.omethe.us"   # replace with your deployment
+base <- "https://pr.omethe.us"   # replace with your deployment
 
 # Ignition-delay datapoints at/above 1000 K
 resp <- request(base) |>
@@ -26,7 +26,7 @@ head(data$results)
 library(httr2)
 
 get_all <- function(path, ...) {
-  base <- "https://dev.omethe.us"
+  base <- "https://pr.omethe.us"
   url <- paste0(base, path)
   out <- list()
   query <- list(...)

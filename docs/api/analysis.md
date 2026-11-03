@@ -22,19 +22,19 @@ performs against each experimental dataset. All read-only.
 Aggregate agreement for a model's runs, best first:
 
 ```bash
-curl "https://dev.omethe.us/api/simulation-result/?ordering=average_error_function"
+curl "https://pr.omethe.us/api/simulation-result/?ordering=average_error_function"
 ```
 
 Per-datapoint comparison for failures only:
 
 ```bash
-curl "https://dev.omethe.us/api/datapoint-result/?success=false"
+curl "https://pr.omethe.us/api/datapoint-result/?success=false"
 ```
 
 Which datasets a model covers with a current successful run:
 
 ```bash
-curl "https://dev.omethe.us/api/model-dataset-coverage/?kinetic_model=5&has_successful_run=true&is_outdated=false"
+curl "https://pr.omethe.us/api/model-dataset-coverage/?kinetic_model=5&has_successful_run=true&is_outdated=false"
 ```
 
 A `datapoint-result` item compares experiment and simulation directly:

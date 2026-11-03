@@ -400,7 +400,7 @@
     <header class="cat-heading">
         <div class="cat-heading__intro">
             <h1>SQL Console</h1>
-            <p class="cat-lede">Run a read-only query against the database. Open a table in the schema list to see its columns, or load one of the example queries.</p>
+            <p class="cat-lede">Run a read-only query against the data tables. Open a table in the schema list to see its columns, or load one of the example queries.</p>
         </div>
         <ul class="sql-limits" aria-label="Query limits">
             <li class="cat-pill cat-pill--muted">Read-only</li>
@@ -409,6 +409,10 @@
             <li class="cat-pill cat-pill--muted">10 s timeout</li>
         </ul>
     </header>
+
+    {% if not available %}
+    <p class="app-notice" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i><span>The SQL console is not set up on this server, so it runs no queries.</span></p>
+    {% endif %}
 
     <div class="sql-layout">
         <div class="sql-main">

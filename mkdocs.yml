@@ -1,6 +1,6 @@
 site_name: Pr.omethe.us
 site_description: Kinetic Models Database — FAIR combustion-kinetics platform usage guide and API reference
-site_url: https://dev.omethe.us/docs/
+site_url: https://pr.omethe.us/docs/
 repo_url: https://github.com/comocheng/kineticmodelssite
 docs_dir: docs
 site_dir: docs_site
@@ -12,14 +12,18 @@ theme:
   favicon: assets/favicon.ico
   font:
     text: Inter
-    code: JetBrains Mono
+    code: IBM Plex Mono
   palette:
-    # Colors are set in stylesheets/extra.css to match the main site (#1a56db).
+    # Colors are set in stylesheets/extra.css to match the main site (#ce4801).
     - scheme: default
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - scheme: slate
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -31,6 +35,10 @@ theme:
     - content.code.annotate
     - search.suggest
     - toc.follow
+
+extra:
+  # The logo goes back to the site, which serves this guide at /docs/
+  homepage: /
 
 extra_css:
   - stylesheets/extra.css
@@ -66,6 +74,7 @@ nav:
       - Experimental data: api/experimental-data.md
       - Kinetic models & species: api/kinetic-models.md
       - Analysis & agreement: api/analysis.md
+      - Provenance & FAIR metadata: api/provenance.md
   - Examples:
       - cURL: examples/curl.md
       - Python: examples/python.md

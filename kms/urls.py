@@ -18,12 +18,14 @@ from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import path, include, re_path
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+
+from kms import views
 
 urlpatterns = [
     path("", include("database.urls")),
@@ -32,7 +34,14 @@ urlpatterns = [
     path("", include("provenance.resolver_urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # ReDoc inside the site header and footer
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema", template_name="api/redoc.html"),
+        name="redoc",
+    ),
+    path("docs/", views.docs, name="docs"),
+    re_path(r"^docs/(?P<path>.+)$", views.docs),
     path("api/", include("api.urls")),
     # path("api/import-voting/", include("import_voting.urls")),  # REMOVED: Unused prototype
     path(
