@@ -69,8 +69,9 @@ class LandingCopyTests(SimpleTestCase):
 
     def test_citation_comes_from_citation_cff(self):
         citation = landing.citation()
-        self.assertEqual(citation["authors"], "Lekia, P.")
+        self.assertEqual(citation["authors"], "Lekia, P.; West, R. H.; Niemeyer, K. E.")
         self.assertEqual(citation["title"], "Pr.omethe.us Kinetic Models Database")
+        self.assertEqual(citation["url"], "https://pr.omethe.us")
 
 
 class LandingSceneTests(TestCase):
