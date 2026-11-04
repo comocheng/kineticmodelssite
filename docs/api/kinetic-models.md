@@ -47,6 +47,12 @@ thermo/transport/kinetics comments):
 curl "https://pr.omethe.us/api/kineticmodel/1/"
 ```
 
+Each kinetics comment gives the model's own arrow (`reversible`). Where the model's CHEMKIN line
+gives an explicit reverse rate (`REV / A n Ea /`), `reverse_rate` holds it: `{"terms": [...]}`,
+one Arrhenius rate (A per mole, in cm) or `null` per rate term, with the CHEMKIN line and its text.
+Without it, the reverse rate comes from thermochemistry. The CHEMKIN download writes it as `REV`,
+and the Cantera download as a second, irreversible reaction.
+
 Look up the literature source behind a model:
 
 ```bash
