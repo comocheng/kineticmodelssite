@@ -12,6 +12,7 @@ import habanero
 from django.db import transaction, IntegrityError
 from dateutil import parser
 from rmgpy import kinetics, constants
+from rmgpy.chemkin import read_kinetics_entry
 from rmgpy.quantity import RateCoefficient
 from rmgpy.reaction import Reaction
 from rmgpy.species import Species
@@ -678,6 +679,39 @@ def _term_rate(term):
     return None, False
 
 
+def _line_rates(line):
+    """A CHEMKIN line's rate as _rates gives a library rate's."""
+    if line["plog"] is not None:
+        return [line["plog"]]
+    rate = (line["A"], line["n"], line["Ea"])
+    return [rate, line["low"]] if line["low"] is not None else [rate]
+
+
+def _rates(kinetics_data):
+    """Each rate of a library entry as a CHEMKIN line writes it: a list per term of a multi-rate,
+    of (A in the written units, n, Ea in J/mol), the low-pressure rate after the high-pressure one
+    for a fall-off rate. None for a kind the lines cannot be compared with (Chebyshev)."""
+    if isinstance(kinetics_data, (kinetics.MultiArrhenius, kinetics.MultiPDepArrhenius)):
+        terms = [_rates(term) for term in kinetics_data.arrhenius]
+        return None if None in terms else [term[0] for term in terms]
+    if isinstance(kinetics_data, (kinetics.Lindemann, kinetics.Troe)):
+        high, low = (_term_rate(a)[0] for a in (kinetics_data.arrheniusHigh, kinetics_data.arrheniusLow))
+        return [[high, low]] if None not in (high, low) else None
+    if isinstance(kinetics_data, kinetics.ThirdBody):
+        low = _term_rate(kinetics_data.arrheniusLow)[0]
+        return [[low]] if low is not None else None
+    rate = _term_rate(kinetics_data)[0]
+    return [[rate]] if rate is not None else None
+
+
+def _collider(rmg_reaction, kinetics_data):
+    """A library entry's collider as read_reactions gives a CHEMKIN line's, in upper case."""
+    specific = getattr(rmg_reaction, "specific_collider", None)
+    if specific is not None:
+        return specific.label.upper()
+    return "M" if isinstance(kinetics_data, (kinetics.ThirdBody, kinetics.Lindemann, kinetics.Troe)) else None
+
+
 class MergedRates:
     """Gives each rate term of a merged library entry back to the reaction its CHEMKIN line writes.
 
@@ -687,16 +721,22 @@ class MergedRates:
     both rates on the labelled name's reaction and leave the other name without it. Each term is
     matched to its line in the model's CHEMKIN file (the same species structures, the same A, n
     and Ea); a term from a line of other records becomes that line's reaction, with its names.
-    RMG-models is only read."""
+
+    Where the model writes an irreversible reaction in both directions, RMG-models kept one entry:
+    with both lines' terms (MatheuCH4 entry 785, C.C*CC#CC => C*CC.C#CC, holds line 1644, the
+    reverse) or with one line's rate (CombFlame2013/2319-Serinyel CH4 (+CH4) => R4CH3 + R1H (+CH4),
+    line 2997, without line 2987, its reverse, and line 2992, its (+M) twin). A term from a line in
+    the other direction becomes that line's reaction too, and dropped_lines reads the lines the
+    library lacks from the CHEMKIN file. RMG-models is only read."""
 
     def __init__(self, kinetics_path, library, states, variants, repeats):
-        self.lines, self.used, self.moved = {}, set(), 0
+        self.lines, self.twins, self.used, self.moved, self.unread = {}, {}, set(), 0, []
         self.states, self.variants = states or {}, variants or {}
         self._keys = {}
         species = dict(getattr(library, "species_dict", None) or {})
         model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
         path = chemkin_lines.reactions_file(model_dir)
-        if not (path and self.variants and species):
+        if not (path and species):
             return
         for later, first in (repeats or {}).items():
             # A name the kinetics dictionary leaves out (it keeps one label per molecule): the later
@@ -705,22 +745,23 @@ class MergedRates:
                 if missing not in species and present in species:
                     species[missing] = Species(label=missing, molecule=species[present].molecule)
         self.species = species
-        spelling = {name.upper(): name for name in species}
-        tokens = set(spelling)
-        with open(path, errors="replace") as handle:
-            block = re.search(r"^\s*SPEC\w*(.*?)^\s*END", handle.read(), re.S | re.M | re.I)
-        if block:
-            tokens.update(t.upper() for line in block.group(1).splitlines() for t in line.split("!")[0].split())
+        self.spelling = spelling = {name.upper(): name for name in species}
+        tokens = set(spelling) | chemkin_lines.species_names(path)
         ea_to_j, self.molecules = chemkin_lines.units(path, kinetics_path)
+        self.units = chemkin_lines.rmg_units(ea_to_j, self.molecules)
         for line in chemkin_lines.read_reactions(path, tokens, ea_to_j):
             names = line["reactants"] + line["products"]
-            if line["third_body"] or not all(n.upper() in spelling for n in names):
+            if not all(n.upper() in spelling for n in names):
                 continue
             line["reactants"] = [spelling[n.upper()] for n in line["reactants"]]
             line["products"] = [spelling[n.upper()] for n in line["products"]]
             key = self.key(line["reactants"], line["products"])
-            if key is not None:
+            if key is None:
+                continue
+            if not line["third_body"]:
                 self.lines.setdefault(key, []).append(line)
+            if not line["reversible"]:
+                self.twins.setdefault(key, []).append(line)
 
     def key(self, reactants, products):
         """The reaction's species structures, either direction; None if one has no key."""
@@ -742,9 +783,16 @@ class MergedRates:
         side = lambda names: tuple(sorted((self.states.get(n, ""), self.variants.get(n, "")) for n in names))
         return tuple(sorted((side(reactants), side(products))))
 
+    def direction(self, reactants, products):
+        """The reactants' records, then the products': A => B and B => A differ."""
+        side = lambda names: tuple(sorted((self._keys.get(n), self.states.get(n, ""), self.variants.get(n, ""))
+                                          for n in names))
+        return side(reactants), side(products)
+
     def parts(self, entry):
         """[(RMG reaction, kinetics, comment)] to import for the entry: the entry itself, or its own
-        terms and one part for each other CHEMKIN reaction its terms came from."""
+        terms and one part for each other CHEMKIN reaction its terms came from: a line of other
+        records or a line in the other direction."""
         data = entry.data
         whole = [(entry.item, data, entry.short_desc)]
         if not self.lines or not isinstance(data, (kinetics.MultiArrhenius, kinetics.MultiPDepArrhenius)):
@@ -753,7 +801,7 @@ class MergedRates:
         candidates = self.lines.get(self.key(*labels), [])
         if not candidates:
             return whole
-        own_names, own_identity = _names_key(*labels), self.identity(*labels)
+        own_names, own_identity, own_direction = _names_key(*labels), self.identity(*labels), self.direction(*labels)
         own, other = [], {}
         for term in data.arrhenius:
             rate, pdep = _term_rate(term)
@@ -761,13 +809,14 @@ class MergedRates:
                     and (line["plog"] if pdep else (line["A"], line["n"], line["Ea"])) is not None
                     and chemkin_lines.same_rate(rate, line["plog"] if pdep else (line["A"], line["n"], line["Ea"]),
                                                 self.molecules)]
-            # The entry's own line first, then lines of the entry's records.
+            # The entry's own line first, then lines of the entry's records in its direction.
             hits.sort(key=lambda line: (_names_key(line["reactants"], line["products"]) != own_names,
+                                        self.direction(line["reactants"], line["products"]) != own_direction,
                                         self.identity(line["reactants"], line["products"]) != own_identity))
             line = hits[0] if hits else None
             if line is not None:
                 self.used.add(id(line))
-            if line is None or self.identity(line["reactants"], line["products"]) == own_identity:
+            if line is None or self.direction(line["reactants"], line["products"]) == own_direction:
                 own.append(term)
             else:
                 other.setdefault((tuple(line["reactants"]), tuple(line["products"]), line["reversible"]), []).append(term)
@@ -783,6 +832,58 @@ class MergedRates:
             self.moved += len(terms)
         return parts
 
+    def dropped_lines(self, entries):
+        """[(RMG reaction, kinetics, comment)] for the irreversible CHEMKIN lines that no library
+        entry holds, where an irreversible entry holds the reaction in the other direction or with
+        another collider. RMG-Py's CHEMKIN reader reads each from the file. A line is held when a
+        term came from it (parts, so call this after parts for every entry), when an entry has its
+        direction and collider, or when an entry has its rate. A line RMG-Py cannot read goes to
+        `unread`."""
+        if not self.twins:
+            return []
+        held = defaultdict(list)
+        for entry in entries:
+            labels = ([s.label for s in entry.item.reactants], [s.label for s in entry.item.products])
+            key = self.key(*labels)
+            if key in self.twins:
+                held[key].append((self.direction(*labels), _collider(entry.item, entry.data), entry))
+        parts = []
+        for key, lines in self.twins.items():
+            entries_of_key = held.get(key, [])
+            rates = [_rates(entry.data) for _, _, entry in entries_of_key]
+            if (all(entry.item.reversible for _, _, entry in entries_of_key) or None in rates):
+                continue
+            rates = [rate for terms in rates for rate in terms]
+            for line in lines:
+                direction = self.direction(line["reactants"], line["products"])
+                collider = (line["collider"] or "").upper() or None
+                if (id(line) in self.used or (direction, collider) in {(d, c) for d, c, _ in entries_of_key}
+                        or any(len(rate) == len(_line_rates(line)) and all(
+                            chemkin_lines.same_rate(a, b, self.molecules) for a, b in zip(rate, _line_rates(line)))
+                            for rate in rates)):
+                    continue
+                reaction = self.read_line(line)
+                if reaction is not None:
+                    parts.append((reaction, reaction.kinetics, f"The chemkin file reaction is {reaction}"))
+        return parts
+
+    def read_line(self, line):
+        """The line as RMG-Py's CHEMKIN reader reads it, with the library's species; None (and the
+        line in `unread`) when it cannot."""
+        a_units, ea_units = self.units
+        names = {upper: self.species[label] for upper, label in self.spelling.items()}
+        try:
+            if ea_units is None:
+                raise ValueError("an Ea unit RMG-Py cannot read")
+            reaction = read_kinetics_entry(chemkin_lines.kinetics_entry(line, names), names, a_units, [], ea_units)
+            if reaction.reversible != line["reversible"]:
+                raise ValueError("another arrow than the line's")
+        except Exception as error:
+            self.unread.append((line["line"], f"{type(error).__name__}: {error}"))
+            logger.warning(f"CHEMKIN line {line['line']} not read ({error}): {line['text']}")
+            return None
+        return reaction
+
 
 def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, states=None,
                     variants=None):
@@ -791,7 +892,10 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
     `states` (label -> electronic state) defaults to the model's SMILES.txt; a term symbol in
     the library dictionary wins over it. `variants` (label -> variant) defaults to
     model_variants. A merged entry's terms go to the reactions their CHEMKIN lines write
-    (MergedRates). Returns counts of imported, skipped and failed entries, and of moved terms."""
+    (MergedRates), and a full import (no only_types) adds the irreversible lines RMG-models left
+    out of a reaction the model writes in both directions or for two colliders
+    (MergedRates.dropped_lines). Returns
+    counts of imported, skipped and failed entries, of moved terms and of added lines."""
     local_context = kinetics_local_context()
     variants = model_variants(kinetics_path, kinetic_model, states) if variants is None else variants
     repeats = {later: first for later, first in model_repeats(kinetics_path, kinetic_model, states).items()
@@ -829,6 +933,20 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
         except Exception:
             counts["failed"] += 1
             logger.exception(f"Failed to import reaction {entry.label}")
+    if only_types is None:
+        for rmg_reaction, rmg_kinetics_data, comment in merged.dropped_lines(library.entries.values()):
+            pending = {}
+            lookups = ChainMap(pending, cache)
+            try:
+                with transaction.atomic():
+                    import_kinetics_link(kinetic_model, rmg_reaction, rmg_kinetics_data, comment, models,
+                                         states, lookups, variants, labels)
+                cache.update(pending)
+                counts["added_lines"] = counts.get("added_lines", 0) + 1
+            except Exception:
+                counts["failed"] += 1
+                logger.exception(f"Failed to import CHEMKIN reaction {rmg_reaction}")
+        counts["failed"] += len(merged.unread)
     if merged.moved:
         counts["moved_terms"] = merged.moved
     return counts
