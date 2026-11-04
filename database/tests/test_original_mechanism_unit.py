@@ -1,0 +1,257 @@
+"""The original mechanism next to the Prometheus downloads, and what the Prometheus downloads leave out.
+
+PCI2017/052-Stagni has 4,089 reaction lines; its Prometheus downloads had 3,109 and gave no sign of the
+other 980: 813 with fractional coefficients (RMG-Py's reader does not read them), 123 with species that
+RMG-models did not identify, and 44 with species without thermo. Its ignition delay at 700 K was 130 times
+the authors'. Now the top of each generated download, the model page and the API give the lines the
+downloads do not have and why, and two more downloads give the model's own CHEMKIN files as they are, and
+those files through ck2yaml.
+"""
+import io
+import os
+import shutil
+import tempfile
+import zipfile
+
+import cantera as ct
+from django.core.files.base import ContentFile
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from rest_framework.test import APIClient
+
+from database import models as db
+from database.scripts.import_rmg_models import import_kinetics, import_thermo
+from database.services import coverage, exports
+from database.tests.test_import_rmg_species_unit import MODELS, NASA_TEXT
+
+ADJ = {
+    "H": "multiplicity 2\n1 H u1 p0 c0",
+    "O": "multiplicity 3\n1 O u2 p2 c0",
+    "H2": "1 H u0 p0 c0 {2,S}\n2 H u0 p0 c0 {1,S}",
+    "O2": "multiplicity 3\n1 O u1 p2 c0 {2,S}\n2 O u1 p2 c0 {1,S}",
+    "OH": "multiplicity 2\n1 O u1 p2 c0 {2,S}\n2 H u0 p0 c0 {1,S}",
+    "HO2": "multiplicity 2\n1 O u0 p2 c0 {2,S} {3,S}\n2 O u1 p2 c0 {1,S}\n3 H u0 p0 c0 {1,S}",
+    "H2O": "1 O u0 p2 c0 {2,S} {3,S}\n2 H u0 p0 c0 {1,S}\n3 H u0 p0 c0 {1,S}",
+    "H2O2": "1 O u0 p2 c0 {2,S} {3,S}\n2 O u0 p2 c0 {1,S} {4,S}\n3 H u0 p0 c0 {1,S}\n4 H u0 p0 c0 {2,S}",
+}
+# H2O2 is identified but has no thermo in Prometheus (as C14H9 and DIBZFUR in Stagni).
+THERMO_LIBRARY = [label for label in ADJ if label != "H2O2"]
+ARR = "Arrhenius(A=({a},'{units}'), n={n}, Ea=({e},'cal/mol'), T0=(1,'K'))"
+BI = "cm^3/(mol*s)"
+ENTRIES = {
+    "H + O2 <=> O + OH": ARR.format(a=3.52e16, units=BI, n=-0.7, e=17070),
+    "O + H2 <=> H + OH": ARR.format(a=3.82e12, units=BI, n=0, e=7948),
+    "H2O2 <=> OH + OH": ARR.format(a=2e12, units="s^-1", n=0.9, e=48749),
+    "H2 + OH <=> H2O + H": ARR.format(a=2.16e8, units=BI, n=1.51, e=3430),
+}
+# One line of each kind. XX is a species RMG-models did not identify (not in its dictionary).
+CHEMKIN = """ELEMENTS H O END
+SPECIES H O H2 O2 OH HO2 H2O H2O2 XX END
+REACTIONS
+H+O2<=>O+OH                3.520E+16  -0.700  17070.0
+O+H2<=>H+OH                3.820E+12   0.000   7948.0
+HO2+H=>0.5H2O2+0.5H2+O     1.000E+13   0.000      0.0
+XX+H<=>H2O                 1.000E+13   0.000      0.0
+H2O2<=>2OH                 2.000E+12   0.900  48749.0
+H2+OH<=>H2O+H              2.160E+08   1.510   3430.0
+HO2+OH<=>H2O+O2            2.890E+13   0.000   -497.0
+END
+"""
+STATUS = {4: "in_download", 5: "in_download", 6: "fractional", 7: "not_identified", 8: "no_thermo",
+          9: "in_download", 10: "not_in_prometheus"}
+COMPOSITION = {"H": "H1", "O": "O1", "H2": "H2", "O2": "O2", "OH": "O1H1", "HO2": "H1O2", "H2O": "H2O1",
+               "H2O2": "H2O2", "XX": "O1H1"}
+
+
+def nasa(name, composition):
+    """A CHEMKIN NASA-7 entry with a constant heat capacity, in the fixed columns."""
+    elements = "".join(f"{composition[i]:<2}{composition[i + 1:i + 2]:>3}" for i in range(0, len(composition), 2))
+    first = f"{name:<18}{'':6}{elements:<20}G{300.0:10.2f}{5000.0:10.2f}{1000.0:8.2f}"
+    a = [2.5, 0, 0, 0, 0, 25471.6, -0.460118]
+    rows = [a[0:5], a[5:7] + a[0:3], a[3:7]]
+    lines = [f"{first:<79}1"] + [f"{''.join(f'{x:15.8E}' for x in row):<79}{k}" for k, row in enumerate(rows, 2)]
+    return "\n".join(lines)
+
+
+THERMO = "THERMO\n   300.000  1000.000  5000.000\n" + "\n".join(nasa(n, c) for n, c in COMPOSITION.items()) + "\nEND\n"
+
+
+def model_folder(root, name):
+    """An RMG-models folder: libraries, import.sh and the model's own CHEMKIN and thermo files."""
+    folder = os.path.join(root, name)
+    thermo_dir, kinetics_dir = (os.path.join(folder, d) for d in ("RMG-Py-thermo-library", "RMG-Py-kinetics-library"))
+    os.makedirs(thermo_dir)
+    os.makedirs(kinetics_dir)
+    thermo_path, kinetics_path = os.path.join(thermo_dir, "ThermoLibrary.py"), os.path.join(kinetics_dir, "reactions.py")
+    with open(thermo_path, "w") as handle:
+        handle.write('name = "test"\nshortDesc = ""\nlongDesc = """"""\n')
+        for index, label in enumerate(THERMO_LIBRARY):
+            handle.write(f'entry(index={index}, label="{label}", molecule="""\n{ADJ[label]}\n""", '
+                         f'thermo={NASA_TEXT}, shortDesc="""test""", longDesc="""""")\n')
+    with open(os.path.join(kinetics_dir, "dictionary.txt"), "w") as handle:
+        for label, adjacency in ADJ.items():
+            handle.write(f"{label}\n{adjacency}\n\n")
+    with open(kinetics_path, "w") as handle:
+        handle.write('name = "test"\nshortDesc = ""\nlongDesc = """"""\nautoGenerated=False\n')
+        for index, (label, kinetics) in enumerate(ENTRIES.items()):
+            handle.write(f'entry(index={index}, label="{label}", degeneracy=1.0, kinetics={kinetics}, '
+                         f'shortDesc="""The chemkin file reaction is {label}""")\n')
+    with open(os.path.join(folder, "import.sh"), "w") as handle:
+        handle.write("python import.py \\\n\t--species chem.inp \\\n\t--reactions chem.inp \\\n\t--thermo therm.dat \\\n")
+    for file_name, text in (("chem.inp", CHEMKIN), ("therm.dat", THERMO)):
+        with open(os.path.join(folder, file_name), "w") as handle:
+            handle.write(text)
+    return thermo_path, kinetics_path
+
+
+class OriginalMechanismTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.root = tempfile.mkdtemp()
+        cls.settings_override = override_settings(RMG_MODELS_PATH=cls.root)
+        cls.settings_override.enable()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls.settings_override.disable()
+        shutil.rmtree(cls.root)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.model = db.KineticModel.objects.create(model_name="lumped/model")
+        thermo_path, kinetics_path = model_folder(cls.root, cls.model.model_name)
+        import_thermo(thermo_path, cls.model, MODELS)
+        import_kinetics(kinetics_path, cls.model, MODELS)
+        cls.bare = db.KineticModel.objects.create(model_name="no/folder")
+
+    def chemkin_text(self):
+        files = exports._generate_chemkin_files(self.model)
+        (text,) = [v.decode() for k, v in files.items() if k.endswith("_chem.inp")]
+        return text
+
+    def test_each_line_has_its_status(self):
+        result = coverage.line_coverage(self.model)
+        self.assertEqual(result["file"], os.path.join("lumped", "model", "chem.inp"))
+        self.assertEqual({line["line"]: line["status"] for line in result["lines"]}, STATUS)
+        (unknown,) = [line for line in result["lines"] if line["status"] == "not_identified"]
+        self.assertEqual(unknown["species_not_in_prometheus"], ["XX"])
+        self.assertEqual(coverage.summary(result), {
+            "file": result["file"], "lines": 7, "in_download": 3, "complete": False,
+            "left_out": {"fractional": 1, "not_identified": 1, "not_in_prometheus": 1, "no_thermo": 1}})
+        self.assertEqual(coverage.cached_summary(self.model), coverage.summary(result))
+
+    def test_the_page_finds_what_the_export_leaves_out(self):
+        left_out = []
+        species_map, _ = exports._build_rmg_species_map(self.model, *_rmg_classes()[:4])
+        exports._build_rmg_reactions(self.model, species_map, _rmg_classes()[4], left_out=left_out)
+        self.assertEqual([(kc.comment, reason) for kc, reason in left_out],
+                         [("The chemkin file reaction is H2O2 <=> OH + OH", "no_thermo")])
+        self.assertEqual(coverage.export_left_out(self.model), {kc.kinetics_id: r for kc, r in left_out})
+
+    def test_the_generated_download_says_what_it_does_not_have(self):
+        text = self.chemkin_text()
+        header = text.split("ELEMENTS", 1)[0]
+        self.assertTrue(header.startswith("! This file has 3 of the 7 reaction lines of the model's own CHEMKIN file"))
+        self.assertIn("!   1 with a coefficient that is not a whole number", header)
+        self.assertIn("!   1 with a species that Prometheus does not have", header)
+        self.assertIn("!   1 with a species that has no thermo in Prometheus:\n!     8\n", header)
+        self.assertIn("!   1 with a reaction that the model's Prometheus record does not have:\n!     10\n", header)
+        self.assertIn("! kinetics ", header)
+        self.assertIn(": H2O2 <=> OH + OH", header)
+
+    def test_the_generated_cantera_file_says_it_too(self):
+        import yaml
+        content = exports.build_cantera_yaml(self.model).content.decode()
+        self.assertIn("This file has 3 of the 7 reaction lines", yaml.safe_load(content)["description"])
+
+    def test_the_original_chemkin_files_are_as_written(self):
+        result = exports.build_original_chemkin_bundle(self.model)
+        self.assertEqual(result.filename, "lumpedmodel_original_chemkin.zip")
+        archive = zipfile.ZipFile(io.BytesIO(result.content))
+        self.assertEqual(sorted(archive.namelist()), ["README.txt", "chem.inp", "therm.dat"])
+        self.assertEqual(archive.read("chem.inp").decode(), CHEMKIN)
+        self.assertEqual(archive.read("therm.dat").decode(), THERMO)
+        readme = archive.read("README.txt").decode()
+        self.assertIn("as RMG-models keeps them", readme)
+        self.assertIn("Prometheus did not change them", readme)
+        self.assertIn("have 3 of the 7 reaction lines of chem.inp", readme)
+
+    def test_the_original_cantera_file_has_every_line(self):
+        result = exports.build_original_cantera_yaml(self.model)
+        self.assertEqual(result.filename, "lumpedmodel_original.yaml")
+        text = result.content.decode()
+        self.assertTrue(text.startswith("# lumped/model: the model's own CHEMKIN files"))
+        self.assertNotIn("does not load", text)
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+            handle.write(text)
+        self.addCleanup(os.unlink, handle.name)
+        gas = ct.Solution(handle.name)
+        self.assertEqual(gas.n_reactions, 7)
+        self.assertIn("XX", gas.species_names)
+        fractional = gas.reaction(2)
+        self.assertEqual(fractional.products, {"H2O2": 0.5, "H2": 0.5, "O": 1.0})
+
+    def test_a_file_cantera_cannot_load_says_so(self):
+        folder = os.path.join(self.root, "lumped", "model")
+        with open(os.path.join(folder, "chem.inp"), "a") as handle:
+            handle.write("REACTIONS\nH+O2<=>O+OH 1E13 0 0\nEND\n")      # an undeclared duplicate
+        self.addCleanup(lambda: open(os.path.join(folder, "chem.inp"), "w").write(CHEMKIN))
+        text = exports.build_original_cantera_yaml(self.model).content.decode()
+        (note,) = [line for line in text.splitlines() if "does not load" in line]
+        self.assertTrue(note.startswith("# Cantera "))
+        self.assertIn("uplicate", note)
+
+    def test_uploaded_files_are_the_original(self):
+        media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, media)
+        with override_settings(MEDIA_ROOT=media):
+            self.bare.chemkin_reactions_file.save("uploaded.inp", ContentFile(CHEMKIN))
+            original = exports.original_files(self.bare)
+            self.assertEqual(original.origin, "uploaded")
+            self.assertEqual(list(original.files.values()), [CHEMKIN.encode()])
+            self.bare.chemkin_reactions_file.delete()
+
+    def test_no_files(self):
+        self.assertIsNone(coverage.line_coverage(self.bare))
+        self.assertFalse(exports.has_original_files(self.bare))
+        with self.assertRaises(exports.ExportError):
+            exports.build_original_chemkin_bundle(self.bare)
+
+    def test_download_view(self):
+        for fmt, name, kind in (("chemkin-original", "lumpedmodel_original_chemkin.zip", "application/zip"),
+                                ("cantera-original", "lumpedmodel_original.yaml", "application/x-yaml")):
+            response = self.client.get(reverse("kinetic-model-download", args=[self.model.pk, fmt]))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], kind)
+            self.assertIn(name, response["Content-Disposition"])
+        response = self.client.get(reverse("kinetic-model-download", args=[self.bare.pk, "chemkin-original"]))
+        self.assertEqual(response.status_code, 400)
+
+    def test_model_page(self):
+        page = self.client.get(reverse("kinetic-model-detail", args=[self.model.pk])).content.decode()
+        self.assertIn(reverse("kinetic-model-download", args=[self.model.pk, "chemkin-original"]), page)
+        self.assertIn(reverse("kinetic-model-download", args=[self.model.pk, "cantera-original"]), page)
+        self.assertIn("have 3 of the 7 reaction lines", page)
+        self.assertIn("1 lines with a coefficient that is not a whole number", page)
+        page = self.client.get(reverse("kinetic-model-detail", args=[self.bare.pk])).content.decode()
+        self.assertNotIn("chemkin-original", page)
+        self.assertNotIn("km-coverage", page)
+
+    def test_api(self):
+        client = APIClient()
+        body = client.get(f"/api/kineticmodel/{self.model.pk}/coverage/").json()
+        self.assertEqual((body["lines"], body["in_download"], body["complete"]), (7, 3, False))
+        self.assertEqual([line["line"] for line in body["reaction_lines"]], [6, 7, 8, 10])
+        body = client.get(f"/api/kineticmodel/{self.model.pk}/coverage/?lines=all").json()
+        self.assertEqual(len(body["reaction_lines"]), 7)
+        self.assertIsNone(client.get(f"/api/kineticmodel/{self.bare.pk}/coverage/").json()["file"])
+
+
+def _rmg_classes():
+    from rmgpy.reaction import Reaction
+    from rmgpy.species import Species
+    from rmgpy.thermo import NASA, NASAPolynomial
+    from rmgpy.transport import TransportData
+    return NASAPolynomial, NASA, TransportData, Species, Reaction
