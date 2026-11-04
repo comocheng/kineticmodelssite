@@ -732,9 +732,9 @@ class MergedRates:
     def __init__(self, kinetics_path, library, states, variants, repeats):
         self.lines, self.twins, self.used, self.moved, self.unread = {}, {}, set(), 0, []
         self.states, self.variants = states or {}, variants or {}
-        self._keys = {}
+        self._keys, self._colliders = {}, None
         species = dict(getattr(library, "species_dict", None) or {})
-        model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
+        self.model_dir = model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
         path = chemkin_lines.reactions_file(model_dir)
         if not (path and species):
             return
@@ -867,11 +867,24 @@ class MergedRates:
                     parts.append((reaction, reaction.kinetics, f"The chemkin file reaction is {reaction}"))
         return parts
 
+    def colliders(self):
+        """upper-case name -> species for the names of the model's thermo library that the kinetics
+        dictionary lacks: species the download has that only a collider efficiency names
+        (Serinyel N2 and AR). Read once."""
+        if self._colliders is None:
+            self._colliders = {}
+            thermo_path = os.path.join(self.model_dir, "RMG-Py-thermo-library", "ThermoLibrary.py")
+            if os.path.exists(thermo_path):
+                for label, entry in load_thermo_library(thermo_path, "colliders", self.states).entries.items():
+                    if label.upper() not in self.spelling:
+                        self._colliders[label.upper()] = Species(label=label, molecule=[entry.item])
+        return self._colliders
+
     def read_line(self, line):
-        """The line as RMG-Py's CHEMKIN reader reads it, with the library's species; None (and the
-        line in `unread`) when it cannot."""
+        """The line as RMG-Py's CHEMKIN reader reads it, with the library's species and, for collider
+        efficiencies, the thermo library's; None (and the line in `unread`) when it cannot."""
         a_units, ea_units = self.units
-        names = {upper: self.species[label] for upper, label in self.spelling.items()}
+        names = {**self.colliders(), **{upper: self.species[label] for upper, label in self.spelling.items()}}
         try:
             if ea_units is None:
                 raise ValueError("an Ea unit RMG-Py cannot read")

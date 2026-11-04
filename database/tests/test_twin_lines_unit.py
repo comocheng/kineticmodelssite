@@ -30,6 +30,7 @@ ADJ = {
     "T-CH2": "multiplicity 3\n1 C u2 p0 c0 {2,S} {3,S}\n2 H u0 p0 c0 {1,S}\n3 H u0 p0 c0 {1,S}",
     "S-CH2": "multiplicity 1\n1 C u0 p1 c0 {2,S} {3,S}\n2 H u0 p0 c0 {1,S}\n3 H u0 p0 c0 {1,S}",
     "O2": "multiplicity 3\n1 O u1 p2 c0 {2,S}\n2 O u1 p2 c0 {1,S}",
+    "AR": "1 Ar u0 p4 c0",
 }
 ADJ["R4CH3"] = ADJ["CH3"]
 ARR = "Arrhenius(A=({a},'{units}'), n={n}, Ea=({e},'cal/mol'), T0=(1,'K'))"
@@ -46,10 +47,11 @@ SERINYEL_ENTRY = ("CH4 (+CH4) => R4CH3 + R1H (+CH4)",
                       ARR.format(a="8.43e+17", units="cm^3/(mol*s)", n=0, e=90900)))
 SERINYEL_LINES = """R1H+R4CH3(+M)=>CH4(+M)         1.67E14     0.         0. !(17)<BAULCH94>!
       O2/0.4/ XX/0.75/ CH4/3.0/
+      AR/0.35/
       LOW /  1.408E24  -1.8   0.0 /
       TROE / 0.37 3315 61 /
 CH4(+M)=>R4CH3+R1H(+M)         2.4E16      0.    105.0E3 !(-17)<BAULCH94>!
-      O2/0.4/ XX/0.75/ CH4/0.0/
+      O2/0.4/ XX/0.75/ CH4/0.0/ AR/0.35/
       LOW / 1.29E18    0.00  90.9E3 /
       TROE / 0  1350  1  7830 /
 CH4(+CH4)=>R4CH3+R1H(+CH4)     2.4E16      0.    105.0E3 !(-17')<BAULCH94>!
@@ -58,12 +60,22 @@ CH4(+CH4)=>R4CH3+R1H(+CH4)     2.4E16      0.    105.0E3 !(-17')<BAULCH94>!
 """
 
 
-def write_model(root, name, labels, entries, lines, species_block=None):
-    """An RMG-models folder with a kinetics library (no thermo library), SMILES.txt, import.sh and
-    the CHEMKIN file."""
+def write_model(root, name, labels, entries, lines, species_block=None, thermo=()):
+    """An RMG-models folder with a kinetics library, a thermo library of the `thermo` labels (none if
+    empty), SMILES.txt, import.sh and the CHEMKIN file."""
     folder = os.path.join(root, name)
     kinetics_dir = os.path.join(folder, "RMG-Py-kinetics-library")
     os.makedirs(kinetics_dir)
+    if thermo:
+        os.makedirs(os.path.join(folder, "RMG-Py-thermo-library"))
+        polynomials = ", ".join(f"NASAPolynomial(coeffs=[3.0,0,0,0,0,1000.0,5.0], Tmin=({a},'K'), Tmax=({b},'K'))"
+                                for a, b in ((300, 1000), (1000, 5000)))
+        with open(os.path.join(folder, "RMG-Py-thermo-library", "ThermoLibrary.py"), "w") as handle:
+            handle.write('name = "test"\nshortDesc = ""\nlongDesc = """"""\n')
+            for index, label in enumerate(thermo):
+                handle.write(f'entry(\n    index = {index},\n    label = "{label}",\n    molecule = """\n{ADJ[label]}\n""",\n'
+                             f"    thermo = NASA(polynomials=[{polynomials}], Tmin=(300,'K'), Tmax=(5000,'K')),\n"
+                             f'    shortDesc = """test {label}""",\n    longDesc = """""",\n)\n\n')
     with open(os.path.join(kinetics_dir, "dictionary.txt"), "w") as handle:
         for label in labels:
             handle.write(f"{label}\n{ADJ[label]}\n\n")
@@ -107,7 +119,7 @@ class ChemkinLineColliderTests(SimpleTestCase):
 
     def test_the_entry_as_rmg_reads_it(self):
         first = self.read(SERINYEL_LINES)[0]
-        # Comments go; an efficiency of a species the library lacks (XX) is left out.
+        # Comments go; an efficiency of a species the library lacks (XX, AR) is left out.
         self.assertEqual(chemkin_lines.kinetics_entry(first, {"R1H", "R4CH3", "CH4", "O2"}),
                          "R1H+R4CH3(+M)=>CH4(+M)         1.67E14     0.         0.\nO2/0.4/ CH4/3.0/\n"
                          "LOW /  1.408E24  -1.8   0.0 /\nTROE / 0.37 3315 61 /")
@@ -140,6 +152,9 @@ class TwinLinesTests(TestCase):
 
     def import_model(self, *args, **kwargs):
         self.kinetics_path = write_model(self.directory, self.model.model_name, *args, **kwargs)
+        if kwargs.get("thermo"):
+            thermo_path = os.path.join(self.directory, self.model.model_name, "RMG-Py-thermo-library", "ThermoLibrary.py")
+            self.assertEqual(import_thermo(thermo_path, self.model, MODELS)["failed"], 0)
         counts = import_kinetics(self.kinetics_path, self.model, MODELS)
         self.assertEqual((counts["failed"], counts["rejected"]), (0, 0))
         return counts
@@ -182,8 +197,10 @@ class TwinLinesTests(TestCase):
         self.assertEqual(self.links().count(), 1)
 
     def test_lines_the_library_left_out_are_read_from_the_chemkin_file(self):
+        # AR is a species of the model (thermo library) that only collider efficiencies name, so the
+        # kinetics dictionary lacks it (Serinyel N2 and AR).
         counts = self.import_model(("R1H", "R4CH3", "CH4", "O2"), (SERINYEL_ENTRY,), SERINYEL_LINES,
-                                   species_block="R1H R4CH3 CH4 O2 XX")
+                                   species_block="R1H R4CH3 CH4 O2 AR XX", thermo=("R1H", "R4CH3", "CH4", "O2", "AR"))
         self.assertEqual(counts["added_lines"], 2)
         kept = self.link("CH4 (+CH4) => R4CH3 + R1H (+CH4)")
         falloff, reverse = self.link("CH4 => R4CH3 + R1H"), self.link("R1H + R4CH3 => CH4")
@@ -197,9 +214,9 @@ class TwinLinesTests(TestCase):
         self.assertEqual((data["alpha"], data["t3"], data["t1"], data["t2"]), (0.0, 1350.0, 1.0, 7830.0))
         self.assertEqual((reverse.kinetics.raw_data["low_arrhenius"]["a"], reverse.kinetics.raw_data["low_arrhenius"]["n"]),
                          (1.408e24, -1.8))
-        # The model's efficiencies; XX, a species the library lacks, is left out.
-        self.assertEqual(self.efficiencies(falloff), {"O2": 0.4, "CH4": 0.0})
-        self.assertEqual(self.efficiencies(reverse), {"O2": 0.4, "CH4": 3.0})
+        # The model's efficiencies; XX, a species neither library has, is left out.
+        self.assertEqual(self.efficiencies(falloff), {"O2": 0.4, "CH4": 0.0, "AR": 0.35})
+        self.assertEqual(self.efficiencies(reverse), {"O2": 0.4, "CH4": 3.0, "AR": 0.35})
         self.assertEqual(self.efficiencies(kept), {})
 
     def test_a_line_an_entry_holds_is_not_added(self):
