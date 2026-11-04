@@ -358,8 +358,8 @@ community:
     - group: "Niemeyer Research Group, Oregon State University"
       lead: "Kyle Niemeyer"
   funding: "Supported by the U.S. National Science Foundation."
-  # Add the award number, for example "Award OAC-0000000". Leave it empty to hide it.
-  award: ""
+  # The award numbers; leave it empty to hide them. The footer of every page links each award.
+  award: "Grant Nos. 1403171, 2531937, and 2531938"
   cite_title: "How to cite"
   cite_intro: "If you use Prometheus, please cite it as follows. The text comes from CITATION.cff in the repository."
   code_label: "Source code:"

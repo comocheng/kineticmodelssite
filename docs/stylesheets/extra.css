@@ -43,3 +43,8 @@
   height: 1.6rem;
   width: auto;
 }
+
+/* The award links of the NSF acknowledgment in the footer, like the site footer. */
+.md-copyright__highlight a {
+  text-decoration: underline;
+}
