@@ -84,6 +84,10 @@ class KineticsComment(models.Model):
     # these species and coefficients shares one reaction record, whose flag is only that of the
     # first import, so the exports use this one.
     reversible = models.BooleanField(default=True)
+    # The model's own reverse rate, REV / A n Ea / on its CHEMKIN line, which RMG-models does not keep:
+    # {"terms": [{"line", "text", "arrhenius"} or null, one per rate term]}. Null: the reverse rate
+    # comes from thermochemistry. Per model, as models that share a rate write other REVs or none.
+    reverse_rate = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return self.comment

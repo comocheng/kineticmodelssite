@@ -16,7 +16,7 @@ from rmgpy.chemkin import read_kinetics_entry
 from rmgpy.quantity import RateCoefficient
 from rmgpy.reaction import Reaction
 from rmgpy.species import Species
-from database.scripts import chemkin_lines
+from database.scripts import chemkin_lines, explicit_reverse
 from database.scripts.rmg_libraries import (
     TolerantKineticsLibrary, TolerantThermoLibrary, smiles_txt_states, structure_key_or_none)
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
@@ -962,6 +962,16 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
         counts["failed"] += len(merged.unread)
     if merged.moved:
         counts["moved_terms"] = merged.moved
+    # The model's own reverse rates (REV on its CHEMKIN lines), which the library does not keep.
+    if explicit_reverse.has_reverse_field(models):
+        model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
+        try:
+            reverse = explicit_reverse.attach(kinetic_model, model_dir, models)
+            if reverse["status"]["matched"]:
+                counts["reverse_rates"] = reverse["status"]["matched"]
+        except Exception:
+            counts["failed"] += 1
+            logger.exception(f"Failed to read the reverse rates of {kinetic_model.model_name}")
     return counts
 
 
