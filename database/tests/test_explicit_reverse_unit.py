@@ -261,9 +261,7 @@ class ExplicitReverseRatesTests(TestCase):
         save_chemkin_file(path, list(species_map.values()), reactions, verbose=False, check_for_duplicates=False)
         with open(path) as handle:
             before = handle.read()
-        exports._write_reverse_rates(path, reactions, {})
-        with open(path) as handle:
-            self.assertEqual(handle.read(), before)
+        self.assertEqual(exports._write_reverse_rates(before, reactions, {}), before)
 
     def test_rev_is_added_to_the_entries_as_written(self):
         from rmgpy.chemkin import save_chemkin_file
@@ -281,18 +279,13 @@ class ExplicitReverseRatesTests(TestCase):
             text = handle.read()
         # Another rewrite of the entries (more digits) stays as it is.
         self.assertIn("3.520000e+16", text)
-        with open(path, "w") as handle:
-            handle.write(text.replace("3.520000e+16", "35200000000000000"))
-        exports._write_reverse_rates(path, reactions, reverse)
-        with open(path) as handle:
-            lines = handle.read().splitlines()
+        text = exports._write_reverse_rates(text.replace("3.520000e+16", "35200000000000000"), reactions, reverse)
+        lines = text.splitlines()
         (number,) = [i for i, line in enumerate(lines) if "35200000000000000" in line]
         self.assertEqual(lines[number + 1].strip(), "REV / 7.04e+13 -0.26 0.15 /")
         # A file whose entries are not the reactions' is refused, not given misplaced REVs.
-        with open(path, "w") as handle:
-            handle.write("\n".join(line for line in lines if "35200000000000000" not in line) + "\n")
         with self.assertRaises(exports.ExportError):
-            exports._write_reverse_rates(path, reactions, reverse)
+            exports._write_reverse_rates("\n".join(l for l in lines if "35200000000000000" not in l), reactions, reverse)
 
     def test_cantera_export_runs_the_models_reverse_rate(self):
         result = exports.build_cantera_yaml(self.model)

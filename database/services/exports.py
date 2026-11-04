@@ -732,8 +732,6 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 verbose=False,
                 check_for_duplicates=False,
             )
-        if reverse:
-            _write_reverse_rates(reactions_path, reactions, reverse)
 
         transport_path = None
         if any(getattr(spec, "transport_data", None) for spec in species_map.values()):
@@ -741,7 +739,10 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             save_transport_file(transport_path, list(species_map.values()))
 
         with open(reactions_path, "rb") as handle:
-            reactions_content = _left_out_header(left_out, species_map) + handle.read()
+            written = handle.read()
+        if reverse:
+            written = _write_reverse_rates(written.decode("utf-8"), reactions, reverse).encode("utf-8")
+        reactions_content = _left_out_header(left_out, species_map) + written
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -751,12 +752,12 @@ def _generate_chemkin_files(kinetic_model, strict=False):
     return files
 
 
-def _write_reverse_rates(path, reactions, reverse):
-    """Add REV / A n Ea / after the reaction line of each reaction in ``reverse`` (id of the reaction ->
-    a term of KineticsComment.reverse_rate) in the CHEMKIN file at *path*, which ``save_chemkin_file``
-    wrote from ``reactions`` in their order. RMG-Py has no writer for REV. The REACTIONS section is
-    read as it is, so other rewrites of the entries are kept: each reaction is one entry (its reaction
-    line and auxiliary lines), a multi-rate one entry per term."""
+def _write_reverse_rates(text, reactions, reverse):
+    """The CHEMKIN file *text* that ``save_chemkin_file`` wrote from ``reactions`` (in their order), with
+    REV / A n Ea / after the reaction line of each reaction in ``reverse`` (id of the reaction -> a term
+    of KineticsComment.reverse_rate). RMG-Py has no writer for REV. The REACTIONS section is read as
+    it is, so a rewrite of the entries before this one is kept: each reaction is one entry (its
+    reaction line and auxiliary lines), a multi-rate one entry per term."""
     from rmgpy import kinetics as rmg_kinetics
 
     multi = (rmg_kinetics.MultiArrhenius, rmg_kinetics.MultiPDepArrhenius)
@@ -764,8 +765,6 @@ def _write_reverse_rates(path, reactions, reverse):
     for rxn in reactions:
         entries = len(rxn.kinetics.arrhenius) if isinstance(rxn.kinetics, multi) else 1
         plan += [reverse.get(id(rxn))] + [None] * (entries - 1)
-    with open(path) as handle:
-        text = handle.read()
     header = re.search(r"^REACTIONS\b.*\n", text, re.M)
     if not header or "KCAL/MOLE" not in header.group() or "MOLES" not in header.group():
         raise ExportError("Chemkin generation failed: no REACTIONS section in KCAL/MOLE and MOLES "
@@ -782,8 +781,7 @@ def _write_reverse_rates(path, reactions, reverse):
     if entry != len(plan) or sum("=" in line.split("!", 1)[0] for line in lines) != len(plan):
         raise ExportError("Chemkin generation failed: the reactions written do not match the model's "
                           "reactions, so its reverse rates cannot be added.")
-    with open(path, "w") as handle:
-        handle.write(text[:header.end()] + "".join(lines))
+    return text[:header.end()] + "".join(lines)
 
 
 def _short_number(value):
