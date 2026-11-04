@@ -1,5 +1,6 @@
 import io
 import logging
+import math
 import os
 import re
 import shutil
@@ -737,8 +738,9 @@ def _generate_chemkin_files(kinetic_model, strict=False):
             transport_path = os.path.join(tempdir, "tran.dat")
             save_transport_file(transport_path, list(species_map.values()))
 
-        with open(reactions_path, "rb") as handle:
-            reactions_content = _left_out_header(left_out, species_map) + handle.read()
+        with open(reactions_path, encoding="utf-8") as handle:
+            written = _write_stored_digits(handle.read(), reactions, list(species_map.values()))
+        reactions_content = _left_out_header(left_out, species_map) + written.encode("utf-8")
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -746,6 +748,159 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 files[f"{model_slug}_tran.dat"] = handle.read()
 
     return files
+
+
+# RMG-Py's CHEMKIN writer (write_kinetics_entry, RMG-Py 4.0) rounds the numbers it writes: TROE
+# temperatures to 3 significant digits, the A of falloff, LOW, PLOG and Chebyshev lines to 4, n and
+# Ea to 3 decimals of kcal/mol, efficiencies to 2 decimals. GRI-Mech 3.0's T1 5836 came out 5840,
+# and an efficiency 0.002 came out 0.00. RMG's own unit arithmetic (cm to m and back, cal/mol to
+# kcal/mol) moves a value by at most 3.4 units in the last place (all rates of local kms), so a
+# number that reads back within 8 of them is the model's own decimal: 17.041, not 17.041000000000004.
+_STORED_DIGITS_ULPS = 8
+_REACTIONS_HEADER = "REACTIONS    KCAL/MOLE   MOLES\n\n"
+
+
+def _stored_number(value, spec):
+    """*value* in RMG's format *spec* (".3e", ".3f", ".3g"), with as many more digits as give the
+    value back: 5836 is "5836", not "5.84e+03"; 5.62e-01 stays as RMG writes it. A value with no
+    short decimal, as 50000 J/mol in kcal/mol, gets the digits of a double."""
+    precision, kind = int(spec[1:-1]), spec[-1]
+    for digits in range(precision, 41 if kind == "f" else 18):
+        text = format(value, f".{digits}{kind}")
+        if abs(float(text) - value) <= _STORED_DIGITS_ULPS * math.ulp(value):
+            return text
+    return repr(float(value))
+
+
+def _kinetics_entry_parts(reaction, species_list):
+    """``write_kinetics_entry(reaction, species_list, verbose=False)`` of RMG-Py 4.0 as text and
+    ``(value, format, width)`` numbers, so the entry can be written to RMG's digits and to the
+    stored ones. None for kinetics the export does not write (surface rates)."""
+    from rmgpy import kinetics as rmg_kinetics
+    from rmgpy.chemkin import get_species_identifier, write_reaction_string
+    from rmgpy.reaction import Reaction
+
+    kinetics = reaction.kinetics
+    if isinstance(kinetics, (rmg_kinetics.MultiArrhenius, rmg_kinetics.MultiPDepArrhenius)):
+        parts = []
+        for single_kinetics in kinetics.arrhenius:
+            single = Reaction(index=reaction.index, reactants=reaction.reactants, products=reaction.products,
+                              specific_collider=reaction.specific_collider, reversible=reaction.reversible,
+                              kinetics=single_kinetics)
+            single_parts = _kinetics_entry_parts(single, species_list)
+            if single_parts is None:
+                return None
+            parts += [*single_parts, "DUPLICATE\n"]
+        return [*parts, "\n"]
+    if (isinstance(kinetics, (rmg_kinetics.StickingCoefficient, rmg_kinetics.SurfaceArrhenius))
+            or getattr(kinetics, "coverage_dependence", None)):
+        return None
+
+    def arrhenius(rate, a_format):
+        factor = rate.A.get_conversion_factor_from_si_to_cm_mol_s()
+        return [(rate.A.value_si / (rate.T0.value_si ** rate.n.value_si) * factor, a_format, 9), " ",
+                (rate.n.value_si, ".3f", 9), " ", (rate.Ea.value_si / 4184., ".3f", 9)]
+
+    parts = ["{0!s:<51} ".format(write_reaction_string(reaction))]
+    if isinstance(kinetics, rmg_kinetics.Arrhenius):
+        parts += arrhenius(kinetics, ".6e")
+    elif isinstance(kinetics, (rmg_kinetics.Lindemann, rmg_kinetics.Troe)):
+        parts += arrhenius(kinetics.arrheniusHigh, ".3e")
+    elif isinstance(kinetics, rmg_kinetics.ThirdBody):
+        parts += arrhenius(kinetics.arrheniusLow, ".3e")
+    elif getattr(kinetics, "highPlimit", None) is not None:
+        parts += arrhenius(kinetics.highPlimit, ".3e")
+    else:
+        # Values CHEMKIN reads and does not use, as for PLOG and Chebyshev rates.
+        parts.append("{0:<9.3e} {1:<9.3f} {2:<9.3f}".format(1, 0, 0))
+    parts.append("\n")
+
+    if isinstance(kinetics, (rmg_kinetics.ThirdBody, rmg_kinetics.Lindemann, rmg_kinetics.Troe)):
+        for collider, efficiency in sorted(kinetics.efficiencies.items(), key=lambda item: id(item[0])):
+            for species in species_list:
+                if any(collider.is_isomorphic(molecule) for molecule in species.molecule):
+                    parts += [f"{get_species_identifier(species)}/", (efficiency, ".2f", 4), "/ "]
+                    break
+        parts.append("\n")
+        if isinstance(kinetics, (rmg_kinetics.Lindemann, rmg_kinetics.Troe)):
+            parts += ["    LOW/ ", *arrhenius(kinetics.arrheniusLow, ".3e"), "/\n"]
+            if isinstance(kinetics, rmg_kinetics.Troe):
+                parts += ["    TROE/ ", (kinetics.alpha, ".3e", 9), " ", (kinetics.T3.value_si, ".3g", 9), " ",
+                          (kinetics.T1.value_si, ".3g", 9)]
+                if kinetics.T2 is not None:
+                    parts += [" ", (kinetics.T2.value_si, ".3g", 9)]
+                parts.append("/\n")
+    elif isinstance(kinetics, rmg_kinetics.PDepArrhenius):
+        for pressure, rate in zip(kinetics.pressures.value_si, kinetics.arrhenius):
+            # Several rates at one pressure, as duplicate PLOG lines.
+            rates = rate.arrhenius if isinstance(rate, rmg_kinetics.MultiArrhenius) else [rate]
+            for single_rate in rates:
+                parts += ["    PLOG/ ", (pressure / 101325., ".6f", 9), " ", *arrhenius(single_rate, ".3e"), "/\n"]
+    elif isinstance(kinetics, rmg_kinetics.Chebyshev):
+        parts += ["    TCHEB/ ", (kinetics.Tmin.value_si, ".3f", 9), " ", (kinetics.Tmax.value_si, ".3f", 9), "/\n",
+                  "    PCHEB/ ", (kinetics.Pmin.value_si / 101325., ".3f", 9), " ",
+                  (kinetics.Pmax.value_si / 101325., ".3f", 9), "/\n",
+                  "    CHEB/ {0:d} {1:d}/\n".format(kinetics.degreeT, kinetics.degreeP)]
+        coeffs = kinetics.coeffs.value_si.copy()
+        # From log10 of SI units to log10 of cm, mol and s.
+        coeffs[0, 0] += 6 * (len(reaction.reactants) - 1)
+        if kinetics.degreeP < 6:
+            for row in coeffs:
+                parts += ["    CHEB/", *[part for value in row for part in (" ", (value, ".3e", 12))], "/\n"]
+        else:
+            # Five to a line; RMG does not close a last line of fewer.
+            for index, value in enumerate(coeffs.flatten()):
+                if index % 5 == 0:
+                    parts.append("    CHEB/")
+                parts += [" ", (value, ".3e", 12)]
+                if index % 5 == 4:
+                    parts.append("/\n")
+
+    if reaction.duplicate:
+        parts.append("DUPLICATE\n")
+    return parts
+
+
+def _render_entry(parts, number):
+    """The entry of ``_kinetics_entry_parts`` with each number written by ``number(value, format)``."""
+    return "".join(part if isinstance(part, str) else f"{number(part[0], part[1]):<{part[2]}}"
+                   for part in parts)
+
+
+def _write_stored_digits(text, reactions, species_list):
+    """The CHEMKIN file *text* that ``save_chemkin_file`` wrote for *reactions*, with the numbers
+    of each reaction written to the digits of the stored values (``_stored_number``).
+
+    Each entry is rebuilt to RMG's digits first, and only an entry that equals the one in the
+    file is rewritten; another keeps RMG's digits, and a file laid out otherwise is not changed."""
+    try:
+        from rmgpy.chemkin import write_kinetics_entry
+    except ImportError:
+        return text
+    start = text.find(_REACTIONS_HEADER)
+    if start < 0:
+        logger.warning("No REACTIONS section in the CHEMKIN file; numbers left as RMG wrote them")
+        return text
+    position = start + len(_REACTIONS_HEADER)
+    pieces = [text[:position]]
+    kept = 0
+    for reaction in reactions:
+        parts = _kinetics_entry_parts(reaction, species_list)
+        entry = _render_entry(parts, format) if parts is not None else None
+        if entry is not None and text.startswith(entry + "\n", position):
+            pieces.append(_render_entry(parts, _stored_number) + "\n")
+        else:
+            entry = write_kinetics_entry(reaction, species_list=species_list, verbose=False)
+            if not text.startswith(entry + "\n", position):
+                logger.warning("The CHEMKIN file does not have the reactions in order; numbers left as RMG wrote them")
+                return text
+            pieces.append(entry + "\n")
+            kept += 1
+        position += len(entry) + 1
+    if kept:
+        logger.warning(f"{kept} reaction(s) keep the digits of RMG's CHEMKIN writer")
+    pieces.append(text[position:])
+    return "".join(pieces)
 
 
 _CHEMKIN_COMMENT_PREFIX = "The chemkin file reaction is "
