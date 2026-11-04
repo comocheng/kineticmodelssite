@@ -697,8 +697,9 @@ def _generate_chemkin_files(kinetic_model, strict=False):
         )
 
     left_out = []
+    reverse = {}
     reactions = _build_rmg_reactions(
-        kinetic_model, species_map, RmgReaction, strict=strict, left_out=left_out
+        kinetic_model, species_map, RmgReaction, strict=strict, left_out=left_out, reverse=reverse
     )
 
     if not species_map or not reactions:
@@ -731,6 +732,8 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 verbose=False,
                 check_for_duplicates=False,
             )
+        if reverse:
+            _write_reverse_rates(reactions_path, reactions, list(species_map.values()), reverse)
 
         transport_path = None
         if any(getattr(spec, "transport_data", None) for spec in species_map.values()):
@@ -746,6 +749,69 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 files[f"{model_slug}_tran.dat"] = handle.read()
 
     return files
+
+
+def _write_reverse_rates(path, reactions, species, reverse):
+    """Write the REACTIONS section of an RMG-Py CHEMKIN file again, with REV / A n Ea / after the
+    reaction line of each reaction in ``reverse`` (id of the reaction -> a term of
+    KineticsComment.reverse_rate). RMG-Py has no writer for REV; ``save_chemkin_file`` writes each
+    reaction as ``write_kinetics_entry`` and a blank line, in KCAL/MOLE and MOLES, as this does."""
+    try:
+        from rmgpy.chemkin import write_kinetics_entry
+    except ImportError:
+        from rmgpy.chemkin import writeKineticsEntry as write_kinetics_entry
+
+    with open(path) as handle:
+        text = handle.read()
+    header = re.search(r"^REACTIONS\b.*\n", text, re.M)
+    if not header or "KCAL/MOLE" not in header.group() or "MOLES" not in header.group():
+        raise ExportError("Chemkin generation failed: no REACTIONS section in KCAL/MOLE and MOLES "
+                          "to add the model's reverse rates to.")
+    body = []
+    for rxn in reactions:
+        entry = write_kinetics_entry(rxn, species, False)
+        term = reverse.get(id(rxn))
+        if term:
+            first, newline, rest = entry.partition("\n")
+            entry = first + newline + _rev_line(term["arrhenius"]) + rest
+        body.append(entry + "\n")
+    with open(path, "w") as handle:
+        handle.write(text[:header.end()] + "\n" + "".join(body) + "END\n\n")
+
+
+def _rev_line(arrhenius):
+    """REV / A n Ea / of Arrhenius raw_data, in cm, mol, s and kcal/mol."""
+    from database.models import kinetic_data as kd
+
+    rate = kd.Arrhenius(**arrhenius).to_rmg()
+    factor = rate.A.get_conversion_factor_from_si_to_cm_mol_s()
+    return "    REV / {0:.6e} {1:.4f} {2:.4f} /\n".format(
+        rate.A.value_si * factor, rate.n.value_si, rate.Ea.value_si / 4184.0)
+
+
+def _reverse_parts(rmg_reaction, terms, rmg_reaction_cls):
+    """[(reaction, term of KineticsComment.reverse_rate or None)]: the reaction itself, or for a
+    multi-rate with the model's REV on any term, one duplicate reaction per term, as the model's
+    DUPLICATE lines each have their own REV."""
+    from rmgpy import kinetics as rmg_kinetics
+
+    if not terms or not any(terms):
+        return [(rmg_reaction, None)]
+    kinetics = rmg_reaction.kinetics
+    if not isinstance(kinetics, rmg_kinetics.MultiArrhenius):
+        return [(rmg_reaction, terms[0])]
+    if len(kinetics.arrhenius) != len(terms):
+        logger.warning(f"Reverse rates of kinetics {rmg_reaction.index} do not match its rate terms; not written")
+        return [(rmg_reaction, None)]
+    parts = []
+    for arrhenius, term in zip(kinetics.arrhenius, terms):
+        part = rmg_reaction_cls(reactants=rmg_reaction.reactants, products=rmg_reaction.products,
+                                reversible=rmg_reaction.reversible)
+        part.specific_collider = rmg_reaction.specific_collider
+        part.index = rmg_reaction.index
+        part.kinetics = arrhenius
+        parts.append((part, term))
+    return parts
 
 
 _CHEMKIN_COMMENT_PREFIX = "The chemkin file reaction is "
@@ -927,9 +993,13 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
 _FALLOFF_TYPES = ("troe", "lindemann")
 
 
-def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False, left_out=None):
+def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False, left_out=None,
+                         reverse=None):
     """The model's reactions as RMG objects.  A falloff reaction with the same species on
-    both sides is not written; its kinetics comment goes into ``left_out`` when one is given."""
+    both sides is not written; its kinetics comment goes into ``left_out`` when one is given.
+    When ``reverse`` (a dict) is given, it gets id(reaction) -> the model's REV for each reaction
+    with one (KineticsComment.reverse_rate), and a multi-rate with a REV becomes one reaction per
+    term (_reverse_parts)."""
     from collections import Counter
 
     reactions = []
@@ -1001,9 +1071,15 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     f"{kinetics.id}."
                 )
             continue
-        if not strict:
-            _normalize_kinetics_units(rmg_reaction.kinetics, len(rmg_reaction.reactants))
-        reactions.append(rmg_reaction)
+        # The model's own reverse rate (REV) of a reversible line, written after the entry.
+        terms = (kinetics_comment.reverse_rate or {}).get("terms") if (
+            reverse is not None and kinetics_comment.reversible) else None
+        for part, term in _reverse_parts(rmg_reaction, terms, rmg_reaction_cls):
+            if not strict:
+                _normalize_kinetics_units(part.kinetics, len(part.reactants))
+            if term:
+                reverse[id(part)] = term
+            reactions.append(part)
 
     # Mark duplicate reactions so save_chemkin_file writes the DUPLICATE keyword
     _mark_duplicate_reactions(reactions)
