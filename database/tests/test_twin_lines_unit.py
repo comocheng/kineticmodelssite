@@ -117,6 +117,14 @@ class ChemkinLineColliderTests(SimpleTestCase):
         self.assertEqual((first["low"], first["entry"]), (None, ["A=>B 1e10 0 0"]))
         self.assertEqual(second["A"], 2e10)
 
+    def test_species_block_ends_at_its_end(self):
+        # SPECIES ... END on one line: the reaction lines after it are not names (S-CH2+H was one).
+        path = os.path.join(self.directory, "chem.inp")
+        with open(path, "w") as handle:
+            handle.write("ELEMENTS C H END\nSPECIES S-CH2 T-CH2 H END\nREACTIONS\nS-CH2+H => T-CH2+H 3e13 0 0\nEND\n"
+                         "SPECIES\nAR ! argon\nHE END\n")
+        self.assertEqual(chemkin_lines.species_names(path), {"S-CH2", "T-CH2", "H", "AR", "HE"})
+
     def test_rmg_units(self):
         self.assertEqual(chemkin_lines.rmg_units(4.184),
                          (["", "s^-1", "cm^3/(mol*s)", "cm^6/(mol^2*s)", "cm^9/(mol^3*s)", "cm^12/(mol^4*s)"], "cal/mol"))
