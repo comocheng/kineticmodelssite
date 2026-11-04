@@ -733,7 +733,7 @@ def _generate_chemkin_files(kinetic_model, strict=False):
                 check_for_duplicates=False,
             )
         if reverse:
-            _write_reverse_rates(reactions_path, reactions, list(species_map.values()), reverse)
+            _write_reverse_rates(reactions_path, reactions, reverse)
 
         transport_path = None
         if any(getattr(spec, "transport_data", None) for spec in species_map.values()):
@@ -751,32 +751,50 @@ def _generate_chemkin_files(kinetic_model, strict=False):
     return files
 
 
-def _write_reverse_rates(path, reactions, species, reverse):
-    """Write the REACTIONS section of an RMG-Py CHEMKIN file again, with REV / A n Ea / after the
-    reaction line of each reaction in ``reverse`` (id of the reaction -> a term of
-    KineticsComment.reverse_rate). RMG-Py has no writer for REV; ``save_chemkin_file`` writes each
-    reaction as ``write_kinetics_entry`` and a blank line, in KCAL/MOLE and MOLES, as this does."""
-    try:
-        from rmgpy.chemkin import write_kinetics_entry
-    except ImportError:
-        from rmgpy.chemkin import writeKineticsEntry as write_kinetics_entry
+def _write_reverse_rates(path, reactions, reverse):
+    """Add REV / A n Ea / after the reaction line of each reaction in ``reverse`` (id of the reaction ->
+    a term of KineticsComment.reverse_rate) in the CHEMKIN file at *path*, which ``save_chemkin_file``
+    wrote from ``reactions`` in their order. RMG-Py has no writer for REV. The REACTIONS section is
+    read as it is, so other rewrites of the entries are kept: each reaction is one entry (its reaction
+    line and auxiliary lines), a multi-rate one entry per term."""
+    from rmgpy import kinetics as rmg_kinetics
 
+    multi = (rmg_kinetics.MultiArrhenius, rmg_kinetics.MultiPDepArrhenius)
+    plan = []                                   # the REV term of each entry, in the file's order
+    for rxn in reactions:
+        entries = len(rxn.kinetics.arrhenius) if isinstance(rxn.kinetics, multi) else 1
+        plan += [reverse.get(id(rxn))] + [None] * (entries - 1)
     with open(path) as handle:
         text = handle.read()
     header = re.search(r"^REACTIONS\b.*\n", text, re.M)
     if not header or "KCAL/MOLE" not in header.group() or "MOLES" not in header.group():
         raise ExportError("Chemkin generation failed: no REACTIONS section in KCAL/MOLE and MOLES "
                           "to add the model's reverse rates to.")
-    body = []
-    for rxn in reactions:
-        entry = write_kinetics_entry(rxn, species, False)
-        term = reverse.get(id(rxn))
-        if term:
-            first, newline, rest = entry.partition("\n")
-            entry = first + newline + _rev_line(term["arrhenius"]) + rest
-        body.append(entry + "\n")
+    lines, entry = [], 0
+    for line in text[header.end():].splitlines(keepends=True):
+        lines.append(line)
+        if "=" in line.split("!", 1)[0]:
+            if entry >= len(plan):
+                break
+            if plan[entry]:
+                lines.append(_rev_line(plan[entry]["arrhenius"]))
+            entry += 1
+    if entry != len(plan) or sum("=" in line.split("!", 1)[0] for line in lines) != len(plan):
+        raise ExportError("Chemkin generation failed: the reactions written do not match the model's "
+                          "reactions, so its reverse rates cannot be added.")
     with open(path, "w") as handle:
-        handle.write(text[:header.end()] + "\n" + "".join(body) + "END\n\n")
+        handle.write(text[:header.end()] + "".join(lines))
+
+
+def _short_number(value):
+    """The shortest decimal that reads back as *value* (within 8 units in the last place)."""
+    import math
+
+    for digits in range(6, 18):
+        text = format(value, f".{digits}g")
+        if abs(float(text) - value) <= 8 * math.ulp(value):
+            return text
+    return repr(float(value))
 
 
 def _rev_line(arrhenius):
@@ -785,8 +803,8 @@ def _rev_line(arrhenius):
 
     rate = kd.Arrhenius(**arrhenius).to_rmg()
     factor = rate.A.get_conversion_factor_from_si_to_cm_mol_s()
-    return "    REV / {0:.6e} {1:.4f} {2:.4f} /\n".format(
-        rate.A.value_si * factor, rate.n.value_si, rate.Ea.value_si / 4184.0)
+    numbers = (rate.A.value_si * factor, rate.n.value_si, rate.Ea.value_si / 4184.0)
+    return "    REV / {} {} {} /\n".format(*(_short_number(x) for x in numbers))
 
 
 def _reverse_parts(rmg_reaction, terms, rmg_reaction_cls):

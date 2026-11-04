@@ -235,15 +235,15 @@ class ExplicitReverseRatesTests(TestCase):
     def test_chemkin_export_writes_the_rev(self):
         blocks = self.chemkin_blocks(self.model)
         (block,) = blocks[sides("H + O2 <=> O + OH")]
-        self.assertIn("REV / 7.040000e+13 -0.2600 0.1500 /", block)
+        self.assertIn("REV / 7.04e+13 -0.26 0.15 /", block)
         # A DUPLICATE pair: one entry per line, each with its own REV or none.
         first, second = blocks[sides("O + H2 <=> H + OH")]
-        self.assertIn("REV / 2.000000e+12 0.0000 5.0000 /", first)
+        self.assertIn("REV / 2e+12 0 5 /", first)
         self.assertNotIn("REV", second)
         self.assertIn("DUPLICATE", first)
         self.assertIn("DUPLICATE", second)
-        self.assertIn("REV / 3.000000e+19 -1.0000 49.0000 /", blocks[sides("H + O2 + M <=> HO2 + M")][0])
-        self.assertIn("REV / 1.233000e+66 -14.2349 63.0464 /", blocks[sides("H2O2 (+M) <=> OH + OH (+M)")][0])
+        self.assertIn("REV / 3e+19 -1 49 /", blocks[sides("H + O2 + M <=> HO2 + M")][0])
+        self.assertIn("REV / 1.233e+66 -14.2349 63.0464 /", blocks[sides("H2O2 (+M) <=> OH + OH (+M)")][0])
         self.assertNotIn("REV", blocks[sides("HO2 + H <=> H2 + O2")][0])
         self.assertNotIn("REV", blocks[sides("HO2 + OH => H2O + O2")][0])
         self.assertNotIn("REV", "".join(b for bs in self.chemkin_blocks(self.plain).values() for b in bs))
@@ -261,9 +261,38 @@ class ExplicitReverseRatesTests(TestCase):
         save_chemkin_file(path, list(species_map.values()), reactions, verbose=False, check_for_duplicates=False)
         with open(path) as handle:
             before = handle.read()
-        exports._write_reverse_rates(path, reactions, list(species_map.values()), {})
+        exports._write_reverse_rates(path, reactions, {})
         with open(path) as handle:
             self.assertEqual(handle.read(), before)
+
+    def test_rev_is_added_to_the_entries_as_written(self):
+        from rmgpy.chemkin import save_chemkin_file
+        from rmgpy.reaction import Reaction
+        from rmgpy.species import Species
+        from rmgpy.thermo import NASA, NASAPolynomial
+        from rmgpy.transport import TransportData
+
+        species_map, _ = exports._build_rmg_species_map(self.model, NASAPolynomial, NASA, TransportData, Species)
+        reverse = {}
+        reactions = exports._build_rmg_reactions(self.model, species_map, Reaction, reverse=reverse)
+        path = os.path.join(self.directory, "digits.inp")
+        save_chemkin_file(path, list(species_map.values()), reactions, verbose=False, check_for_duplicates=False)
+        with open(path) as handle:
+            text = handle.read()
+        # Another rewrite of the entries (more digits) stays as it is.
+        self.assertIn("3.520000e+16", text)
+        with open(path, "w") as handle:
+            handle.write(text.replace("3.520000e+16", "35200000000000000"))
+        exports._write_reverse_rates(path, reactions, reverse)
+        with open(path) as handle:
+            lines = handle.read().splitlines()
+        (number,) = [i for i, line in enumerate(lines) if "35200000000000000" in line]
+        self.assertEqual(lines[number + 1].strip(), "REV / 7.04e+13 -0.26 0.15 /")
+        # A file whose entries are not the reactions' is refused, not given misplaced REVs.
+        with open(path, "w") as handle:
+            handle.write("\n".join(line for line in lines if "35200000000000000" not in line) + "\n")
+        with self.assertRaises(exports.ExportError):
+            exports._write_reverse_rates(path, reactions, reverse)
 
     def test_cantera_export_runs_the_models_reverse_rate(self):
         result = exports.build_cantera_yaml(self.model)
