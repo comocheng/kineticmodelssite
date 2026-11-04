@@ -160,3 +160,30 @@ class LandingSceneTests(TestCase):
         # The importer reserves the port of each run, so the import.sh of the page sets none
         self.assertContains(response, "importChemkin.py")
         self.assertNotContains(response, "--port")
+
+
+class FundingAcknowledgmentTests(TestCase):
+    AWARDS = ("1403171", "2531937", "2531938")
+
+    def setUp(self):
+        cache.clear()
+
+    def test_footer_of_each_page_links_the_awards_and_gives_the_disclaimer(self):
+        for name in ("home", "species-search"):
+            response = self.client.get(reverse(name))
+            for award in self.AWARDS:
+                with self.subTest(page=name, award=award):
+                    self.assertContains(
+                        response, f'href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID={award}"'
+                    )
+            with self.subTest(page=name):
+                self.assertContains(
+                    response, "do not necessarily reflect the views of the National Science Foundation."
+                )
+
+    def test_funding_line_names_the_grants(self):
+        response = self.client.get(reverse("home"))
+        self.assertContains(
+            response,
+            "Supported by the U.S. National Science Foundation. Grant Nos. 1403171, 2531937, and 2531938.",
+        )

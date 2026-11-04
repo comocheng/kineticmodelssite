@@ -2,6 +2,14 @@ site_name: Pr.omethe.us
 site_description: Kinetic Models Database — FAIR combustion-kinetics platform usage guide and API reference
 site_url: https://pr.omethe.us/docs/
 repo_url: https://github.com/comocheng/kineticmodelssite
+# The NSF acknowledgment and disclaimer of the site footer, in the footer of each guide page
+copyright: >-
+  This material is based upon work supported by the National Science Foundation under Grant Nos.
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=1403171">1403171</a>,
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2531937">2531937</a>, and
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2531938">2531938</a>.
+  Any opinions, findings, and conclusions or recommendations expressed in this material are those of the
+  author(s) and do not necessarily reflect the views of the National Science Foundation.
 docs_dir: docs
 site_dir: docs_site
 use_directory_urls: false

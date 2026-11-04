@@ -1049,6 +1049,21 @@ label {
     font-size: 10px;
 }
 
+.footer-nsf {
+    max-width: 880px;
+    margin-top: 12px;
+    line-height: 1.7;
+}
+
+.footer-nsf a {
+    color: var(--color-white);
+    text-decoration: underline;
+}
+
+.footer-nsf a:hover {
+    color: #ff7a33;
+}
+
 .nsf-badge {
     display: inline-flex;
     align-items: center;
