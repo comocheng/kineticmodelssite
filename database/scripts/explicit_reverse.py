@@ -17,6 +17,7 @@ model's SpeciesName rows) and whose rate term has the line's forward A, n and Ea
 """
 import itertools
 import logging
+import math
 import os
 import re
 from collections import Counter, defaultdict
@@ -198,7 +199,7 @@ def attach(kinetic_model, model_dir, models, apply=True):
         terms = wanted.get(link.id)
         value = ({"terms": [terms.get(i) for i in range(len(forward_terms(link.kinetics.raw_data)))]}
                  if terms else None)
-        if value == link.reverse_rate:
+        if _same(value, link.reverse_rate):
             report["unchanged"] += value is not None
             continue
         report["set" if value is not None else "cleared"] += 1
@@ -208,6 +209,18 @@ def attach(kinetic_model, model_dir, models, apply=True):
         with transaction.atomic():
             models.KineticsComment.objects.bulk_update(changed, ["reverse_rate"], batch_size=500)
     return report
+
+
+def _same(a, b):
+    """Whether two stored values are one. PostgreSQL keeps 1.233e66 as an integer, so numbers are
+    compared as floats."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
+        return math.isclose(float(a), float(b), rel_tol=1e-12, abs_tol=0.0)
+    return a == b
 
 
 def chemkin_lines_species(path):

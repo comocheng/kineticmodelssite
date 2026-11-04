@@ -66,7 +66,7 @@ REV / 3.0E+19 -1.0 49000.0/
 H2O2(+M)<=>2OH(+M)         2.000E+12   0.900  48749.0
     LOW / 2.49E+24 -2.3 48749.0 /
     TROE / 0.43 1E-30 1E+30 /
-    REV / 1.0E+12 0.0 0.0 /
+    REV/ 1.233E+66 -14.2349 63046.4/
 HO2+H<=>H2+O2              1.660E+13   0.000    820.0
 H2+OH<=>H2O+H              2.160E+08   1.510   3430.0
     REV / 0.0 0.0 0.0 /
@@ -136,6 +136,7 @@ class RevLinesTests(SimpleTestCase):
         self.assertEqual(lines[11]["rev"], (3e19, -1.0, 49000.0))
         self.assertEqual((lines[11]["collider"], lines[11]["falloff"]), ("M", False))
         self.assertEqual((lines[13]["collider"], lines[13]["falloff"]), ("M", True))
+        self.assertEqual(lines[13]["rev"], (1.233e66, -14.2349, 63046.4))    # Malewicki 17 line 23076
         self.assertFalse(lines[4]["duplicate"] or lines[4]["falloff"] or lines[4]["collider"])
 
     def test_rev_on_an_irreversible_line_is_not_read(self):
@@ -242,7 +243,7 @@ class ExplicitReverseRatesTests(TestCase):
         self.assertIn("DUPLICATE", first)
         self.assertIn("DUPLICATE", second)
         self.assertIn("REV / 3.000000e+19 -1.0000 49.0000 /", blocks[sides("H + O2 + M <=> HO2 + M")][0])
-        self.assertIn("REV / 1.000000e+12 0.0000 0.0000 /", blocks[sides("H2O2 (+M) <=> OH + OH (+M)")][0])
+        self.assertIn("REV / 1.233000e+66 -14.2349 63.0464 /", blocks[sides("H2O2 (+M) <=> OH + OH (+M)")][0])
         self.assertNotIn("REV", blocks[sides("HO2 + H <=> H2 + O2")][0])
         self.assertNotIn("REV", blocks[sides("HO2 + OH => H2O + O2")][0])
         self.assertNotIn("REV", "".join(b for bs in self.chemkin_blocks(self.plain).values() for b in bs))
@@ -297,6 +298,6 @@ class ExplicitReverseRatesTests(TestCase):
             status = {int(row["line"]): row["status"] for row in csv.DictReader(handle)}
         self.assertEqual(status, {4: "matched", 6: "matched", 11: "matched", 13: "matched",
                                   20: "irreversible_link", 22: "no_species"})
-        # Again: nothing to change.
+        # Again: nothing to change (PostgreSQL gives 1.233e66 back as an integer).
         result = explicit_reverse.attach(self.model, os.path.join(self.directory, "rev"), MODELS)
         self.assertEqual((result["set"], result["cleared"], result["unchanged"]), (0, 0, 4))
