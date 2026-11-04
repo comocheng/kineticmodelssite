@@ -31,7 +31,7 @@ from django.db.models import Count
 from database import models as db
 from database.models.kinetic_data import efficiencies_hash
 from database.scripts.import_rmg_models import (
-    get_reaction_hash, get_species_hash, import_kinetics, import_thermo, variant_name)
+    get_reaction_hash, get_species_hash, import_kinetics, import_thermo)
 
 MODELS = SimpleNamespace(**{name: getattr(db, name) for name in (
     "KineticModel", "Source", "Author", "Authorship", "Thermo", "ThermoComment", "Species", "Formula",
@@ -128,7 +128,7 @@ def keep_oldest(model, group_fields, **filters):
 # ---------------------------------------------------------------------------
 
 def species_identities():
-    """species id -> (structure keys of its isomers, electronic state and variant).
+    """species id -> (structure keys of its isomers, electronic state).
 
     Records without structure keys are left out."""
     keys_of_isomer = defaultdict(set)
@@ -137,17 +137,16 @@ def species_identities():
     keys = defaultdict(set)
     for species_id, isomer_id in db.Species.isomers.through.objects.values_list("species_id", "isomer_id"):
         keys[species_id] |= keys_of_isomer[isomer_id]
-    states = {pk: (state, variant) for pk, state, variant
-              in db.Species.objects.values_list("pk", "electronic_state", "variant")}
+    states = dict(db.Species.objects.values_list("pk", "electronic_state"))
     return {sp: (frozenset(k), states[sp]) for sp, k in keys.items() if k}
 
 
 def split_groups():
     """Groups of records that are one species, the record to keep first.
 
-    Records in one electronic state and variant that share a structure key are one species
-    (spin states have different keys; a model's variant record, furop2 next to furop1, is a
-    species of its own). Resonance forms usually share one key, but not when their InChI H
+    Records in one electronic state that share a structure key are one species (spin states
+    have different keys; a model's two names for one structure, furop1 and furop2, are two names
+    of one record). Resonance forms usually share one key, but not when their InChI H
     layers differ: an older import left CH2COOH as a record with [CH2]C(=O)O and another with
     that form and C=C([O])O. So records are joined through any key they share, also through a
     third record, not only when all their keys are the same. The kept record is the one the
@@ -161,10 +160,10 @@ def split_groups():
         return species_id
 
     first_holder = {}
-    for species_id, (keys, state_and_variant) in species_identities().items():
+    for species_id, (keys, state) in species_identities().items():
         parent.setdefault(species_id, species_id)
         for key in keys:
-            holder = first_holder.setdefault((key, state_and_variant), species_id)
+            holder = first_holder.setdefault((key, state), species_id)
             parent[root(species_id)] = root(holder)
     groups = defaultdict(list)
     for species_id in parent:
@@ -212,21 +211,80 @@ def merge_species_group(ids):
     keep.save(update_fields=["prime_id", "cas_number"])
     db.Species.objects.filter(pk__in=drop_ids).delete()
     keep.isomers.add(*isomers)
-    keep.hash = get_species_hash(keep.isomers.all(), keep.electronic_state, keep.variant)
+    keep.hash = get_species_hash(keep.isomers.all(), keep.electronic_state)
     keep.save(update_fields=["hash"])
     # Names: one row per model and name, and no empty placeholder next to a name.
-    keep_oldest(db.SpeciesName, ("kinetic_model", "name"), species_id=keep_id)
+    keep_oldest_names(keep_id)
     named = set(db.SpeciesName.objects.filter(species_id=keep_id).exclude(name="")
                 .values_list("kinetic_model", flat=True))
     db.SpeciesName.objects.filter(species_id=keep_id, name="", kinetic_model__in=named).delete()
     keep_oldest(db.Efficiency, ("kinetics", "species"), species_id=keep_id)
+    merge_identical_thermo(keep_id)
     return reactions
+
+
+def keep_oldest_names(species_id):
+    """One name row per model and name of the record: the links of a second copy move to the
+    oldest before it goes."""
+    first = {}
+    for pk, model, name in db.SpeciesName.objects.filter(species_id=species_id).order_by("pk").values_list(
+            "pk", "kinetic_model", "name"):
+        if (model, name) in first:
+            move_references(db.SpeciesName, [pk], first[(model, name)])
+            db.SpeciesName.objects.filter(pk=pk).delete()
+        else:
+            first[(model, name)] = pk
+
+
+def merge_identical_thermo(species_id):
+    """Model thermo rows of the record with the same polynomials become one, the oldest: the row
+    the importer finds for them (model_thermo). Returns the rows merged away."""
+    fields = ("coeffs_poly1", "coeffs_poly2", "temp_min_1", "temp_max_1", "temp_min_2", "temp_max_2")
+    rows = defaultdict(list)
+    for row in db.Thermo.objects.filter(species_id=species_id, provider_record__isnull=True).order_by(
+            "pk").values("pk", *fields):
+        rows[tuple(tuple(v) if isinstance(v, list) else v for v in (row[f] for f in fields))].append(row["pk"])
+    merged = 0
+    for ids in rows.values():
+        if len(ids) > 1:
+            move_references(db.Thermo, ids[1:], ids[0])
+            db.Thermo.objects.filter(pk__in=ids[1:]).delete()
+            merged += len(ids) - 1
+    if merged:
+        keep_oldest(db.ThermoComment, ("kinetic_model", "thermo", "species_name"), thermo__species_id=species_id)
+    return merged
+
+
+def link_names(link_ids):
+    """kinetics link id -> the later names it writes, sorted (reactant, name) pairs."""
+    names = defaultdict(list)
+    for link_id, reactant, name in db.KineticsCommentName.objects.filter(
+            kinetics_comment__in=link_ids).values_list("kinetics_comment_id", "reactant", "species_name__name"):
+        names[link_id].append((reactant, name))
+    return {link_id: tuple(sorted(v)) for link_id, v in names.items()}
+
+
+def keep_oldest_links(kinetics_id):
+    """One link per model and later names on a kinetics row: furop1 + H and furop2 + H with
+    one rate are two of the model's lines."""
+    links = list(db.KineticsComment.objects.filter(kinetics_id=kinetics_id).order_by("pk")
+                 .values_list("pk", "kinetic_model"))
+    names = link_names([pk for pk, _ in links])
+    seen, extra = set(), []
+    for pk, model in links:
+        key = (model, names.get(pk, ()))
+        if key in seen:
+            extra.append(pk)
+        else:
+            seen.add(key)
+    db.KineticsComment.objects.filter(pk__in=extra).delete()
+    return len(extra)
 
 
 def merge_kinetics(keep_id, drop_id):
     """Merge a kinetics row into the identical one of the same reaction."""
     move_references(db.Kinetics, [drop_id], keep_id)
-    keep_oldest(db.KineticsComment, ("kinetic_model",), kinetics_id=keep_id)
+    keep_oldest_links(keep_id)
     keep_oldest(db.Efficiency, ("species",), kinetics_id=keep_id)
     db.Kinetics.objects.filter(pk=drop_id).delete()
 
@@ -290,21 +348,136 @@ def merge_reactions(reaction_ids, report):
 
 def merge_split_species(apply=False, log=print):
     """Step 1. Returns counts of what was (or, in a dry run, would be) merged."""
+    with transaction.atomic():
+        report = merge_groups(split_groups(), log)
+        if not apply:
+            transaction.set_rollback(True)
+    return dict(report)
+
+
+def merge_groups(groups, log=print, report=None):
+    """Merge each group of records into its first; see merge_split_species. Returns the counts."""
+    report = Counter() if report is None else report
+    report["split_groups"] += len(groups)
+    report["records_merged_away"] += sum(len(g) - 1 for g in groups)
+    reactions = set()
+    for n, ids in enumerate(groups, 1):
+        reactions |= merge_species_group(ids)
+        if n % 100 == 0:
+            log(f"  merged {n} of {len(groups)} groups")
+    report["reactions_with_changed_species"] += len(reactions)
+    # A collider efficiency on a merged record changes the rate's fingerprint.
+    refresh_efficiencies_hashes(set(db.Efficiency.objects.filter(
+        species_id__in=[ids[0] for ids in groups]).values_list("kinetics_id", flat=True)), report)
+    merge_reactions(reactions, report)
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Variant records (Species.variant, Nov 2026)
+# ---------------------------------------------------------------------------
+
+def variant_column():
+    """Whether database_species still has the variant column (migration 0021 removes it)."""
+    from django.db import connection
+    with connection.cursor() as cursor:
+        return "variant" in {c.name for c in connection.introspection.get_table_description(
+            cursor, db.Species._meta.db_table)}
+
+
+def variant_records():
+    """[(species id, model name, label)] of the records that 0019 gave a model's later name for a
+    structure it already lists ("<model name>: <label>")."""
+    from django.db import connection
+    if not variant_column():
+        return []
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT id, variant FROM {db.Species._meta.db_table} WHERE variant <> '' ORDER BY id")
+        rows = cursor.fetchall()
+    return [(pk, *variant.split(": ", 1)) for pk, variant in rows]
+
+
+def fold_species_variants(apply=False, log=print):
+    """Merges each variant record into the record of its structure and state, and keeps its name,
+    thermo links and kinetics links. Before anything moves, the links say which name they are for:
+    the model's thermo links of both records name their record's name (ThermoComment.species_name),
+    and each kinetics link of the model on a reaction of the variant record names the variant
+    label each time it writes it (KineticsCommentName). Then the variant is cleared and the records
+    are merged as merge_split_species merges them (reactions that become identical are merged, a
+    link per model and names kept). A variant record without such a record becomes the shared
+    record. Returns the counts; writes only with apply=True."""
     report = Counter()
     with transaction.atomic():
-        groups = split_groups()
-        report["split_groups"] = len(groups)
-        report["records_merged_away"] = sum(len(g) - 1 for g in groups)
-        reactions = set()
-        for n, ids in enumerate(groups, 1):
-            reactions |= merge_species_group(ids)
-            if n % 100 == 0:
-                log(f"  merged {n} of {len(groups)} groups")
-        report["reactions_with_changed_species"] = len(reactions)
-        # A collider efficiency on a merged record changes the rate's fingerprint.
-        refresh_efficiencies_hashes(set(db.Efficiency.objects.filter(
-            species_id__in=[ids[0] for ids in groups]).values_list("kinetics_id", flat=True)), report)
-        merge_reactions(reactions, report)
+        variants = variant_records()
+        report["variant_records"] = len(variants)
+        if not variants:
+            return dict(report)
+        model_ids = dict(db.KineticModel.objects.values_list("model_name", "pk"))
+        identity = species_identities()
+        holders = defaultdict(set)
+        variant_ids = {pk for pk, _, _ in variants}
+        for species_id, (keys, state) in identity.items():
+            if species_id not in variant_ids:
+                for key in keys:
+                    holders[(key, state)].add(species_id)
+        for pk, model_name, label in variants:
+            model_id = model_ids.get(model_name)
+            names = db.SpeciesName.objects.filter(species_id=pk, kinetic_model_id=model_id, name=label)
+            name = names.order_by("pk").first()
+            if model_id is None or name is None:
+                report["variants_without_their_name"] += 1
+                log(f"  record {pk}: no name {label!r} of {model_name!r}")
+                continue
+            keys, state = identity.get(pk, (frozenset(), ""))
+            shared = sorted(set().union(*(holders[(key, state)] for key in keys))) if keys else []
+            if not shared:
+                report["variants_without_shared_record"] += 1
+                log(f"  record {pk} ({model_name}: {label}) has no shared record: it becomes one")
+            # The thermo links of the variant record are its name's ...
+            report["thermo_links_named"] += db.ThermoComment.objects.filter(
+                kinetic_model_id=model_id, thermo__species_id=pk).update(species_name=name)
+            # ... and those of the shared record in this model are its own name's, its first name.
+            for other in shared:
+                first = db.SpeciesName.objects.filter(species_id=other, kinetic_model_id=model_id).exclude(
+                    name="").order_by("pk").first()
+                if first is not None:
+                    report["thermo_links_named"] += db.ThermoComment.objects.filter(
+                        kinetic_model_id=model_id, thermo__species_id=other).update(species_name=first)
+            # Each time a kinetics link of the model writes the variant record, it writes the label.
+            coefficients = defaultdict(list)
+            for reaction_id, coeff in db.Stoichiometry.objects.filter(species_id=pk).values_list("reaction_id", "coeff"):
+                coefficients[reaction_id].append(coeff)
+            rows = []
+            for link_id, reaction_id in db.KineticsComment.objects.filter(
+                    kinetic_model_id=model_id, kinetics__reaction_id__in=list(coefficients)).values_list(
+                    "pk", "kinetics__reaction_id"):
+                for coeff in coefficients[reaction_id]:
+                    if coeff != int(coeff):
+                        report["fractional_coefficients_not_named"] += 1
+                        continue
+                    rows += [db.KineticsCommentName(kinetics_comment_id=link_id, species_name=name,
+                                                    reactant=coeff < 0) for _ in range(abs(int(coeff)))]
+            db.KineticsCommentName.objects.bulk_create(rows)
+            report["kinetics_names_written"] += len(rows)
+            report["kinetics_links_named"] += len({row.kinetics_comment_id for row in rows})
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(f"UPDATE {db.Species._meta.db_table} SET variant = '' WHERE variant <> ''")
+        groups = [g for g in split_groups() if variant_ids & set(g)]
+        # The shared record is kept: the oldest record that is not a variant record first.
+        groups = [sorted(g, key=lambda sp: (sp in variant_ids, g.index(sp))) for g in groups]
+        merge_groups(groups, log, report)
+        # A variant record that is the only record of its structure keeps its rows; its hash
+        # loses the variant, or it joins the record that already has that hash.
+        for species in db.Species.objects.filter(pk__in=variant_ids).order_by("pk"):
+            new_hash = get_species_hash(species.isomers.all(), species.electronic_state)
+            twin = db.Species.objects.filter(hash=new_hash).exclude(pk=species.pk).values_list("pk", flat=True).first()
+            if twin is not None:
+                merge_groups([[twin, species.pk]], log, report)
+            else:
+                db.Species.objects.filter(pk=species.pk).update(hash=new_hash)
+                report["variant_records_kept_as_shared"] += 1
+        report["species_records_after"] = db.Species.objects.count()
         if not apply:
             transaction.set_rollback(True)
     return dict(report)
@@ -315,13 +488,22 @@ def merge_split_species(apply=False, log=print):
 # ---------------------------------------------------------------------------
 
 def model_links(model):
+    """The model's names, thermo links (with the name each is for, "" for a record's only name)
+    and kinetics links (with the later names each writes, see link_names)."""
+    kinetics = list(db.KineticsComment.objects.filter(kinetic_model=model)
+                    .values("id", "kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key",
+                            "comment", "reversible"))
+    names = link_names([k["id"] for k in kinetics])
+    for k in kinetics:
+        k["names"] = names.get(k.pop("id"), ())
+    thermo = list(db.ThermoComment.objects.filter(kinetic_model=model)
+                  .values("thermo_id", "thermo__species_id", "comment", "species_name__name"))
+    for t in thermo:
+        t["name"] = t.pop("species_name__name") or ""
     return (
         list(db.SpeciesName.objects.filter(kinetic_model=model).values("species_id", "name")),
-        list(db.ThermoComment.objects.filter(kinetic_model=model)
-             .values("thermo_id", "thermo__species_id", "comment")),
-        list(db.KineticsComment.objects.filter(kinetic_model=model)
-             .values("kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key", "comment",
-                     "reversible")),
+        thermo,
+        kinetics,
     )
 
 
@@ -510,19 +692,21 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
     # same" is judged by record and, for a corrected structure (a new record), by the model's
     # names: the species' name, or the reaction written with names.
     old_names, made_names_of = names_of_species(old[0]), names_of_species(made[0])
-    made_thermo = {t["thermo_id"] for t in made[1]}
+    # A link is its row and the name it is for: two names may share a thermo row or a rate.
+    thermo_key, kinetics_key = (lambda t: (t["thermo_id"], t["name"])), (lambda k: (k["kinetics_id"], k["names"]))
+    made_thermo = set(map(thermo_key, made[1]))
     covered = {t["thermo__species_id"] for t in made[1]}
     covered_names = set().union(*(made_names_of[s] for s in covered)) if covered else set()
-    keep_thermo = {t["thermo_id"]: t["comment"] for t in old[1]
-                   if t["thermo_id"] not in made_thermo and thermo_status != "ok"
+    keep_thermo = {thermo_key(t): t for t in old[1]
+                   if thermo_key(t) not in made_thermo and thermo_status != "ok"
                    and t["thermo__species_id"] not in covered
                    and not old_names[t["thermo__species_id"]] & covered_names}
-    made_kinetics = {k["kinetics_id"] for k in made[2]}
+    made_kinetics = set(map(kinetics_key, made[2]))
     made_reactions = {k["kinetics__reaction__canonical_key"] for k in made[2]} - {""}
     made_equations = set().union(*label_equations(made[2], made_names_of).values())
     old_equations = label_equations(old[2], old_names)
-    keep_kinetics = {k["kinetics_id"]: k for k in old[2]
-                     if k["kinetics_id"] not in made_kinetics and kinetics_status != "ok"
+    keep_kinetics = {kinetics_key(k): k for k in old[2]
+                     if kinetics_key(k) not in made_kinetics and kinetics_status != "ok"
                      and k["kinetics__reaction__canonical_key"] not in made_reactions
                      and not old_equations[k["kinetics_id"]] & made_equations}
     # A kept link must still be the equation it names, written with the names the model has
@@ -531,21 +715,33 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
     stoichiometry = stoichiometry_rows({k["kinetics__reaction_id"] for k in keep_kinetics.values()})
     wrong = links_not_their_equation(keep_kinetics.values(), names_now, stoichiometry)
     for k in wrong:
-        del keep_kinetics[k["kinetics_id"]]
+        del keep_kinetics[kinetics_key(k)]
     result["kinetics_links_not_their_equation"] = len(wrong)
     db.SpeciesName.objects.bulk_create([
         db.SpeciesName(species_id=species, kinetic_model=model, name=name) for species, name in keep_names])
+    # Kept links name the model's name rows as they are now.
+    name_rows, first_row = {}, {}
+    for pk, species, name in db.SpeciesName.objects.filter(kinetic_model=model).order_by("pk").values_list(
+            "pk", "species_id", "name"):
+        name_rows.setdefault((species, name), pk)
+        first_row.setdefault(name, pk)
     db.ThermoComment.objects.bulk_create([
-        db.ThermoComment(thermo_id=pk, kinetic_model=model, comment=c) for pk, c in keep_thermo.items()])
+        db.ThermoComment(thermo_id=t["thermo_id"], kinetic_model=model, comment=t["comment"],
+                         species_name_id=name_rows.get((t["thermo__species_id"], t["name"])) if t["name"] else None)
+        for t in keep_thermo.values()])
     # A kept link keeps its arrow too: its library entry failed, so nothing can set it again.
-    db.KineticsComment.objects.bulk_create([
-        db.KineticsComment(kinetics_id=pk, kinetic_model=model, comment=k["comment"][:1000],
+    kept_links = db.KineticsComment.objects.bulk_create([
+        db.KineticsComment(kinetics_id=k["kinetics_id"], kinetic_model=model, comment=k["comment"][:1000],
                            reversible=k["reversible"])
-        for pk, k in keep_kinetics.items()])
+        for k in keep_kinetics.values()])
+    db.KineticsCommentName.objects.bulk_create([
+        db.KineticsCommentName(kinetics_comment=link, species_name_id=first_row[name], reactant=reactant)
+        for link, k in zip(kept_links, keep_kinetics.values()) for reactant, name in k["names"]
+        if name in first_row])
 
     # Counts compare the link rows before and after: a second copy of a link counts as removed.
     after = model_links(model)
-    keys = (lambda n: (n["species_id"], n["name"]), lambda t: t["thermo_id"], lambda k: k["kinetics_id"])
+    keys = (lambda n: (n["species_id"], n["name"]), thermo_key, kinetics_key)
     for label, key, before_rows, after_rows, kept in zip(
             ("names", "thermo_links", "kinetics_links"), keys, old, after, (keep_names, keep_thermo, keep_kinetics)):
         before_count, after_count = Counter(map(key, before_rows)), Counter(map(key, after_rows))
@@ -619,17 +815,20 @@ def integrity_report():
     r["name_links_empty_next_to_a_name"] = sum(1 for m, s, n in names if not n and (m, s) in named_pairs)
     r["name_links_duplicate"] = sum(c - 1 for c in Counter(names).values() if c > 1)
 
-    r["thermo_links_duplicate"] = duplicate_rows(db.ThermoComment, ("kinetic_model", "thermo"))
-    r["kinetics_links_duplicate"] = duplicate_rows(db.KineticsComment, ("kinetic_model", "kinetics"))
+    r["thermo_links_duplicate"] = duplicate_rows(db.ThermoComment, ("kinetic_model", "thermo", "species_name"))
+    # A link is one per model, kinetics row and later names (furop1 + H and furop2 + H, one rate).
+    link_rows = list(db.KineticsComment.objects.values_list("pk", "kinetic_model", "kinetics"))
+    written = link_names([pk for pk, _, _ in link_rows])
+    r["kinetics_links_duplicate"] = sum(n - 1 for n in Counter(
+        (model, kinetics, written.get(pk, ())) for pk, model, kinetics in link_rows).values() if n > 1)
     r["thermo_links_to_provider_rows"] = db.ThermoComment.objects.filter(thermo__provider_record__isnull=False).count()
 
     isomers = defaultdict(list)
     for species_id, isomer_id in db.Species.isomers.through.objects.values_list("species_id", "isomer_id"):
         isomers[species_id].append(SimpleNamespace(id=isomer_id))
     r["species_with_stale_hash"] = sum(
-        1 for pk, stored, state, variant in db.Species.objects.values_list(
-            "pk", "hash", "electronic_state", "variant")
-        if stored != get_species_hash(isomers[pk], state, variant))
+        1 for pk, stored, state in db.Species.objects.values_list("pk", "hash", "electronic_state")
+        if stored != get_species_hash(isomers[pk], state))
     stoich = defaultdict(list)
     for reaction_id, coeff, species_id in db.Stoichiometry.objects.values_list("reaction_id", "coeff", "species_id"):
         stoich[reaction_id].append((coeff, SimpleNamespace(id=species_id)))
@@ -655,13 +854,30 @@ def integrity_report():
     ground = set(db.Species.objects.filter(electronic_state="").values_list("pk", flat=True))
     r["excited_names_on_ground_state_records"] = sum(
         1 for m, s, n in names if n and EXCITED_NAME.search(n) and s in ground)
-    # A variant record ("<model>: <label>") carries that model's label and no other name.
-    model_names = dict(db.KineticModel.objects.values_list("pk", "model_name"))
-    variants = dict(db.Species.objects.exclude(variant="").values_list("pk", "variant"))
-    r["variant_species"] = len(variants)
-    r["names_not_their_variant"] = sum(
-        1 for m, s, n in names
-        if s in variants and variants[s] != variant_name(SimpleNamespace(model_name=model_names.get(m)), n))
+    # A model's two names for one record (furop1 and furop2): each thermo link of the record in
+    # that model names one of them, no name has two, and each name a kinetics link writes is a
+    # name of that model for a species on that side of the reaction.
+    r["variant_species_records"] = len(variant_records())
+    thermo_links = list(db.ThermoComment.objects.values_list("kinetic_model", "thermo__species_id", "species_name"))
+    per_record = Counter((m, s) for m, s, _ in thermo_links)
+    r["thermo_links_without_name_on_records_with_2plus"] = sum(
+        1 for m, s, name in thermo_links if per_record[(m, s)] > 1 and name is None)
+    r["names_with_2plus_thermo_links"] = sum(
+        n - 1 for n in Counter(name for _, _, name in thermo_links if name is not None).values() if n > 1)
+    sides = defaultdict(Counter)
+    for reaction_id, species_id, coeff in db.Stoichiometry.objects.values_list("reaction_id", "species_id", "coeff"):
+        sides[reaction_id][(species_id, coeff < 0)] += abs(coeff)
+    written_names = defaultdict(Counter)
+    wrong_model = 0
+    for link_id, reaction_id, reactant, species_id, name_model, link_model in db.KineticsCommentName.objects.values_list(
+            "kinetics_comment_id", "kinetics_comment__kinetics__reaction_id", "reactant", "species_name__species_id",
+            "species_name__kinetic_model_id", "kinetics_comment__kinetic_model_id"):
+        written_names[(link_id, reaction_id)][(species_id, reactant)] += 1
+        wrong_model += name_model != link_model
+    r["kinetics_names_of_another_model"] = wrong_model
+    r["kinetics_names_not_on_their_reaction"] = sum(
+        1 for (link_id, reaction_id), counts in written_names.items()
+        if any(n > sides[reaction_id][key] for key, n in counts.items()))
     mismatched = mismatched_kinetics_links()
     r["kinetics_links_not_their_equation"] = len(mismatched)
     r["examples"] = {

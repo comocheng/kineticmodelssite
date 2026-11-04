@@ -937,26 +937,45 @@ def _left_out_header(left_out, species_map):
 
 
 def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
-    from collections import defaultdict
+    """record id -> RMG species of the download, and ("name", SpeciesName id) -> RMG species for
+    each later name of a record the model names twice, each name with its own thermo entry
+    (furop1 and furop2): each such name is a species of the download, with its thermo. The
+    record's key holds its first name (the oldest name row). The species are in the order of the
+    model's name rows."""
+    from collections import Counter, defaultdict
     from django.db.models import F
-    from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, Transport
+    from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, ThermoComment, Transport
 
     species_map = {}
     labels = set()
     # The model's names and the structures of its species are read in one query each, not
     # one per species: a model of 2,000 species took seconds of queries alone.
+    name_rows = list(SpeciesName.objects.filter(kinetic_model=kinetic_model).order_by("pk").values_list(
+        "pk", "species_id", "name"))
+    name_thermo = dict(ThermoComment.objects.filter(
+        kinetic_model=kinetic_model, species_name__isnull=False).values_list("species_name_id", "thermo_id"))
+    with_entry = Counter(species_id for pk, species_id, _ in name_rows if pk in name_thermo)
+    named_records = {species_id for species_id, n in with_entry.items() if n > 1}
+    first_name_row = {}
+    for pk, species_id, _ in name_rows:
+        if species_id in named_records and pk in name_thermo:
+            first_name_row.setdefault(species_id, pk)
+    # The later names are species of their own, so the record's other rows do not take them.
+    later = {(species_id, name) for pk, species_id, name in name_rows
+             if species_id in named_records and pk in name_thermo and pk != first_name_row[species_id]}
     names_in_model = defaultdict(list)
-    for species_id, name in SpeciesName.objects.filter(kinetic_model=kinetic_model).values_list(
-            "species_id", "name"):
-        if name:
+    for _, species_id, name in name_rows:
+        if name and (species_id, name) not in later:
             names_in_model[species_id].append(name)
 
-    def assign_label(db_species, index):
-        name = None
+    def assign_label(db_species, index, own_name=None):
+        name = own_name
         # Prefer the name linked to THIS specific model to avoid
         # picking up labels from other models (e.g. N2C4H9OH vs sc4h9oh).
         model_names = sorted(names_in_model[db_species.id])
-        if model_names:
+        if name:
+            pass
+        elif model_names:
             name = model_names[0]
         elif hasattr(db_species, "names"):
             names = sorted(n for n in db_species.names if n)
@@ -974,7 +993,12 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         labels.add(label)
         return label
 
-    species_list = list(kinetic_model.species.all())
+    # One entry per name row, in the order of the rows (the order of their ids); a later name is
+    # an entry of its own (its row id), every other row an entry of its record.
+    species_objects = Species.objects.in_bulk({species_id for _, species_id, _ in name_rows})
+    later_rows = {pk: name for pk, species_id, name in name_rows if (species_id, name) in later}
+    entries = [(species_objects[species_id], pk if pk in later_rows else None)
+               for pk, species_id, _ in name_rows]
     # Species of the model's reactions, and their specific colliders, that the model does not name.
     reaction_species_ids = set(Stoichiometry.objects.filter(
         reaction__kinetics__kineticscomment__kinetic_model=kinetic_model
@@ -982,10 +1006,10 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
     reaction_species_ids.update(kinetic_model.kineticscomment_set.filter(
         kinetics__specific_collider__isnull=False
     ).values_list("kinetics__specific_collider_id", flat=True))
-    reaction_species_ids -= {species.id for species in species_list}
-    species_list.extend(Species.objects.filter(id__in=reaction_species_ids).order_by("id"))
+    reaction_species_ids -= set(species_objects)
+    entries.extend((species, None) for species in Species.objects.filter(id__in=reaction_species_ids).order_by("id"))
 
-    species_ids = [species.id for species in species_list]
+    species_ids = list(dict.fromkeys(species.id for species, _ in entries))
     structures = defaultdict(list)
     for structure in Structure.objects.filter(isomer__species__in=species_ids).annotate(
             of_species=F("isomer__species")):
@@ -993,7 +1017,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
 
     # Use thermo entries linked to THIS model via ThermoComment so we get
     # the correct polynomials rather than an arbitrary entry from another model.
-    from database.models import ThermoComment, TransportComment
+    from database.models import TransportComment
     model_thermo_ids = set(
         ThermoComment.objects.filter(kinetic_model=kinetic_model)
         .values_list("thermo_id", flat=True)
@@ -1002,6 +1026,11 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         id__in=model_thermo_ids, species_id__in=species_ids
     ).select_related("species")
     thermo_map = {thermo.species_id: thermo for thermo in model_thermos}
+    thermo_by_id = {thermo.id: thermo for thermo in model_thermos}
+    # A record the model names twice: the record's entry has its first name's thermo.
+    for species_id, pk in first_name_row.items():
+        if name_thermo[pk] in thermo_by_id:
+            thermo_map[species_id] = thermo_by_id[name_thermo[pk]]
 
     # Fallback: for species in reactions but missing a model-specific thermo,
     # use any available thermo entry.
@@ -1018,10 +1047,13 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         transport.species_id: transport
         for transport in Transport.objects.filter(species_id__in=species_ids).select_related("species")
     }
+    name_transport = dict(TransportComment.objects.filter(
+        kinetic_model=kinetic_model, species_name_id__in=list(later_rows)).values_list("species_name_id", "transport_id"))
+    transport_by_id = Transport.objects.in_bulk(list(name_transport.values()))
     missing_thermo = []
 
-    for index, db_species in enumerate(species_list, start=1):
-        rmg_species = rmg_species_cls(index=index, label=assign_label(db_species, index))
+    for index, (db_species, later_row) in enumerate(entries, start=1):
+        rmg_species = rmg_species_cls(index=index, label=assign_label(db_species, index, later_rows.get(later_row)))
         # Parse adjacency lists into RMG Molecule objects.  Some imported
         # species may have malformed adjacency lists (e.g. containing
         # ReSpecTh/PrIMe fields like 'molecularTermSymbol') that RMG
@@ -1039,7 +1071,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
                 )
         rmg_species.molecule = molecules
 
-        thermo = thermo_map.get(db_species.id)
+        thermo = thermo_by_id.get(name_thermo[later_row]) if later_row else thermo_map.get(db_species.id)
         if thermo is None:
             missing_thermo.append(db_species.id)
             continue
@@ -1061,7 +1093,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
             Tmax=(thermo.temp_max_2, "K"),
         )
 
-        transport = transport_map.get(db_species.id)
+        transport = transport_by_id.get(name_transport.get(later_row)) or transport_map.get(db_species.id)
         if transport:
             rmg_species.transport_data = transport_cls(
                 shapeIndex=int(transport.geometry or 0),
@@ -1074,7 +1106,7 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
             )
             rmg_species.transportData = rmg_species.transport_data
 
-        species_map[db_species.id] = rmg_species
+        species_map[("name", later_row) if later_row else db_species.id] = rmg_species
 
     return species_map, missing_thermo
 
@@ -1083,15 +1115,33 @@ _FALLOFF_TYPES = ("troe", "lindemann")
 
 
 def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=False, left_out=None):
-    """The model's reactions as RMG objects.  A falloff reaction with the same species on
-    both sides is not written; its kinetics comment goes into ``left_out`` when one is given."""
-    from collections import Counter
+    """The model's reactions as RMG objects.  A species is written with the name the link names
+    for it (KineticsCommentName, a later name: furop2 + H), else with its record's species. A
+    falloff reaction with the same species on both sides is not written; its kinetics comment
+    goes into ``left_out`` when one is given."""
+    from collections import Counter, defaultdict
 
     reactions = []
     missing_species = set()
     unbalanced_reactions = []
     from django.db.models import Prefetch
-    from database.models import Efficiency
+    from database.models import Efficiency, KineticsCommentName
+
+    written = defaultdict(list)
+    for link_id, reactant, species_id, name_id in KineticsCommentName.objects.filter(
+            kinetics_comment__kinetic_model=kinetic_model).order_by("species_name__name", "pk").values_list(
+            "kinetics_comment_id", "reactant", "species_name__species_id", "species_name_id"):
+        written[(link_id, reactant, species_id)].append(name_id)
+
+    def keys(link_id, rows, reactant):
+        # The species_map key of each species: the named name's while the link has one for it.
+        left = {}
+        out = []
+        for sp in rows:
+            names = left.setdefault(sp.id, list(written.get((link_id, reactant, sp.id), ())))
+            name_key = ("name", names.pop(0)) if names else None
+            out.append(name_key if name_key in species_map else sp.id)
+        return out
 
     # Coefficients and efficiencies in three queries for the model, not in a dozen per link.
     for kinetics_comment in kinetic_model.kineticscomment_set.select_related(
@@ -1114,26 +1164,28 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     f"coefficient: {kinetics.id}."
                 )
             continue
-        # A falloff reaction with the same species on both sides, as furop1 (+M) <=> furop2 (+M)
-        # when the model's two names are one species record: Cantera takes the species for a
-        # named collider and does not load the file. The reaction changes no amount. Other
-        # types with the same species on both sides load, so they are written.
+        reactant_keys = keys(kinetics_comment.pk, reactant_rows, True)
+        product_keys = keys(kinetics_comment.pk, product_rows, False)
+        # A falloff reaction with the same species on both sides: Cantera takes the species for
+        # a named collider and does not load the file. The reaction changes no amount. Other
+        # types with the same species on both sides load, so they are written. furop1 (+M) <=>
+        # furop2 (+M) names two species, so it is written.
         if (kinetics.data.type in _FALLOFF_TYPES and reactant_rows
-                and Counter(sp.id for sp in reactant_rows) == Counter(sp.id for sp in product_rows)):
+                and Counter(reactant_keys) == Counter(product_keys)):
             if left_out is not None:
                 left_out.append(kinetics_comment)
             continue
         # A specific collider, as in H + O2 (+AR), must be in the SPECIES block too.
-        needed = [sp.id for sp in [*reactant_rows, *product_rows]]
+        needed = [*reactant_keys, *product_keys]
         if kinetics.specific_collider_id:
             needed.append(kinetics.specific_collider_id)
-        if any(species_id not in species_map for species_id in needed):
+        if any(key not in species_map for key in needed):
             if strict:
-                missing_species.update(i for i in needed if i not in species_map)
+                missing_species.update(key for key in needed if key not in species_map)
             continue
         rmg_reaction = rmg_reaction_cls(
-            reactants=[species_map[sp.id] for sp in reactant_rows],
-            products=[species_map[sp.id] for sp in product_rows],
+            reactants=[species_map[key] for key in reactant_keys],
+            products=[species_map[key] for key in product_keys],
             # The model's own arrow; the shared reaction record has only the first import's.
             reversible=kinetics_comment.reversible,
         )
@@ -1171,7 +1223,7 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         )
 
     if strict and missing_species:
-        sample = ", ".join(str(species_id) for species_id in sorted(missing_species)[:5])
+        sample = ", ".join(sorted(map(str, missing_species))[:5])
         suffix = "" if len(missing_species) <= 5 else "..."
         raise ExportError(
             "Strict Chemkin generation failed because reactions reference species without thermo data: "

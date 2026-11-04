@@ -12,7 +12,7 @@ def change_reaction_hash_on_stoichiometry_change(instance, **kwargs):
 
 @receiver(m2m_changed, sender=Species.isomers.through)
 def change_species_hash_on_isomers_change(instance, **kwargs):
-    instance.hash = get_species_hash(instance.isomers.all(), instance.electronic_state, instance.variant)
+    instance.hash = get_species_hash(instance.isomers.all(), instance.electronic_state)
     instance.save()
 
 

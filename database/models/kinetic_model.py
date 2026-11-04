@@ -89,6 +89,20 @@ class KineticsComment(models.Model):
         return self.comment
 
 
+class KineticsCommentName(models.Model):
+    """The model's name for a species of this rate, where the model has two names for that species
+    record, each with its own thermo entry (furop1 and furop2): the rate of furop2 + H names
+    furop2. One row each time a later name is written (2 X is two rows); a species written with
+    its first name, the record's default name in the model, has no row."""
+
+    kinetics_comment = models.ForeignKey(KineticsComment, related_name="names", on_delete=models.CASCADE)
+    species_name = models.ForeignKey(SpeciesName, related_name="kinetics_names", on_delete=models.CASCADE)
+    reactant = models.BooleanField(help_text="A reactant; a product otherwise")
+
+    def __str__(self):
+        return f"{self.species_name.name} ({'reactant' if self.reactant else 'product'})"
+
+
 class ThermoComment(models.Model):
     """
     The comment that a kinetic model made about a thermo entry it used.
@@ -101,6 +115,10 @@ class ThermoComment(models.Model):
     thermo = models.ForeignKey("Thermo", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.TextField(blank=True)
+    # The model's name this entry belongs to, where the model has two names for the species
+    # record (furop1 and furop2), each with its own entry. Empty for the record's only name.
+    species_name = models.ForeignKey(SpeciesName, null=True, blank=True, related_name="thermo_links",
+                                     on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.comment
@@ -110,6 +128,9 @@ class TransportComment(models.Model):
     transport = models.ForeignKey("Transport", on_delete=models.CASCADE)
     kinetic_model = models.ForeignKey(KineticModel, on_delete=models.CASCADE)
     comment = models.CharField(blank=True, max_length=1000)
+    # As ThermoComment.species_name.
+    species_name = models.ForeignKey(SpeciesName, null=True, blank=True, related_name="transport_links",
+                                     on_delete=models.SET_NULL)
 
     def __str__(self):
         name = self.__class__.__name__

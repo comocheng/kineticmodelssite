@@ -2,8 +2,9 @@
 
 AramcoMech_1.3 entry 965, CH3CHCHCHO + H <=> CH3CHCHCO + H2, is a MultiArrhenius of two terms:
 CHEMKIN line 2568 (CH3CHCHCHO + H) and line 2990 (SC3H5CHO + H). SMILES.txt gave both names one
-SMILES, so RMG-models took them for one species. SC3H5CHO now has its own record, so its rate
-must go to its own reaction. The tests use furop1/furop2 from test_species_variants_unit.
+SMILES, so RMG-models took them for one species. Both names are names of one species record, each
+with its own thermo; the SC3H5CHO rate must be the rate of its own line, which names SC3H5CHO. The
+tests use furop1/furop2 from test_model_names_unit.
 """
 import os
 import shutil
@@ -16,7 +17,7 @@ from database.scripts import chemkin_lines
 from database.scripts.import_rmg_models import import_kinetics, import_thermo
 from database.services import cleanup
 from database.tests.test_import_rmg_species_unit import MODELS
-from database.tests.test_species_variants_unit import ADJ, import_without_variants, thermo_text
+from database.tests.test_model_names_unit import ADJ, import_without_repeats, link_names, thermo_text
 
 LABELS = ("furop1", "furop2", "H", "CH2CO", "C2H3")
 MERGED = ("furop1 + H <=> CH2CO + C2H3",
@@ -116,10 +117,10 @@ class MergedRatesTests(TestCase):
         one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
         self.assertEqual((one.kinetics.raw_data["type"], one.kinetics.raw_data["a"]), ("arrhenius", 1e13))
         self.assertEqual((two.kinetics.raw_data["type"], two.kinetics.raw_data["a"]), ("arrhenius", 2e13))
-        species = lambda link: set(link.kinetics.reaction.stoichiometry_set.values_list("species_id", flat=True))
-        self.assertIn(self.record("furop1").pk, species(one))
-        self.assertIn(self.record("furop2").pk, species(two))
-        self.assertNotIn(self.record("furop1").pk, species(two))
+        # One reaction record of the two names; the second rate names furop2.
+        self.assertEqual(self.record("furop1").pk, self.record("furop2").pk)
+        self.assertEqual(one.kinetics.reaction_id, two.kinetics.reaction_id)
+        self.assertEqual((link_names(one), link_names(two)), ([], [(True, "furop2")]))
         self.assertTrue(two.reversible)
 
     def test_each_rate_goes_to_its_names_reaction(self):
@@ -155,7 +156,9 @@ class MergedRatesTests(TestCase):
         self.import_model(entries=((MERGED[0], same),), lines=lines)
         one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
         self.assertEqual((one.kinetics.raw_data["a"], two.kinetics.raw_data["a"]), (1e13, 1e13))
-        self.assertNotEqual(one.kinetics.reaction_id, two.kinetics.reaction_id)
+        # One rate of one reaction record, two links of the model: each line is written.
+        self.assertEqual(one.kinetics_id, two.kinetics_id)
+        self.assertEqual((link_names(one), link_names(two)), ([], [(True, "furop2")]))
 
     def test_without_the_chemkin_file_the_entry_stays_whole(self):
         counts = self.import_model(chemkin=False)
@@ -166,9 +169,9 @@ class MergedRatesTests(TestCase):
         self.import_model(lines=(LINES[0],))
         self.assertEqual(self.link("furop1 + H <=> CH2CO + C2H3").kinetics.raw_data["type"], "multi_arrhenius")
 
-    def test_without_variants_the_entry_stays_whole(self):
+    def test_without_the_later_names_the_entry_stays_whole(self):
         thermo_path, kinetics_path = model_folder(self.directory, "m")
-        counts = import_without_variants(thermo_path, kinetics_path, self.model)
+        counts = import_without_repeats(thermo_path, kinetics_path, self.model)
         self.assertNotIn("moved_terms", counts)
         self.assertEqual(self.link("furop1 + H <=> CH2CO + C2H3").kinetics.raw_data["type"], "multi_arrhenius")
 
@@ -183,7 +186,7 @@ class MergedRatesTests(TestCase):
 
     def test_rebuild_moves_the_rate_to_its_name(self):
         thermo_path, kinetics_path = model_folder(self.directory, "m")
-        import_without_variants(thermo_path, kinetics_path, self.model)
+        import_without_repeats(thermo_path, kinetics_path, self.model)
         merged = self.link("furop1 + H <=> CH2CO + C2H3").kinetics
         self.assertEqual(merged.raw_data["type"], "multi_arrhenius")
         result = cleanup.rebuild_model_links(self.model, thermo_path, kinetics_path)

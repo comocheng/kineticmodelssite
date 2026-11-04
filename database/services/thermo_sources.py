@@ -204,8 +204,7 @@ def save_record(molecule, *, provider, external_id, source_version, label, nasa=
     if structure is None:
         species, structure = _species_and_structure(molecule, label)
     elif species is None:
-        # The record other models share, not a model's variant record (furop2) of the structure.
-        species = models.Species.objects.filter(isomers=structure.isomer).order_by("variant", "pk").first()
+        species = models.Species.objects.filter(isomers=structure.isomer).order_by("pk").first()
         if species is None:
             raise ThermoSourceError("The target structure belongs to no species.")
     record, _ = models.ThermoRecord.objects.get_or_create(

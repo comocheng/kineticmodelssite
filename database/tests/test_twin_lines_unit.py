@@ -261,7 +261,7 @@ class TwinLinesTests(TestCase):
 
 class VariantTwinLinesTests(TestCase):
     """MatheuCH4 lines 1287 and 1305: CY[C(C)*CC*CC.] => CY[C(C)*CC.C*C] and back, both 5.5e8. The
-    names are one structure (variants), and entry 498 holds both terms."""
+    names are one structure (one record, two names), and entry 498 holds both terms."""
 
     def setUp(self):
         self.directory = tempfile.mkdtemp()
@@ -285,6 +285,6 @@ class VariantTwinLinesTests(TestCase):
         self.assertEqual((forward.kinetics.raw_data["type"], forward.kinetics.raw_data["a"]), ("arrhenius", 5.5e8))
         self.assertEqual((reverse.kinetics.raw_data["type"], reverse.kinetics.raw_data["a"]), ("arrhenius", 5.5e8))
         self.assertFalse(forward.reversible or reverse.reversible)
-        record = lambda name: db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name=name)
-        reactant = lambda link: link.kinetics.reaction.stoichiometry_set.get(coeff__lt=0).species_id
-        self.assertEqual((reactant(forward), reactant(reverse)), (record("furop1").pk, record("furop2").pk))
+        # One record: each link names the later name where it writes it.
+        names = lambda link: sorted(link.names.values_list("reactant", "species_name__name"))
+        self.assertEqual((names(forward), names(reverse)), ([(False, "furop2")], [(True, "furop2")]))

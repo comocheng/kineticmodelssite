@@ -92,13 +92,11 @@ class LandingSceneTests(TestCase):
         model_a = KineticModel.objects.create(model_name="A", source=source)
         model_b = KineticModel.objects.create(model_name="B", source=source)
         propyne = cls.add_molecule("propyne", PROPYNE, "C#CC")
-        # A model's second name for one structure is its own species record
-        propyne_variant = Species.objects.create(hash="propyne-variant", variant="B: CC#C")
-        propyne_variant.isomers.add(propyne.isomers.get())
         allene = cls.add_molecule("allene", ALLENE, "C=C=C")
         SpeciesName.objects.create(species=propyne, kinetic_model=model_a, name="C3H4-P")
         SpeciesName.objects.create(species=propyne, kinetic_model=model_b, name="PC3H4")
-        SpeciesName.objects.create(species=propyne_variant, kinetic_model=model_b, name="CC#C")
+        # A model's second name for one structure is a second name of its record
+        SpeciesName.objects.create(species=propyne, kinetic_model=model_b, name="CC#C")
         SpeciesName.objects.create(species=propyne, name="Propyne")
         SpeciesName.objects.create(species=allene, kinetic_model=model_a, name="C3H4")
 
@@ -112,11 +110,11 @@ class LandingSceneTests(TestCase):
         self.assertEqual(molecule["smiles"], "C#CC")
 
     def test_flame_species_are_the_most_used_under_their_most_common_name(self):
-        # Propyne is in both models; the tie between its two names goes to the first in order
-        # C3H4-P and C3H4 spell the atoms of C3H4, so their digits are subscripts; CC#C is SMILES
+        # Propyne is in both models; the tie between its names goes to the first in order. CC#C is
+        # a second name of propyne in model B, not a species of its own.
+        # C3H4-P and C3H4 spell the atoms of C3H4, so their digits are subscripts
         self.assertEqual(landing.flame_species(), [
             {"name": "C3H4-P", "models": 2, "subscripts": True},
-            {"name": "CC#C", "models": 1, "subscripts": False},
             {"name": "C3H4", "models": 1, "subscripts": True},
         ])
         self.assertEqual(landing.flame_species(limit=1), [{"name": "C3H4-P", "models": 2, "subscripts": True}])
@@ -146,7 +144,7 @@ class LandingSceneTests(TestCase):
         self.assertContains(response, "The models in Prometheus use 3 names for propyne and 1 names for allene.")
         self.assertNotContains(response, "{propyne_names}")
         self.assertContains(response, 'id="lp-flame-species"')
-        self.assertContains(response, "is one of the 3 species that the most models in Prometheus use.")
+        self.assertContains(response, "is one of the 2 species that the most models in Prometheus use.")
 
     def test_contribution_routes_link_to_their_pull_requests_and_pages(self):
         response = self.client.get(reverse("home"))

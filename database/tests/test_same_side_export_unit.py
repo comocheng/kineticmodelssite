@@ -1,10 +1,11 @@
 """Reactions with the same species on both sides in Prometheus, as CombFlame2013/2291-Somers has
-furop1 (+M) <=> furop2 (+M): the model gives two names to one structure, and an import before
-variant records put both names on one species record. Cantera read the exported falloff reaction
-furop1 (+M) <=> furop1 (+M) as a reaction with furop1 for a named collider, and did not load the
-file. The exports leave such a falloff reaction out and name it in a comment; the other types
-load, so they are written as before. A model imported with variant records keeps furop2 as a
-species of its own, so its download has the model's reaction."""
+furop1 (+M) <=> furop2 (+M): the model gives two names to one structure, one species record. An
+import before Nov 2026 kept only the first name for the record, so the export wrote furop1 (+M) <=>
+furop1 (+M), which Cantera read as a reaction with furop1 for a named collider, and did not load
+the file. The exports leave such a falloff reaction out and name it in a comment; the other types
+load, so they are written as before. A model imported now names furop2 on its thermo link and on
+the rates that write it, so furop2 is a species of the download and the model's reaction is
+written."""
 import os
 import re
 import shutil
@@ -17,7 +18,7 @@ from database.scripts.import_rmg_models import import_kinetics, import_thermo
 from database.services import exports
 from database.tests.test_import_rmg_species_unit import MODELS, NASA_TEXT
 from database.tests.test_repeated_species_export_unit import sides
-from database.tests.test_species_variants_unit import import_without_variants
+from database.tests.test_model_names_unit import import_without_repeats
 
 ALLYL = ("multiplicity 2\n1 C u0 p0 c0 {2,D} {4,S} {5,S}\n2 C u0 p0 c0 {1,D} {3,S} {6,S}\n"
          "3 C u1 p0 c0 {2,S} {7,S} {8,S}\n4 H u0 p0 c0 {1,S}\n5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {2,S}\n"
@@ -87,8 +88,7 @@ def chemkin_text(model):
 
 
 class SameSideExportTests(TestCase):
-    """A model imported before variant records (local and production databases until their
-    models are rebuilt)."""
+    """A model imported before Nov 2026 (the databases until their models are rebuilt)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -96,7 +96,7 @@ class SameSideExportTests(TestCase):
         try:
             cls.model = db.KineticModel.objects.create(model_name="somers")
             thermo_path, kinetics_path = library(directory)
-            cls.counts = import_without_variants(thermo_path, kinetics_path, cls.model)
+            cls.counts = import_without_repeats(thermo_path, kinetics_path, cls.model)
         finally:
             shutil.rmtree(directory)
 
@@ -133,9 +133,9 @@ WRITTEN = [label.replace(" <=> ", " (+M) <=> ") + " (+M)" if label == "C3H5-A <=
            for label in REACTIONS]
 
 
-class VariantExportTests(TestCase):
-    """The same model imported now: C3H5-X has its own record, so every reaction of the model is
-    written, the falloff reaction too."""
+class ModelNamesExportTests(TestCase):
+    """The same model imported now: C3H5-X is a second name of the record with its own thermo
+    link, so every reaction of the model is written, the falloff reaction too."""
 
     @classmethod
     def setUpTestData(cls):
@@ -148,10 +148,11 @@ class VariantExportTests(TestCase):
         finally:
             shutil.rmtree(directory)
 
-    def test_the_two_names_are_two_species(self):
+    def test_the_two_names_are_one_record(self):
         self.assertEqual((self.counts["imported"], self.counts["failed"]), (5, 0))
         names = db.SpeciesName.objects.filter(kinetic_model=self.model, name__in=["C3H5-A", "C3H5-X"])
-        self.assertEqual(len({name.species_id for name in names}), 2)
+        self.assertEqual(len({name.species_id for name in names}), 1)
+        self.assertEqual(db.ThermoComment.objects.filter(kinetic_model=self.model, species_name__in=names).count(), 2)
 
     def test_chemkin_export_writes_the_models_reactions(self):
         text = chemkin_text(self.model)
