@@ -4,6 +4,8 @@ RMG-models converted each model from its CHEMKIN file (the --reactions file of t
 and keeps that file in the model folder. Where two of the model's names had one SMILES, the
 converter took them for one species and wrote both names' reactions as one library entry: a
 MultiArrhenius with one term per CHEMKIN line. The lines say which name each rate belongs to.
+Where the model writes an irreversible reaction in both directions, or for two colliders, the
+converter kept one entry; the lines say which direction and collider each rate has.
 """
 import math
 import os
@@ -22,6 +24,10 @@ AUX = {"LOW", "TROE", "SRI", "PLOG", "REV", "DUPLICATE", "DUP", "FORD", "RORD", 
 COLLIDER = re.compile(r"\(\s*\+\s*[^)]+\)")
 NUMBER = re.compile(r"^[-+]?(\d+\.?\d*|\.\d+)([eEdD][-+]?\d+)?$")
 PLOG = re.compile(r"\s*PLOG\s*/\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*/", re.I)
+LOW = re.compile(r"\s*LOW\s*/\s*(\S+)\s+(\S+)\s+(\S+)\s*/", re.I)
+EFFICIENCY = re.compile(r"([^\s/]+)\s*/\s*([^/\s]+)\s*/")
+# The Ea unit RMG-Py's CHEMKIN reader takes for each J/mol factor of units(); it reads no EVOLTS.
+RMG_EA_UNITS = {4.184: "cal/mol", 4184.0: "kcal/mol", 1.0: "J/mol", 1000.0: "kJ/mol", 8.314462618: "K"}
 
 
 def reactions_file(model_dir):
@@ -33,6 +39,23 @@ def reactions_file(model_dir):
         match = re.search(r"--reactions\s+(\S+)", handle.read())
     path = os.path.join(model_dir, match.group(1)) if match else None
     return path if path and os.path.exists(path) else None
+
+
+def species_names(path):
+    """The names of a CHEMKIN file's SPECIES blocks, in upper case. A block ends at its END, which
+    may stand on the last line of names (SPECIES H2 O2 END)."""
+    names, inside = set(), False
+    with open(path, errors="replace") as handle:
+        for raw in handle:
+            for index, token in enumerate(raw.split("!", 1)[0].split()):
+                upper = token.upper()
+                if not inside and index == 0 and upper.startswith("SPEC"):
+                    inside = True
+                elif inside and upper == "END":
+                    inside = False
+                elif inside:
+                    names.add(upper)
+    return names
 
 
 def units(path, library_path=None):
@@ -79,9 +102,15 @@ def split_side(side, names):
     return [t for t in out if t and t.upper() != "M"]
 
 
+def _float(text):
+    return float(text.replace("D", "E").replace("d", "e"))
+
+
 def read_reactions(path, names, ea_to_j):
     """The reaction lines of a CHEMKIN file: line number, text, reactants, products, reversible,
-    third_body, A, n, Ea (J/mol) and the first PLOG rate (A, n, Ea in J/mol) when there is one."""
+    third_body, collider ("M" for (+M) and + M, the species name for (+AR), else None), A, n, Ea
+    (J/mol), the first PLOG rate and the LOW rate (A, n, Ea in J/mol) when there are, and entry: the
+    line and its auxiliary lines without comments, as RMG-Py's CHEMKIN reader takes them."""
     reactions, last, inside = [], None, False
     with open(path, errors="replace") as handle:
         lines = handle.read().splitlines()
@@ -98,27 +127,64 @@ def read_reactions(path, names, ea_to_j):
             inside = False
             continue
         if head in AUX or head == "AUX" or "=" not in body:
-            plog = PLOG.match(body)
-            if last is not None and plog and last["plog"] is None:
-                a, n, e = (float(x.replace("D", "E").replace("d", "e")) for x in plog.groups()[1:])
+            if last is None:
+                continue
+            last["entry"].append(body)
+            plog, low = PLOG.match(body), LOW.match(body)
+            if plog and last["plog"] is None:
+                a, n, e = (_float(x) for x in plog.groups()[1:])
                 last["plog"] = (a, n, e * ea_to_j)
+            if low and last["low"] is None:
+                a, n, e = (_float(x) for x in low.groups())
+                last["low"] = (a, n, e * ea_to_j)
             continue
         parts = body.split()
         numbers = []
         while parts and NUMBER.match(parts[-1]) and len(numbers) < 3:
-            numbers.insert(0, float(parts.pop().replace("d", "e").replace("D", "e")))
+            numbers.insert(0, _float(parts.pop()))
         if len(numbers) != 3:
+            # Not a reaction line that can be read: its auxiliary lines are not the last line's.
+            last = None
             continue
         equation = "".join(parts)
         arrow = "<=>" if "<=>" in equation else ("=>" if "=>" in equation else "=")
         left, right = equation.split(arrow, 1)
         tokens = COLLIDER.sub("", left).split("+") + COLLIDER.sub("", right).split("+")
+        named = COLLIDER.search(equation)
+        collider = (named.group(0)[1:-1].strip()[1:].strip() if named
+                    else "M" if any(t.upper() == "M" for t in tokens) else None)
         last = {"line": number, "text": raw.strip(), "reactants": split_side(left, names),
                 "products": split_side(right, names), "reversible": arrow != "=>",
-                "third_body": bool(COLLIDER.search(equation)) or any(t.upper() == "M" for t in tokens),
-                "A": numbers[0], "n": numbers[1], "Ea": numbers[2] * ea_to_j, "plog": None}
+                "third_body": collider is not None,
+                "collider": collider.upper() if collider and collider.upper() == "M" else collider,
+                "A": numbers[0], "n": numbers[1], "Ea": numbers[2] * ea_to_j, "plog": None, "low": None,
+                "entry": [body]}
         reactions.append(last)
     return reactions
+
+
+def rmg_units(ea_to_j, molecules=False):
+    """(A units by order, Ea unit) for RMG-Py's CHEMKIN reader, as it takes them from a REACTIONS
+    line; the Ea unit is None for one it cannot read."""
+    unit = "molecule" if molecules else "mol"
+    a_units = ["", "s^-1", f"cm^3/({unit}*s)"] + [f"cm^{3 * k}/({unit}^{k}*s)" for k in (2, 3, 4)]
+    return a_units, RMG_EA_UNITS.get(ea_to_j)
+
+
+def kinetics_entry(line, names):
+    """A line's entry (read_reactions) as RMG-Py's CHEMKIN reader takes it, in upper case: names
+    are upper case too (CHEMKIN names are not case sensitive). A collider efficiency of a name
+    not in `names` is left out, as RMG-models left out the species it could not identify."""
+    out = []
+    for index, body in enumerate(line["entry"]):
+        first = body.split("/")[0].split()
+        if index == 0 or (first and first[0].upper() in AUX):
+            out.append(body.upper())
+            continue
+        kept = [f"{name}/{value}/" for name, value in EFFICIENCY.findall(body.upper()) if name in names]
+        if kept:
+            out.append(" ".join(kept))
+    return "\n".join(out)
 
 
 def same_rate(a, b, molecules=False):
