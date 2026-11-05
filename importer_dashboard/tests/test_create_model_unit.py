@@ -149,3 +149,17 @@ class CreateFormTests(CreateModelTestCase):
     def test_source_txt_names_one_doi_only(self):
         response = self.post(citation='See 10.1016/j.combustflame.2020.01.001 and the companion paper.')
         self.assertContains(response, 'source.txt can name one DOI only')
+
+
+class StartAfterCheckTests(CreateModelTestCase):
+    def test_a_broker_that_is_down_is_reported_not_raised(self):
+        with patch('importer_dashboard.local_job_manager.run_import_job') as task:
+            task.delay.side_effect = ConnectionError('Error 61 connecting to localhost:6379')
+            self.post()
+            draft = self.draft()
+            self.wait_for_check(draft)
+            job = ClusterJob.objects.get(name=self.folder)
+            response = self.client.get(reverse('importer_dashboard:job_detail', args=[job.id]))
+        self.assertEqual(response.status_code, 200)
+        message = JobLog.objects.filter(job=job, log_type='error').latest('timestamp').message
+        self.assertIn('could not start: Error 61', message)

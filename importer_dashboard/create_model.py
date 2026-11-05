@@ -10,6 +10,7 @@ the job starts when it passes. Nothing goes into the database here: the model ar
 its pull request to RMG-models is merged (import_rmg_models).
 """
 
+import logging
 import re
 
 from django import forms
@@ -17,6 +18,8 @@ from django.utils import timezone
 
 from . import drafts, editor
 from .models import ClusterJob, Draft, ImportJobConfig, ImportJobStatus, JobLog
+
+logger = logging.getLogger(__name__)
 
 DOI_PATTERN = re.compile(r'10\.\d{4,9}/[^\s"<>]+')
 LIVE = (ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT)
@@ -226,7 +229,17 @@ def start_checked_job(job, manager):
         return 'failed'
     if job.status in LIVE:
         return None
-    task_id, _ = manager.start_job(job)
+    try:
+        task_id, _ = manager.start_job(job)
+    except Exception as e:  # e.g. Celery's broker is down: say so on the job page, don't fail it
+        logger.exception(f"Could not start {job.name} after Check files")
+        JobLog.objects.create(
+            job=job,
+            log_type='error',
+            message=(f'The files passed Check files, but the import could not start: {e}. '
+                     'Start it again.'),
+        )
+        return 'failed'
     ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=task_id, started_by=draft.created_by)
     JobLog.objects.create(
         job=job, log_type='info', message='The files passed Check files; the import started.'
