@@ -82,7 +82,8 @@
 <style>
 .im-create__layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 900px) { .im-create__layout { grid-template-columns: 1fr; } }
-.im-create__form { display: grid; gap: 18px; }
+@media (max-width: 480px) { .im-create__form, .im-create__side { padding: 16px; } }
+.im-create__form { display: grid; gap: 18px; padding: 20px 22px; }
 .im-create__form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
 .im-create__form legend { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
 .im-create__field { display: grid; gap: 4px; }
@@ -92,7 +93,7 @@
 .im-create__error { color: var(--color-danger, #b42318); font-size: 13px; margin: 0; }
 .im-create__check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
 .im-create__actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.im-create__side { display: grid; gap: 10px; }
+.im-create__side { display: grid; gap: 10px; padding: 20px 22px; }
 .im-create__files { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
 .im-create__text { margin: 0; font-size: 13px; color: var(--color-gray-600); }
 .im-create__code { margin: 0; font-size: 12px; white-space: pre; overflow-x: auto; padding: 10px; border-radius: 6px; background: var(--color-gray-50, #f9fafb); }
