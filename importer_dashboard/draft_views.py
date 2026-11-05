@@ -241,6 +241,7 @@ def draft_files(request, job_id):
         'files': file_list,
         'check': editor.check_status(draft) if draft else None,
         'drafts_enabled': drafts.drafts_enabled(),
+        'base_branch': drafts.base_branch(),
         'editing_blocked': job.status in LIVE_OR_QUEUED,
         'max_edit_mb': editor.MAX_EDIT_BYTES // 2**20,
         'page_title': f'Files: {job.name}',
@@ -281,7 +282,7 @@ def draft_file_edit(request, job_id, name):
         text = request.POST.get('content', '').replace('\r\n', '\n')
         message = request.POST.get('message', '')
         if name == 'SMILES.txt':
-            errors, warnings = editor.check_smiles_text(draft, text)
+            errors, warnings = editor.check_smiles_text(draft, text, current)
         preview = editor.diff(name, current, text)
         if request.POST.get('action') == 'save' and not errors:
             try:
@@ -350,6 +351,7 @@ def model_create(request):
         'drafts_enabled': enabled,
         'base_branch': drafts.base_branch(),
         'example_import_sh': create_model.import_sh('thermo.txt', 'transport.txt'),
+        'folder_files': create_model.FOLDER_FILES,
         'page_title': 'Add a model to the Importer',
     }
     return render(request, 'importer_dashboard/model_create.html', context)

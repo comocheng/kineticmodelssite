@@ -444,6 +444,7 @@ def changes(draft):
         'commits': commits,
         'files': files,
         'smiles_added': added,
+        'smiles_changed': len(added) + len(removed),
         'smiles_removed': removed,
         'pending': pending,
         'same_as_base': same_as_base,

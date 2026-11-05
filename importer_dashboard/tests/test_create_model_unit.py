@@ -112,7 +112,7 @@ class CreatePageTests(CreateModelTestCase):
             task.delay.assert_called_once_with(job.id)
         job.refresh_from_db()
         self.assertEqual((job.status, job.started_by, job.celery_task_id), (ImportJobStatus.PENDING, self.user, 'task-1'))
-        self.assertContains(response, 'A new model')
+        self.assertContains(response, 'New model')
         self.assertTrue(JobLog.objects.filter(job=job, message__contains='passed Check files').exists())
 
     def test_a_failed_check_does_not_start_the_import(self):

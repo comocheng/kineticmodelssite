@@ -1,0 +1,34 @@
+{% comment %}
+What a SMILES.txt looks like: an example in the notation importChemkin.py reads, and its rules.
+Used on the create page and in the SMILES.txt editor. Pass open=True to show it unfolded.
+{% endcomment %}
+<details class="im-smiles-help"{% if open %} open{% endif %}>
+    <summary>What SMILES.txt looks like</summary>
+    <div class="im-smiles-help__body">
+        <pre class="im-smiles-help__example" aria-label="Example SMILES.txt">N2	N#N
+AR	[Ar]
+CH4	C
+C2H3	[CH]=C
+CH2(S)	singlet[CH2]	! singlet methylene: [CH2] alone is the triplet
+OHV	excited[OH]	! OH(A), the excited state
+CH3CF	singletC[C]F</pre>
+        <ul class="im-smiles-help__rules">
+            <li>One species a line: its name in the mechanism's SPECIES block, a tab or spaces, then its SMILES.</li>
+            <li>Text after <code>!</code> is a comment. You don't write who identified a species: the Importer records that itself.</li>
+            <li>When the SMILES alone gives the wrong spin, write the spin in front of it: <code>singlet</code>, <code>doublet</code> or <code>triplet</code>, as in <code>singletC[C]F</code>.</li>
+            <li>A few molecules have special names: <code>singlet[CH2]</code>, <code>triplet[CH2]</code>, <code>singletC=[C]</code>, <code>[C]</code>, <code>[O]singlet</code>, <code>excited[OH]</code>, <code>excited[CH]</code> and others in importChemkin.py.</li>
+            <li>The file can be left out: the Importer identifies small molecules by their formula, and you confirm the others on the Importer page.</li>
+        </ul>
+    </div>
+</details>
+<style>
+.im-smiles-help { border-radius: 6px; background: var(--km-tint, #edf3ff); }
+.im-smiles-help > summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--color-gray-900); list-style: none; }
+.im-smiles-help > summary::-webkit-details-marker { display: none; }
+.im-smiles-help > summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--transition-fast, .15s); }
+.im-smiles-help[open] > summary::before { transform: rotate(45deg); }
+.im-smiles-help__body { display: grid; gap: 10px; padding: 0 12px 12px; }
+.im-smiles-help__example { margin: 0; padding: 10px 12px; overflow-x: auto; border: 1px solid var(--color-gray-200); border-radius: 6px; background: var(--color-white); font-family: var(--font-mono); font-size: 12px; line-height: 1.6; tab-size: 10; white-space: pre; color: var(--color-gray-800); }
+.im-smiles-help__rules { display: grid; gap: 6px; margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.55; color: var(--color-gray-600); }
+.im-smiles-help__rules code { font-size: 11px; }
+</style>

@@ -1,0 +1,10 @@
+{# Shows the chosen file's name beside the button of each kineticmodel_file_field.html row #}
+<script>
+    // Show the chosen file's name beside its button
+    document.querySelectorAll('.km-upload__input').forEach((input) => {
+        const chosen = input.closest('.km-upload').querySelector('[data-file-name]');
+        input.addEventListener('change', () => {
+            chosen.textContent = input.files.length ? input.files[0].name : 'No file chosen';
+        });
+    });
+</script>

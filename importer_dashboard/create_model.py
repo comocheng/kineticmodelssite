@@ -25,6 +25,17 @@ DOI_PATTERN = re.compile(r'10\.\d{4,9}/[^\s"<>]+')
 LIVE = (ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT)
 
 
+# The folder of a new model, as the create page lists it
+FOLDER_FILES = [
+    ('mechanism.txt', 'your mechanism file'),
+    ('thermo.txt', 'your thermo file, unless the thermo is in the mechanism'),
+    ('transport.txt', 'your transport file, if the model has one'),
+    ('SMILES.txt', 'your SMILES.txt, or an empty one'),
+    ('source.txt', 'the citation, the DOI, the download page and the original file names'),
+    ('import.sh', 'written by Prometheus'),
+]
+
+
 def dois_in(text):
     """The DOIs in `text`, the way import_rmg_models finds the DOI of a source.txt."""
     found = set()
@@ -38,48 +49,67 @@ def dois_in(text):
 
 
 class NewModelForm(forms.Form):
+    # The widgets carry the classes of the kinetic model form (Figma 170:7072), whose styles the
+    # create page shares (database/kineticmodel_form_styles.html)
     folder = forms.CharField(
         max_length=200,
         label='Folder in RMG-models',
-        help_text='A name, or Journal/NNN-Author as in RMG-models, for example PCI2019/555-Sun.',
-    )
-    mechanism = forms.FileField(
-        label='Mechanism file', help_text='The CHEMKIN file with the SPECIES and REACTIONS blocks.'
-    )
-    thermo = forms.FileField(required=False, label='Thermo file')
-    thermo_in_mechanism = forms.BooleanField(
-        required=False, label='The thermo is in the mechanism file'
-    )
-    transport = forms.FileField(
-        required=False, label='Transport file', help_text='If the model has one.'
-    )
-    smiles = forms.FileField(
-        required=False,
-        label='SMILES.txt',
-        help_text=(
-            'The species you know already, one a line: the name in the mechanism, then its SMILES. '
-            'Leave it out to start with none; see the example below.'
+        help_text='A name, or Journal/NNN-Author as in RMG-models.',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. PCI2019/555-Sun',
+                'autocomplete': 'off',
+                'spellcheck': 'false',
+            }
         ),
     )
+    mechanism = forms.FileField(label='Mechanism file')
+    thermo = forms.FileField(required=False, label='Thermo file')
+    thermo_in_mechanism = forms.BooleanField(
+        required=False,
+        label='The thermo is in the mechanism file',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+    transport = forms.FileField(required=False, label='Transport file')
+    smiles = forms.FileField(required=False, label='SMILES.txt')
     citation = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3}),
         label='Citation',
-        help_text='Authors (year). Title. Journal.',
+        help_text='Authors (year). Title. Journal, volume, pages.',
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'e.g. Y. Li, H. J. Curran (2017). The oxidation of 2-butene. '
+                'Proc. Combust. Inst. 36, 403-411.',
+            }
+        ),
     )
     doi = forms.CharField(
-        required=False, label='DOI', help_text='For example 10.1016/j.proci.2018.05.116'
+        required=False,
+        label='DOI',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. 10.1016/j.proci.2016.05.052',
+                'spellcheck': 'false',
+            }
+        ),
     )
     url = forms.URLField(
         required=False,
         label='Downloaded from',
         help_text=(
-            'The web page you downloaded the files from, if it is not the paper (for example the '
-            "group's mechanism page). Leave it empty if the files are the paper's "
-            'supplementary material.'
+            "Only if the files are not the paper's supplementary material, "
+            "e.g. the group's mechanism page."
         ),
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://'}),
     )
     start = forms.BooleanField(
-        required=False, initial=True, label='Start the import when the files pass Check files'
+        required=False,
+        initial=True,
+        label='Start the import when the files pass Check files',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
 
     def clean_folder(self):

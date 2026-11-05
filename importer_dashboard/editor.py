@@ -93,9 +93,7 @@ def files(draft):
         file_roles = list(roles.get(name, []))
         if name == 'source.txt':
             file_roles.append('source')
-        if lowered in ('transport.txt', 'transport.dat', 'tran.dat') or lowered.endswith(
-            '_tran.dat'
-        ):
+        if 'transport' in lowered or re.search(r'(^|[_.-])tran([_.-]|$)', lowered):
             file_roles.append('transport')
         text = size <= MAX_EDIT_BYTES and not _binary(full)
         result.append(
@@ -181,31 +179,37 @@ def species_labels(draft):
     return labels
 
 
-def check_smiles_text(draft, text):
+def check_smiles_text(draft, text, previous=''):
     """
-    Quick checks of a SMILES.txt before it is saved: (errors, warnings). Formulas and the spin
-    notation are checked by Check files, which uses the importer's own rules.
+    Quick checks of a SMILES.txt before it is saved: (errors, warnings). Only the lines added or
+    changed since `previous` (the file as it is) are checked, so the notices are about this edit,
+    not about lines the file already had. Formulas and the spin notation are checked by Check
+    files, which uses the importer's own rules.
     """
     errors, warnings = [], []
     labels = species_labels(draft)
+    before = {line.strip() for line in previous.splitlines()}
     seen = {}
     for number, line in enumerate(text.splitlines(), 1):
         content = line.split('!', 1)[0]
         tokens = content.split()
         if not tokens:
             continue
+        changed = line.strip() not in before
         if len(tokens) != 2:
-            errors.append(
-                f'Line {number}: expected a species name and a SMILES, found {len(tokens)} words.'
-            )
+            if changed:
+                errors.append(
+                    f'Line {number}: expected a species name and a SMILES, '
+                    f'found {len(tokens)} words.'
+                )
             continue
         label, smiles = tokens
-        if label in seen and seen[label][1] != smiles:
+        if label in seen and seen[label][1] != smiles and (changed or seen[label][2]):
             errors.append(
                 f'Line {number}: {label} is already {seen[label][1]} on line {seen[label][0]}.'
             )
-        seen.setdefault(label, (number, smiles))
-        if labels is not None and label not in labels:
+        seen.setdefault(label, (number, smiles, changed))
+        if changed and labels is not None and label not in labels:
             warnings.append(
                 f'Line {number}: {label} is not a species of the mechanism; the importer skips it.'
             )

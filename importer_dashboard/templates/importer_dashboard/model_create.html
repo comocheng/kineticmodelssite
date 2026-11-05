@@ -1,126 +1,164 @@
 {% extends "base.html" %}
 {% load static %}
-{# Add a model through the Importer: its files go into a new draft of RMG-models (importer_dashboard/create_model.py) #}
+{% comment %}
+Add a model through the Importer (importer_dashboard/create_model.py). The layout, sections, upload
+rows and side cards are those of the kinetic model form, from the Figma "Prometheus · Edit kinetic
+model CH2F2" (node 170:7072), whose styles this page shares.
+{% endcomment %}
 
-{% block title %}Add a model | Import jobs | Prometheus{% endblock %}
+{% block title %}Add a kinetic model | Import jobs | Prometheus{% endblock %}
 
 {% block content %}
-<div class="im-page im-create">
+<div class="km-page km-form im-create">
 
     <nav aria-label="Breadcrumb">
-        <ol class="im-crumbs">
+        <ol class="km-crumbs">
             <li><a href="{% url 'home' %}">Home</a></li>
             <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'importer_dashboard:index' %}">Import jobs</a></li>
             <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Add a model</span></li>
         </ol>
     </nav>
 
-    <header class="im-heading">
-        <div class="im-heading__intro">
-            <h1>Add a model to the Importer</h1>
-            <p class="im-lede">The files go into a draft: a new folder on a branch of RMG-models {{ base_branch }}, on this server. The import starts when the files pass Check files. Nothing goes to GitHub or into the database until you open a pull request from the job page and it is merged.</p>
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <h1>Add a kinetic model</h1>
+            <p class="km-lede">Upload the model's files. Prometheus puts them in a draft of RMG-models, checks them and starts the import.</p>
         </div>
+        <a class="app-link" href="{% url 'importer_dashboard:index' %}">← Back to import jobs</a>
     </header>
 
     {% if not drafts_enabled %}
-    <div class="im-alert im-alert--warning">
-        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
-        <div class="im-alert__body"><p class="im-alert__title">Drafts are off on this server</p>
-            <p class="im-alert__text">New models are added in a draft of RMG-models. Turn drafts on with <code>IMPORTER_WORKSPACES</code>.</p></div>
-    </div>
+    <div class="alert alert-warning mb-0">Drafts are off on this server (<code>IMPORTER_WORKSPACES</code>), so models cannot be added here.</div>
     {% endif %}
 
-    <div class="im-create__layout">
-        <form method="post" enctype="multipart/form-data" class="app-panel im-create__form" novalidate>
+    <div class="km-form__layout">
+        <form class="km-form__main" method="post" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
-            {% if form.non_field_errors %}{% for e in form.non_field_errors %}<p class="im-create__error" role="alert">{{ e }}</p>{% endfor %}{% endif %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-0">{{ form.non_field_errors }}</div>
+            {% endif %}
 
-            <fieldset>
-                <legend>Folder</legend>
-                {% include "importer_dashboard/im_create_field.html" with field=form.folder %}
-            </fieldset>
+            <section class="app-panel km-form__section" aria-labelledby="im-folder-title">
+                <div class="km-form__section-head">
+                    <h2 class="app-panel__title" id="im-folder-title">Model folder</h2>
+                    <span class="km-form__required">* Required field</span>
+                </div>
+                <div class="km-form__field">
+                    <label for="{{ form.folder.id_for_label }}">{{ form.folder.label }} <span class="km-form__star">*</span></label>
+                    {{ form.folder }}
+                    <div class="km-form__hint"><span>{{ form.folder.help_text }}</span></div>
+                    {% if form.folder.errors %}<div class="invalid-feedback d-block">{{ form.folder.errors }}</div>{% endif %}
+                </div>
+            </section>
 
-            <fieldset>
-                <legend>Files</legend>
-                {% include "importer_dashboard/im_create_field.html" with field=form.mechanism %}
-                {% include "importer_dashboard/im_create_field.html" with field=form.thermo %}
-                <label class="im-create__check">{{ form.thermo_in_mechanism }} {{ form.thermo_in_mechanism.label }}</label>
-                {% include "importer_dashboard/im_create_field.html" with field=form.transport %}
-                {% include "importer_dashboard/im_create_field.html" with field=form.smiles %}
-                <details class="im-create__example">
-                    <summary>What SMILES.txt looks like</summary>
-                    <pre class="im-create__code">N2	N#N
-AR	[Ar]
-CH4	C
-H2O	O
-C2H3	[CH]=C
-CH2(S)	singlet[CH2]	! singlet methylene: [CH2] alone is the triplet
-OHV	excited[OH]	! OH(A), the excited state
-CH3CF	singletC[C]F</pre>
-                    <ul class="im-create__rules">
-                        <li>One species a line: its name in the mechanism's SPECIES block, a tab or spaces, then its SMILES.</li>
-                        <li>Text after <code>!</code> is a comment. You don't write who identified a species: the Importer records that itself.</li>
-                        <li>When the SMILES alone gives the wrong spin, write the spin in front of it: <code>singlet</code>, <code>doublet</code> or <code>triplet</code> (for example <code>singletC[C]F</code>).</li>
-                        <li>A few molecules have special names: <code>singlet[CH2]</code>, <code>triplet[CH2]</code>, <code>singletC=[C]</code>, <code>[C]</code>, <code>[O]singlet</code>, <code>excited[OH]</code>, <code>excited[CH]</code> and others in importChemkin.py.</li>
-                        <li>You can leave it out. The Importer identifies small molecules by their formula, and you confirm the others on the Importer page; each confirmation is written to SMILES.txt.</li>
-                    </ul>
-                </details>
-            </fieldset>
+            <section class="app-panel km-form__section km-form__files" aria-labelledby="im-files-title">
+                <div class="km-form__section-head">
+                    <h2 class="app-panel__title" id="im-files-title">Model files</h2>
+                    <span class="km-pill">CHEMKIN format</span>
+                </div>
+                <p class="km-form__guidance">
+                    <img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="16" height="16">
+                    The files are kept byte for byte, under the names of an import job's folder. Their original names go into source.txt.
+                </p>
+                <div class="km-form__uploads">
+                    {% include "database/kineticmodel_file_field.html" with field=form.mechanism title="Mechanism file *" purpose="The SPECIES and REACTIONS blocks. Saved as mechanism.txt" %}
+                    {% include "database/kineticmodel_file_field.html" with field=form.thermo title="Thermo file" purpose="Saved as thermo.txt" %}
+                    <div class="form-check im-create__check">
+                        {{ form.thermo_in_mechanism }}
+                        <label class="form-check-label" for="{{ form.thermo_in_mechanism.id_for_label }}">{{ form.thermo_in_mechanism.label }}</label>
+                    </div>
+                    {% include "database/kineticmodel_file_field.html" with field=form.transport title="Transport file" purpose="If the model has one. Saved as transport.txt" %}
+                    {% include "database/kineticmodel_file_field.html" with field=form.smiles title="SMILES.txt" purpose="The species you already know. Leave it out to start with none" %}
+                </div>
+                {% include "importer_dashboard/im_smiles_help.html" %}
+            </section>
 
-            <fieldset>
-                <legend>Source</legend>
-                {% include "importer_dashboard/im_create_field.html" with field=form.citation %}
-                {% include "importer_dashboard/im_create_field.html" with field=form.doi %}
-                {% include "importer_dashboard/im_create_field.html" with field=form.url %}
-            </fieldset>
+            <section class="app-panel km-form__section" aria-labelledby="im-source-title">
+                <div class="km-form__section-head">
+                    <h2 class="app-panel__title" id="im-source-title">Source</h2>
+                    <span class="km-pill">Written to source.txt</span>
+                </div>
+                <div class="km-form__field">
+                    <label for="{{ form.citation.id_for_label }}">{{ form.citation.label }} <span class="km-form__star">*</span></label>
+                    {{ form.citation }}
+                    <div class="km-form__hint"><span>{{ form.citation.help_text }}</span></div>
+                    {% if form.citation.errors %}<div class="invalid-feedback d-block">{{ form.citation.errors }}</div>{% endif %}
+                </div>
+                <div class="km-form__row">
+                    <div class="km-form__field km-form__field--grow">
+                        <label for="{{ form.doi.id_for_label }}">{{ form.doi.label }}</label>
+                        {{ form.doi }}
+                        <div class="km-form__hint"><span>One DOI: the database looks the paper up by it.</span></div>
+                        {% if form.doi.errors %}<div class="invalid-feedback d-block">{{ form.doi.errors }}</div>{% endif %}
+                    </div>
+                    <div class="km-form__field km-form__field--grow">
+                        <label for="{{ form.url.id_for_label }}">{{ form.url.label }}</label>
+                        {{ form.url }}
+                        <div class="km-form__hint"><span>{{ form.url.help_text }}</span></div>
+                        {% if form.url.errors %}<div class="invalid-feedback d-block">{{ form.url.errors }}</div>{% endif %}
+                    </div>
+                </div>
+            </section>
 
-            <label class="im-create__check">{{ form.start }} {{ form.start.label }}</label>
-            <div class="im-create__actions">
-                <button type="submit" class="app-btn"{% if not drafts_enabled %} disabled{% endif %}>Create and import</button>
-                <a href="{% url 'importer_dashboard:index' %}">Cancel</a>
+            <div class="km-form__actions">
+                <div class="form-check im-create__check">
+                    {{ form.start }}
+                    <label class="form-check-label" for="{{ form.start.id_for_label }}">{{ form.start.label }}</label>
+                </div>
+                <div class="km-actions">
+                    <a class="km-btn" href="{% url 'importer_dashboard:index' %}">Cancel</a>
+                    <button type="submit" class="app-btn"{% if not drafts_enabled %} disabled{% endif %}>Create and import</button>
+                </div>
             </div>
         </form>
 
-        <aside class="app-panel im-create__side" aria-labelledby="im-template-title">
-            <h2 class="app-panel__title" id="im-template-title">The folder Prometheus makes</h2>
-            <ul class="im-create__files">
-                <li><code>mechanism.txt</code> your mechanism file</li>
-                <li><code>thermo.txt</code> your thermo file (none if the thermo is in the mechanism)</li>
-                <li><code>transport.txt</code> your transport file, if any</li>
-                <li><code>SMILES.txt</code> your SMILES.txt, or an empty one</li>
-                <li><code>source.txt</code> the citation, the DOI, the page the files were downloaded from, and their original names</li>
-                <li><code>import.sh</code> written by Prometheus</li>
-            </ul>
-            <p class="im-create__text">The files are kept byte for byte. import.sh sets no port: the Importer gives each run a free one.</p>
-            <pre class="im-create__code">{{ example_import_sh }}</pre>
+        <aside class="km-form__aside">
+            <section class="app-panel km-form__card" aria-labelledby="im-next-title">
+                <h2 class="km-form__card-title" id="im-next-title">What happens next</h2>
+                <ol class="im-create__steps">
+                    <li><span>1</span><div><strong>A draft</strong> The files go into a new branch of RMG-models {{ base_branch }} on this server.</div></li>
+                    <li><span>2</span><div><strong>Check files</strong> The Importer reads them as an import would.</div></li>
+                    <li><span>3</span><div><strong>The import</strong> It starts when the check passes. You confirm the species on the Importer page.</div></li>
+                    <li><span>4</span><div><strong>A pull request</strong> When the job is complete, open it from the job page with your GitHub account. After the merge, the model goes into the database.</div></li>
+                </ol>
+            </section>
+
+            <section class="app-panel km-form__card" aria-labelledby="im-folder-files-title">
+                <h2 class="km-form__card-title" id="im-folder-files-title">The folder Prometheus makes</h2>
+                <ul class="km-form__tips">
+                    {% for name, what in folder_files %}
+                    <li><img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="16" height="16"><span><code>{{ name }}</code> {{ what }}</span></li>
+                    {% endfor %}
+                </ul>
+                <pre class="im-create__code" aria-label="The import.sh Prometheus writes">{{ example_import_sh }}</pre>
+                <p class="im-create__note">import.sh sets no port: the Importer gives each run a free one.</p>
+            </section>
         </aside>
     </div>
 </div>
-
-<style>
-.im-create__layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 900px) { .im-create__layout { grid-template-columns: 1fr; } }
-@media (max-width: 480px) { .im-create__form, .im-create__side { padding: 16px; } }
-.im-create__form { display: grid; gap: 18px; padding: 20px 22px; }
-.im-create__form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
-.im-create__form legend { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-.im-create__field { display: grid; gap: 4px; }
-.im-create__field label { font-size: 13px; font-weight: 500; }
-.im-create__field input[type=text], .im-create__field input[type=url], .im-create__field textarea { padding: 7px 9px; border: 1px solid var(--color-gray-300, #d0d5dd); border-radius: 6px; font: inherit; width: 100%; }
-.im-create__help { font-size: 12px; color: var(--color-gray-500); margin: 0; }
-.im-create__error { color: var(--color-danger, #b42318); font-size: 13px; margin: 0; }
-.im-create__check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
-.im-create__actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.im-create__side { display: grid; gap: 10px; padding: 20px 22px; }
-.im-create__files { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
-.im-create__text { margin: 0; font-size: 13px; color: var(--color-gray-600); }
-.im-create__example summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--color-primary); }
-.im-create__example .im-create__code { margin-top: 8px; tab-size: 10; }
-.im-create__rules { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--color-gray-600); display: grid; gap: 4px; }
-.im-create__code { margin: 0; font-size: 12px; white-space: pre; overflow-x: auto; padding: 10px; border-radius: 6px; background: var(--color-gray-50, #f9fafb); }
-</style>
 {% endblock %}
 
 {% block extra_css %}
-{% include "importer_dashboard/im_styles.html" %}
+{% include "database/kineticmodel_styles.html" %}
+{% include "database/kineticmodel_form_styles.html" %}
+<style>
+.im-create__check { display: flex; align-items: center; gap: 8px; min-height: 0; margin: 0; padding-left: 0; }
+.im-create__check .form-check-input { float: none; margin: 0; }
+.im-create__check .form-check-label { font-size: 12px; color: var(--color-gray-900); }
+.km-form__uploads .im-create__check { padding: 0 0 15px 50px; margin-top: -6px; }
+.im-create__steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.im-create__steps li { display: flex; align-items: flex-start; gap: 12px; font-size: 12px; line-height: 1.6; color: var(--color-gray-600); }
+.im-create__steps li > span { display: inline-flex; flex: 0 0 22px; align-items: center; justify-content: center; height: 22px; border-radius: 50%; background: var(--km-tint); font-size: 11px; font-weight: 600; color: var(--color-primary); }
+.im-create__steps strong { display: block; font-size: 12px; font-weight: 600; color: var(--color-gray-900); }
+.im-create .km-form__tips code { font-size: 11px; color: var(--color-gray-900); }
+.im-create__code { margin: 0; padding: 12px; overflow-x: auto; border-radius: 6px; background: var(--color-gray-50); font-family: var(--font-mono); font-size: 11px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; color: var(--color-gray-800); }
+.im-create__note { margin: 0; font-size: 11px; line-height: 1.6; color: var(--color-gray-600); }
+@media (max-width: 575.98px) {
+    .km-form__uploads .im-create__check { padding-left: 0; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% include "database/kineticmodel_file_field_js.html" %}
 {% endblock %}

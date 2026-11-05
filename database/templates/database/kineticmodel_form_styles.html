@@ -1,0 +1,360 @@
+{% load static %}
+{# The styles of the kinetic model form (Figma 170:7072), shared with the Importer's create page #}
+<style>
+.km-form {
+    --km-danger: #ba3f4d;  /* the Figma delete action, the colour of its trash icon */
+}
+
+.km-form__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 24px;
+    align-items: start;
+}
+
+.km-form__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    min-width: 0;
+}
+
+.km-form__section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 24px;
+}
+
+.km-form__files {
+    gap: 14px;
+    padding-bottom: 8px;
+}
+
+.km-form__section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+}
+
+.km-form .km-form__section-head .app-panel__title {
+    font-size: 17px;
+}
+
+.km-form__required {
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-form__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* minmax(0, 1fr): a select is as wide as its longest option otherwise */
+.km-form__field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+}
+
+.km-form__field--grow {
+    flex: 1 1 320px;
+}
+
+.km-form__field--prime {
+    flex: 0 1 288px;
+}
+
+.km-form__field > label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__star {
+    color: var(--color-gray-900);
+}
+
+.km-form .form-control,
+.km-form .form-select {
+    min-height: 42px;
+    padding: 11px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-900);
+}
+
+.km-form .form-select {
+    padding-right: 40px;
+    background-color: var(--color-white);
+    background-image: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}");
+    background-position: right 12px center;
+    background-size: 16px 16px;
+}
+
+.km-form .form-control::placeholder {
+    color: var(--color-gray-500);
+}
+
+.km-form textarea.form-control {
+    min-height: 82px;
+}
+
+.km-form__hint {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-form__hint a {
+    font-weight: 600;
+}
+
+.km-form__guidance {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--km-tint);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+/* File upload rows (Figma 170:7165) */
+.km-upload {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 15px 0;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.km-upload__symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+}
+
+.km-upload__purpose {
+    display: grid;
+    flex: 1 1 220px;
+    gap: 5px;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.km-upload__purpose > label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-upload__current {
+    overflow-wrap: anywhere;
+}
+
+.km-upload__clear .form-check-label {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-upload__chosen {
+    font-size: 12px;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+/* The native input stays focusable; its label is the visible button */
+.km-upload__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.km-upload__input:focus-visible + .km-upload__button {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.km-upload__button {
+    margin: 0;
+}
+
+.km-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding: 4px 0;
+}
+
+.km-form__actions p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+/* Support column */
+.km-form__aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-width: 0;
+}
+
+.km-form__card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 22px;
+}
+
+.km-form__current p {
+    margin: 0 0 7px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.km-form__current h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 23px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.km-form__stats {
+    display: grid;
+    gap: 15px;
+    margin: 4px 0 0;
+}
+
+.km-form__stats > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.km-form__stats dt {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-form__stats dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__card-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.km-form__tips {
+    display: grid;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.km-form__tips li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-form__tips .app-icon {
+    margin-top: 2px;
+}
+
+.km-form__delete {
+    gap: 12px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+}
+
+.km-form__delete .km-form__card-title {
+    font-size: 13px;
+}
+
+.km-form__delete p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.km-form__danger {
+    justify-self: start;
+    color: var(--km-danger);
+}
+
+.km-form__danger:hover {
+    border-color: var(--km-danger);
+    color: var(--km-danger);
+}
+
+@media (max-width: 991.98px) {
+    .km-form__layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .km-form__section {
+        padding: 18px;
+    }
+
+    .km-form__files {
+        padding-bottom: 4px;
+    }
+
+    .km-form__field--prime {
+        flex-basis: 100%;
+    }
+}
+</style>
