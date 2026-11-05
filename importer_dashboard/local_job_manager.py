@@ -22,7 +22,7 @@ from django.utils import timezone
 from celery.result import AsyncResult
 
 from .models import ClusterJob, ImportJobConfig, ImportJobStatus, JobLog
-from .tasks import run_import_job, schedule_evidence_index_refresh, _tail_file
+from .tasks import commit_identifications, run_import_job, schedule_evidence_index_refresh, _tail_file
 from .importer_files import (STATE_FILE, apply_progress, is_process_alive, outcome_from_state,
                              read_importer_state, read_progress)
 from .job_paths import job_folder
@@ -30,6 +30,8 @@ from .port_allocator import release_port, release_stale_ports
 
 # Statuses whose importer may still be running, and so still holds its port
 ACTIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT]
+# Statuses whose importer runs and can make identifications
+LIVE = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +166,7 @@ class LocalJobManager:
         job.save(update_fields=['status', 'completed_at', 'updated_at'])
         apply_progress(job, read_progress(job_folder(job, self.root_path)))
         release_port(job)
+        commit_identifications(job, final=True)
 
     def get_log_tail(self, job: ClusterJob, lines: Optional[int] = 50):
         """
@@ -232,6 +235,10 @@ class LocalJobManager:
         for job in ClusterJob.objects.filter(status=ImportJobStatus.AWAITING_INPUT):
             self._refresh_detached_job(job)
 
+        # Identifications made on the importer pages go into the drafts' branches
+        for job in ClusterJob.objects.filter(status__in=LIVE, draft__status='open').select_related('draft'):
+            commit_identifications(job)
+
         # A worker killed mid-job never reaches its `finally`, so sweep up here
         release_stale_ports(ACTIVE_STATUSES)
 
@@ -294,6 +301,7 @@ class LocalJobManager:
             apply_progress(job, read_progress(job_path))
             JobLog.objects.create(job=job, log_type=log_type, message=message)
             release_port(job)
+            commit_identifications(job, final=True)
             schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
             logger.info(f"Job {job.name} ended: {new_status}")
             return True

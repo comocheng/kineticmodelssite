@@ -20,6 +20,7 @@ from .models import ClusterJob, ImportJobConfig, JobLog, ImportJobStatus, Voting
 from .manager_factory import get_job_manager
 from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
+from . import drafts
 
 # Jobs whose importer is up, so its page can be opened and its progress changes
 LIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
@@ -37,6 +38,28 @@ def latest_error(job):
     """The message of the job's latest error in its log, or None."""
     entry = job.logs.filter(log_type='error').order_by('-timestamp').first()
     return entry.message if entry else None
+
+
+def attach_draft(request, job):
+    """
+    Open the draft of the job's model (or use the open one) before the job starts, so the job
+    runs in its worktree and its identifications are committed to its branch. Returns True when
+    the job has a draft, None when drafts are off, and False (after a message) when the draft
+    could not be opened: then the job must not start in the read copy.
+    """
+    if getattr(settings, 'IMPORTER_MODE', 'cluster') != 'local' or not drafts.drafts_enabled():
+        return None
+    try:
+        draft, warning = drafts.open_draft(job.name, user=request.user)
+    except drafts.DraftError as e:
+        messages.error(request, f'Could not open a draft of {job.name} in RMG-models: {e}')
+        return False
+    if job.draft_id != draft.pk:
+        ClusterJob.objects.filter(pk=job.pk).update(draft=draft)
+        job.draft = draft
+    if warning:
+        messages.warning(request, warning)
+    return True
 
 
 @site_login_required
@@ -336,8 +359,21 @@ def job_detail(request, job_id):
     # Get recent logs
     recent_logs = job.logs.all()[:50]
     
+    draft = job.draft if job.draft_id and job.draft.is_open else None
+    draft_changes, draft_error = None, None
+    if draft:
+        try:
+            draft_changes = drafts.changes(draft)
+        except drafts.DraftError as e:
+            draft_error = str(e)
+
     context = {
         'job': job,
+        'draft': draft,
+        'draft_changes': draft_changes,
+        'draft_error': draft_error,
+        'drafts_enabled': drafts.drafts_enabled(),
+        'base_branch': drafts.base_branch(),
         'recent_logs': recent_logs,
         'page_title': f'Job: {job.name}',
         'progress_status': progress_status,
@@ -407,6 +443,9 @@ def job_start(request, job_id):
             job_name=job.name,
             details={'action': 'start_job'}
         )
+        draft_note = attach_draft(request, job)
+        if draft_note is False:
+            return redirect('importer_dashboard:job_detail', job_id=job.id)
         manager = get_job_manager(config=config)
         
         dashboard_logger.info(
@@ -1354,3 +1393,23 @@ def jobs_stats_api(request):
         'jobs': jobs_data,
         'count': len(jobs_data)
     })
+
+
+@site_login_required
+@require_http_methods(["POST"])
+@write_login_required('Sign in to discard drafts.')
+def draft_discard(request, job_id):
+    """Delete the job's draft: its worktree and local branch. A pull request on GitHub stays."""
+    job = get_object_or_404(ClusterJob, id=job_id)
+    if job.status in (ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT):
+        messages.error(request, f'{job.name} is {job.get_status_display().lower()}. Kill it before you discard its draft.')
+        return redirect('importer_dashboard:job_detail', job_id=job.id)
+    draft = job.draft
+    if draft is None or not draft.is_open:
+        messages.info(request, f'{job.name} has no open draft.')
+        return redirect('importer_dashboard:job_detail', job_id=job.id)
+    branch = draft.branch
+    drafts.close_draft(draft, drafts.DraftStatus.DISCARDED)
+    JobLog.objects.create(job=job, log_type='info', message=f'Draft {branch} discarded by {actor_name(request)}')
+    messages.success(request, f'Discarded the draft {branch}.')
+    return redirect('importer_dashboard:job_detail', job_id=job.id)

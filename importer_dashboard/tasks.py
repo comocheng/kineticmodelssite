@@ -80,6 +80,7 @@ def run_import_job(self, job_id):
         if _set_final_status(job, status):
             apply_progress(job, read_progress(job_path))
             JobLog.objects.create(job=job, log_type=log_type, message=message)
+        commit_identifications(job, final=True)
         return {'job_id': job_id, **result}
 
     poll_seconds = getattr(settings, 'IMPORTER_STATE_POLL_SECONDS', 10)
@@ -151,11 +152,14 @@ def run_import_job(self, job_id):
                 try:
                     returncode = process.wait(timeout=poll_seconds)
                 except subprocess.TimeoutExpired:
+                    # Each identification goes into the draft's branch within a minute
+                    commit_identifications(job)
                     if read_importer_state(job_path).get('state') == 'awaiting_input':
                         detached = True
                         break
 
         if detached:
+            commit_identifications(job, final=True)
             if _set_final_status(job, ImportJobStatus.AWAITING_INPUT):
                 apply_progress(job, read_progress(job_path))
                 JobLog.objects.create(
@@ -406,3 +410,15 @@ def ping(sent_at=None):
     """
     import time
     return time.monotonic()
+
+
+def commit_identifications(job, final=False):
+    """Commit the job's identifications to its draft (drafts.checkpoint_job); never raises."""
+    if getattr(job, 'draft_id', None) is None:
+        return None
+    from .drafts import checkpoint_job
+    try:
+        return checkpoint_job(job, final=final)
+    except Exception:
+        logger.exception(f"Could not commit the identifications of {job.name}")
+        return None

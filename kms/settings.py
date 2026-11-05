@@ -389,6 +389,20 @@ IMPORTER_PORT_RANGE = (8100, 8999)
 IMPORTER_EVIDENCE_INDEX = os.getenv('IMPORTER_EVIDENCE_INDEX',
                                     os.path.join(os.path.dirname(RMG_MODELS_PATH), 'evidence_index.sqlite'))
 
+# Drafts (importer_dashboard/drafts.py): each import job runs in its model's own git worktree of
+# RMG-models, on branch importer/<folder>/<id> from RMG_MODELS_REMOTE/RMG_MODELS_BASE_BRANCH, and
+# its identifications are committed there. RMG_MODELS_PATH stays the read copy. Turn drafts off
+# with IMPORTER_WORKSPACES=false (jobs then run in the read copy and nothing is committed).
+IMPORTER_WORKSPACES = os.getenv('IMPORTER_WORKSPACES', 'true').lower() in ('1', 'true', 'yes', 'on')
+RMG_MODELS_WORKSPACES_PATH = os.getenv('RMG_MODELS_WORKSPACES_PATH',
+                                       os.path.join(os.path.dirname(RMG_MODELS_PATH), 'RMG-models-drafts'))
+RMG_MODELS_REMOTE = os.getenv('RMG_MODELS_REMOTE', 'origin')
+RMG_MODELS_BASE_BRANCH = os.getenv('RMG_MODELS_BASE_BRANCH', 'master')
+RMG_MODELS_GITHUB_REPO = os.getenv('RMG_MODELS_GITHUB_REPO', 'comocheng/RMG-models')
+# The committer of draft commits (the author is the person, when known)
+IMPORTER_GIT_NAME = os.getenv('IMPORTER_GIT_NAME', 'Prometheus Importer')
+IMPORTER_GIT_EMAIL = os.getenv('IMPORTER_GIT_EMAIL', 'importer@pr.omethe.us')
+
 # 'local' = Celery on office server, 'cluster' = SSH/SLURM on Explorer
 IMPORTER_MODE = 'local'
 

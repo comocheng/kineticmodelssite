@@ -17,6 +17,7 @@ urlpatterns = [
     path('job/<int:job_id>/kill/', views.job_kill, name='job_kill'),
     path('job/<int:job_id>/log/', views.job_log_view, name='job_log'),
     path('job/<int:job_id>/error-log/', views.job_error_log_view, name='job_error_log'),
+    path('job/<int:job_id>/draft/discard/', views.draft_discard, name='draft_discard'),
     
     # Dashboard actions
     path('refresh-jobs/', views.refresh_jobs, name='refresh_jobs'),
