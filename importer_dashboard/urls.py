@@ -27,6 +27,7 @@ urlpatterns = [
     path('github/connect/', draft_views.github_connect, name='github_connect'),
     path('github/callback/', draft_views.github_callback, name='github_callback'),
     path('github/disconnect/', draft_views.github_disconnect, name='github_disconnect'),
+    path('github/webhook/', draft_views.github_webhook, name='github_webhook'),
     
     # Dashboard actions
     path('refresh-jobs/', views.refresh_jobs, name='refresh_jobs'),

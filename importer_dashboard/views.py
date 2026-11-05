@@ -1001,7 +1001,32 @@ def refresh_progress(request):
     return redirect('importer_dashboard:index')
 
 
-@superuser_required('the Importer settings', 'importer_dashboard:index')
+def _rmg_models_status(request):
+    """The read copy of RMG-models and its last sync with GitHub (read_copy_sync.py), for Settings."""
+    from datetime import datetime
+    from django.urls import reverse
+    from .read_copy_sync import last_status, read_copy_head
+    branch, sha = read_copy_head()
+    last = last_status()
+    if last:
+        for key in ('checked_at', 'updated_at'):
+            try:
+                last[key] = datetime.fromisoformat(last[key]) if last.get(key) else None
+            except ValueError:
+                last[key] = None
+    return {
+        'path': drafts.read_copy(),
+        'branch': branch,
+        'sha': sha,
+        'upstream': f'{drafts.remote_name()}/{drafts.base_branch()}',
+        'github_repo': github.repository(),
+        'last': last,
+        'webhook_on': bool(getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')),
+        'webhook_url': github.public_url(request, reverse('importer_dashboard:github_webhook')),
+    }
+
+
+@superuser_required('open the Importer settings', 'importer_dashboard:index')
 def settings_view(request):
     """
     View and edit the Importer settings (the job configuration). Only a superuser sees them.
@@ -1032,6 +1057,7 @@ def settings_view(request):
         'config': config,
         'ssh_username': os.environ.get('SSH_USERNAME', 'Not configured'),
         'page_title': 'Dashboard Settings',
+        'rmg_models': _rmg_models_status(request),
     }
     
     return render(request, 'importer_dashboard/settings.html', context)
@@ -1062,29 +1088,17 @@ def reconnect(request):
     return redirect('importer_dashboard:index')
 
 
-@site_login_required
 @require_http_methods(["POST"])
-@write_login_required('Sign in to pull RMG-models.')
+@superuser_required('update RMG-models on this server', 'importer_dashboard:index')
 def git_pull(request):
-    """Pull updates from GitHub repository"""
-    try:
-        config = ImportJobConfig.objects.filter(is_default=True).first()
-        manager = get_job_manager(config=config)
-        
-        root_path = getattr(settings, 'RMG_MODELS_PATH', config.root_path)
-        cmd = f'cd {root_path} && git pull official master'
-        stdout, stderr = manager.exec_command(cmd)
-        
-        if stderr:
-            messages.warning(request, f"Git pull completed with warnings: {stderr}")
-        else:
-            messages.success(request, f"Git pull successful: {stdout}")
-        
-    except Exception as e:
-        logger.error(f"Failed to git pull: {str(e)}")
-        messages.error(request, f"Failed to pull updates: {str(e)}")
-    
-    return redirect('importer_dashboard:index')
+    """Update now on the Settings page: fast-forward the read copy to GitHub's master, if safe."""
+    from .read_copy_sync import CURRENT, UPDATED, sync
+    result = sync('manual')
+    if result['status'] in (UPDATED, CURRENT):
+        messages.success(request, result['message'])
+    else:
+        messages.error(request, result['message'])
+    return redirect('importer_dashboard:settings')
 
 
 @site_login_required
