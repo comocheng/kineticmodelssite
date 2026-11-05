@@ -534,7 +534,7 @@ class Kinetics(models.Model):
                 condition=models.Q(specific_collider__isnull=False) & CHEBYSHEV,
                 name="unique_chebyshev_rate_collider"),
             models.CheckConstraint(
-                condition=~CHEBYSHEV | models.Q(**{f"{name}__isnull": False for name in RANGE_FIELDS}),
+                check=~CHEBYSHEV | models.Q(**{f"{name}__isnull": False for name in RANGE_FIELDS}),
                 name="chebyshev_has_range"),
         ]
 
