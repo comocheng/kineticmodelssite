@@ -325,3 +325,72 @@ class SplitChebyshevRangesTests(TestCase):
     def test_model_option(self):
         report = split_chebyshev_ranges(self.directory, apply=False, models={"cai"})
         self.assertEqual(report["counts"], {"links_paired": 2, "records": 2})
+
+
+# With the authors' digits (author_digits): RMG-models wrote PCHEB with 6 digits (0.00986923 atm), the CHEMKIN
+# lines with every digit, and the importer keeps the authors'. The importer finds a record by the library's range,
+# so the authors' range must not give a second record of the same rate, nor undo the digits in the split.
+from database.tests.test_explicit_reverse_unit import model_folder as chemkin_model_folder  # noqa: E402
+
+AUTHOR_P = (0.009869232667160128 * ATM, 98.69232667160128 * ATM)
+CHEB_RATE = "H2O + HO2 + O2 + OH"
+
+
+def cheb_files(tmin, tmax):
+    library = {"HO2 + OH <=> H2O + O2": (
+        "Chebyshev(coeffs=[[12.717, -0.21556], [-1.0198, 0.0473], [0.10896, -0.000557]], kunits='cm^3/(mol*s)', "
+        f"Tmin=({tmin},'K'), Tmax=({tmax},'K'), Pmin=(0.00986923,'atm'), Pmax=(98.6923,'atm'))", True)}
+    chemkin = ("ELEMENTS H O END\nSPECIES H O H2 O2 OH HO2 H2O2 H2O END\nREACTIONS\n"
+               f"HO2+OH<=>H2O+O2            1.0 0.0 0.0\n    TCHEB / {tmin}.0 {tmax}.0 /\n"
+               "    PCHEB / 0.009869232667160128 98.69232667160128 /\n    CHEB / 3 2 /\n"
+               "    CHEB / 12.717 -0.21556 -1.0198 0.0473 0.10896 -0.000557 /\nEND\n")
+    return library, chemkin
+
+
+class ChebyshevAuthorDigitsTests(TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory)
+
+    def import_model(self, name, tmin, tmax):
+        model = db.KineticModel.objects.create(model_name=name)
+        thermo_path, kinetics_path = chemkin_model_folder(self.directory, name, *cheb_files(tmin, tmax))
+        import_thermo(thermo_path, model, MODELS)
+        return model, import_kinetics(kinetics_path, model, MODELS)
+
+    def pressures(self, kinetics):
+        return (kinetics.min_pressure, kinetics.max_pressure)
+
+    def test_the_same_range_shares_one_record_with_the_authors_pressures(self):
+        cai, _ = self.import_model("cai", 290, 3000)
+        zhang, counts = self.import_model("zhang", 290, 3000)
+        self.assertEqual(counts["failed"], 0)
+        self.assertEqual(records(zhang)[CHEB_RATE].pk, records(cai)[CHEB_RATE].pk)
+        self.assertEqual(self.pressures(records(cai)[CHEB_RATE]), AUTHOR_P)
+        self.assertEqual(db.Kinetics.objects.filter(raw_data__type="chebyshev").count(), 1)
+
+    def test_another_t_range_is_its_own_record_with_the_authors_pressures(self):
+        cai, _ = self.import_model("cai", 290, 3000)
+        jin, counts = self.import_model("jin", 270, 3000)
+        self.assertEqual(counts["failed"], 0)
+        cai_rate, jin_rate = records(cai)[CHEB_RATE], records(jin)[CHEB_RATE]
+        self.assertNotEqual(jin_rate.pk, cai_rate.pk)
+        self.assertEqual((t_range(jin_rate), self.pressures(jin_rate)), ((270, 3000), AUTHOR_P))
+
+    def test_the_split_keeps_the_authors_pressures(self):
+        cai, _ = self.import_model("cai", 290, 3000)
+        self.import_model("zhang", 290, 3000)
+        jin, _ = self.import_model("jin", 270, 3000)
+        old_import(jin, cai)
+        report = split_chebyshev_ranges(self.directory, apply=True)
+        self.assertEqual((report["counts"]["records_created"], report["counts"]["links_moved"]), (1, 1))
+        jin_rate = records(jin)[CHEB_RATE]
+        self.assertEqual((t_range(jin_rate), self.pressures(jin_rate)), ((270, 3000), AUTHOR_P))
+        self.assertEqual(self.pressures(records(cai)[CHEB_RATE]), AUTHOR_P)
+        # Nothing left for the authors' digits, and nothing for a second split.
+        from database.scripts import author_digits
+        from database.services.cleanup import MODELS as CLEANUP_MODELS
+        restored = author_digits.restore([(m, os.path.join(self.directory, m.model_name))
+                                          for m in db.KineticModel.objects.all()], CLEANUP_MODELS, apply=False)
+        self.assertEqual((restored["links"], dict(restored["records"])), (0, {}))
+        self.assertEqual(split_chebyshev_ranges(self.directory, apply=False)["counts"].get("records_changed", 0), 0)

@@ -6,9 +6,11 @@ the importer gave a model that writes the coefficients of an earlier model with 
 earlier model's record and range: PCI2017/111-Jin's TCHEB 270 3000 rates carry 290 3000 from
 CombFlame2013/1939-Cai, up to a factor of 5 in k.
 
-For each link to a Chebyshev record, the model's own range is that of its RMG-models library
-entry (<path>/<model>/RMG-Py-kinetics-library/reactions.py): the entry of the same reaction (the
-model's species names), the same collider and the same coefficients. The links of a record whose
+For each link to a Chebyshev record, the model's own range is the one the importer stores: that of
+its RMG-models library entry (<path>/<model>/RMG-Py-kinetics-library/reactions.py; the entry of the
+same reaction by the model's species names, the same collider and the same coefficients), with the
+PCHEB of the model's CHEMKIN line where the library's is that number written with 6 digits
+(author_digits.is_rounding: 0.009869232667160128 atm, not 0.00986923). The links of a record whose
 models give two or more ranges are split: the links with the stored range stay, the others go to
 the record of their range (an existing one, or a copy of the record with that range, its
 efficiencies and its own rate fingerprint). A record none of whose models has the stored range
@@ -24,6 +26,7 @@ from django.db import transaction
 
 from database import models as db
 from database.models.kinetic_data import RANGE_FIELDS, kinetics_identity
+from database.scripts import author_digits, chemkin_lines
 from database.scripts.import_rmg_models import (
     create_kinetics_data, get_base_kinetics_data_fields, index_new_rows, kinetics_local_context)
 from database.services.cleanup import MODELS
@@ -102,10 +105,65 @@ def _keys(names, left, right):
     return {(x, y) for x in a for y in b} | {(y, x) for x in a for y in b}
 
 
-def own_ranges(path, models=None):
+def chemkin_lines_of(model_dir, names):
+    """The Chebyshev lines of the model's CHEMKIN file whose species the model has, read with every digit
+    as author_digits reads them: [{"keys", "raw", "range", "collider", "taken"}]; [] without a file.
+    `names` maps the model's names in upper case (CHEMKIN names are not case sensitive) to species ids."""
+    from rmgpy.molecule import Molecule
+    from rmgpy.species import Species
+
+    path = chemkin_lines.reactions_file(model_dir)
+    if not path:
+        return []
+    library = os.path.join(model_dir, LIBRARY)
+    ea_to_j, molecules = chemkin_lines.units(path, library if os.path.exists(library) else None)
+    units = chemkin_lines.rmg_units(ea_to_j, molecules)
+    tokens = set(names) | chemkin_lines.species_names(path)
+    species = {name: Species(label=name, molecule=[Molecule()]) for name in tokens}
+    found = []
+    for line in chemkin_lines.read_reactions(path, tokens, ea_to_j):
+        heads = {body.split("/")[0].strip().upper() for body in line["entry"][1:]}
+        if not heads & {"CHEB", "TCHEB", "PCHEB"}:
+            continue
+        left, right = ([n.upper() for n in line[side]] for side in ("reactants", "products"))
+        if not all(names.get(n) for n in left + right):
+            continue
+        try:
+            raw, base, collider = author_digits._author_rate(line, species, units)
+        except Exception:
+            continue
+        if raw["type"] == "chebyshev":
+            found.append({"keys": _keys(names, left, right), "raw": raw, "collider": collider, "taken": False,
+                          "range": tuple(base.get(name) for name in RANGE_FIELDS)})
+    return found
+
+
+def _line_of(lines, key, kinetics):
+    """The model's CHEMKIN line of this record's rate: the same species, collider and coefficients
+    (within author_digits.MATCH)."""
+    hits = []
+    for line in lines:
+        if key not in line["keys"] or (line["collider"] is None) != (kinetics.specific_collider_id is None):
+            continue
+        try:
+            found = list(author_digits.leaves(line["raw"], kinetics.raw_data))
+        except author_digits.Mismatch:
+            continue
+        if max((author_digits.rel(x, y) for _, x, y, _ in found), default=0.0) <= author_digits.MATCH:
+            hits.append(line)
+    line = next((h for h in hits if not h["taken"]), hits[0] if hits else None)
+    if line is not None:
+        line["taken"] = True
+    return line
+
+
+def own_ranges(path, models=None, notes=None):
     """[(link, own range or None, status)] for every link to a Chebyshev record; status is
     `paired`, `no_library` (no library file for the model), `library_not_read` or
-    `no_library_entry`. `models` limits it to these model names."""
+    `no_library_entry`. `models` limits it to these model names. `notes` (a Counter) counts the
+    PCHEB values taken from the CHEMKIN lines and the TCHEB values of a line that differ from the
+    library's (the library's is kept)."""
+    notes = Counter() if notes is None else notes
     links = defaultdict(list)
     for link in db.KineticsComment.objects.filter(kinetics__raw_data__type="chebyshev").select_related(
             "kinetic_model", "kinetics").order_by("pk"):
@@ -127,9 +185,12 @@ def own_ranges(path, models=None):
         except Exception:
             out.extend((link, None, "library_not_read") for link in rows)
             continue
-        names = defaultdict(set)
+        names, upper = defaultdict(set), defaultdict(set)
         for name, species_id in db.SpeciesName.objects.filter(kinetic_model=model).values_list("name", "species_id"):
             names[name].add(species_id)
+            if name:
+                upper[name.upper()].add(species_id)
+        lines = chemkin_lines_of(os.path.join(path, model.model_name), upper)
         candidates = []
         for label, raw, own in entries:
             left, right, collider = label_parts(label)
@@ -145,7 +206,19 @@ def own_ranges(path, models=None):
                 out.append((link, None, "no_library_entry"))
                 continue
             hit["taken"] = True
-            out.append((link, hit["range"], "paired"))
+            own = list(hit["range"])
+            line = _line_of(lines, key, kinetics)
+            if line is not None:
+                for index, name in enumerate(RANGE_FIELDS):
+                    author, library_value = line["range"][index], own[index]
+                    if author is None or library_value is None:
+                        continue
+                    if name.endswith("pressure") and author_digits.is_rounding(author, library_value, author_digits.ATM):
+                        own[index] = author
+                        notes["pcheb_authors_digits"] += 1
+                    elif author_digits.rel(author, library_value) > author_digits.EXACT:
+                        notes[f"line_differs_from_library_{name}"] += 1
+            out.append((link, tuple(own), "paired"))
     return out
 
 
@@ -176,7 +249,8 @@ def split_chebyshev_ranges(path, apply=False, models=None):
     rows, unpaired = [], []
     with transaction.atomic():
         by_record = defaultdict(list)
-        for link, own, status in own_ranges(path, models):
+        notes = Counter()
+        for link, own, status in own_ranges(path, models, notes):
             report[f"links_{status}"] += 1
             by_record[link.kinetics_id].append((link, own))
             if own is None:
@@ -239,4 +313,5 @@ def split_chebyshev_ranges(path, apply=False, models=None):
             rows.append(row)
         if not apply:
             transaction.set_rollback(True)
-    return {"counts": dict(sorted(report.items())), "records": rows, "links_without_own_range": unpaired}
+    return {"counts": dict(sorted(report.items())), "notes": dict(sorted(notes.items())), "records": rows,
+            "links_without_own_range": unpaired}

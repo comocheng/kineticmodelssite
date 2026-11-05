@@ -39,4 +39,6 @@ class Command(BaseCommand):
             with open(options["report"], "w") as handle:
                 json.dump(report, handle, indent=1)
         self.stdout.write(", ".join(f"{k} {v}" for k, v in report["counts"].items()))
+        if report["notes"]:
+            self.stdout.write("own ranges: " + ", ".join(f"{k} {v}" for k, v in report["notes"].items()))
         self.stdout.write("applied" if options["apply"] else "dry run: nothing written")
