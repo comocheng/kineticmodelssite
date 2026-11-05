@@ -235,6 +235,11 @@ class LocalJobManager:
         for job in ClusterJob.objects.filter(status=ImportJobStatus.AWAITING_INPUT):
             self._refresh_detached_job(job)
 
+        # Models added on the create page start once Check files passes
+        from .create_model import start_checked_job
+        for job in ClusterJob.objects.filter(draft__status='open', draft__start_job_after_check=True):
+            start_checked_job(job, self)
+
         # Identifications made on the importer pages go into the drafts' branches
         for job in ClusterJob.objects.filter(status__in=LIVE, draft__status='open').select_related('draft'):
             commit_identifications(job)

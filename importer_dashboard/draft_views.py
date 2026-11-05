@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 
 from kms.access import actor_name, sign_in_redirect, site_login_required, write_login_required
 
-from . import drafts, editor, github
+from . import create_model, drafts, editor, github
 from .models import ClusterJob, ImportJobStatus, JobLog
 from .views import attach_draft
 
@@ -314,3 +314,42 @@ def draft_file_edit(request, job_id, name):
         'page_title': f'{name}: {job.name}',
     }
     return render(request, 'importer_dashboard/draft_file_edit.html', context)
+
+
+# --------------------------------------------------------------------------------------
+# Add a model through the Importer (importer_dashboard/create_model.py)
+# --------------------------------------------------------------------------------------
+
+
+@site_login_required
+def model_create(request):
+    """/kineticmodel/create/: a new model's files go into a draft, and its import job starts."""
+    if not request.user.is_authenticated:
+        return sign_in_redirect(request, 'Sign in to add a model.', next_url=request.path)
+    enabled = drafts.drafts_enabled()
+    form = create_model.NewModelForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST' and enabled and form.is_valid():
+        try:
+            job, draft, warning = create_model.create(form.cleaned_data, request.user)
+        except (drafts.DraftError, editor.EditError) as e:
+            form.add_error(None, str(e))
+        else:
+            if warning:
+                messages.warning(request, warning)
+            if draft.start_job_after_check:
+                messages.success(
+                    request,
+                    f'Added {draft.model_folder} in draft {draft.branch}. Checking the '
+                    'files; the import starts when they pass.',
+                )
+            else:
+                messages.success(request, f'Added {draft.model_folder} in draft {draft.branch}.')
+            return redirect('importer_dashboard:job_detail', job_id=job.id)
+    context = {
+        'form': form,
+        'drafts_enabled': enabled,
+        'base_branch': drafts.base_branch(),
+        'example_import_sh': create_model.import_sh('thermo.txt', 'transport.txt'),
+        'page_title': 'Add a model to the Importer',
+    }
+    return render(request, 'importer_dashboard/model_create.html', context)

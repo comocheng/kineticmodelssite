@@ -81,7 +81,13 @@ class DraftTestCase(TestCase):
             f.write(FAKE_IMPORTER.format(python=sys.executable))
         os.chmod(importer, os.stat(importer).st_mode | stat.S_IEXEC)
 
+        # The importers' conda environment: its python is this one
+        conda = os.path.join(root, 'conda')
+        os.makedirs(os.path.join(conda, 'envs', 'rmg_env', 'bin'))
+        os.symlink(sys.executable, os.path.join(conda, 'envs', 'rmg_env', 'bin', 'python'))
+
         override = override_settings(
+            CONDA_BASE_PATH=conda, CONDA_ENV_NAME='rmg_env',
             RMG_MODELS_PATH=self.read, RMG_MODELS_WORKSPACES_PATH=os.path.join(root, 'drafts'),
             IMPORTER_WORKSPACES=True, RMG_MODELS_REMOTE='origin', RMG_MODELS_BASE_BRANCH='master',
             RMG_PY_PATH=self.rmgpy, IMPORTER_PORT_RANGE=(18120, 18130), IMPORTER_EVIDENCE_INDEX='',

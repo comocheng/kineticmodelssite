@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+{# Add a model through the Importer: its files go into a new draft of RMG-models (importer_dashboard/create_model.py) #}
+
+{% block title %}Add a model | Import jobs | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-create">
+
+    <nav aria-label="Breadcrumb">
+        <ol class="im-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'importer_dashboard:index' %}">Import jobs</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Add a model</span></li>
+        </ol>
+    </nav>
+
+    <header class="im-heading">
+        <div class="im-heading__intro">
+            <h1>Add a model to the Importer</h1>
+            <p class="im-lede">The files go into a draft: a new folder on a branch of RMG-models {{ base_branch }}, on this server. The import starts when the files pass Check files. Nothing goes to GitHub or into the database until you open a pull request from the job page and it is merged.</p>
+        </div>
+    </header>
+
+    {% if not drafts_enabled %}
+    <div class="im-alert im-alert--warning">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body"><p class="im-alert__title">Drafts are off on this server</p>
+            <p class="im-alert__text">New models are added in a draft of RMG-models. Turn drafts on with <code>IMPORTER_WORKSPACES</code>.</p></div>
+    </div>
+    {% endif %}
+
+    <div class="im-create__layout">
+        <form method="post" enctype="multipart/form-data" class="app-panel im-create__form" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}{% for e in form.non_field_errors %}<p class="im-create__error" role="alert">{{ e }}</p>{% endfor %}{% endif %}
+
+            <fieldset>
+                <legend>Folder</legend>
+                {% include "importer_dashboard/im_create_field.html" with field=form.folder %}
+            </fieldset>
+
+            <fieldset>
+                <legend>Files</legend>
+                {% include "importer_dashboard/im_create_field.html" with field=form.mechanism %}
+                {% include "importer_dashboard/im_create_field.html" with field=form.thermo %}
+                <label class="im-create__check">{{ form.thermo_in_mechanism }} {{ form.thermo_in_mechanism.label }}</label>
+                {% include "importer_dashboard/im_create_field.html" with field=form.transport %}
+                {% include "importer_dashboard/im_create_field.html" with field=form.smiles %}
+            </fieldset>
+
+            <fieldset>
+                <legend>Source</legend>
+                {% include "importer_dashboard/im_create_field.html" with field=form.citation %}
+                {% include "importer_dashboard/im_create_field.html" with field=form.doi %}
+                {% include "importer_dashboard/im_create_field.html" with field=form.url %}
+            </fieldset>
+
+            <label class="im-create__check">{{ form.start }} {{ form.start.label }}</label>
+            <div class="im-create__actions">
+                <button type="submit" class="app-btn"{% if not drafts_enabled %} disabled{% endif %}>Create and import</button>
+                <a href="{% url 'importer_dashboard:index' %}">Cancel</a>
+            </div>
+        </form>
+
+        <aside class="app-panel im-create__side" aria-labelledby="im-template-title">
+            <h2 class="app-panel__title" id="im-template-title">The folder Prometheus makes</h2>
+            <ul class="im-create__files">
+                <li><code>mechanism.txt</code> your mechanism file</li>
+                <li><code>thermo.txt</code> your thermo file (none if the thermo is in the mechanism)</li>
+                <li><code>transport.txt</code> your transport file, if any</li>
+                <li><code>SMILES.txt</code> your SMILES.txt, or an empty one</li>
+                <li><code>source.txt</code> the citation, the DOI, where the files come from, and their original names</li>
+                <li><code>import.sh</code> written by Prometheus</li>
+            </ul>
+            <p class="im-create__text">The files are kept byte for byte. import.sh sets no port: the Importer gives each run a free one.</p>
+            <pre class="im-create__code">{{ example_import_sh }}</pre>
+        </aside>
+    </div>
+</div>
+
+<style>
+.im-create__layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .im-create__layout { grid-template-columns: 1fr; } }
+.im-create__form { display: grid; gap: 18px; }
+.im-create__form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; }
+.im-create__form legend { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.im-create__field { display: grid; gap: 4px; }
+.im-create__field label { font-size: 13px; font-weight: 500; }
+.im-create__field input[type=text], .im-create__field input[type=url], .im-create__field textarea { padding: 7px 9px; border: 1px solid var(--color-gray-300, #d0d5dd); border-radius: 6px; font: inherit; width: 100%; }
+.im-create__help { font-size: 12px; color: var(--color-gray-500); margin: 0; }
+.im-create__error { color: var(--color-danger, #b42318); font-size: 13px; margin: 0; }
+.im-create__check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.im-create__actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.im-create__side { display: grid; gap: 10px; }
+.im-create__files { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
+.im-create__text { margin: 0; font-size: 13px; color: var(--color-gray-600); }
+.im-create__code { margin: 0; font-size: 12px; white-space: pre; overflow-x: auto; padding: 10px; border-radius: 6px; background: var(--color-gray-50, #f9fafb); }
+</style>
+{% endblock %}

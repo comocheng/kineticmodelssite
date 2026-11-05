@@ -18,7 +18,8 @@
         </div>
         <div class="im-actions">
             <a href="{% url 'importer_dashboard:settings' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="settings" %}Settings</a>
-            <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
+            <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
+            <a href="{% url 'kinetic-model-create' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="file" %}Add a model</a>
         </div>
     </header>
 

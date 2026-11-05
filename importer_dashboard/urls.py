@@ -22,6 +22,7 @@ urlpatterns = [
     path('job/<int:job_id>/draft/open/', draft_views.draft_open, name='draft_open'),
     path('job/<int:job_id>/files/', draft_views.draft_files, name='draft_files'),
     path('job/<int:job_id>/files/<path:name>', draft_views.draft_file_edit, name='draft_file_edit'),
+    path('models/new/', draft_views.model_create, name='model_create'),
     path('github/connect/', draft_views.github_connect, name='github_connect'),
     path('github/callback/', draft_views.github_callback, name='github_callback'),
     path('github/disconnect/', draft_views.github_disconnect, name='github_disconnect'),

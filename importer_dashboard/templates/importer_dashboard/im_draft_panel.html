@@ -19,6 +19,15 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
     {% elif draft_error %}
     <p class="im-draft__text im-draft__text--error">Could not read the draft: {{ draft_error }}</p>
     {% else %}
+    {% if draft.is_new_model %}
+    <p class="im-draft__text">A new model: <code>{{ draft.model_folder }}</code> is not in RMG-models {{ draft.base_branch }} yet.</p>
+    {% endif %}
+    {% if draft.start_job_after_check %}
+    <p class="im-draft__text" role="status">Checking the files (importChemkin.py --minimal). The import starts when they pass.</p>
+    <script>setTimeout(function () { location.reload(); }, 5000);</script>
+    {% elif draft_check.state == 'failed' and job.status == 'idle' %}
+    <p class="im-draft__text im-draft__text--error">Check files failed, so the import did not start. <a href="{% url 'importer_dashboard:draft_files' job.id %}">See the check and correct the files</a>.</p>
+    {% endif %}
     <dl class="im-draft__metrics">
         <div><dt>Commits</dt><dd>{{ draft_changes.commits|length }}</dd></div>
         <div><dt>SMILES.txt lines added</dt><dd>{{ draft_changes.smiles_added|length }}</dd></div>

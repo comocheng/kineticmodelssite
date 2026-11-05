@@ -20,7 +20,7 @@ from .models import ClusterJob, ImportJobConfig, JobLog, ImportJobStatus, Voting
 from .manager_factory import get_job_manager
 from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
-from . import drafts, github
+from . import drafts, editor, github
 
 # Jobs whose importer is up, so its page can be opened and its progress changes
 LIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
@@ -359,6 +359,11 @@ def job_detail(request, job_id):
     # Get recent logs
     recent_logs = job.logs.all()[:50]
     
+    if job.draft_id and job.draft.start_job_after_check and config:
+        # A model added on the create page starts once Check files passes
+        from .create_model import start_checked_job
+        if start_checked_job(job, get_job_manager(config=config)):
+            job.refresh_from_db()
     draft = job.draft if job.draft_id and job.draft.is_open else None
     if draft:
         # A merged pull request closes the draft
@@ -382,6 +387,7 @@ def job_detail(request, job_id):
         'github_account': github_account,
         'github_configured': github.configured(),
         'draft_changes': draft_changes,
+        'draft_check': editor.check_status(draft) if draft else None,
         'draft_error': draft_error,
         'drafts_enabled': drafts.drafts_enabled(),
         'base_branch': drafts.base_branch(),

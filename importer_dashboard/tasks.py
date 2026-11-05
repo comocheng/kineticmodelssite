@@ -313,11 +313,10 @@ def _build_command_from_import_sh(import_sh_path, rmg_py_path, conda_env, job_pa
     # Collapse multiple spaces
     import_cmd = re.sub(r'\s+', ' ', import_cmd).strip()
 
-    import_cmd = re.sub(
-        r'^python\b',
-        f'/home/prometheus/miniconda3/envs/{conda_env}/bin/python',
-        import_cmd
-    )
+    # The python of the importers' conda environment (settings.CONDA_BASE_PATH), not the one on PATH
+    conda_python = os.path.join(getattr(settings, 'CONDA_BASE_PATH', '/home/prometheus/miniconda3'),
+                                'envs', conda_env, 'bin', 'python')
+    import_cmd = re.sub(r'^python\b', lambda _: shlex.quote(conda_python), import_cmd)
 
     # Wrap with conda activation and cd
     # stderr is left alone so Popen routes it to error.log (the Errors page)

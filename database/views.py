@@ -748,25 +748,7 @@ class SourceDeleteView(SiteLoginRequiredMixin, DeleteView):
 # KineticModel CRUD Views
 # =============================================================================
 
-class KineticModelCreateView(SiteLoginRequiredMixin, CreateView):
-    """Create a new KineticModel."""
-    model = KineticModel
-    form_class = KineticModelForm
-    template_name = 'database/kineticmodel_form.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form_title'] = 'Add New Kinetic Model'
-        context['submit_text'] = 'Create Model'
-        return context
-    
-    def form_valid(self, form):
-        self.object = form.save()
-        messages.success(self.request, f'Kinetic Model "{self.object.model_name}" created successfully.')
-        return HttpResponseRedirect(self.get_success_url())
-    
-    def get_success_url(self):
-        return reverse('kinetic-model-detail', kwargs={'pk': self.object.pk})
+# Adding a kinetic model: importer_dashboard.draft_views.model_create (a draft and an import job)
 
 
 class KineticModelUpdateView(SiteLoginRequiredMixin, UpdateView):

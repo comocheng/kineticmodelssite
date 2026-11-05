@@ -46,6 +46,28 @@ model's draft branch on the server, then, when someone opens a pull request, to 
    start opens a new draft from master. Loading the merged model into the database
    (`import_rmg_models`, `rebuild_model_links`) is still a separate step.
 
+## Adding a model
+
+`/kineticmodel/create/` ("Add a model to the Importer", also the **Add a model** button on the
+dashboard) puts a new model's files into a new draft, in the folder template of an import job:
+
+| File | What it is |
+| --- | --- |
+| `mechanism.txt` | the uploaded mechanism (the `--species` and `--reactions` file) |
+| `thermo.txt` | the uploaded thermo file; no file if the thermo is in the mechanism |
+| `transport.txt` | the uploaded transport file, if any |
+| `SMILES.txt` | the uploaded SMILES.txt, or an empty file |
+| `source.txt` | the citation, `DOI: https://doi.org/...`, where the files come from, the original file names, and who added the model |
+| `import.sh` | written by Prometheus, with no port and no SBATCH lines |
+
+- The files are kept byte for byte. The first commit is "<folder>: add the model files as
+  uploaded", by the person who added them.
+- `source.txt` can name one DOI only, because `import_rmg_models` looks the paper up by it.
+- **Create and import** runs Check files, then sends you to the Importer job page. The import
+  starts when the check passes. If it fails, the job page says so and links the Files tab.
+- No KineticModel row is made. The model goes into the database after its pull request is
+  merged (`import_rmg_models`), in the same way as ChemKED datasets.
+
 ## Editing a model's files
 
 The **Files** tab of a job lists the files of its draft. If the job has no draft, select **Open a

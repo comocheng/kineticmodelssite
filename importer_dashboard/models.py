@@ -292,6 +292,8 @@ class Draft(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_checkpoint_at = models.DateTimeField(null=True, blank=True)
+    # Start the job of this draft when Check files passes (the create page)
+    start_job_after_check = models.BooleanField(default=False)
 
     # Its pull request on GitHub (importer_dashboard/github.py)
     pr_number = models.IntegerField(null=True, blank=True)
