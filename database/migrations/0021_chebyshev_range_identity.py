@@ -40,6 +40,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='kinetics',
-            constraint=models.CheckConstraint(condition=models.Q(models.Q(('raw_data__type', 'chebyshev'), _negated=True), models.Q(('max_pressure__isnull', False), ('max_temp__isnull', False), ('min_pressure__isnull', False), ('min_temp__isnull', False)), _connector='OR'), name='chebyshev_has_range'),
+            constraint=models.CheckConstraint(check=models.Q(models.Q(('raw_data__type', 'chebyshev'), _negated=True), models.Q(('max_pressure__isnull', False), ('max_temp__isnull', False), ('min_pressure__isnull', False), ('min_temp__isnull', False)), _connector='OR'), name='chebyshev_has_range'),
         ),
     ]

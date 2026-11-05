@@ -2,9 +2,19 @@
 
 The thermo and transport links say which name they belong to, and the kinetics links which names
 they write. Species.variant stays until fold_species_variants has merged the variant records into
-their shared records (0023 removes it); a database default lets rows be created meanwhile."""
+their shared records (0023 removes it); a database default lets rows be created meanwhile.
+
+The default is set in SQL, not with Field(db_default=...), because the server runs Django 4.2
+(environment.yml), which has no db_default."""
 import django.db.models.deletion
 from django.db import migrations, models
+
+
+def _variant_default(sql):
+    def run(apps, schema_editor):
+        table = schema_editor.quote_name(apps.get_model("database", "Species")._meta.db_table)
+        schema_editor.execute(f"ALTER TABLE {table} ALTER COLUMN {schema_editor.quote_name('variant')} {sql}")
+    return run
 
 
 class Migration(migrations.Migration):
@@ -14,11 +24,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name="species",
-            name="variant",
-            field=models.CharField(blank=True, db_default="", db_index=True, default="", max_length=300),
-        ),
+        migrations.RunPython(_variant_default("SET DEFAULT ''"), _variant_default("DROP DEFAULT")),
         migrations.AddField(
             model_name="thermocomment",
             name="species_name",
