@@ -52,8 +52,8 @@ EXPORTED = ["C3H5-A + H <=> C3H5-A + H", "C3H6 + C3H5-A <=> C3H5-A + C3H6",
 
 
 def one_name(equation):
-    """The equation with C3H5-A for its export label: the export lists a species with two names
-    twice and labels the second C3H5-A01 (furop1 and furop101 in Somers)."""
+    """The equation with C3H5-A for both names: a model imported before variant records has one
+    record for both, written as C3H5-A (once listed twice, as C3H5-A01: furop101 in Somers)."""
     return sides(re.sub(r"C3H5-A\d*", "C3H5-A", equation))
 
 
@@ -117,6 +117,10 @@ class SameSideExportTests(TestCase):
         self.assertEqual(sorted(line.split(": ", 1)[1] for line in header), sorted(LEFT_OUT))
         self.assertTrue(text.startswith("! Prometheus did not write 1 falloff reaction(s)"))
 
+    def test_the_record_of_two_names_is_written_once_under_the_first(self):
+        species = self.chemkin_text().split("SPECIES", 1)[1].split("END", 1)[0].split()
+        self.assertEqual([name for name in species if name.startswith("C3H5")], ["C3H5-A"])
+
     def test_cantera_file_loads_and_says_what_was_left_out(self):
         import cantera as ct
         import yaml
@@ -161,7 +165,7 @@ class ModelNamesExportTests(TestCase):
         self.assertCountEqual(map(sides, written), map(sides, WRITTEN))
         self.assertFalse([line for line in text.splitlines() if line.startswith("! kinetics ")])
         species = text.split("SPECIES", 1)[1].split("END", 1)[0].split()
-        # Each name once, with RMG's index (C3H5-A(3)); no C3H5-A01 for a second name.
+        # Each name once, as the model writes it (older downloads: C3H5-A(3)); no C3H5-A01.
         self.assertEqual(sorted(re.sub(r"\(\d+\)$", "", name) for name in species if name.startswith("C3H5")),
                          ["C3H5-A", "C3H5-X"])
 

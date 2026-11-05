@@ -207,6 +207,212 @@ def build_cantera_yaml(kinetic_model, strict=False):
     return ExportResult(content=content, filename=filename, content_type="application/x-yaml")
 
 
+# The original mechanism: the model's own CHEMKIN files, not the Prometheus record of the model.
+# The generated downloads leave out what Prometheus does not have (coverage.py); these do not.
+
+_TRANSPORT_NAMES = ("transport.txt", "transport.dat", "tran.dat", "trans.dat", "tran.txt")
+
+
+@dataclass(frozen=True)
+class OriginalFiles:
+    files: dict            # file name -> bytes, as written
+    reactions: str         # the name of the reactions file
+    thermo: Optional[str]  # None when the thermo is in the reactions file
+    transport: Optional[str]
+    origin: str            # "uploaded" or "RMG-models"
+    folder: str = ""       # the model's folder in RMG-models
+    commit: str = ""       # RMG-models' commit, when its .git can be read
+
+
+def _import_sh_path(folder, key):
+    """The file that the model's import.sh names after --<key>, or None."""
+    script = os.path.join(folder, "import.sh")
+    if not os.path.exists(script):
+        return None
+    with open(script, errors="replace") as handle:
+        match = re.search(rf"--{key}\s+(\S+)", handle.read())
+    path = os.path.join(folder, match.group(1)) if match else None
+    return path if path and os.path.isfile(path) else None
+
+
+def _git_commit(root):
+    """The short commit of the git checkout at *root*, read from .git without running git."""
+    try:
+        git = os.path.join(root, ".git")
+        if os.path.isfile(git):                      # a worktree: "gitdir: <path>"
+            with open(git) as handle:
+                git = handle.read().split(":", 1)[1].strip()
+        with open(os.path.join(git, "HEAD")) as handle:
+            head = handle.read().strip()
+        if not head.startswith("ref:"):
+            return head[:7]
+        ref = head.split(None, 1)[1]
+        for base in (git, os.path.join(git, "..", "..")):  # a worktree keeps its refs in the main .git
+            path = os.path.join(base, ref)
+            if os.path.isfile(path):
+                with open(path) as handle:
+                    return handle.read().strip()[:7]
+            packed = os.path.join(base, "packed-refs")
+            if os.path.isfile(packed):
+                with open(packed) as handle:
+                    for line in handle:
+                        if line.rstrip().endswith(" " + ref):
+                            return line.split()[0][:7]
+    except (OSError, IndexError):
+        pass
+    return ""
+
+
+def original_files(kinetic_model):
+    """The model's own CHEMKIN files as they are, or None: the files uploaded for the model, or
+    else the files RMG-models converted (the --reactions and --thermo files of the model's
+    import.sh, and a transport file with one of the usual names)."""
+    uploaded = {}
+    names = {}
+    for role, field, fallback in (("reactions", kinetic_model.chemkin_reactions_file, "chemkin_reactions"),
+                                  ("thermo", kinetic_model.chemkin_thermo_file, "chemkin_thermo"),
+                                  ("transport", kinetic_model.chemkin_transport_file, "chemkin_transport")):
+        content = _read_file_field(field)
+        if content:
+            names[role] = _get_filename_with_fallback(field, fallback)
+            uploaded[names[role]] = content
+    if "reactions" in names:
+        return OriginalFiles(uploaded, names["reactions"], names.get("thermo"), names.get("transport"), "uploaded")
+
+    root = getattr(settings, "RMG_MODELS_PATH", None)
+    if not root or not kinetic_model.model_name:
+        return None
+    folder = os.path.join(root, kinetic_model.model_name)
+    reactions = _import_sh_path(folder, "reactions")
+    if not reactions:
+        return None
+    thermo = _import_sh_path(folder, "thermo")
+    if thermo and os.path.abspath(thermo) == os.path.abspath(reactions):
+        thermo = None                                 # the thermo is in the reactions file
+    transport = next((os.path.join(folder, name) for name in sorted(os.listdir(folder))
+                      if (name.lower() in _TRANSPORT_NAMES or name.lower().endswith("_tran.dat"))
+                      and os.path.isfile(os.path.join(folder, name))), None)
+    files = {}
+    for path in (reactions, thermo, transport):
+        if path:
+            with open(path, "rb") as handle:
+                files[os.path.basename(path)] = handle.read()
+    return OriginalFiles(files, os.path.basename(reactions), thermo and os.path.basename(thermo),
+                         transport and os.path.basename(transport), "RMG-models",
+                         kinetic_model.model_name, _git_commit(root))
+
+
+def has_original_files(kinetic_model):
+    """Whether original_files() finds files, without reading them."""
+    if kinetic_model.chemkin_reactions_file:
+        return True
+    root = getattr(settings, "RMG_MODELS_PATH", None)
+    return bool(root and kinetic_model.model_name
+                and _import_sh_path(os.path.join(root, kinetic_model.model_name), "reactions"))
+
+
+def _original_note(kinetic_model, original):
+    """Plain-text lines that say where the original files come from."""
+    if original.origin == "uploaded":
+        lines = [f"{kinetic_model.model_name}: the CHEMKIN files uploaded for this model.",
+                 "Prometheus did not change them."]
+    else:
+        commit = f", commit {original.commit}" if original.commit else ""
+        lines = [f"{kinetic_model.model_name}: the model's own CHEMKIN files, as RMG-models keeps them",
+                 f"(folder {original.folder} in RMG-models{commit}). These are the files RMG-models",
+                 "converted. Prometheus did not change them."]
+    lines.append(f"Reactions: {original.reactions}")
+    lines.append(f"Thermo: {original.thermo or 'in the reactions file'}")
+    if original.transport:
+        lines.append(f"Transport: {original.transport}")
+    if original.origin != "uploaded":
+        from database.services import coverage
+        summary = coverage.cached_summary(kinetic_model)
+        if summary and not summary["complete"]:
+            lines.append(f"The generated Prometheus downloads of this model have {summary['in_download']:,} of the "
+                         f"{summary['lines']:,} reaction lines of {original.reactions}.")
+    return lines
+
+
+def _cantera_error(text, path):
+    """(line number or None, first message line) of a Cantera load error. A CanteraError is framed
+    by *** lines, says "... thrown by ...", and an InputFileError names the file and line."""
+    line = None
+    match = re.search(r"Error on line (\d+) of ", text)
+    if match:
+        line = int(match.group(1))
+    for row in text.splitlines():
+        row = row.strip()
+        if (row and not row.startswith("***") and "thrown by" not in row and not row.startswith("Error on line")
+                and not row.startswith("|") and not row.startswith(">")):
+            return line, row.replace(path, os.path.basename(path))
+    return (line, "") if line else None
+
+
+def build_original_chemkin_bundle(kinetic_model):
+    """The model's own CHEMKIN files in a zip, as they are, with README.txt on where they come from."""
+    original = original_files(kinetic_model)
+    if original is None:
+        raise ExportError("Prometheus has no original CHEMKIN files for this model.")
+    files = dict(original.files)
+    files["README.txt"] = ("\n".join(_original_note(kinetic_model, original)) + "\n").encode("utf-8")
+    slug = slugify(kinetic_model.model_name or str(kinetic_model.pk))
+    return ExportResult(content=_build_zip(files), filename=f"{slug or kinetic_model.pk}_original_chemkin.zip",
+                        content_type="application/zip")
+
+
+def build_original_cantera_yaml(kinetic_model):
+    """The model's own CHEMKIN files through Cantera's ck2yaml, with no change to them: no repaired
+    thermo, no added DUPLICATE flags. YAML comments at the top say where the files come from and
+    whether Cantera loads the result."""
+    import cantera
+    from cantera.ck2yaml import Parser
+
+    original = original_files(kinetic_model)
+    if original is None:
+        raise ExportError("Prometheus has no original CHEMKIN files for this model.")
+    note = _original_note(kinetic_model, original)
+    slug = slugify(kinetic_model.model_name or str(kinetic_model.pk)) or str(kinetic_model.pk)
+    with tempfile.TemporaryDirectory() as tempdir:
+        paths = {}
+        for name, content in original.files.items():
+            paths[name] = os.path.join(tempdir, name)
+            with open(paths[name], "wb") as handle:
+                handle.write(content)
+        output_path = os.path.join(tempdir, f"{slug}_original.yaml")
+        transport = paths.get(original.transport) if original.transport else None
+        try:
+            Parser.convert_mech(paths[original.reactions], paths.get(original.thermo) if original.thermo else None,
+                                transport, out_name=output_path, quiet=True, permissive=True)
+        except Exception as exc:
+            if not transport:
+                raise ExportError(f"Cantera's ck2yaml cannot convert the model's own files: {exc}") from exc
+            try:
+                Parser.convert_mech(paths[original.reactions],
+                                    paths.get(original.thermo) if original.thermo else None, None,
+                                    out_name=output_path, quiet=True, permissive=True)
+            except Exception as inner:
+                raise ExportError(f"Cantera's ck2yaml cannot convert the model's own files: {inner}") from inner
+            first = (str(exc).strip().splitlines() or [type(exc).__name__])[0]
+            note.append(f"Without the transport data: ck2yaml cannot read {original.transport} ({first})")
+        load_error = None
+        try:
+            cantera.Solution(output_path)
+        except Exception as exc:
+            load_error = _cantera_error(str(exc), output_path) or type(exc).__name__
+        with open(output_path, "rb") as handle:
+            converted = handle.read()
+    header = f"Converted by Cantera {cantera.__version__} ck2yaml from the files above, as written."
+    if load_error:
+        # The comment lines come before the converted text, so its line numbers move down.
+        line, message = load_error
+        where = f" (line {line + len(note) + 2})" if line else ""
+        note.append(f"Cantera {cantera.__version__} does not load this file as written{where}: {message}")
+    comment = "".join(f"# {line}\n" for line in [*note, header])
+    return ExportResult(content=comment.encode("utf-8") + converted, filename=f"{slug}_original.yaml",
+                        content_type="application/x-yaml")
+
+
 def _dedupe_chemkin_species_block(content: bytes) -> bytes:
     """Remove duplicate species labels in a Chemkin SPECIES block.
 
@@ -686,8 +892,9 @@ def _generate_chemkin_files(kinetic_model, strict=False):
 
     use_camelcase = getattr(save_chemkin_file, "__name__", "") == "saveChemkinFile"
 
+    kept_index = []
     species_map, missing_species = _build_rmg_species_map(
-        kinetic_model, NASAPolynomial, NASA, TransportData, RmgSpecies
+        kinetic_model, NASAPolynomial, NASA, TransportData, RmgSpecies, kept_index=kept_index
     )
     if strict and missing_species:
         sample = ", ".join(str(species_id) for species_id in missing_species[:5])
@@ -744,7 +951,8 @@ def _generate_chemkin_files(kinetic_model, strict=False):
         # After _write_stored_digits, which needs the entries as RMG-Py wrote them.
         if reverse:
             written = _write_reverse_rates(written, reactions, reverse)
-        reactions_content = _left_out_header(left_out, species_map) + written.encode("utf-8")
+        reactions_content = (_left_out_header(left_out, species_map, kinetic_model)
+                             + _kept_index_header(kept_index) + written.encode("utf-8"))
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -988,42 +1196,125 @@ def _reverse_parts(rmg_reaction, terms, rmg_reaction_cls):
 _CHEMKIN_COMMENT_PREFIX = "The chemkin file reaction is "
 
 
-def _left_out_header(left_out, species_map):
-    """CHEMKIN comment lines that name the reactions ``_build_rmg_reactions`` did not write.
-    ck2yaml copies the comments at the top of the file into the Cantera file's description."""
-    if not left_out:
-        return b""
+_LEFT_OUT_TEXT = {
+    "falloff_same_side": [
+        "! Prometheus did not write {n} falloff reaction(s) of this model. In each, two",
+        "! names of the model are one species in Prometheus, so the species is on both sides:",
+        "! the reaction changes no amount, and Cantera cannot read it (it takes the species",
+        "! for a named collider).",
+    ],
+    "no_thermo": [
+        "! Prometheus did not write {n} reaction(s) of this model, because a species of each",
+        "! has no thermo in Prometheus.",
+    ],
+    "unbalanced": ["! Prometheus did not write {n} reaction(s) of this model that RMG-Py finds unbalanced."],
+    "fractional": ["! Prometheus did not write {n} reaction(s) with a coefficient that is not a whole number."],
+}
+
+
+def _left_out_header(left_out, species_map, kinetic_model=None):
+    """CHEMKIN comment lines for the top of a generated download: how many reaction lines of the
+    model's own CHEMKIN file it has (coverage.header_lines, when the model has that file), and the
+    kinetics links ``_build_rmg_reactions`` did not write, by reason. ck2yaml copies the comments
+    at the top of the file into the Cantera file's description."""
+    from database.services import coverage
+
+    lines = []
+    if kinetic_model is not None:
+        lines = coverage.header_lines(
+            kinetic_model,
+            coverage.line_coverage(kinetic_model, {kc.kinetics_id: reason for kc, reason in left_out}))
 
     def label(species):
         rmg_species = species_map.get(species.id)
         return rmg_species.label if rmg_species is not None else f"species {species.id}"
 
-    lines = [
-        f"! Prometheus did not write {len(left_out)} falloff reaction(s) of this model. In each, two",
-        "! names of the model are one species in Prometheus, so the species is on both sides:",
-        "! the reaction changes no amount, and Cantera cannot read it (it takes the species",
-        "! for a named collider).",
-    ]
-    for kinetics_comment in left_out:
-        comment = kinetics_comment.comment or ""
-        if comment.startswith(_CHEMKIN_COMMENT_PREFIX):
-            equation = comment[len(_CHEMKIN_COMMENT_PREFIX):].strip()
-        else:
-            reaction = kinetics_comment.kinetics.reaction
-            arrow = " <=> " if kinetics_comment.reversible else " => "
-            equation = (" + ".join(label(s) for s in reaction.stoich_reactants()) + arrow
-                        + " + ".join(label(s) for s in reaction.stoich_products()))
-        lines.append(f"! kinetics {kinetics_comment.kinetics_id}: {equation}")
-    logger.info(f"Left out {len(left_out)} falloff reaction(s) with the same species on both sides")
+    for reason, text in _LEFT_OUT_TEXT.items():
+        comments = [kc for kc, why in left_out if why == reason]
+        if not comments:
+            continue
+        lines.extend(line.format(n=len(comments)) for line in text)
+        for kinetics_comment in comments:
+            comment = kinetics_comment.comment or ""
+            if comment.startswith(_CHEMKIN_COMMENT_PREFIX):
+                equation = comment[len(_CHEMKIN_COMMENT_PREFIX):].strip()
+            else:
+                reaction = kinetics_comment.kinetics.reaction
+                arrow = " <=> " if kinetics_comment.reversible else " => "
+                try:
+                    equation = (" + ".join(label(s) for s in reaction.stoich_reactants()) + arrow
+                                + " + ".join(label(s) for s in reaction.stoich_products()))
+                except NotImplementedError:
+                    equation = f"reaction {reaction.id}"
+            lines.append(f"! kinetics {kinetics_comment.kinetics_id}: {equation}")
+        logger.info(f"Left out {len(comments)} reaction(s): {reason}")
+    if not lines:
+        return b""
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
-def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
-    """record id -> RMG species of the download, and ("name", SpeciesName id) -> RMG species for
-    each later name of a record the model names twice, each name with its own thermo entry
-    (furop1 and furop2): each such name is a species of the download, with its thermo. The
-    record's key holds its first name (the oldest name row). The species are in the order of the
-    model's name rows."""
+# RMG-Py's get_species_identifier writes a species as label(index) when that has 16 characters or
+# fewer, else formula(index), else S(index): AramcoMech 1.3's CH2CHOOHCOCH3 came out C4H7O3(29). With
+# no index (-1) it writes the label itself. CHEMKIN-III and CHEMKIN-PRO take names of up to 16
+# characters, RMG-Py's thermo writer gives the name 16 columns, and RMG-Py writes the formula for a
+# label with a character other than A-Z a-z 0-9 - _ , ( ) * # . : [ ].
+_CHEMKIN_NAME_LENGTH = 16
+_RMG_REFUSED_CHARACTER = re.compile(r"[^A-Za-z0-9\-_,()*#.:\[\]]")
+
+
+def _write_model_names(species):
+    """Write each RMG species of a download under its label, the model's name, without RMG-Py's
+    index: CH2CHOOHCOCH3, not C4H7O3(29). A species keeps what RMG-Py writes with the index
+    (label(index), else formula(index)) when its label has more than 16 characters, has a character
+    RMG-Py does not write (a SMILES name as [CH2]C=O), or would be written as another species is.
+    Each species gets index -1 and the label to write, so RMG-Py writes the label as it is, and
+    save_chemkin_file keeps the species in their order. Returns (label, written) of each species
+    that keeps the index."""
+    from collections import Counter
+    from rmgpy.chemkin import get_species_identifier
+
+    species = list(species)
+    with_index = {id(s): get_species_identifier(s) for s in species}
+    written = {id(s): s.label if (0 < len(s.label) <= _CHEMKIN_NAME_LENGTH
+                                  and not _RMG_REFUSED_CHARACTER.search(s.label)) else with_index[id(s)]
+               for s in species}
+    # A model's name that another species is written as keeps the index too: a name C2H3O(5) (names
+    # as Allen's OH(19) end in digits in brackets) and RMG-Py's C2H3O(5) for a SMILES name. Each
+    # round only moves names to the identifiers with the index, which are distinct, so it ends.
+    while True:
+        counts = Counter(written.values())
+        clash = [s for s in species if counts[written[id(s)]] > 1 and written[id(s)] != with_index[id(s)]]
+        if not clash:
+            break
+        for s in clash:
+            written[id(s)] = with_index[id(s)]
+    kept = [(s.label, written[id(s)]) for s in species if written[id(s)] != s.label]
+    for s in species:
+        s.label = written[id(s)]
+        s.index = -1
+    return kept
+
+
+def _kept_index_header(kept):
+    """CHEMKIN comment lines that name the species written with RMG-Py's index (_write_model_names)."""
+    if not kept:
+        return b""
+    lines = [f"! Prometheus writes {len(kept)} species of this model with RMG-Py's index: CHEMKIN cannot take",
+             "! the name (more than 16 characters, or a character it does not take), or another species",
+             "! of this file has that name. The model's name, then the name in this file:"]
+    lines += [f"! {label} as {written}" for label, written in kept]
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls,
+                           kept_index=None):
+    """record id -> RMG species of the download, each under the model's name (_write_model_names),
+    and ("name", SpeciesName id) -> RMG species for each later name of a record the model names
+    twice, each name with its own thermo entry (furop1 and furop2): each such name is a species of
+    the download, with its thermo. The record's key holds its first name (the oldest name row).
+    The species are in the order of the model's name rows. Also returns the ids of the records
+    with no thermo. When ``kept_index`` (a list) is given, it gets (the model's name, the name
+    written) of each species written with RMG-Py's index."""
     from collections import Counter, defaultdict
     from django.db.models import F
     from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, ThermoComment, Transport
@@ -1075,12 +1366,15 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         labels.add(label)
         return label
 
-    # One entry per name row, in the order of the rows (the order of their ids); a later name is
-    # an entry of its own (its row id), every other row an entry of its record.
+    # One entry per record and one per later name, in the order of the name rows (the order of
+    # their ids): a later name is an entry of its own (its row id). Each record once: the model has
+    # a row per name, and a record it names twice must not come twice, as Malewicki's
+    # BZCOOH01(1988) for BZCOOH and C6H5CH2OOH did.
     species_objects = Species.objects.in_bulk({species_id for _, species_id, _ in name_rows})
     later_rows = {pk: name for pk, species_id, name in name_rows if (species_id, name) in later}
-    entries = [(species_objects[species_id], pk if pk in later_rows else None)
-               for pk, species_id, _ in name_rows]
+    entries = list(dict.fromkeys((species_id, pk if pk in later_rows else None)
+                                 for pk, species_id, _ in name_rows))
+    entries = [(species_objects[species_id], row) for species_id, row in entries]
     # Species of the model's reactions, and their specific colliders, that the model does not name.
     reaction_species_ids = set(Stoichiometry.objects.filter(
         reaction__kinetics__kineticscomment__kinetic_model=kinetic_model
@@ -1190,6 +1484,9 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
 
         species_map[("name", later_row) if later_row else db_species.id] = rmg_species
 
+    kept = _write_model_names(species_map.values())
+    if kept_index is not None:
+        kept_index.extend(kept)
     return species_map, missing_thermo
 
 
@@ -1200,10 +1497,12 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                          reverse=None):
     """The model's reactions as RMG objects.  A species is written with the name the link names
     for it (KineticsCommentName, a later name: furop2 + H), else with its record's species. A
-    falloff reaction with the same species on both sides is not written; its kinetics comment
-    goes into ``left_out`` when one is given. When ``reverse`` (a dict) is given, it gets
-    id(reaction) -> the model's REV for each reaction with one (KineticsComment.reverse_rate), and
-    a multi-rate with a REV becomes one reaction per term (_reverse_parts)."""
+    falloff reaction with the same species on both sides, a reaction with a species without
+    thermo, and an unbalanced or fractional reaction are not written; when ``left_out`` (a list)
+    is given, it gets (kinetics comment, reason) for each: "falloff_same_side", "no_thermo",
+    "unbalanced" or "fractional". When ``reverse`` (a dict) is given, it gets id(reaction) -> the
+    model's REV for each reaction with one (KineticsComment.reverse_rate), and a multi-rate with a
+    REV becomes one reaction per term (_reverse_parts)."""
     from collections import Counter, defaultdict
 
     reactions = []
@@ -1248,6 +1547,8 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     "Strict Chemkin generation failed because a reaction has a fractional "
                     f"coefficient: {kinetics.id}."
                 )
+            if left_out is not None:
+                left_out.append((kinetics_comment, "fractional"))
             continue
         reactant_keys = keys(kinetics_comment.pk, reactant_rows, True)
         product_keys = keys(kinetics_comment.pk, product_rows, False)
@@ -1258,7 +1559,7 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         if (kinetics.data.type in _FALLOFF_TYPES and reactant_rows
                 and Counter(reactant_keys) == Counter(product_keys)):
             if left_out is not None:
-                left_out.append(kinetics_comment)
+                left_out.append((kinetics_comment, "falloff_same_side"))
             continue
         # A specific collider, as in H + O2 (+AR), must be in the SPECIES block too.
         needed = [*reactant_keys, *product_keys]
@@ -1267,6 +1568,8 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
         if any(key not in species_map for key in needed):
             if strict:
                 missing_species.update(key for key in needed if key not in species_map)
+            if left_out is not None:
+                left_out.append((kinetics_comment, "no_thermo"))
             continue
         rmg_reaction = rmg_reaction_cls(
             reactants=[species_map[key] for key in reactant_keys],
@@ -1292,6 +1595,8 @@ def _build_rmg_reactions(kinetic_model, species_map, rmg_reaction_cls, strict=Fa
                     "Strict Chemkin generation failed because a reaction is unbalanced: "
                     f"{kinetics.id}."
                 )
+            if left_out is not None:
+                left_out.append((kinetics_comment, "unbalanced"))
             continue
         # The model's own reverse rate (REV) of a reversible line, written after the entry.
         terms = (kinetics_comment.reverse_rate or {}).get("terms") if (

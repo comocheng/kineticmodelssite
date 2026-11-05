@@ -29,7 +29,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count
 
 from database import models as db
-from database.models.kinetic_data import efficiencies_hash
+from database.models.kinetic_data import efficiencies_hash, kinetics_identity
 from database.scripts.import_rmg_models import (
     get_reaction_hash, get_species_hash, import_kinetics, import_thermo)
 
@@ -296,10 +296,8 @@ def refresh_efficiencies_hashes(kinetics_ids, report):
         new_hash = efficiencies_hash(kinetics.efficiency_set.values_list("species_id", "efficiency"))
         if new_hash == kinetics.efficiencies_hash:
             continue
-        twin = db.Kinetics.objects.filter(
-            reaction_id=kinetics.reaction_id, raw_data=kinetics.raw_data,
-            specific_collider_id=kinetics.specific_collider_id, efficiencies_hash=new_hash,
-        ).exclude(pk=kinetics.pk).values_list("pk", flat=True).first()
+        twin = db.Kinetics.objects.filter(**kinetics_identity(kinetics, efficiencies_hash=new_hash)).exclude(
+            pk=kinetics.pk).values_list("pk", flat=True).first()
         if twin is not None:
             merge_kinetics(twin, kinetics.pk)
             report["kinetics_merged"] += 1
@@ -309,12 +307,11 @@ def refresh_efficiencies_hashes(kinetics_ids, report):
 
 
 def merge_reaction_pair(keep_id, drop_id, report):
-    """Merge a reaction into the one with the same species and coefficients."""
+    """Merge a reaction into the one with the same species and coefficients. A rate merges into
+    the same rate of the kept reaction (kinetics_identity: a Chebyshev rate with another range
+    stays a record of its own)."""
     for kinetics in db.Kinetics.objects.filter(reaction_id=drop_id):
-        twin = db.Kinetics.objects.filter(
-            reaction_id=keep_id, raw_data=kinetics.raw_data,
-            specific_collider_id=kinetics.specific_collider_id,
-            efficiencies_hash=kinetics.efficiencies_hash).first()
+        twin = db.Kinetics.objects.filter(**kinetics_identity(kinetics, reaction_id=keep_id)).first()
         if twin:
             merge_kinetics(twin.pk, kinetics.pk)
             report["kinetics_merged"] += 1
@@ -378,7 +375,7 @@ def merge_groups(groups, log=print, report=None):
 # ---------------------------------------------------------------------------
 
 def variant_column():
-    """Whether database_species still has the variant column (migration 0022 removes it)."""
+    """Whether database_species still has the variant column (migration 0023 removes it)."""
     from django.db import connection
     with connection.cursor() as cursor:
         return "variant" in {c.name for c in connection.introspection.get_table_description(

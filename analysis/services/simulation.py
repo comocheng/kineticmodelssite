@@ -178,6 +178,20 @@ def _get_inert_species_defs(names: List[str]):
     return defs
 
 
+class _MechanismYamlLoader(yaml.SafeLoader):
+    """A SafeLoader that reads true and false as booleans, as YAML 1.2 and Cantera do, and every
+    other word as text. PyYAML (YAML 1.1) reads no, NO, yes, on and off as booleans, so a species
+    named NO (GRI-Mech 3.0) or no (Bohon) came back as False and was written as false."""
+
+
+_MechanismYamlLoader.yaml_implicit_resolvers = {
+    first: [(tag, regexp) for tag, regexp in resolvers if tag != "tag:yaml.org,2002:bool"]
+    for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+_MechanismYamlLoader.add_implicit_resolver(
+    "tag:yaml.org,2002:bool", re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF"))
+
+
 def _inject_inert_species(mechanism_path: str, species_names: List[str]):
     """Inject missing inert species into a Cantera YAML mechanism file.
 
@@ -194,7 +208,7 @@ def _inject_inert_species(mechanism_path: str, species_names: List[str]):
     with open(mechanism_path, "r", encoding="utf-8") as f:
         text = f.read()
 
-    data = yaml.safe_load(text)
+    data = yaml.load(text, Loader=_MechanismYamlLoader)
 
     # Append species entries
     if "species" not in data:
@@ -637,7 +651,10 @@ def get_dataset_species_map(dataset: ExperimentDataset):
     return species_map
 
 
-# Mechanism species names are "label(index)", e.g. "O2(10)"; the index is the export's, not the model's.
+# The downloads write the model's names (O2). Older downloads, and a species whose name CHEMKIN
+# cannot take, have RMG-Py's index: "label(index)", e.g. "O2(10)"; that index is the export's, not the
+# model's. A model's own name can also end in digits in brackets (Allen's OH(19)), so _MechanismNames
+# tries the exact name before the name without them.
 _EXPORT_INDEX = re.compile(r"\(\d+\)$")
 
 

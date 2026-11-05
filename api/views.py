@@ -1,6 +1,9 @@
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, BasePermission, SAFE_METHODS
+from rest_framework.response import Response
 
 from database import models
 from api import filters, serializers
@@ -111,6 +114,24 @@ class KineticModelViewSet(PermissionsViewSet):
     filterset_class = filters.KineticModelFilter
     search_fields = ["model_name", "prime_id", "info", "source__doi", "source__source_title"]
     ordering_fields = ["id", "model_name"]
+
+    @extend_schema(summary="How many lines of the model's own CHEMKIN file the generated downloads have",
+                   responses={200: OpenApiTypes.OBJECT})
+    @action(detail=True, methods=["get"])
+    def coverage(self, request, pk=None):
+        """Each reaction line of the model's own CHEMKIN file (the file RMG-models converted) that the
+        generated CHEMKIN and Cantera downloads do not have, with the reason; `?lines=all` gives every
+        line. `file` is null when Prometheus has no such file for the model."""
+        from database.services import coverage
+
+        result = coverage.line_coverage(self.get_object())
+        if result is None:
+            return Response({"file": None, "lines": None, "in_download": None, "left_out": {},
+                             "complete": None, "reaction_lines": []})
+        every = request.query_params.get("lines") == "all"
+        body = coverage.summary(result)
+        body["reaction_lines"] = [line for line in result["lines"] if every or line["status"] != "in_download"]
+        return Response(body)
 
 
 @extend_schema(tags=["bibliography"])

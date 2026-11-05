@@ -3,9 +3,9 @@
 0019 gave a model's later name for a structure it already lists (furop2 after furop1) a record of
 its own, "<model name>: <label>". One record per species is kept instead: the name stays, as a
 second name of the model for the shared record, and so do its thermo links (they name it) and its
-kinetics links (they name it where they write it). Run between migration 0021 and 0022:
+kinetics links (they name it where they write it). Run between migration 0022 and 0023:
 
-    python manage.py migrate database 0021
+    python manage.py migrate database 0022
     python manage.py fold_species_variants          # dry run: does the work and rolls it back
     python manage.py fold_species_variants --apply
     python manage.py migrate

@@ -90,7 +90,7 @@ def library(root):
 
 
 def name(label):
-    """A species name of the export without RMG's index: AR(7) -> AR."""
+    """A species name of the export without RMG's index (older downloads): AR(7) -> AR."""
     return re.sub(r"\(\d+\)$", "", label)
 
 
@@ -328,11 +328,11 @@ class ExportDigitsTests(TestCase):
                     self.assertAlmostEqual(float(old_token), float(new_token), delta=6e-3 * max(1, abs(float(new_token))))
         self.assertIn("TROE/ 5.620e-01 91        5836      8552     /", rewritten)
         self.assertIn("TROE/ 5.620e-01 91        5.84e+03  8.55e+03 /", text)
-        self.assertRegex(rewritten, r"O2\(\d+\)/0.002/")
-        self.assertRegex(rewritten, r"AR\(\d+\)/0.375/")
+        self.assertRegex(rewritten, r"O2(?:\(\d+\))?/0.002/")
+        self.assertRegex(rewritten, r"AR(?:\(\d+\))?/0.375/")
         self.assertIn("PLOG/ 0.0001316", rewritten)
         self.assertIn(" 1.2717e+01 ", rewritten)
-        exact = [line for line in new_lines if re.match(r"CH2CO\(\d+\)\+O\(\d+\)<=>", line)]
+        exact = [line for line in new_lines if re.match(r"CH2CO(?:\(\d+\))?\+O(?:\(\d+\))?<=>", line)]
         self.assertEqual(len(exact), 1)
         self.assertIn(exact[0], old_lines)
 

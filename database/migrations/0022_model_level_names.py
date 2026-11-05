@@ -2,7 +2,7 @@
 
 The thermo and transport links say which name they belong to, and the kinetics links which names
 they write. Species.variant stays until fold_species_variants has merged the variant records into
-their shared records (0022 removes it); a database default lets rows be created meanwhile."""
+their shared records (0023 removes it); a database default lets rows be created meanwhile."""
 import django.db.models.deletion
 from django.db import migrations, models
 
@@ -10,7 +10,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("database", "0020_kineticscomment_reverse_rate"),
+        ("database", "0021_chebyshev_range_identity"),
     ]
 
     operations = [

@@ -447,6 +447,37 @@ def efficiencies_hash(efficiencies):
     return hashlib.md5(bytes(";".join(pairs), "UTF-8")).hexdigest() if pairs else ""
 
 
+RANGE_FIELDS = ("min_temp", "max_temp", "min_pressure", "max_pressure")
+CHEBYSHEV = models.Q(raw_data__type="chebyshev")
+
+
+def range_identity(raw_data, min_temp=None, max_temp=None, min_pressure=None, max_pressure=None):
+    """The T and P range fields that are part of a rate record's identity, for this raw_data.
+
+    A Chebyshev rate's T and P range make its reduced T and P, so the same coefficients with
+    another range are another k (PCI2017/111-Jin writes TCHEB 270 3000 with the coefficients that
+    CombFlame2013/1939-Cai writes with 290 3000): the range is part of the identity. Another
+    rate's range only says where it holds and is not."""
+    if (raw_data or {}).get("type") != "chebyshev":
+        return {}
+    return dict(zip(RANGE_FIELDS, (min_temp, max_temp, min_pressure, max_pressure)))
+
+
+def kinetics_identity(kinetics, **changes):
+    """The fields that find the record of the same rate as this one (the unique constraints of
+    Kinetics): reaction, raw_data, specific collider, efficiencies_hash and, for a Chebyshev rate,
+    the T and P range. `changes` replace fields first (reaction_id=..., efficiencies_hash=...)."""
+    fields = {"reaction_id": kinetics.reaction_id, "raw_data": kinetics.raw_data,
+              "specific_collider_id": kinetics.specific_collider_id,
+              "efficiencies_hash": kinetics.efficiencies_hash,
+              **{name: getattr(kinetics, name) for name in RANGE_FIELDS}}
+    fields.update(changes)
+    identity = {name: fields[name] for name in
+                ("reaction_id", "raw_data", "specific_collider_id", "efficiencies_hash")}
+    identity.update(range_identity(fields["raw_data"], *(fields[name] for name in RANGE_FIELDS)))
+    return identity
+
+
 class Kinetics(models.Model):
     prime_id = models.CharField(blank=True, max_length=10)
     reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
@@ -482,17 +513,29 @@ class Kinetics(models.Model):
     class Meta:
         verbose_name_plural = "Kinetics"
         # The same rate for (+M) and for (+AR), or with other collider efficiencies, are two
-        # records. PostgreSQL 14 has no NULLS NOT DISTINCT, so the (+M) rates get their own
-        # constraint.
+        # records, and so is a Chebyshev rate with another T or P range (range_identity).
+        # PostgreSQL 14 has no NULLS NOT DISTINCT, so the (+M) rates get their own constraints,
+        # and a Chebyshev record must have its range (a NULL would let a twin in).
         constraints = [
             models.UniqueConstraint(
                 fields=("reaction", "raw_data", "efficiencies_hash"),
-                condition=models.Q(specific_collider__isnull=True),
+                condition=models.Q(specific_collider__isnull=True) & ~CHEBYSHEV,
                 name="unique_kinetics_rate"),
             models.UniqueConstraint(
                 fields=("reaction", "raw_data", "specific_collider", "efficiencies_hash"),
-                condition=models.Q(specific_collider__isnull=False),
+                condition=models.Q(specific_collider__isnull=False) & ~CHEBYSHEV,
                 name="unique_kinetics_rate_collider"),
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "efficiencies_hash", *RANGE_FIELDS),
+                condition=models.Q(specific_collider__isnull=True) & CHEBYSHEV,
+                name="unique_chebyshev_rate"),
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "specific_collider", "efficiencies_hash", *RANGE_FIELDS),
+                condition=models.Q(specific_collider__isnull=False) & CHEBYSHEV,
+                name="unique_chebyshev_rate_collider"),
+            models.CheckConstraint(
+                condition=~CHEBYSHEV | models.Q(**{f"{name}__isnull": False for name in RANGE_FIELDS}),
+                name="chebyshev_has_range"),
         ]
 
     def to_rmg(self):

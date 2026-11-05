@@ -16,7 +16,7 @@ from rmgpy.chemkin import read_kinetics_entry
 from rmgpy.quantity import RateCoefficient
 from rmgpy.reaction import Reaction
 from rmgpy.species import Species
-from database.scripts import chemkin_lines, explicit_reverse
+from database.scripts import author_digits, chemkin_lines, explicit_reverse
 from database.scripts.rmg_libraries import (
     TolerantKineticsLibrary, TolerantThermoLibrary, smiles_txt_states, structure_key_or_none)
 from rmgpy.thermo import NASA, ThermoData, Wilhoit, NASAPolynomial
@@ -884,8 +884,9 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
     model_repeats; a rate that writes a later label names it. A merged entry's terms go to the
     reactions their CHEMKIN lines write (MergedRates), and a full import (no only_types) adds the
     irreversible lines RMG-models left out of a reaction the model writes in both directions or
-    for two colliders (MergedRates.dropped_lines). Returns
-    counts of imported, skipped and failed entries, of moved terms and of added lines."""
+    for two colliders (MergedRates.dropped_lines). A number the library rounded to 6 significant
+    digits takes the author's digits from the CHEMKIN line (author_digits). Returns counts of
+    imported, skipped and failed entries, of moved terms, of added lines and of restored digits."""
     local_context = kinetics_local_context()
     repeats = model_repeats(kinetics_path, kinetic_model, states) if repeats is None else repeats
     # Older RMG accepted reactions that RMG 4 refuses; skip just those, not the whole library.
@@ -937,9 +938,19 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
         counts["failed"] += len(merged.unread)
     if merged.moved:
         counts["moved_terms"] = merged.moved
+    model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
+    # The authors' digits, which the library rounded to 6 significant digits. Before the reverse
+    # rates, which are paired with the forward rate as the line writes it.
+    if author_digits.can_restore(models):
+        try:
+            restored = author_digits.restore([(kinetic_model, model_dir)], models)
+            if restored["links"]:
+                counts["author_digits"] = sum(restored["numbers"].values())
+        except Exception:
+            counts["failed"] += 1
+            logger.exception(f"Failed to restore the authors' digits of {kinetic_model.model_name}")
     # The model's own reverse rates (REV on its CHEMKIN lines), which the library does not keep.
     if explicit_reverse.has_reverse_field(models):
-        model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
         try:
             reverse = explicit_reverse.attach(kinetic_model, model_dir, models)
             if reverse["status"]["matched"]:
@@ -998,6 +1009,11 @@ def import_kinetics_link(kinetic_model, rmg_reaction, rmg_kinetics_data, comment
         # (H2O 7.5 where this library has 0.0) is not this model's rate.
         identity["efficiencies_hash"] = kd.efficiencies_hash(
             (species.pk, efficiency) for species, efficiency in efficiencies)
+    # A Chebyshev rate with another T or P range is another k: PCI2017/111-Jin writes TCHEB 270
+    # 3000 with coefficients that CombFlame2013/1939-Cai writes with 290 3000. Another rate's
+    # range only says where it holds, and the first import's stays.
+    identity.update(kd.range_identity(kinetics_data, **base_fields))
+    base_fields = {name: value for name, value in base_fields.items() if name not in identity}
 
     kinetics_instance, created = models.Kinetics.objects.get_or_create(
         **identity, defaults=base_fields
