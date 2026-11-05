@@ -27,6 +27,7 @@ from itertools import product
 
 from django.db import transaction
 
+from database.models.kinetic_data import kinetics_identity, range_identity
 from database.scripts import chemkin_lines
 
 logger = logging.getLogger(__name__)
@@ -310,11 +311,15 @@ def model_changes(kinetic_model, model_dir, models):
     return report
 
 
-def _same_record(models, kinetics, raw):
-    """The other record with the key of unique_kinetics_rate and this raw_data, or None."""
-    return (models.Kinetics.objects.filter(reaction_id=kinetics.reaction_id, raw_data=raw,
-                                           specific_collider_id=kinetics.specific_collider_id,
-                                           efficiencies_hash=kinetics.efficiencies_hash)
+def _identity(raw, base):
+    """What makes two links' rates one record: the raw_data and, for a Chebyshev rate, its T and P range
+    (kinetic_data.range_identity: PCHEB with the authors' digits is another record than with 6 digits)."""
+    return canonical(raw), tuple(range_identity(raw, *(base[f] for f in BASE_FIELDS)).values())
+
+
+def _same_record(models, kinetics, raw, base):
+    """The other record with the identity of this raw_data and range (kinetics_identity), or None."""
+    return (models.Kinetics.objects.filter(**kinetics_identity(kinetics, raw_data=raw, **base))
             .exclude(pk=kinetics.pk).order_by("pk").first())
 
 
@@ -340,51 +345,53 @@ def apply_changes(changes, models, report):
     for kinetics_id in sorted(by_record):
         kinetics = models.Kinetics.objects.get(pk=kinetics_id)
         wanted = by_record[kinetics_id]
-        stored, stored_base = canonical(kinetics.raw_data), {f: getattr(kinetics, f) for f in BASE_FIELDS}
+        stored_base = {f: getattr(kinetics, f) for f in BASE_FIELDS}
+        stored = _identity(kinetics.raw_data, stored_base)
+        # Links group by the identity of their rate: the numbers and, for a Chebyshev rate, the range
+        # (only a Chebyshev rate's base fields change here: PCHEB).
         groups, staying = {}, []
         for link in models.KineticsComment.objects.filter(kinetics=kinetics).order_by("id"):
             raw, base = wanted.get(link.id, (kinetics.raw_data, stored_base))
-            text = canonical(raw)
-            if text == stored:
-                staying.append((link, base))
+            key = _identity(raw, base)
+            if key == stored:
+                staying.append(link)
             else:
-                groups.setdefault(text, {"raw": raw, "links": []})["links"].append((link, base))
+                groups.setdefault(key, {"raw": raw, "base": base, "links": []})["links"].append(link)
         in_place = None
         if groups and not staying:
             # No model keeps the stored numbers: the record takes those of most of its models.
-            text, group = max(groups.items(), key=lambda item: (len(item[1]["links"]), -item[1]["links"][0][0].id))
-            if _same_record(models, kinetics, group["raw"]) is None:
-                in_place = groups.pop(text)
-                kinetics.raw_data = in_place["raw"]
+            key, group = max(groups.items(), key=lambda item: (len(item[1]["links"]), -item[1]["links"][0].id))
+            if _same_record(models, kinetics, group["raw"], group["base"]) is None:
+                in_place = groups.pop(key)
                 staying = in_place["links"]
         for group in groups.values():
-            target = _same_record(models, kinetics, group["raw"])
+            target = _same_record(models, kinetics, group["raw"], group["base"])
             if target is None:
-                bases = {tuple(base[f] for f in BASE_FIELDS) for _, base in group["links"]}
-                target = _new_record(models, kinetics, group["raw"],
-                                     dict(zip(BASE_FIELDS, bases.pop())) if len(bases) == 1 else stored_base)
+                target = _new_record(models, kinetics, group["raw"], group["base"])
                 report["records"]["new"] += 1
             else:
                 report["records"]["moved_to_existing"] += 1
-            ids = [link.id for link, _ in group["links"]]
+            ids = [link.id for link in group["links"]]
             models.KineticsComment.objects.filter(pk__in=ids).update(kinetics=target)
             report["links_moved"] += len(ids)
         if not staying:
             kinetics.delete()
             report["records"]["deleted"] += 1
             continue
-        # The record's PCHEB range is the one every model that keeps it gives.
-        fields = ["raw_data"] if in_place else []
-        bases = {tuple(base[f] for f in BASE_FIELDS) for _, base in staying}
-        if len(bases) == 1 and bases != {tuple(stored_base[f] for f in BASE_FIELDS)}:
-            for field, value in zip(BASE_FIELDS, bases.pop()):
-                setattr(kinetics, field, value)
-            fields += BASE_FIELDS
-            report["records"]["range_changed"] += 1
-        if fields:
+        if in_place:
+            fields = []
+            if canonical(in_place["raw"]) != canonical(kinetics.raw_data):
+                kinetics.raw_data = in_place["raw"]
+                fields.append("raw_data")
+                report["records"]["changed_in_place"] += 1
+            if any(in_place["base"][f] != stored_base[f] for f in BASE_FIELDS):
+                # The PCHEB range every model of the record gives.
+                for field in BASE_FIELDS:
+                    setattr(kinetics, field, in_place["base"][field])
+                fields += BASE_FIELDS
+                report["records"]["range_changed"] += 1
             kinetics.save(update_fields=fields)
             index_new_rows(models, kinetics=kinetics)
-            report["records"]["changed_in_place"] += bool(in_place)
 
 
 def restore(model_dirs, models, apply=True):
