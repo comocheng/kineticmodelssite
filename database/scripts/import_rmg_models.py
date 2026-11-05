@@ -997,6 +997,11 @@ def import_kinetics_link(kinetic_model, rmg_reaction, rmg_kinetics_data, comment
         # (H2O 7.5 where this library has 0.0) is not this model's rate.
         identity["efficiencies_hash"] = kd.efficiencies_hash(
             (species.pk, efficiency) for species, efficiency in efficiencies)
+    # A Chebyshev rate with another T or P range is another k: PCI2017/111-Jin writes TCHEB 270
+    # 3000 with coefficients that CombFlame2013/1939-Cai writes with 290 3000. Another rate's
+    # range only says where it holds, and the first import's stays.
+    identity.update(kd.range_identity(kinetics_data, **base_fields))
+    base_fields = {name: value for name, value in base_fields.items() if name not in identity}
 
     kinetics_instance, created = models.Kinetics.objects.get_or_create(
         **identity, defaults=base_fields
