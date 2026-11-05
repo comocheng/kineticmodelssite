@@ -60,6 +60,7 @@ class CreatePageTests(CreateModelTestCase):
         # SMILES.txt has an example, with the spin notation the importer reads
         self.assertContains(response, 'What SMILES.txt looks like')
         self.assertContains(response, 'singlet[CH2]')
+        self.assertNotContains(response, 'Confirmed by')  # the Importer writes that itself
         self.assertContains(response, 'Downloaded from')
 
     def test_anonymous_visitors_are_asked_to_sign_in(self):

@@ -56,10 +56,10 @@ H2O	O
 C2H3	[CH]=C
 CH2(S)	singlet[CH2]	! singlet methylene: [CH2] alone is the triplet
 OHV	excited[OH]	! OH(A), the excited state
-CH3CF	singletC[C]F	! Confirmed by lekia</pre>
+CH3CF	singletC[C]F</pre>
                     <ul class="im-create__rules">
                         <li>One species a line: its name in the mechanism's SPECIES block, a tab or spaces, then its SMILES.</li>
-                        <li>Text after <code>!</code> is a comment. The Importer adds <code>! Confirmed by &lt;name&gt;</code> to each species it identifies.</li>
+                        <li>Text after <code>!</code> is a comment. You don't write who identified a species: the Importer records that itself.</li>
                         <li>When the SMILES alone gives the wrong spin, write the spin in front of it: <code>singlet</code>, <code>doublet</code> or <code>triplet</code> (for example <code>singletC[C]F</code>).</li>
                         <li>A few molecules have special names: <code>singlet[CH2]</code>, <code>triplet[CH2]</code>, <code>singletC=[C]</code>, <code>[C]</code>, <code>[O]singlet</code>, <code>excited[OH]</code>, <code>excited[CH]</code> and others in importChemkin.py.</li>
                         <li>You can leave it out. The Importer identifies small molecules by their formula, and you confirm the others on the Importer page; each confirmation is written to SMILES.txt.</li>
