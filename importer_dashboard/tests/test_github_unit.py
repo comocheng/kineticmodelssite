@@ -229,3 +229,14 @@ class PullRequestTests(GitHubTestCase):
         response = self.client.post(reverse('importer_dashboard:draft_pull_request', args=[self.job.id]))
         self.assertTrue(response.url.startswith('/login/'))
         self.assertEqual(self.gh.made('POST', '/repos/comocheng/RMG-models/pulls'), [])
+
+
+class PublicSiteUrlTests(GitHubTestCase):
+    @override_settings(PUBLIC_SITE_URL='https://pr.omethe.us/')
+    def test_the_callback_uses_the_public_https_address(self):
+        response = self.client.get(reverse('importer_dashboard:github_connect'))
+        query = parse_qs(urlparse(response.url).query)
+        self.assertEqual(query['redirect_uri'], ['https://pr.omethe.us/importer/github/callback/'])
+        self.client.get(reverse('importer_dashboard:github_callback'), {'code': 'abc', 'state': query['state'][0]})
+        exchange = [c for c in self.gh.calls if c[0] == 'POST'][0][2]
+        self.assertEqual(exchange['redirect_uri'], 'https://pr.omethe.us/importer/github/callback/')

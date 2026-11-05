@@ -95,7 +95,7 @@ def github_callback(request):
         account = github.connect(
             request.user,
             request.GET.get('code', ''),
-            request.build_absolute_uri('/importer/github/callback/'),
+            github.callback_url(request),
         )
     except github.GitHubError as e:
         messages.error(request, str(e))
@@ -130,7 +130,7 @@ def draft_pull_request(request, job_id):
         return redirect('importer_dashboard:job_detail', job_id=job.id)
     try:
         github.open_or_update_pull_request(
-            draft, job, request.user, request.build_absolute_uri(job_detail_path(job))
+            draft, job, request.user, github.public_url(request, job_detail_path(job))
         )
     except (github.GitHubError, drafts.DraftError) as e:
         verb = 'update' if action['kind'] == 'update' else 'open'

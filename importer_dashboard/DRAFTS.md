@@ -110,6 +110,7 @@ branch. Then open the pull request.
   | `GITHUB_APP_CLIENT_ID` | none; required for pull requests |
   | `GITHUB_APP_CLIENT_SECRET` | none; required for pull requests |
   | `GITHUB_TOKEN_ENCRYPTION_KEY` | a key derived from `SECRET_KEY` |
+  | `PUBLIC_SITE_URL` | none; set it to `https://pr.omethe.us`, so the callback address is the https one registered with the App |
 
   For `GITHUB_TOKEN_ENCRYPTION_KEY`, make a key with
   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
@@ -136,7 +137,9 @@ A comocheng owner must do these steps.
    `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET`. No private key is necessary: the
    Importer uses only user access tokens.
 3. Install the App on comocheng, for the repository **RMG-models** only.
-4. Restart gunicorn. Each person then selects **Connect GitHub** on a job page once.
+4. Set `PUBLIC_SITE_URL=https://pr.omethe.us` in `.env` too. Behind nginx, Django can see the
+   request as http, and GitHub refuses a callback that is not the registered https one.
+5. Restart gunicorn. Each person then selects **Connect GitHub** on a job page once.
 
 A user access token can do only what both the App and the person can do. People without write
 access to RMG-models see a disabled button with the reason.

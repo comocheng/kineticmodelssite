@@ -105,11 +105,25 @@ def _expiry(seconds):
 # ----------------------------------------------------------------------------------------------
 
 
+def public_url(request, path):
+    """
+    The address of `path` as people and GitHub see it. settings.PUBLIC_SITE_URL (for example
+    https://pr.omethe.us) is used when set: behind nginx or Cloudflare, Django can see the request
+    as http, and GitHub refuses a callback that is not the https one registered with the App.
+    """
+    base = getattr(settings, 'PUBLIC_SITE_URL', '').rstrip('/')
+    return f'{base}{path}' if base else request.build_absolute_uri(path)
+
+
+def callback_url(request):
+    return public_url(request, '/importer/github/callback/')
+
+
 def authorize_url(request, state):
     params = {
         'client_id': settings.GITHUB_APP_CLIENT_ID,
         'state': state,
-        'redirect_uri': request.build_absolute_uri('/importer/github/callback/'),
+        'redirect_uri': callback_url(request),
         'allow_signup': 'false',
     }
     return f'{web_url()}/login/oauth/authorize?{urlencode(params)}'

@@ -405,6 +405,9 @@ RMG_MODELS_GITHUB_REPO = os.getenv('RMG_MODELS_GITHUB_REPO', 'comocheng/RMG-mode
 # https://<host>/importer/github/callback/. The tokens are encrypted with
 # GITHUB_TOKEN_ENCRYPTION_KEY (a Fernet key), or with a key derived from SECRET_KEY.
 GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID', '')
+# The site's public address (e.g. https://pr.omethe.us), for the App's callback URL and the job links
+# in pull requests. Without it the address of the request is used, which behind nginx can be http.
+PUBLIC_SITE_URL = os.getenv('PUBLIC_SITE_URL', '')
 GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET', '')
 GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
 # The committer of draft commits (the author is the person, when known)
