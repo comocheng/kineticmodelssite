@@ -57,7 +57,7 @@ dashboard) puts a new model's files into a new draft, in the folder template of 
 | `thermo.txt` | the uploaded thermo file; no file if the thermo is in the mechanism |
 | `transport.txt` | the uploaded transport file, if any |
 | `SMILES.txt` | the uploaded SMILES.txt, or an empty file |
-| `source.txt` | the citation, `DOI: https://doi.org/...`, where the files come from, the original file names, and who added the model |
+| `source.txt` | the citation, `DOI: https://doi.org/...`, `Downloaded from <page>` if the files did not come with the paper, the original file names, and who added the model |
 | `import.sh` | written by Prometheus, with no port and no SBATCH lines |
 
 - The files are kept byte for byte. The first commit is "<folder>: add the model files as

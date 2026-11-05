@@ -131,3 +131,15 @@ class CheckFilesTests(EditorTestCase):
         self.assertEqual(self.wait_for_check()['state'], 'failed')
         response = self.client.get(reverse('importer_dashboard:draft_files', args=[self.job.id]))
         self.assertContains(response, 'Failed')
+
+
+class NoticeTests(EditorTestCase):
+    def test_only_the_lines_of_this_edit_are_checked(self):
+        # The file already names a species the mechanism lacks (as 2-BTP's SMILES.txt does)
+        with open(os.path.join(self.folder, 'SMILES.txt'), 'w') as f:
+            f.write('N2\tN#N\nOLD\tC\n')
+        with open(os.path.join(self.folder, 'm.dat'), 'w') as f:
+            f.write('SPECIES\nN2 CH4\nEND\n')
+        response = self.edit('SMILES.txt', 'N2\tN#N\nOLD\tC\nNEW\tO\n', action='preview')
+        self.assertContains(response, 'NEW is not a species of the mechanism')
+        self.assertNotContains(response, 'OLD is not a species of the mechanism')
