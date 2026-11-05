@@ -18,6 +18,10 @@ urlpatterns = [
     path('job/<int:job_id>/log/', views.job_log_view, name='job_log'),
     path('job/<int:job_id>/error-log/', views.job_error_log_view, name='job_error_log'),
     path('job/<int:job_id>/draft/discard/', views.draft_discard, name='draft_discard'),
+    path('job/<int:job_id>/draft/pull-request/', views.draft_pull_request, name='draft_pull_request'),
+    path('github/connect/', views.github_connect, name='github_connect'),
+    path('github/callback/', views.github_callback, name='github_callback'),
+    path('github/disconnect/', views.github_disconnect, name='github_disconnect'),
     
     # Dashboard actions
     path('refresh-jobs/', views.refresh_jobs, name='refresh_jobs'),

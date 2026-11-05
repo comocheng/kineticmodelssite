@@ -253,6 +253,10 @@ class ClusterJob(models.Model):
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at', 'updated_at'])
 
+    def drafts_closed(self):
+        """Earlier drafts of this job's model folder that were merged or discarded, newest first."""
+        return Draft.objects.filter(model_folder=self.name).exclude(status=DraftStatus.OPEN).order_by('-updated_at')
+
     @property
     def ood_url(self):
         """Return the Open OnDemand URL for this job's web interface (if host is known)."""
@@ -289,6 +293,17 @@ class Draft(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     last_checkpoint_at = models.DateTimeField(null=True, blank=True)
 
+    # Its pull request on GitHub (importer_dashboard/github.py)
+    pr_number = models.IntegerField(null=True, blank=True)
+    pr_url = models.URLField(blank=True)
+    pr_state = models.CharField(max_length=20, blank=True, help_text="open, closed or merged")
+    last_pushed_sha = models.CharField(max_length=40, blank=True,
+                                       help_text="The commit the last push sent to GitHub")
+    pushed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='importer_pushes')
+    pushed_at = models.DateTimeField(null=True, blank=True)
+    pr_checked_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-updated_at']
         constraints = [
@@ -302,6 +317,37 @@ class Draft(models.Model):
     @property
     def is_open(self):
         return self.status == DraftStatus.OPEN
+
+
+class GitHubAccount(models.Model):
+    """
+    A Prometheus user's GitHub account, linked through the Prometheus GitHub App. Its user access
+    token acts as that person, and only where both the App and the person have access, so pull
+    requests and pushes carry their name and nobody shares a token. The tokens are stored
+    encrypted (importer_dashboard/github.py) and are never shown, logged or put in a URL.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='github_account')
+    github_id = models.BigIntegerField(unique=True)
+    login = models.CharField(max_length=100)
+    name = models.CharField(max_length=255, blank=True)
+    access_token = models.TextField(help_text="Encrypted")
+    access_token_expires_at = models.DateTimeField(null=True, blank=True)
+    refresh_token = models.TextField(blank=True, help_text="Encrypted")
+    refresh_token_expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"@{self.login} ({self.user.username})"
+
+    @property
+    def commit_name(self):
+        return self.name or self.login
+
+    @property
+    def commit_email(self):
+        """GitHub's noreply address: commits count for the account without showing its email."""
+        return f"{self.github_id}+{self.login}@users.noreply.github.com"
 
 
 class PortReservation(models.Model):

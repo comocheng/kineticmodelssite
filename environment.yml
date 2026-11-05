@@ -45,6 +45,8 @@ dependencies:
       - paramiko
       - titlecase==2.4.1
       - requests
+      # Encrypts the GitHub tokens of the Importer's pull requests (paramiko needs it too)
+      - cryptography
 
       # Brings pytest, flake8
       - pytest-cov

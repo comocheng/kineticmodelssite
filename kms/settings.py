@@ -399,6 +399,14 @@ RMG_MODELS_WORKSPACES_PATH = os.getenv('RMG_MODELS_WORKSPACES_PATH',
 RMG_MODELS_REMOTE = os.getenv('RMG_MODELS_REMOTE', 'origin')
 RMG_MODELS_BASE_BRANCH = os.getenv('RMG_MODELS_BASE_BRANCH', 'master')
 RMG_MODELS_GITHUB_REPO = os.getenv('RMG_MODELS_GITHUB_REPO', 'comocheng/RMG-models')
+# The Prometheus GitHub App: people connect their own GitHub account and open pull requests of
+# drafts with it (importer_dashboard/github.py, importer_dashboard/SETUP.md). The App needs
+# Contents and Pull requests (read and write) on RMG_MODELS_GITHUB_REPO, and the callback URL
+# https://<host>/importer/github/callback/. The tokens are encrypted with
+# GITHUB_TOKEN_ENCRYPTION_KEY (a Fernet key), or with a key derived from SECRET_KEY.
+GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID', '')
+GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET', '')
+GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
 # The committer of draft commits (the author is the person, when known)
 IMPORTER_GIT_NAME = os.getenv('IMPORTER_GIT_NAME', 'Prometheus Importer')
 IMPORTER_GIT_EMAIL = os.getenv('IMPORTER_GIT_EMAIL', 'importer@pr.omethe.us')

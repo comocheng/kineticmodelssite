@@ -12,6 +12,8 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
 
     {% if not drafts_enabled %}
     <p class="im-draft__text">Jobs run in the read copy of RMG-models, and nothing is committed (drafts are off: <code>IMPORTER_WORKSPACES</code>).</p>
+    {% elif not draft and last_draft and last_draft.status == 'merged' %}
+    <p class="im-draft__text">The last draft, <code>{{ last_draft.branch }}</code>, was merged{% if last_draft.pr_url %} in <a href="{{ last_draft.pr_url }}" target="_blank" rel="noopener">pull request #{{ last_draft.pr_number }}</a>{% endif %}. Starting the job again opens a new draft from {{ base_branch }}.</p>
     {% elif not draft %}
     <p class="im-draft__text">This job has no draft. Starting it opens one: a branch of RMG-models {{ base_branch }} on this server. Each identification the job makes is committed to that branch within a minute; nothing reaches GitHub until someone opens a pull request.</p>
     {% elif draft_error %}
@@ -51,6 +53,20 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
 
     {% if draft %}
     <div class="im-draft__actions">
+        {% if pull_request.kind == 'open' or pull_request.kind == 'update' %}
+        <form method="post" action="{% url 'importer_dashboard:draft_pull_request' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="external" %}{{ pull_request.label }}</button>
+        </form>
+        {% elif pull_request.kind == 'connect' %}
+        <a class="app-btn" href="{% url 'importer_dashboard:github_connect' %}?next={{ request.path|urlencode }}">{% include "importer_dashboard/im_icon.html" with icon="external" %}{{ pull_request.label }}</a>
+        {% elif pull_request %}
+        <button type="button" class="app-btn" disabled aria-describedby="im-pr-reason">{{ pull_request.label }}</button>
+        <span class="im-draft__reason" id="im-pr-reason">{{ pull_request.reason }}</span>
+        {% endif %}
+        {% if draft.pr_url %}
+        <a class="im-btn" href="{{ draft.pr_url }}" target="_blank" rel="noopener">{% include "importer_dashboard/im_icon.html" with icon="external" %}Pull request #{{ draft.pr_number }}{% if draft.pr_state and draft.pr_state != 'open' %} ({{ draft.pr_state }}){% endif %}</a>
+        {% endif %}
         {% if job.status != 'running' and job.status != 'pending' and job.status != 'awaiting_input' %}
         <form method="post" action="{% url 'importer_dashboard:draft_discard' job.id %}">
             {% csrf_token %}
@@ -58,6 +74,17 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
         </form>
         {% endif %}
     </div>
+    {% endif %}
+
+    {% if github_configured and user.is_authenticated %}
+    <p class="im-draft__account">
+        {% if github_account %}
+        GitHub: <strong>@{{ github_account.login }}</strong>. Pushes and pull requests are made with this account.
+        <form method="post" action="{% url 'importer_dashboard:github_disconnect' %}?next={{ request.path|urlencode }}" class="im-inline">{% csrf_token %}<button type="submit" class="im-textbtn">Disconnect</button></form>
+        {% else %}
+        <a href="{% url 'importer_dashboard:github_connect' %}?next={{ request.path|urlencode }}">Connect GitHub</a> to open pull requests with your own account.
+        {% endif %}
+    </p>
     {% endif %}
 </section>
 
@@ -77,4 +104,7 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
 .im-draft__list { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
 .im-draft__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .im-draft__actions form { margin: 0; }
+.im-draft__reason { font-size: 13px; color: var(--color-gray-600); }
+.im-draft__account { margin: 0; font-size: 13px; color: var(--color-gray-600); }
+.im-inline { display: inline; margin: 0; }
 </style>

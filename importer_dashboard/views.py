@@ -5,7 +5,8 @@ Provides web interface for managing import jobs on the cluster.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from kms.access import actor_name, site_login_required, write_login_required
+from django.urls import reverse
+from kms.access import actor_name, sign_in_redirect, site_login_required, write_login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -20,7 +21,7 @@ from .models import ClusterJob, ImportJobConfig, JobLog, ImportJobStatus, Voting
 from .manager_factory import get_job_manager
 from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
-from . import drafts
+from . import drafts, github
 
 # Jobs whose importer is up, so its page can be opened and its progress changes
 LIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
@@ -360,16 +361,27 @@ def job_detail(request, job_id):
     recent_logs = job.logs.all()[:50]
     
     draft = job.draft if job.draft_id and job.draft.is_open else None
+    if draft:
+        # A merged pull request closes the draft
+        draft = github.refresh_pull_request(draft, request.user)
+        draft = draft if draft.is_open else None
     draft_changes, draft_error = None, None
     if draft:
         try:
             draft_changes = drafts.changes(draft)
         except drafts.DraftError as e:
             draft_error = str(e)
+    last_draft = draft or job.drafts_closed().first()
+    pull_request = github.pull_request_action(draft, job, request.user) if draft else None
+    github_account = getattr(request.user, 'github_account', None) if request.user.is_authenticated else None
 
     context = {
         'job': job,
         'draft': draft,
+        'last_draft': last_draft,
+        'pull_request': pull_request,
+        'github_account': github_account,
+        'github_configured': github.configured(),
         'draft_changes': draft_changes,
         'draft_error': draft_error,
         'drafts_enabled': drafts.drafts_enabled(),
@@ -1401,8 +1413,10 @@ def jobs_stats_api(request):
 def draft_discard(request, job_id):
     """Delete the job's draft: its worktree and local branch. A pull request on GitHub stays."""
     job = get_object_or_404(ClusterJob, id=job_id)
-    if job.status in (ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT):
-        messages.error(request, f'{job.name} is {job.get_status_display().lower()}. Kill it before you discard its draft.')
+    if job.status in (ImportJobStatus.RUNNING, ImportJobStatus.PENDING,
+                      ImportJobStatus.AWAITING_INPUT):
+        messages.error(request, f'{job.name} is {job.get_status_display().lower()}. '
+                                f'Kill it before you discard its draft.')
         return redirect('importer_dashboard:job_detail', job_id=job.id)
     draft = job.draft
     if draft is None or not draft.is_open:
@@ -1410,6 +1424,101 @@ def draft_discard(request, job_id):
         return redirect('importer_dashboard:job_detail', job_id=job.id)
     branch = draft.branch
     drafts.close_draft(draft, drafts.DraftStatus.DISCARDED)
-    JobLog.objects.create(job=job, log_type='info', message=f'Draft {branch} discarded by {actor_name(request)}')
+    JobLog.objects.create(job=job, log_type='info',
+                          message=f'Draft {branch} discarded by {actor_name(request)}')
     messages.success(request, f'Discarded the draft {branch}.')
     return redirect('importer_dashboard:job_detail', job_id=job.id)
+
+
+# --------------------------------------------------------------------------------------
+# GitHub: pull requests with each person's own account (importer_dashboard/github.py)
+# --------------------------------------------------------------------------------------
+
+def _safe_next(request, default='/importer/'):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    target = request.GET.get('next') or request.session.get('github_next') or default
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return default
+    return target
+
+
+@site_login_required
+def github_connect(request):
+    """Start the GitHub App's web flow for the signed-in user."""
+    if not request.user.is_authenticated:
+        return sign_in_redirect(request, 'Sign in, then connect GitHub.',
+                                next_url=request.get_full_path())
+    if not github.configured():
+        messages.error(request, 'GitHub is not set up on this server (GITHUB_APP_CLIENT_ID).')
+        return redirect(_safe_next(request))
+    state = github.new_state()
+    request.session['github_state'] = state
+    request.session['github_next'] = _safe_next(request)
+    return redirect(github.authorize_url(request, state))
+
+
+@site_login_required
+def github_callback(request):
+    """GitHub sends the person back here with a code; link their account."""
+    target = _safe_next(request)
+    if not request.user.is_authenticated:
+        return sign_in_redirect(request, 'Sign in, then connect GitHub.', next_url=target)
+    expected = request.session.pop('github_state', None)
+    if not expected or request.GET.get('state') != expected:
+        messages.error(request, 'The GitHub sign-in could not be checked. Try again.')
+        return redirect(target)
+    if request.GET.get('error'):
+        reason = request.GET.get('error_description') or request.GET['error']
+        messages.warning(request, f"GitHub: {reason}")
+        return redirect(target)
+    try:
+        account = github.connect(request.user, request.GET.get('code', ''),
+                                 request.build_absolute_uri('/importer/github/callback/'))
+    except github.GitHubError as e:
+        messages.error(request, str(e))
+        return redirect(target)
+    request.session.pop('github_next', None)
+    messages.success(request, f'Connected GitHub as @{account.login}.')
+    return redirect(target)
+
+
+@site_login_required
+@require_http_methods(["POST"])
+@write_login_required('Sign in to change your GitHub connection.')
+def github_disconnect(request):
+    github.disconnect(request.user)
+    messages.success(request, 'Disconnected your GitHub account.')
+    return redirect(_safe_next(request, request.META.get('HTTP_REFERER', '/importer/')))
+
+
+@site_login_required
+@require_http_methods(["POST"])
+@write_login_required('Sign in to open pull requests.')
+def draft_pull_request(request, job_id):
+    """Push the job's draft with the person's GitHub account and open or update its pull request."""
+    job = get_object_or_404(ClusterJob, id=job_id)
+    draft = job.draft if job.draft_id and job.draft.is_open else None
+    action = github.pull_request_action(draft, job, request.user)
+    if action['kind'] == 'connect':
+        connect = reverse('importer_dashboard:github_connect')
+        return redirect(f"{connect}?next={job_detail_path(job)}")
+    if action['kind'] not in ('open', 'update'):
+        messages.info(request, action['reason'])
+        return redirect('importer_dashboard:job_detail', job_id=job.id)
+    try:
+        github.open_or_update_pull_request(draft, job, request.user,
+                                           request.build_absolute_uri(job_detail_path(job)))
+    except (github.GitHubError, drafts.DraftError) as e:
+        verb = 'update' if action['kind'] == 'update' else 'open'
+        messages.error(request, f'Could not {verb} the pull request: {e}')
+        return redirect('importer_dashboard:job_detail', job_id=job.id)
+    verb = 'Updated' if action['kind'] == 'update' else 'Opened'
+    JobLog.objects.create(job=job, log_type='info',
+                          message=(f'{verb} pull request #{draft.pr_number} ({draft.pr_url}) '
+                                   f'by {actor_name(request)}'))
+    messages.success(request, f'{verb} pull request #{draft.pr_number}: {draft.pr_url}')
+    return redirect('importer_dashboard:job_detail', job_id=job.id)
+
+
+def job_detail_path(job):
+    return reverse('importer_dashboard:job_detail', args=[job.id])
