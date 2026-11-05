@@ -138,12 +138,31 @@ def _fast_forward(path):
                      f'{_plural(count, "commit")} of {upstream}.', old, new)
 
 
+def _add_new_models():
+    """
+    Make an import job for each model folder of the read copy that has none (a model merged on
+    GitHub, such as POLIMI-NUIG-C4), as Refresh jobs does. Returns their names.
+    """
+    from .job_paths import jobs_on_this_machine
+    if not jobs_on_this_machine():
+        return []
+    from .local_job_manager import LocalJobManager
+    from .models import ClusterJob, ImportJobConfig
+    before = set(ClusterJob.objects.values_list('name', flat=True))
+    try:
+        LocalJobManager(config=ImportJobConfig.objects.filter(is_default=True).first()).discover_jobs()
+    except Exception as e:
+        logger.warning(f'Could not add the new models to the import jobs: {e}')
+        return []
+    return sorted(set(ClusterJob.objects.values_list('name', flat=True)) - before)
+
+
 def sync(reason='schedule'):
     """
     Bring the read copy to <remote>/<base branch> if that is safe (see the module docstring).
-    `reason` says what asked: 'webhook', 'schedule' or 'manual'. Returns, and keeps for the
-    Settings page, a dict: status ('updated', 'current', 'refused' or 'failed'), message, old, new,
-    reason and checked_at.
+    `reason` says what asked: 'webhook', 'schedule' or 'manual'. Then each model folder without
+    an import job gets one. Returns, and keeps for the Settings page, a dict: status ('updated',
+    'current', 'refused' or 'failed'), message, old, new, new_models, reason and checked_at.
     """
     path = read_copy()
     if not is_git_repository(path):
@@ -153,8 +172,14 @@ def sync(reason='schedule'):
         with _read_copy_lock():
             status, message, old, new = _fast_forward(path)
 
+    new_models = _add_new_models() if status in (UPDATED, CURRENT) else []
+    if new_models:
+        listed = ', '.join(new_models[:10]) + (f' and {len(new_models) - 10} more' if len(new_models) > 10 else '')
+        message += f' Added {_plural(len(new_models), "new model")} to the import jobs: {listed}.'
+
     previous = last_status() or {}
     result = {'status': status, 'message': message, 'old': old, 'new': new, 'reason': reason,
+              'new_models': new_models,
               'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')}
     if status == UPDATED:
         result['updated_at'] = result['checked_at']

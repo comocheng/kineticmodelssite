@@ -22,7 +22,7 @@ from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
 from .job_logs import LOGS, log_path, read_log
 from .job_paths import is_model_folder, job_folder, jobs_on_this_machine, model_folder_names
-from . import drafts, editor, github
+from . import drafts, editor, github, species_sync
 
 # Jobs whose importer is up, so its page can be opened and its progress changes
 LIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
@@ -201,6 +201,17 @@ def job_detail(request, job_id):
         'total_candidates': sum(s.candidates.count() for s in species_list),
         'blocked_matches': blocked_matches.count(),
     }
+
+    # A run that ended while nobody watched has its counts (progress.json) but no species rows:
+    # load them from its vote database (species_sync.py)
+    species_loading, species_sync_error = False, None
+    if not stats['total_species'] and species_sync.vote_databases(job):
+        species_loading = species_sync.queue(job)
+        last_try = job.sync_logs.filter(sync_type='incremental').first()
+        if not species_loading and last_try and not last_try.success:
+            species_sync_error = last_try.error_message or 'The sync stopped without a message.'
+        elif not species_loading and last_try is None:
+            species_loading = True  # queued by an earlier view; it has not finished yet
     
     dashboard_logger.info(
         f"Viewing job details", 
@@ -416,6 +427,8 @@ def job_detail(request, job_id):
         'drafts_enabled': drafts.drafts_enabled(),
         'base_branch': drafts.base_branch(),
         'not_a_model': not_a_model(job),
+        'species_loading': species_loading,
+        'species_sync_error': species_sync_error,
         'recent_logs': recent_logs,
         'page_title': f'Job: {job.name}',
         'progress_status': progress_status,

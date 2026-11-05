@@ -273,7 +273,13 @@
                     </div>
                 </div>
                 {% else %}
+                {% if species_loading %}
+                <p class="im-result__empty">Loading the species from this job's vote database. Reload the page in a minute.</p>
+                {% elif species_sync_error %}
+                <p class="im-result__empty">Could not load the species from this job's vote database: {{ species_sync_error|truncatechars:300 }}</p>
+                {% else %}
                 <p class="im-result__empty">No species data yet. Data will appear once RMG starts processing.</p>
+                {% endif %}
                 {% endif %}
             </section>
 

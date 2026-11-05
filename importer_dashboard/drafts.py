@@ -237,6 +237,25 @@ def _copy_vote_databases(model_folder, worktree):
         shutil.copy2(path, target)
 
 
+def _return_vote_databases(draft):
+    """
+    Copy the draft's vote databases back into the read copy before its worktree is deleted. The
+    draft started with copies of them and its runs added votes and identifications; the next draft
+    of the model starts from these. git does not track them (.gitignore), so the read copy stays clean.
+    """
+    source = os.path.join(draft.path, draft.model_folder)
+    target = os.path.join(read_copy(), draft.model_folder)
+    for path in glob(os.path.join(source, 'votes_*.db')):
+        kept = os.path.join(target, os.path.basename(path))
+        if os.path.exists(kept) and os.path.getmtime(kept) >= os.path.getmtime(path):
+            continue
+        try:
+            os.makedirs(target, exist_ok=True)
+            shutil.copy2(path, kept)
+        except OSError as e:
+            logger.warning(f'Could not keep {path} in the read copy before closing the draft: {e}')
+
+
 def _repair_worktree(draft):
     """Make the worktree again if it was removed from disk (its branch keeps the commits)."""
     if draft.path and os.path.isdir(draft.path):
@@ -270,6 +289,7 @@ def close_draft(draft, status):
                 keep_logs(job)
             except OSError as e:
                 logger.warning(f'Could not keep the logs of {job.name} before closing its draft: {e}')
+        _return_vote_databases(draft)
         _remove_worktree(draft)
     draft.status = status
     draft.save(update_fields=['status', 'updated_at'])
