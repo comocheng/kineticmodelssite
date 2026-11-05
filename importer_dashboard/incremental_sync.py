@@ -41,8 +41,13 @@ class IncrementalSync:
         
         # Build path to vote database. LocalJobManager carries its own root_path
         # (settings.RMG_MODELS_PATH); SSHJobManager uses the config's cluster path.
-        root_path = getattr(ssh_manager, 'root_path', None) or self.config.root_path
-        self.job_path = f"{root_path}/{job.name}"
+        local_root = getattr(ssh_manager, 'root_path', None)
+        if local_root:
+            # In the job's open draft if it has one: that is where its importer writes the votes
+            from .job_paths import job_folder
+            self.job_path = job_folder(job, local_root)
+        else:
+            self.job_path = f"{self.config.root_path}/{job.name}"
         self.vote_db_pattern = f"{self.job_path}/votes_*.db"
     
     def find_vote_database(self):

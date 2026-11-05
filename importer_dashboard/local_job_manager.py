@@ -25,6 +25,7 @@ from .models import ClusterJob, ImportJobConfig, ImportJobStatus, JobLog
 from .tasks import _keep_logs, _tail_file, commit_identifications, run_import_job, schedule_evidence_index_refresh
 from .importer_files import (STATE_FILE, apply_progress, is_process_alive, outcome_from_state,
                              read_importer_state, read_progress)
+from . import species_sync
 from .job_logs import log_path
 from .job_paths import job_folder, model_folder_names
 from .port_allocator import release_port, release_stale_ports
@@ -77,12 +78,12 @@ class LocalJobManager:
             logger.error(f"Root path does not exist: {self.root_path}")
             return discovered
 
-        model_dirs = [(name, root / name) for name in sorted(names)]
-
-        for job_name, model_dir in model_dirs:
+        # One query for the jobs there are; a row only for each new model folder
+        existing = set(ClusterJob.objects.filter(name__in=names).values_list('name', flat=True))
+        for job_name in sorted(names):
             discovered.append(job_name)
-
-            # Create ClusterJob if it doesn't exist
+            if job_name in existing:
+                continue
             job, created = ClusterJob.objects.get_or_create(
                 name=job_name,
                 defaults={
@@ -94,7 +95,7 @@ class LocalJobManager:
                 # Parse port from import.sh. It is only a hint now (the port
                 # allocator reserves one at start), so skip a port another job in
                 # this config already holds rather than violate the unique constraint.
-                port = self._parse_port(model_dir / 'import.sh')
+                port = self._parse_port(root / job_name / 'import.sh')
                 if port and not ClusterJob.objects.filter(
                         config=job.config, port=port).exclude(pk=job.pk).exists():
                     job.port = port
@@ -234,6 +235,10 @@ class LocalJobManager:
         for job in ClusterJob.objects.filter(draft__status='open', draft__start_job_after_check=True):
             start_checked_job(job, self)
 
+        # The species rows of live jobs, from their vote databases (at most every 5 minutes)
+        for job in ClusterJob.objects.filter(status__in=LIVE).select_related('draft', 'config'):
+            species_sync.queue(job)
+
         # Identifications made on the importer pages go into the drafts' branches
         for job in ClusterJob.objects.filter(status__in=LIVE, draft__status='open').select_related('draft'):
             commit_identifications(job)
@@ -302,6 +307,7 @@ class LocalJobManager:
             release_port(job)
             commit_identifications(job, final=True)
             _keep_logs(job)
+            species_sync.queue(job, force=True)
             schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
             logger.info(f"Job {job.name} ended: {new_status}")
             return True

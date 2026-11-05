@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from .importer_files import (EXIT_KILLED_FROM_WEB_PAGE, apply_progress, clear_importer_state,
                              read_importer_state, read_progress, reset_progress)
+from . import species_sync
 from .job_logs import keep_logs, kept_path, logs_folder
 from .job_paths import job_folder
 from .port_allocator import NoFreePortError, apply_port_to_command, release_port, reserve_port
@@ -84,6 +85,7 @@ def run_import_job(self, job_id):
             JobLog.objects.create(job=job, log_type=log_type, message=message)
         commit_identifications(job, final=True)
         _keep_logs(job)
+        species_sync.queue(job, force=True)  # the job page's species rows, from the vote database
         return {'job_id': job_id, **result}
 
     poll_seconds = getattr(settings, 'IMPORTER_STATE_POLL_SECONDS', 10)
@@ -410,6 +412,19 @@ def refresh_evidence_index():
         return {'status': 'failed', 'error': result.stderr[-2000:]}
     logger.info(summary)
     return {'status': 'ok', 'summary': summary}
+
+
+@shared_task(name='importer_dashboard.sync_job_species')
+def sync_job_species(job_id):
+    """Fill the job's species rows from its vote database (importer_dashboard/species_sync.py)."""
+    from .models import ClusterJob
+    job = ClusterJob.objects.filter(pk=job_id).select_related('draft', 'config').first()
+    if job is None:
+        return None
+    result = species_sync.sync(job)
+    if result is None:
+        return {'job_id': job_id, 'skipped': 'another sync of this job is running'}
+    return {'job_id': job_id, **{key: result.get(key) for key in ('success', 'identified_synced', 'candidates_synced', 'error')}}
 
 
 @shared_task(name='importer_dashboard.sync_rmg_models_read_copy')
