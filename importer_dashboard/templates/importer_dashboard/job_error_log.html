@@ -24,10 +24,8 @@
         <div class="im-alert__body">
             <p class="im-alert__title">These errors are from a previous run</p>
             <p class="im-alert__text">
-                Error log last modified <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong>; current job started <strong>{{ job.started_at|date:"Y-m-d H:i:s" }}</strong>.
-                The current job (SLURM ID: {{ job.slurm_job_id }}) is running successfully.
-                If the current run encounters errors, they will be appended below.
-                Check the RMG log tab to see current job progress.
+                error.log was last written <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong>; this run started <strong>{{ job.started_at|date:"Y-m-d H:i:s" }}</strong>.
+                The run has written no errors yet. See its progress on the Output log tab.
             </p>
         </div>
     </div>
@@ -38,7 +36,7 @@
             <p class="im-alert__title">Job is currently running</p>
             <p class="im-alert__text">
                 New errors (if any) will appear here in real-time.
-                {% if error_file_mtime %}Error log last modified <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong>.{% endif %}
+                {% if error_file_mtime %}error.log was last written <strong>{{ error_file_mtime|date:"Y-m-d H:i:s" }}</strong>.{% endif %}
             </p>
         </div>
     </div>
@@ -52,20 +50,7 @@
     </div>
     {% endif %}
 
-    <section class="app-panel im-logpanel" aria-labelledby="im-error-title">
-        <div class="app-panel__head">
-            <h2 class="app-panel__title" id="im-error-title">{% include "importer_dashboard/im_icon.html" with icon="alert" size=18 %}Error log</h2>
-            {% if error_updated %}<span class="app-panel__meta">Last fetched {{ error_updated|date:"Y-m-d H:i:s" }}</span>{% endif %}
-        </div>
-        {% if job.slurm_job_id %}
-        <dl class="im-runinfo">
-            <div><dt>SLURM job ID</dt><dd class="im-mono">{{ job.slurm_job_id }}</dd></div>
-            <div><dt>Status</dt><dd><span class="im-status im-status--{{ job.status }}">{{ job.get_status_display }}</span></dd></div>
-            {% if job.host %}<div><dt>Host</dt><dd class="im-mono">{{ job.host }}</dd></div>{% endif %}
-        </dl>
-        {% endif %}
-        <div class="log-viewer im-log" tabindex="0" role="region" aria-label="Error log">{{ error_content|default:"No error information available. Select Refresh to fetch it again." }}</div>
-    </section>
+    {% include "importer_dashboard/im_log_panel.html" with title="Error log" icon="alert" missing="The job has written no error.log yet. Start the job: the importer writes what it prints to standard error, such as a traceback, to error.log." %}
 </div>
 {% endblock %}
 
@@ -80,37 +65,5 @@
     color: var(--color-gray-900);
 }
 
-/* Scheduler facts between the panel head and the log */
-.im-runinfo {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 28px;
-    margin: 0;
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-gray-200);
-    font-size: 13px;
-}
-
-.im-runinfo > div {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.im-runinfo dt {
-    font-weight: 500;
-    color: var(--color-gray-600);
-}
-
-.im-runinfo dd {
-    margin: 0;
-    color: var(--color-gray-900);
-}
-
-@media (max-width: 575.98px) {
-    .im-runinfo {
-        padding: 12px 14px;
-    }
-}
 </style>
 {% endblock %}

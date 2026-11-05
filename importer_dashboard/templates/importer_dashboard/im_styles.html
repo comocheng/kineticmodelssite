@@ -556,7 +556,7 @@ on these pages, because that sheet restyles body, links, tables and buttons site
     color: var(--color-primary);
 }
 
-/* Job tabs: Overview, RMG log and Error log are separate pages */
+/* Job tabs: Overview, Output log, Error log and Files are separate pages */
 .im-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -608,6 +608,40 @@ on these pages, because that sheet restyles body, links, tables and buttons site
 
 .im-page .im-log:focus-visible {
     outline-offset: -2px;
+}
+
+/* One log in full (im_log_panel.html): its file, size and time, and the download link */
+.im-logpanel .app-panel__head {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.im-logpanel__aside {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.im-logpanel__aside code {
+    font-size: 12px;
+    color: var(--color-gray-700);
+    background: none;
+    padding: 0;
+}
+
+.im-logpanel__note {
+    margin: 0;
+    padding: 10px 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.im-logpanel__empty {
+    margin: 0;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    color: var(--color-gray-600);
 }
 
 .im-note {

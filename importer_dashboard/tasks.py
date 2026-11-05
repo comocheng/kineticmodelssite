@@ -122,6 +122,8 @@ def run_import_job(self, job_id):
             'PYTHONPATH': rmg_py_path,
             'RMG': rmg_py_path,
             'PATH': f'{conda_bin}:{os.environ.get("PATH", "")}',
+            # Write output.log as the importer prints, so the Output log page follows the run
+            'PYTHONUNBUFFERED': '1',
         }
         evidence_index = getattr(settings, 'IMPORTER_EVIDENCE_INDEX', '')
         if evidence_index:

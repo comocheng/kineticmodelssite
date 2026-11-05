@@ -25,7 +25,7 @@ from .models import ClusterJob, ImportJobConfig, ImportJobStatus, JobLog
 from .tasks import commit_identifications, run_import_job, schedule_evidence_index_refresh, _tail_file
 from .importer_files import (STATE_FILE, apply_progress, is_process_alive, outcome_from_state,
                              read_importer_state, read_progress)
-from .job_paths import job_folder
+from .job_paths import job_folder, model_folder_names
 from .port_allocator import release_port, release_stale_ports
 
 # Statuses whose importer may still be running, and so still holds its port
@@ -71,19 +71,12 @@ class LocalJobManager:
         root = Path(self.root_path)
         discovered = []
 
-        if not root.exists():
+        names = model_folder_names(self.root_path)
+        if names is None:
             logger.error(f"Root path does not exist: {self.root_path}")
             return discovered
 
-        model_dirs = []
-        for journal_dir in sorted(root.iterdir()):
-            if not journal_dir.is_dir() or journal_dir.name.startswith('.'):
-                continue
-            if (journal_dir / 'import.sh').exists():
-                model_dirs.append((journal_dir.name, journal_dir))
-            for model_dir in sorted(journal_dir.iterdir()):
-                if model_dir.is_dir() and (model_dir / 'import.sh').exists():
-                    model_dirs.append((f"{journal_dir.name}/{model_dir.name}", model_dir))
+        model_dirs = [(name, root / name) for name in sorted(names)]
 
         for job_name, model_dir in model_dirs:
             discovered.append(job_name)

@@ -1,0 +1,30 @@
+{% comment %}
+One log of an import job in full (importer_dashboard/job_logs.py), in the panel and light mono pane of
+the Figma job page "Prometheus · Importer failed job" (182:4578). Include it with log, read_error,
+title, icon and missing (what to say when the job has not written the log).
+{% endcomment %}
+<section class="app-panel im-logpanel" aria-labelledby="im-log-title">
+    <div class="app-panel__head">
+        <h2 class="app-panel__title" id="im-log-title">{% include "importer_dashboard/im_icon.html" with icon=icon size=18 %}{{ title }}</h2>
+        {% if log.exists %}
+        <div class="im-logpanel__aside">
+            <span class="app-panel__meta"><code>{{ log.name }}</code> · {{ log.size|filesizeformat }}{% if log.modified %} · written {{ log.modified|date:"M d, Y H:i:s" }}{% endif %}</span>
+            {% if not log.remote %}<a class="im-btn im-btn--sm" href="{% url 'importer_dashboard:job_log_download' job.id log.name %}">{% include "importer_dashboard/im_icon.html" with icon="download" %}Download</a>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% if log.left_out %}
+    <p class="im-note im-logpanel__note">{% include "importer_dashboard/im_icon.html" with icon="info" %}<span>The log is {{ log.size|filesizeformat }}, so this page shows its last {{ log.shown|filesizeformat }}. Download it for the whole file.</span></p>
+    {% endif %}
+    {% if read_error %}
+    <div class="log-viewer im-log" tabindex="0" role="region" aria-label="{{ title }}">{{ read_error }}</div>
+    {% elif not log.exists %}
+    <p class="im-logpanel__empty">{{ missing }}</p>
+    {% elif not log.text %}
+    <p class="im-logpanel__empty"><code>{{ log.name }}</code> is empty.</p>
+    {% else %}
+    <div class="log-viewer im-log" tabindex="0" role="region" aria-label="{{ title }}" data-log-end>{{ log.text }}</div>
+    {# A run stops at the end of its log, so the pane opens there #}
+    <script>document.querySelectorAll('[data-log-end]').forEach(function (pane) { pane.scrollTop = pane.scrollHeight; });</script>
+    {% endif %}
+</section>

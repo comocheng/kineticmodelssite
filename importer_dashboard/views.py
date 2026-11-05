@@ -7,19 +7,21 @@ Provides web interface for managing import jobs on the cluster.
 from django.shortcuts import render, redirect, get_object_or_404
 from kms.access import actor_name, site_login_required, write_login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import FileResponse, Http404, JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db.models import Case, When, Value, IntegerField, OuterRef, Q, Subquery
+from django.db.models import Case, Count, When, Value, IntegerField, OuterRef, Q, Subquery
 import json
 import logging
 import os
 from django.conf import settings
 
-from .models import ClusterJob, ImportJobConfig, JobLog, ImportJobStatus, VotingReaction
+from .models import ClusterJob, DraftStatus, ImportJobConfig, JobLog, ImportJobStatus, VotingReaction
 from .manager_factory import get_job_manager
 from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
+from .job_logs import LOGS, log_path, read_log
+from .job_paths import is_model_folder, job_folder, jobs_on_this_machine, model_folder_names
 from . import drafts, editor, github
 
 # Jobs whose importer is up, so its page can be opened and its progress changes
@@ -38,6 +40,26 @@ def latest_error(job):
     """The message of the job's latest error in its log, or None."""
     entry = job.logs.filter(log_type='error').order_by('-timestamp').first()
     return entry.message if entry else None
+
+
+def model_jobs(jobs):
+    """
+    The jobs of `jobs` that are models: their folder in RMG-models has an import.sh, or they have
+    an open draft (a model added on the create page is only in its draft). Folders such as
+    modelComparer, translations or a journal folder (CombFlame2013) are not jobs. When the jobs run
+    on a cluster, their folders are not on this server, so all jobs are given.
+    """
+    names = model_folder_names() if jobs_on_this_machine() else None
+    if names is None:
+        return jobs
+    return jobs.filter(Q(name__in=names) | Q(draft__status=DraftStatus.OPEN))
+
+
+def not_a_model(job):
+    """True if the job's folder is on this server and has no import.sh, so there is nothing to import."""
+    if not jobs_on_this_machine() or (job.draft_id and job.draft.is_open):
+        return False
+    return not is_model_folder(job_folder(job))
 
 
 def attach_draft(request, job):
@@ -91,9 +113,10 @@ def dashboard_index(request):
         except Exception as exc:
             logger.warning(f"Could not refresh job statuses on dashboard load: {exc}")
 
-    # Get all jobs ordered with running jobs first, then alphabetically by name.
+    # The jobs that are models, ordered with running jobs first, then alphabetically by name.
     # A failed job carries the first line of its latest error, so the row says why.
-    jobs = ClusterJob.objects.annotate(
+    listed = model_jobs(ClusterJob.objects.all())
+    jobs = listed.annotate(
         last_error=Subquery(JobLog.objects.filter(job=OuterRef('pk'), log_type='error')
                             .order_by('-timestamp').values('message')[:1]),
         status_priority=Case(
@@ -112,15 +135,16 @@ def dashboard_index(request):
             Q(slurm_job_id__icontains=search_query)
         )
 
-    # Calculate stats
+    # Counts of the listed jobs, before the search
+    by_status = dict(listed.order_by().values_list('status').annotate(n=Count('id')))
     stats = {
-        'total_jobs': ClusterJob.objects.count(),  # Total unfiltered count
-        'running_jobs': ClusterJob.objects.filter(status='running').count(),
-        'awaiting_input_jobs': ClusterJob.objects.filter(status='awaiting_input').count(),
-        'pending_jobs': ClusterJob.objects.filter(status='pending').count(),
-        'idle_jobs': ClusterJob.objects.filter(status='idle').count(),
-        'completed_jobs': ClusterJob.objects.filter(status='completed').count(),
-        'failed_jobs': ClusterJob.objects.filter(status='failed').count(),
+        'total_jobs': sum(by_status.values()),
+        'running_jobs': by_status.get('running', 0),
+        'awaiting_input_jobs': by_status.get('awaiting_input', 0),
+        'pending_jobs': by_status.get('pending', 0),
+        'idle_jobs': by_status.get('idle', 0),
+        'completed_jobs': by_status.get('completed', 0),
+        'failed_jobs': by_status.get('failed', 0),
     }
 
     # Get list of running job IDs for AJAX updates
@@ -391,6 +415,7 @@ def job_detail(request, job_id):
         'draft_error': draft_error,
         'drafts_enabled': drafts.drafts_enabled(),
         'base_branch': drafts.base_branch(),
+        'not_a_model': not_a_model(job),
         'recent_logs': recent_logs,
         'page_title': f'Job: {job.name}',
         'progress_status': progress_status,
@@ -431,6 +456,10 @@ def job_start(request, job_id):
         messages.warning(request, f"{job.name} is already {job.get_status_display().lower()}. "
                                   f"Kill it first if you want to start it again.")
         return redirect('importer_dashboard:index')
+    if not_a_model(job):
+        messages.error(request, f"{job.name} has no import.sh, so it is not a model and there is "
+                                f"nothing to import.")
+        return redirect('importer_dashboard:job_detail', job_id=job.id)
 
     dashboard_logger.info(
         f"Starting job: {job.name}", 
@@ -598,311 +627,88 @@ def job_kill(request, job_id):
     return redirect('importer_dashboard:index')
 
 
+def _job_log(job, name):
+    """
+    The log `name` ('output.log' or 'error.log') of `job` in full (job_logs.read_log), and the
+    error message if it could not be read. On a cluster, the job manager reads it over SSH.
+    """
+    try:
+        if jobs_on_this_machine():
+            return read_log(job, name), None
+        manager = get_job_manager(config=job.config or ImportJobConfig.objects.filter(is_default=True).first())
+        text = manager.get_console_output(job) if name == 'output.log' else manager.get_error_log(job)
+        return {'name': name, 'exists': text is not None, 'size': len(text or ''), 'modified': None,
+                'text': text or '', 'left_out': 0, 'remote': True}, None
+    except Exception as e:
+        logger.error(f"Could not read {name} of job {job.id}: {e}")
+        return None, f'Could not read {name}: {e}'
+
+
+def _rmg_log(job):
+    """RMG-Py-output/RMG.log of `job` for its download link, or None if there is none."""
+    if not jobs_on_this_machine():
+        return None
+    try:
+        size = os.path.getsize(log_path(job, 'RMG.log'))
+    except OSError:
+        return None
+    return {'name': 'RMG.log', 'size': size}
+
+
 @site_login_required
 def job_log_view(request, job_id):
     """
-    View the complete RMG log for a job
+    The output log of a job: output.log, all that the importer printed, in full. (RMG.log has only
+    what RMG-Py logs, and is empty for some models; it can be downloaded.)
     """
     job = get_object_or_404(ClusterJob, id=job_id)
-    dashboard_logger.info(
-        "Fetching RMG log",
-        "dashboard",
-        job_id=job.id,
-        job_name=job.name,
-        details={
-            'user': actor_name(request),
-            'log_type': 'RMG.log'
-        }
-    )
-    
-    config = job.config or ImportJobConfig.objects.filter(is_default=True).first()
-    
-    try:
-        dashboard_logger.info(
-            "Connecting to job backend", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-        )
-        manager = get_job_manager(config=config)
-        
-        log_path = (
-            f"{config.root_path}/{job.name}/RMG-Py-output/RMG.log"
-            if config and job.name else "unknown"
-        )
-        dashboard_logger.info(
-            f"Reading RMG.log from {job.host or 'server'}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'log_path': log_path,
-                'host': job.host or 'localhost'
-            }
-        )
-        log_content = manager.get_log_tail(job, lines=None)
-        
-        line_count = len(log_content.split('\n')) if log_content else 0
-        file_size = len(log_content) if log_content else 0
-        
-        dashboard_logger.success(
-            f"Retrieved {line_count} lines", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'lines': line_count,
-                'bytes': file_size,
-                'log_path': log_path
-            }
-        )
-        
-        job.last_log_update = timezone.now()
-        job.save()
-        
-    except Exception as e:
-        dashboard_logger.error(
-            f"Failed to fetch log: {str(e)}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'error': str(e),
-                'error_type': type(e).__name__,
-                'log_path': log_path if 'log_path' in locals() else 'unknown'
-            }
-        )
-        logger.error(f"Failed to get log for job {job.id}: {str(e)}")
-        log_content = f"Error retrieving log: {str(e)}"
-    
-    context = {
+    log, read_error = _job_log(job, 'output.log')
+    # Only this field: a full save would put back a status or counts that changed meanwhile
+    ClusterJob.objects.filter(pk=job.pk).update(last_log_update=timezone.now())
+    return render(request, 'importer_dashboard/job_log.html', {
         'job': job,
-        'log_content': log_content,
-        'page_title': f'Log: {job.name}',
-    }
-    
-    return render(request, 'importer_dashboard/job_log.html', context)
-
-
-@site_login_required
-def job_console_output_view(request, job_id):
-    """
-    View the console output (output.log) - shows complete job execution
-    """
-    job = get_object_or_404(ClusterJob, id=job_id)
-    dashboard_logger.info(
-        "Fetching console output", 
-        "dashboard",
-        job_id=job.id,
-        job_name=job.name,
-        details={
-            'user': actor_name(request),
-            'log_type': 'console_output'
-        }
-    )
-    
-    config = job.config or ImportJobConfig.objects.filter(is_default=True).first()
-    
-    try:
-        dashboard_logger.info(
-            "Connecting to job backend", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-        )
-        manager = get_job_manager(config=config)
-        
-        output_path = f"{config.root_path}/{job.name}/output.log" if config and job.name else "unknown"
-        dashboard_logger.info(
-            f"Reading console output from {job.host or 'server'}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'output_path': output_path,
-                'host': job.host or 'localhost'
-            }
-        )
-        console_content = manager.get_console_output(job)
-        
-        line_count = len(console_content.split('\n')) if console_content else 0
-        file_size = len(console_content) if console_content else 0
-        
-        dashboard_logger.success(
-            f"Retrieved {line_count} lines", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'lines': line_count,
-                'bytes': file_size,
-                'output_path': output_path
-            }
-        )
-        
-    except Exception as e:
-        dashboard_logger.error(
-            f"Failed to fetch console output: {str(e)}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'error': str(e),
-                'error_type': type(e).__name__,
-                'output_path': output_path if 'output_path' in locals() else 'unknown'
-            }
-        )
-        logger.error(f"Failed to get console output for job {job.id}: {str(e)}")
-        console_content = f"Error retrieving console output: {str(e)}"
-    
-    context = {
-        'job': job,
-        'log_content': console_content,
-        'page_title': f'Console Output: {job.name}',
-        'log_type': 'console',
-    }
-    
-    return render(request, 'importer_dashboard/job_log.html', context)
+        'log': log,
+        'read_error': read_error,
+        'rmg_log': _rmg_log(job),
+        'page_title': f'Output log: {job.name}',
+    })
 
 
 @site_login_required
 def job_error_log_view(request, job_id):
-    """
-    View comprehensive error information for a job (live from cluster)
-    """
+    """The error log of a job: error.log, what the importer wrote to standard error, in full."""
     job = get_object_or_404(ClusterJob, id=job_id)
-    dashboard_logger.info(
-        "Fetching error log", 
-        "dashboard",
-        job_id=job.id,
-        job_name=job.name,
-        details={
-            'user': actor_name(request),
-            'log_type': 'error_log'
-        }
-    )
-    
-    config = job.config or ImportJobConfig.objects.filter(is_default=True).first()
-    
-    error_content = None
-    error_updated = None
-    
-    try:
-        dashboard_logger.info(
-            "Connecting to job backend", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-        )
-        manager = get_job_manager(config=config)
-        
-        error_path = f"{config.root_path}/{job.name}" if config and job.name else "unknown"
-        dashboard_logger.info(
-            f"Reading error logs from {job.host or 'server'}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'error_path': error_path,
-                'host': job.host or 'localhost'
-            }
-        )
-        error_content = manager.get_error_log(job)
-        error_updated = timezone.now()
-        
-        # Parse error file modification time from stat output
-        error_file_mtime = None
-        if error_content:
-            lines = error_content.split('\n')
-            # Last line should be the stat timestamp
-            if lines and len(lines) > 1:
-                last_line = lines[-1].strip()
-                # Try to parse timestamp like "2025-10-10 08:55:31.244482512 -0400"
-                if last_line and not last_line.startswith('Error') and not last_line.startswith('Traceback'):
-                    try:
-                        from datetime import datetime
-                        # Split on space and take first two parts (date and time with microseconds)
-                        parts = last_line.split()
-                        if len(parts) >= 2:
-                            datetime_str = f"{parts[0]} {parts[1].split('.')[0]}"  # Remove microseconds
-                            error_file_mtime = timezone.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-                            # Make timezone-aware
-                            error_file_mtime = timezone.make_aware(error_file_mtime)
-                            # Remove the timestamp line from content
-                            error_content = '\n'.join(lines[:-1])
-                    except Exception as parse_error:
-                        logger.debug(f"Could not parse error log timestamp: {parse_error}")
-                        pass
-        
-        # Determine if errors are from current run or previous run
-        error_is_stale = False
-        if error_file_mtime and job.started_at:
-            # If error file was last modified before this job started, errors are from previous run
-            if error_file_mtime < job.started_at:
-                error_is_stale = True
-        
-        if error_content and error_content.strip():
-            error_lines = error_content.split('\n')
-            error_count = len([line for line in error_lines if 'error' in line.lower()])
-            dashboard_logger.warning(
-                f"Found {error_count} error entries", 
-                "dashboard",
-                job_id=job.id,
-                job_name=job.name,
-                details={
-                    'error_count': error_count,
-                    'total_lines': len(error_lines),
-                    'error_path': error_path,
-                    'error_is_stale': error_is_stale,
-                    'error_file_mtime': str(error_file_mtime) if error_file_mtime else 'unknown'
-                }
-            )
-        else:
-            dashboard_logger.success(
-                "No errors found", 
-                "dashboard",
-                job_id=job.id,
-                job_name=job.name,
-                details={
-                    'error_path': error_path
-                }
-            )
-        
-        # Update the job's last error check time (only that field: a full save of this
-        # object would put back a status or counts that changed while the page loaded)
-        job.last_error_update = error_updated
-        ClusterJob.objects.filter(pk=job.pk).update(last_error_update=error_updated)
-        
-    except Exception as e:
-        dashboard_logger.error(
-            f"Failed to fetch error log: {str(e)}", 
-            "dashboard",
-            job_id=job.id,
-            job_name=job.name,
-            details={
-                'error': str(e),
-                'error_type': type(e).__name__,
-                'error_path': error_path if 'error_path' in locals() else 'unknown'
-            }
-        )
-        logger.error(f"Failed to get error log for job {job.id}: {str(e)}")
-        error_content = f"Error retrieving live error information: {str(e)}\n\n"
-        error_content += "Please check:\n"
-        error_content += "1. SSH connection is active (click 'Reconnect SSH')\n"
-        error_content += "2. Job directory exists on cluster\n"
-        error_content += f"3. You have access to: {config.root_path if config else 'N/A'}"
-    
-    context = {
+    log, read_error = _job_log(job, 'error.log')
+    error_updated = timezone.now()
+    # Only this field: a full save would put back a status or counts that changed meanwhile
+    ClusterJob.objects.filter(pk=job.pk).update(last_error_update=error_updated)
+    modified = log['modified'] if log else None
+    return render(request, 'importer_dashboard/job_error_log.html', {
         'job': job,
+        'log': log,
+        'read_error': read_error,
+        'error_content': log['text'] if log else '',
         'failure_reason': latest_error(job) if job.status == ImportJobStatus.FAILED else None,
-        'error_content': error_content,
         'error_updated': error_updated,
-        'error_file_mtime': error_file_mtime,
-        'error_is_stale': error_is_stale if 'error_is_stale' in locals() else False,
-        'page_title': f'Error Log: {job.name}',
-    }
-    
-    return render(request, 'importer_dashboard/job_error_log.html', context)
+        'error_file_mtime': modified,
+        # A running job whose error.log is older than its start: those errors are from a run before
+        'error_is_stale': bool(modified and job.started_at and modified < job.started_at),
+        'page_title': f'Error log: {job.name}',
+    })
+
+
+@site_login_required
+def job_log_download(request, job_id, name):
+    """One log of a job (output.log, error.log or RMG.log), the whole file, as a download."""
+    job = get_object_or_404(ClusterJob, id=job_id)
+    if name not in LOGS or not jobs_on_this_machine():
+        raise Http404('No such log')
+    try:
+        handle = open(log_path(job, name), 'rb')
+    except OSError:
+        raise Http404(f'{job.name} has no {name}')
+    return FileResponse(handle, as_attachment=True, filename=f"{job.name.replace('/', '_')}_{name}",
+                        content_type='text/plain; charset=utf-8')
 
 
 @site_login_required

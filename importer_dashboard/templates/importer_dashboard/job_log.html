@@ -1,21 +1,19 @@
 {% extends "base.html" %}
 {% load static %}
-{# The log of one import job; no Figma frame, so it follows the job page "Importer failed job" (182:4578) #}
+{# The output log of one import job; no Figma frame, so it follows the job page "Importer failed job" (182:4578) #}
 
-{% block title %}{{ job.name }} | {% if log_type == 'console' %}Console output{% else %}RMG log{% endif %} | Prometheus{% endblock %}
+{% block title %}{{ job.name }} | Output log | Prometheus{% endblock %}
 
 {% block content %}
 <div class="im-page im-job">
 
     {% include "importer_dashboard/im_job_header.html" with current="log" %}
 
-    <section class="app-panel im-logpanel" aria-labelledby="im-log-title">
-        <div class="app-panel__head">
-            <h2 class="app-panel__title" id="im-log-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}{% if log_type == 'console' %}Console output{% else %}RMG log{% endif %}</h2>
-            <span class="app-panel__meta">Read when this page loaded; select Refresh to read it again</span>
-        </div>
-        <div class="log-viewer im-log" tabindex="0" role="region" aria-label="Job log">{{ log_content|default:"No log content available" }}</div>
-    </section>
+    {% include "importer_dashboard/im_log_panel.html" with title="Output log" icon="file" missing="The job has written no output.log yet. Start the job: the importer writes all that it prints to output.log." %}
+
+    {% if rmg_log %}
+    <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" %}<span>RMG-Py also writes <code>RMG-Py-output/RMG.log</code> ({{ rmg_log.size|filesizeformat }}), with only what RMG-Py logs. <a href="{% url 'importer_dashboard:job_log_download' job.id 'RMG.log' %}">Download RMG.log</a></span></p>
+    {% endif %}
 </div>
 {% endblock %}
 

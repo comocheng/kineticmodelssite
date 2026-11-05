@@ -12,7 +12,7 @@ carries the job actions; the log pages carry a Refresh button instead, and the F
         <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Job {{ job.id }}</span></li>
         {% else %}
         <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'importer_dashboard:job_detail' job.id %}">Job {{ job.id }}</a></li>
-        <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{% if current == "log" %}RMG log{% elif current == "files" %}Files{% else %}Error log{% endif %}</span></li>
+        <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{% if current == "log" %}Output log{% elif current == "files" %}Files{% else %}Error log{% endif %}</span></li>
         {% endif %}
     </ol>
 </nav>
@@ -48,7 +48,7 @@ carries the job actions; the log pages carry a Refresh button instead, and the F
                 {% include "importer_dashboard/im_icon.html" with icon="stop" %}Kill
             </button>
         </form>
-        {% else %}
+        {% elif not not_a_model %}
         <form method="post" action="{% url 'importer_dashboard:job_start' job.id %}">
             {% csrf_token %}
             <button type="submit" class="app-btn">
@@ -66,7 +66,7 @@ carries the job actions; the log pages carry a Refresh button instead, and the F
 
 <nav class="im-tabs" aria-label="Job pages">
     <a class="im-tab{% if current == 'overview' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_detail' job.id %}"{% if current == 'overview' %} aria-current="page"{% endif %}>Overview</a>
-    <a class="im-tab{% if current == 'log' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_log' job.id %}"{% if current == 'log' %} aria-current="page"{% endif %}>RMG log</a>
+    <a class="im-tab{% if current == 'log' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_log' job.id %}"{% if current == 'log' %} aria-current="page"{% endif %}>Output log</a>
     <a class="im-tab{% if current == 'errors' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_error_log' job.id %}"{% if current == 'errors' %} aria-current="page"{% endif %}>Error log</a>
     <a class="im-tab{% if current == 'files' %} is-active{% endif %}" href="{% url 'importer_dashboard:draft_files' job.id %}"{% if current == 'files' %} aria-current="page"{% endif %}>Files</a>
 </nav>

@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from importer_dashboard.local_job_manager import LocalJobManager
 from importer_dashboard.ssh_manager import SSHJobManager
@@ -54,20 +54,22 @@ class JobLogTests(SimpleTestCase):
         with patch.object(self.remote, 'exec_command', return_value=('', 'No such file')):
             self.assertIn('Log file not found:', self.remote.get_log_tail(self.job, lines=None))
 
-    def test_log_page_requests_complete_log(self):
+    def test_log_page_shows_the_complete_output_log(self):
+        # The Output log tab shows output.log, all that the importer printed; RMG.log is a download
+        output = ''.join(f'Output line {line}\n' for line in range(250))
+        (Path(self.directory.name) / self.job.name / 'output.log').write_text(output)
         request = RequestFactory().get('/importer/job/159/log/')
         request.user = SimpleNamespace(is_authenticated=True, username='tester')
-        job = Mock(id=159, config=self.remote.config, host='localhost')
+        job = Mock(id=159, draft=None)
         job.name = self.job.name
-        manager = Mock()
-        manager.get_log_tail.return_value = self.content
         with (
+            override_settings(RMG_MODELS_PATH=self.directory.name, IMPORTER_MODE='local'),
             patch('importer_dashboard.views.get_object_or_404', return_value=job),
-            patch('importer_dashboard.views.get_job_manager', return_value=manager),
-            patch('importer_dashboard.views.dashboard_logger'),
+            patch('importer_dashboard.views.ClusterJob'),
             patch('importer_dashboard.views.render') as render,
         ):
             job_log_view(request, job.id)
 
-        manager.get_log_tail.assert_called_once_with(job, lines=None)
-        self.assertEqual(render.call_args.args[2]['log_content'], self.content)
+        context = render.call_args.args[2]
+        self.assertEqual(context['log']['text'], output)
+        self.assertEqual(context['rmg_log'], {'name': 'RMG.log', 'size': len(self.content)})

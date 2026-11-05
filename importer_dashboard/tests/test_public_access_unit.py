@@ -84,20 +84,21 @@ class PublicAccessTests(SimpleTestCase):
             self.assertEqual(views.get_logs(self.request).status_code, 200)
             self.assertEqual(views.stream_logs(self.request).status_code, 200)
 
+    @override_settings(IMPORTER_MODE='local')
     def test_anonymous_full_log_page(self):
         job = Mock(id=159, config=Mock(root_path='/models'), host='localhost')
         job.name = 'ANL-Brown'
-        manager = Mock()
-        manager.get_log_tail.return_value = 'First line\nLast line\n'
+        log = {'name': 'output.log', 'exists': True, 'text': 'First line\nLast line\n'}
         with (
             patch.object(views, 'get_object_or_404', return_value=job),
-            patch.object(views, 'get_job_manager', return_value=manager),
-            patch.object(views, 'dashboard_logger'),
-            patch.object(views, 'render', return_value=HttpResponse('log')),
+            patch.object(views, 'read_log', return_value=log) as read_log,
+            patch.object(views, 'ClusterJob'),
+            patch.object(views, 'render', return_value=HttpResponse('log')) as render,
         ):
             response = views.job_log_view(self.request, job.id)
         self.assertEqual(response.status_code, 200)
-        manager.get_log_tail.assert_called_once_with(job, lines=None)
+        read_log.assert_called_once_with(job, 'output.log')
+        self.assertEqual(render.call_args.args[2]['log'], log)
 
     @override_settings(IMPORTER_MODE='local')
     def test_anonymous_job_start_asks_to_sign_in(self):
