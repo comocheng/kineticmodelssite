@@ -100,30 +100,20 @@ class PublicAccessTests(SimpleTestCase):
         manager.get_log_tail.assert_called_once_with(job, lines=None)
 
     @override_settings(IMPORTER_MODE='local')
-    def test_anonymous_job_start_has_no_user_foreign_key(self):
-        request = self.factory.post('/importer/job/159/start/')
+    def test_anonymous_job_start_asks_to_sign_in(self):
+        # Reading stays public; starting a job acts on the server, so it needs a name on it
+        request = self.factory.post('/importer/job/159/start/', HTTP_REFERER='http://testserver/importer/job/159/')
         request.user = AnonymousUser()
-        job = ClusterJob(id=159, name='ANL-Brown', status=ImportJobStatus.IDLE)
-        job.config = ImportJobConfig(id=1, root_path='/models')
         manager = Mock()
-        manager.start_job.return_value = ('task-id', 'localhost')
         with (
-            patch.object(views, 'get_object_or_404', return_value=job),
             patch.object(views, 'get_job_manager', return_value=manager),
-            patch.object(views, 'dashboard_logger'),
-            patch.object(views, 'messages'),
-            patch.object(job, 'mark_as_running') as running,
-            patch.object(job, 'mark_as_failed') as failed,
-            patch.object(views.JobLog.objects, 'create') as log,
+            patch('django.contrib.messages.info') as message,
         ):
-            response = views.job_start(request, job.id)
+            response = views.job_start(request, 159)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/importer/')
-        self.assertIsNone(job.started_by)
-        self.assertEqual(job.celery_task_id, 'task-id')
-        running.assert_called_once_with(host='localhost')
-        failed.assert_not_called()
-        self.assertIn('started by anonymous', log.call_args.kwargs['message'])
+        self.assertEqual(response.url, '/login/?next=%2Fimporter%2Fjob%2F159%2F')
+        manager.start_job.assert_not_called()
+        self.assertIn('Sign in', message.call_args.args[1])
 
     def test_job_actions_still_require_post(self):
         for action in [views.job_start, views.job_kill]:

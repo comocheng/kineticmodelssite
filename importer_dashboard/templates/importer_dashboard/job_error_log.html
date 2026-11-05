@@ -9,7 +9,16 @@
 
     {% include "importer_dashboard/im_job_header.html" with current="errors" %}
 
-    {% if error_is_stale and job.status == 'running' %}
+    {% if failure_reason %}
+    <div class="im-alert im-alert--danger">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body">
+            <p class="im-alert__title">Why the job failed</p>
+            <p class="im-alert__text">The dashboard recorded this when the job ended{% if not error_content %}; the job wrote no error.log{% endif %}.</p>
+            <pre class="im-reason">{{ failure_reason }}</pre>
+        </div>
+    </div>
+    {% elif error_is_stale and job.status == 'running' %}
     <div class="im-alert im-alert--warning">
         <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
         <div class="im-alert__body">
@@ -33,7 +42,7 @@
             </p>
         </div>
     </div>
-    {% elif not error_content %}
+    {% elif not error_content and job.status != 'failed' %}
     <div class="im-alert im-alert--success">
         <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="check-circle" size=26 %}</span>
         <div class="im-alert__body">
@@ -61,6 +70,9 @@
 {% endblock %}
 
 {% block extra_css %}
+<style>
+.im-reason { margin: .5rem 0 0; white-space: pre-wrap; font-family: var(--app-mono, ui-monospace, monospace); font-size: .8125rem; max-height: 16rem; overflow: auto; }
+</style>
 {% include "importer_dashboard/im_styles.html" %}
 <style>
 .im-alert__text strong {

@@ -5,12 +5,12 @@ Provides web interface for managing import jobs on the cluster.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from kms.access import actor_name, site_login_required
+from kms.access import actor_name, site_login_required, write_login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db.models import Case, When, Value, IntegerField, Q
+from django.db.models import Case, When, Value, IntegerField, OuterRef, Q, Subquery
 import json
 import logging
 import os
@@ -31,6 +31,12 @@ logger = setup_dashboard_logging('importer_dashboard', 'dashboard')
 # But note: dashboard_logger is the one that shows in the Activity Log UI
 # logger is for standard Python logging (console, files, etc.)
 standard_logger = logging.getLogger(__name__)
+
+
+def latest_error(job):
+    """The message of the job's latest error in its log, or None."""
+    entry = job.logs.filter(log_type='error').order_by('-timestamp').first()
+    return entry.message if entry else None
 
 
 @site_login_required
@@ -62,8 +68,11 @@ def dashboard_index(request):
         except Exception as exc:
             logger.warning(f"Could not refresh job statuses on dashboard load: {exc}")
 
-    # Get all jobs ordered with running jobs first, then alphabetically by name
+    # Get all jobs ordered with running jobs first, then alphabetically by name.
+    # A failed job carries the first line of its latest error, so the row says why.
     jobs = ClusterJob.objects.annotate(
+        last_error=Subquery(JobLog.objects.filter(job=OuterRef('pk'), log_type='error')
+                            .order_by('-timestamp').values('message')[:1]),
         status_priority=Case(
             When(status__in=LIVE_STATUSES, then=Value(0)),
             default=Value(1),
@@ -312,9 +321,11 @@ def job_detail(request, job_id):
                 'message': 'Job completed but no statistics available. Output files may not have been generated.'
             }
     elif job.status == 'failed':
+        reason = latest_error(job)
         progress_status = {
             'type': 'danger',
-            'message': 'Job failed. Check the Error Log tab for details.'
+            'message': (f'{reason.splitlines()[0]} See the Error log tab for details.' if reason
+                        else 'Job failed. Check the Error Log tab for details.')
         }
     elif job.status == 'pending':
         progress_status = {
@@ -355,6 +366,7 @@ def job_detail(request, job_id):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to start import jobs.')
 def job_start(request, job_id):
     """
     Start an import job on the cluster
@@ -404,15 +416,19 @@ def job_start(request, job_id):
             job_name=job.name,
         )
         task_id, host = manager.start_job(job)
-        
-        # Assign to the correct field based on deployment mode
+
+        # Save only these fields: the job object is from before start_job, and a full save
+        # could put back a status or counts that the Celery task has already changed
         importer_mode = getattr(settings, 'IMPORTER_MODE', 'cluster')
         if importer_mode == 'local':
             job.celery_task_id = task_id
+            fields = {'celery_task_id': task_id}
         else:
             job.slurm_job_id = task_id
+            job.mark_as_running(host=host)
+            fields = {'slurm_job_id': task_id}
         job.started_by = request.user if request.user.is_authenticated else None
-        job.mark_as_running(host=host)
+        ClusterJob.objects.filter(pk=job.pk).update(started_by=job.started_by, **fields)
         
         JobLog.objects.create(
             job=job,
@@ -450,6 +466,7 @@ def job_start(request, job_id):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to stop import jobs.')
 def job_kill(request, job_id):
     """
     Kill a running import job
@@ -794,9 +811,10 @@ def job_error_log_view(request, job_id):
                 }
             )
         
-        # Update the job's last error check time
+        # Update the job's last error check time (only that field: a full save of this
+        # object would put back a status or counts that changed while the page loaded)
         job.last_error_update = error_updated
-        job.save()
+        ClusterJob.objects.filter(pk=job.pk).update(last_error_update=error_updated)
         
     except Exception as e:
         dashboard_logger.error(
@@ -819,6 +837,7 @@ def job_error_log_view(request, job_id):
     
     context = {
         'job': job,
+        'failure_reason': latest_error(job) if job.status == ImportJobStatus.FAILED else None,
         'error_content': error_content,
         'error_updated': error_updated,
         'error_file_mtime': error_file_mtime,
@@ -1067,7 +1086,8 @@ def refresh_progress(request):
                     job.identified_species = job.species.filter(identification_status='confirmed').count()
                     job.processed_species = job.species.count()
                     job.confirmed_species = job.identified_species
-                    job.save()
+                    job.save(update_fields=['total_species', 'total_reactions', 'identified_species',
+                                            'processed_species', 'confirmed_species'])
                     
                     dashboard_logger.success(
                         f"Synced votes for {job.name}",
@@ -1119,6 +1139,7 @@ def refresh_progress(request):
 
 
 @site_login_required
+@write_login_required('Sign in to change the Importer settings.')
 def settings_view(request):
     """
     View and edit dashboard settings
@@ -1156,6 +1177,7 @@ def settings_view(request):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to reconnect the job backend.')
 def reconnect(request):
     """Reconnect / verify the job backend connection"""
     dashboard_logger.info("Verifying backend connection...", "dashboard")
@@ -1180,6 +1202,7 @@ def reconnect(request):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to pull RMG-models.')
 def git_pull(request):
     """Pull updates from GitHub repository"""
     try:
@@ -1204,6 +1227,7 @@ def git_pull(request):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to pause import jobs.')
 def job_pause(request, job_id):
     """Pause a running job"""
     try:
@@ -1274,6 +1298,7 @@ def get_logs(request):
 
 @site_login_required
 @require_http_methods(["POST"])
+@write_login_required('Sign in to clear the activity log.')
 def clear_logs(request):
     """
     Clear all dashboard logs
