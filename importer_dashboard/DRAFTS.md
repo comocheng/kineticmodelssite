@@ -24,6 +24,9 @@ model's draft branch on the server, then, when someone opens a pull request, to 
    - The libraries are committed only when the importer last reported `awaiting_input`,
      `finished` or `stopped`, because it empties the library folder before it writes it.
    - `progress.json`, `importer_state.json`, the vote databases and the logs are never committed.
+   - The logs are not in the draft: each job keeps `output.log`, `error.log` and a copy of `RMG.log`
+     in `IMPORTER_LOGS_PATH/<job id>/`, so they stay after the draft closes. Logs of runs from
+     before that are copied in with `manage.py collect_job_logs --from <RMG-models folder> --apply`.
    - The author is the person who started the job (their GitHub account, if it is connected).
      The committer is `IMPORTER_GIT_NAME <IMPORTER_GIT_EMAIL>`.
 5. **The job page** ("Changes in RMG-models") shows:
@@ -113,6 +116,7 @@ branch. Then open the pull request.
   | `GITHUB_TOKEN_ENCRYPTION_KEY` | a key derived from `SECRET_KEY` |
   | `PUBLIC_SITE_URL` | none; set it to `https://pr.omethe.us`, so the callback address is the https one registered with the App |
   | `GITHUB_WEBHOOK_SECRET` | none; the App's webhook secret. Empty: `/importer/github/webhook/` is off |
+  | `IMPORTER_LOGS_PATH` | `importer-logs` next to the read copy; each job's `output.log`, `error.log` and a copy of `RMG.log`, in `<path>/<job id>/` |
 
   For `GITHUB_TOKEN_ENCRYPTION_KEY`, make a key with
   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.

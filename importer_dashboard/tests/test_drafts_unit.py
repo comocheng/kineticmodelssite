@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from importer_dashboard import drafts
+from importer_dashboard import drafts, job_logs
 from importer_dashboard.models import ClusterJob, Draft, DraftStatus, ImportJobConfig, ImportJobStatus
 from importer_dashboard.tasks import run_import_job
 
@@ -249,9 +249,11 @@ class JobInDraftTests(DraftTestCase):
         run_import_job.apply(args=[self.job.id])
         self.job.refresh_from_db()
         self.assertEqual(self.job.status, ImportJobStatus.COMPLETED)
-        # The importer ran in the draft, not in the read copy
-        self.assertTrue(os.path.exists(self.worktree_file(draft, 'output.log')))
-        self.assertFalse(os.path.exists(os.path.join(self.read, self.model, 'output.log')))
+        # The importer ran in the draft, not in the read copy; its logs are in the job's log folder
+        self.assertTrue(os.path.exists(self.worktree_file(draft, 'importer_state.json')))
+        self.assertFalse(os.path.exists(os.path.join(self.read, self.model, 'importer_state.json')))
+        self.assertTrue(os.path.exists(job_logs.kept_path(self.job, 'output.log')))
+        self.assertFalse(os.path.exists(self.worktree_file(draft, 'output.log')))
         self.assertEqual(out('status', '--short', cwd=self.read), '')
         # Its identification and library are on the draft's branch, by the person who started it
         # (one commit, or two when the task's checkpoint commits SMILES.txt before the run ends)

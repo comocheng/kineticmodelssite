@@ -263,6 +263,13 @@ def close_draft(draft, status):
     branch is on GitHub). Its jobs run in the read copy again until a new draft is opened.
     """
     with draft_lock(draft):
+        # The worktree goes, with the logs and RMG.log of the runs in it: keep them first
+        from .job_logs import keep_logs
+        for job in draft.jobs.all():
+            try:
+                keep_logs(job)
+            except OSError as e:
+                logger.warning(f'Could not keep the logs of {job.name} before closing its draft: {e}')
         _remove_worktree(draft)
     draft.status = status
     draft.save(update_fields=['status', 'updated_at'])

@@ -22,9 +22,10 @@ from django.utils import timezone
 from celery.result import AsyncResult
 
 from .models import ClusterJob, ImportJobConfig, ImportJobStatus, JobLog
-from .tasks import commit_identifications, run_import_job, schedule_evidence_index_refresh, _tail_file
+from .tasks import _keep_logs, _tail_file, commit_identifications, run_import_job, schedule_evidence_index_refresh
 from .importer_files import (STATE_FILE, apply_progress, is_process_alive, outcome_from_state,
                              read_importer_state, read_progress)
+from .job_logs import log_path
 from .job_paths import job_folder, model_folder_names
 from .port_allocator import release_port, release_stale_ports
 
@@ -169,18 +170,15 @@ class LocalJobManager:
         Read RMG.log tail, or the complete log when lines is None.
         Replaces SSHJobManager.get_log_tail() which used SSH.
         """
-        log_path = os.path.join(job_folder(job, self.root_path), 'RMG-Py-output', 'RMG.log')
-        return self._tail_local_file(log_path, lines)
+        return self._tail_local_file(log_path(job, 'RMG.log', self.root_path), lines)
 
     def get_console_output(self, job: ClusterJob):
         """Read output.log from local filesystem."""
-        log_path = os.path.join(job_folder(job, self.root_path), 'output.log')
-        return self._read_local_file(log_path)
+        return self._read_local_file(log_path(job, 'output.log', self.root_path))
 
     def get_error_log(self, job: ClusterJob):
         """Read error.log from local filesystem."""
-        log_path = os.path.join(job_folder(job, self.root_path), 'error.log')
-        return self._read_local_file(log_path)
+        return self._read_local_file(log_path(job, 'error.log', self.root_path))
 
     def get_completion_stats(self, job: ClusterJob):
         """The importer's progress counts (its progress.json), or None."""
@@ -296,13 +294,14 @@ class LocalJobManager:
         new_status, log_type, message = outcome_from_state(state)
         message += note
         if new_status == ImportJobStatus.FAILED:
-            message += (f'\nerror.log:\n{_tail_file(os.path.join(job_path, "error.log"), 20)}\n\n'
-                        f'output.log:\n{_tail_file(os.path.join(job_path, "output.log"), 20)}')
+            message += (f'\nerror.log:\n{_tail_file(log_path(job, "error.log", self.root_path), 20)}\n\n'
+                        f'output.log:\n{_tail_file(log_path(job, "output.log", self.root_path), 20)}')
         if self._set_status(job, new_status, completed_at=timezone.now()):
             apply_progress(job, read_progress(job_path))
             JobLog.objects.create(job=job, log_type=log_type, message=message)
             release_port(job)
             commit_identifications(job, final=True)
+            _keep_logs(job)
             schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
             logger.info(f"Job {job.name} ended: {new_status}")
             return True
