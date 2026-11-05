@@ -9,6 +9,16 @@
 
     {% include "importer_dashboard/im_job_header.html" with current="overview" %}
 
+    {% if not_a_model %}
+    <div class="im-alert im-alert--warning">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body">
+            <p class="im-alert__title">Not a model</p>
+            <p class="im-alert__text">The folder {{ job.name }} in RMG-models has no import.sh, so there is nothing to import. The list of import jobs leaves it out.</p>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Status explanation (Figma 182:4632) -->
     {% if progress_status %}
     <div class="im-alert im-alert--{{ progress_status.type }}">
@@ -42,7 +52,7 @@
         </dl>
     </section>
 
-    {% include "importer_dashboard/im_draft_panel.html" %}
+    {% if not not_a_model %}{% include "importer_dashboard/im_draft_panel.html" %}{% endif %}
 
     <!-- Job configuration (Figma 182:4671) -->
     <section class="app-panel im-config" aria-labelledby="im-config-title">

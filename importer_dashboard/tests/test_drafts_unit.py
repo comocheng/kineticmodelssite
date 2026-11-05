@@ -273,6 +273,10 @@ class JobInDraftTests(DraftTestCase):
         self.client.force_login(self.user)
         self.job.name = 'NoSuchModel'
         self.job.save()
+        # A model in the read copy only: master has no NoSuchModel, so no draft can start from it
+        os.makedirs(os.path.join(self.read, 'NoSuchModel'))
+        with open(os.path.join(self.read, 'NoSuchModel', 'import.sh'), 'w') as f:
+            f.write('#!/bin/bash\n')
         with patch('importer_dashboard.local_job_manager.run_import_job') as task:
             response = self.client.post(reverse('importer_dashboard:job_start', args=[self.job.id]), follow=True)
         task.delay.assert_not_called()

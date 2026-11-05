@@ -17,7 +17,7 @@
             <p class="im-lede">Run and monitor RMG imports of kinetic mechanisms, and follow their species identification.</p>
         </div>
         <div class="im-actions">
-            <a href="{% url 'importer_dashboard:settings' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="settings" %}Settings</a>
+            {% if user.is_superuser %}<a href="{% url 'importer_dashboard:settings' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="settings" %}Settings</a>{% endif %}
             <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
             <a href="{% url 'kinetic-model-create' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="file" %}Add a model</a>
         </div>
@@ -138,7 +138,7 @@
                                     <li><span class="dropdown-item-text im-faint">Compute node not assigned yet</span></li>
                                     {% endif %}
                                     {% endif %}
-                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_log' job.id %}">RMG log</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_log' job.id %}">Output log</a></li>
                                     <li><a class="dropdown-item" href="{% url 'importer_dashboard:job_error_log' job.id %}">Error log</a></li>
                                 </ul>
                             </div>
