@@ -5,7 +5,7 @@ Provides web interface for managing import jobs on the cluster.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from kms.access import actor_name, site_login_required, write_login_required
+from kms.access import actor_name, site_login_required, superuser_required, write_login_required
 from django.contrib import messages
 from django.http import FileResponse, Http404, JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -1001,11 +1001,10 @@ def refresh_progress(request):
     return redirect('importer_dashboard:index')
 
 
-@site_login_required
-@write_login_required('Sign in to change the Importer settings.')
+@superuser_required('the Importer settings', 'importer_dashboard:index')
 def settings_view(request):
     """
-    View and edit dashboard settings
+    View and edit the Importer settings (the job configuration). Only a superuser sees them.
     """
     import os
     
