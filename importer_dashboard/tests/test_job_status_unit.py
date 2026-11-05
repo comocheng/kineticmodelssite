@@ -230,3 +230,18 @@ class WriteActionTests(JobStatusTestCase):
             response = self.client.get(reverse('importer_dashboard:index'))
         self.assertContains(response, 'Job failed with exit code -9')
         self.assertContains(response, '% identified')
+
+
+@override_settings(IMPORTER_MODE='local')
+class StartOrderTests(JobStatusTestCase):
+    def test_a_run_that_ends_before_start_returns_keeps_its_status(self):
+        # A worker can take the task and finish it before delay() returns
+        user = User.objects.create_user('lekia')
+        self.client.force_login(user)
+        with patch('importer_dashboard.local_job_manager.run_import_job.delay',
+                   side_effect=lambda job_id: run_import_job.apply(args=[job_id])):
+            self.client.post(reverse('importer_dashboard:job_start', args=[self.job.id]))
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, ImportJobStatus.COMPLETED)
+        self.assertEqual(self.job.started_by, user)
+        self.assertTrue(self.job.celery_task_id)

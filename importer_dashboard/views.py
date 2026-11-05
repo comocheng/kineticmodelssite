@@ -471,6 +471,9 @@ def job_start(request, job_id):
             job_id=job.id,
             job_name=job.name,
         )
+        # Who started it, before the task runs: the task's commits name this person
+        job.started_by = request.user if request.user.is_authenticated else None
+        ClusterJob.objects.filter(pk=job.pk).update(started_by=job.started_by)
         task_id, host = manager.start_job(job)
 
         # Save only these fields: the job object is from before start_job, and a full save
@@ -478,13 +481,11 @@ def job_start(request, job_id):
         importer_mode = getattr(settings, 'IMPORTER_MODE', 'cluster')
         if importer_mode == 'local':
             job.celery_task_id = task_id
-            fields = {'celery_task_id': task_id}
+            ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=task_id)
         else:
             job.slurm_job_id = task_id
             job.mark_as_running(host=host)
-            fields = {'slurm_job_id': task_id}
-        job.started_by = request.user if request.user.is_authenticated else None
-        ClusterJob.objects.filter(pk=job.pk).update(started_by=job.started_by, **fields)
+            ClusterJob.objects.filter(pk=job.pk).update(slurm_job_id=task_id)
         
         JobLog.objects.create(
             job=job,

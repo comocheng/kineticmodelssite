@@ -229,6 +229,8 @@ def start_checked_job(job, manager):
         return 'failed'
     if job.status in LIVE:
         return None
+    ClusterJob.objects.filter(pk=job.pk).update(started_by=draft.created_by)
+    job.started_by = draft.created_by
     try:
         task_id, _ = manager.start_job(job)
     except Exception as e:  # e.g. Celery's broker is down: say so on the job page, don't fail it
@@ -240,7 +242,7 @@ def start_checked_job(job, manager):
                      'Start it again.'),
         )
         return 'failed'
-    ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=task_id, started_by=draft.created_by)
+    ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=task_id)
     JobLog.objects.create(
         job=job, log_type='info', message='The files passed Check files; the import started.'
     )

@@ -132,12 +132,15 @@ class LocalJobManager:
         
         Returns (task_id, host) to match the SLURM interface.
         """
-        result = run_import_job.delay(job.id)
-
-        job.celery_task_id = result.id
+        # Pending before the task is queued: a worker can start the task (and set Running, or even
+        # finish it) before delay() returns, and a save after it would put Pending back
         job.status = ImportJobStatus.PENDING
         job.worker_pid = None  # the previous run's PID would make the job look alive
-        job.save()
+        job.save(update_fields=['status', 'worker_pid', 'updated_at'])
+
+        result = run_import_job.delay(job.id)
+        job.celery_task_id = result.id
+        ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=result.id)
 
         logger.info(f"Submitted Celery task {result.id} for job {job.name}")
         return result.id, 'localhost'
