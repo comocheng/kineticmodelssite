@@ -64,11 +64,12 @@ def write_login_required(message='Sign in to do this.'):
     return decorator
 
 
-def superuser_required(what, back_to):
+def superuser_required(action, back_to):
     """
-    Only a superuser may open the view, for GET and POST alike. An anonymous visitor is sent to
+    Only a superuser may use the view, for GET and POST alike. An anonymous visitor is sent to
     sign in and then back here; a signed-in user who is not a superuser is sent to the URL name
-    `back_to`, with a message that only a site administrator can open `what`.
+    `back_to`, with a message that only a site administrator can `action` (for example
+    'open the Importer settings').
     """
     from functools import wraps
 
@@ -79,10 +80,11 @@ def superuser_required(what, back_to):
             from django.shortcuts import redirect
 
             if not request.user.is_authenticated:
-                return sign_in_redirect(request, f'Sign in as a site administrator to open {what}.',
-                                        next_url=request.path)
+                # After signing in, a page comes back to itself; a form post goes to the last page
+                return sign_in_redirect(request, f'Sign in as a site administrator to {action}.',
+                                        next_url=request.path if request.method in ('GET', 'HEAD') else None)
             if not request.user.is_superuser:
-                messages.error(request, f'Only a site administrator can open {what}.')
+                messages.error(request, f'Only a site administrator can {action}.')
                 return redirect(back_to)
             return view(request, *args, **kwargs)
         return wrapped

@@ -3,11 +3,17 @@ Views of drafts (importer_dashboard/drafts.py), their pull requests (github.py) 
 (editor.py): the "Changes in RMG-models" panel of a job page, and its Files tab.
 """
 
+import hashlib
+import hmac
+import json
 import os
 
+from django.conf import settings
 from django.contrib import messages
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from kms.access import actor_name, sign_in_redirect, site_login_required, write_login_required
@@ -355,3 +361,43 @@ def model_create(request):
         'page_title': 'Add a model to the Importer',
     }
     return render(request, 'importer_dashboard/model_create.html', context)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def github_webhook(request):
+    """
+    The webhook of the Prometheus GitHub App. A push to the base branch of RMG-models (a merged
+    pull request) queues a fast-forward of the read copy (read_copy_sync.py); other events are
+    acknowledged and ignored. GitHub signs each delivery with the webhook secret
+    (X-Hub-Signature-256), so a request without that signature changes nothing. With no
+    GITHUB_WEBHOOK_SECRET the address is off.
+    """
+    secret = getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')
+    if not secret:
+        raise Http404('The GitHub webhook is not set up on this server.')
+    expected = 'sha256=' + hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(request.headers.get('X-Hub-Signature-256', ''), expected):
+        return JsonResponse({'error': 'The signature does not match the webhook secret.'}, status=403)
+
+    event = request.headers.get('X-GitHub-Event', '')
+    if event == 'ping':
+        return JsonResponse({'ok': True, 'message': 'Prometheus received the ping.'})
+    if event != 'push':
+        return JsonResponse({'ignored': f'{event} events are not used.'}, status=202)
+    try:
+        payload = json.loads(request.body)
+    except ValueError:
+        return JsonResponse({'error': 'The body is not JSON.'}, status=400)
+    repository = (payload.get('repository') or {}).get('full_name', '')
+    ref, wanted = payload.get('ref', ''), f'refs/heads/{drafts.base_branch()}'
+    if repository.lower() != github.repository().lower() or ref != wanted:
+        return JsonResponse({'ignored': f'A push to {ref} of {repository}; only {wanted} of '
+                                        f'{github.repository()} updates the read copy.'}, status=202)
+
+    from .tasks import sync_rmg_models_read_copy
+    try:
+        sync_rmg_models_read_copy.delay('webhook')
+    except Exception as e:  # the broker is down: Celery Beat catches up later
+        return JsonResponse({'error': f'Could not queue the update: {e}'}, status=503)
+    return JsonResponse({'queued': True, 'after': payload.get('after', '')}, status=202)

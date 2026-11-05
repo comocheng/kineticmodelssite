@@ -410,6 +410,9 @@ GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID', '')
 PUBLIC_SITE_URL = os.getenv('PUBLIC_SITE_URL', '')
 GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET', '')
 GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
+# The webhook secret of the Prometheus GitHub App. A push to RMG_MODELS_GITHUB_REPO's base branch then
+# fast-forwards the read copy (POST /importer/github/webhook/). Empty: the webhook address is off.
+GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
 # The committer of draft commits (the author is the person, when known)
 IMPORTER_GIT_NAME = os.getenv('IMPORTER_GIT_NAME', 'Prometheus Importer')
 IMPORTER_GIT_EMAIL = os.getenv('IMPORTER_GIT_EMAIL', 'importer@pr.omethe.us')
@@ -439,6 +442,13 @@ CELERY_BEAT_SCHEDULE = {
     'refresh-evidence-index': {
         'task': 'importer_dashboard.refresh_evidence_index',
         'schedule': crontab(hour=3, minute=30),
+    },
+    # The GitHub webhook brings merges to the read copy of RMG-models at once; this catches up
+    # when a delivery is lost (importer_dashboard/read_copy_sync.py)
+    'sync-rmg-models-read-copy': {
+        'task': 'importer_dashboard.sync_rmg_models_read_copy',
+        'schedule': 900.0,
+        'options': {'expires': 900},
     },
 }
 

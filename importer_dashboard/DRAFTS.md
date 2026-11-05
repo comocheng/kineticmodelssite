@@ -43,8 +43,9 @@ model's draft branch on the server, then, when someone opens a pull request, to 
    - Nothing is pushed to master directly.
 7. **After the merge.** The job page reads the pull request's state (at most every 5 minutes).
    A merged pull request closes the draft: its worktree and local branch are removed. The next
-   start opens a new draft from master. Loading the merged model into the database
-   (`import_rmg_models`, `rebuild_model_links`) is still a separate step.
+   start opens a new draft from master. The read copy follows master by itself (see
+   "Updates from GitHub"). Loading the merged model into the database (`import_rmg_models`,
+   `rebuild_model_links`) is still a separate step.
 
 ## Adding a model
 
@@ -111,6 +112,7 @@ branch. Then open the pull request.
   | `GITHUB_APP_CLIENT_SECRET` | none; required for pull requests |
   | `GITHUB_TOKEN_ENCRYPTION_KEY` | a key derived from `SECRET_KEY` |
   | `PUBLIC_SITE_URL` | none; set it to `https://pr.omethe.us`, so the callback address is the https one registered with the App |
+  | `GITHUB_WEBHOOK_SECRET` | none; the App's webhook secret. Empty: `/importer/github/webhook/` is off |
 
   For `GITHUB_TOKEN_ENCRYPTION_KEY`, make a key with
   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
@@ -129,7 +131,7 @@ A comocheng owner must do these steps.
    - Callback URL: `https://pr.omethe.us/importer/github/callback/`.
    - Select **Expire user authorization tokens**.
    - Do not select **Request user authorization (OAuth) during installation**.
-   - Webhook: off.
+   - Webhook: see "Updates from GitHub" below.
    - Repository permissions: **Contents** read and write; **Pull requests** read and write;
      **Metadata** read (it is always on).
    - Where can this App be installed: **Only on this account**.
@@ -143,6 +145,41 @@ A comocheng owner must do these steps.
 
 A user access token can do only what both the App and the person can do. People without write
 access to RMG-models see a disabled button with the reason.
+
+## Updates from GitHub
+
+When a pull request is merged into RMG-models master on GitHub, the read copy on the server moves
+to the new master by a **fast-forward only** (`importer_dashboard/read_copy_sync.py`). It is
+never merged, reset or cleaned. It is not moved, and the reason is kept, when:
+
+- the read copy is on another branch than master;
+- a tracked file has a change that nobody committed;
+- it has commits that master does not have;
+- git cannot fast-forward (for example, an untracked file is where master adds one);
+- drafts are off and an import job is running in the read copy.
+
+After a move, the evidence index is refreshed. The database is not changed (`import_rmg_models`).
+
+Three things start it:
+
+1. **The App's webhook**, within seconds of a merge. A comocheng owner sets it up:
+   - Make a secret: `python3 -c "import secrets; print(secrets.token_hex(32))"`.
+   - App settings, **General**, **Webhook**: select **Active**. Webhook URL:
+     `https://pr.omethe.us/importer/github/webhook/`. Webhook secret: the secret. Keep SSL
+     verification on.
+   - **Permissions & events**, **Subscribe to events**: select **Push**. (It uses the Contents
+     permission that the App already has.)
+   - Put the same secret in the server's `.env` as `GITHUB_WEBHOOK_SECRET`, and restart gunicorn.
+   - The webhook accepts only deliveries signed with the secret (`X-Hub-Signature-256`). It
+     answers GitHub's ping, queues the update for a push to `RMG_MODELS_GITHUB_REPO`'s
+     `RMG_MODELS_BASE_BRANCH`, and ignores other pushes and events. Its answer is under
+     **Advanced**, **Recent deliveries** in the App settings, where a delivery can be sent again.
+2. **Celery Beat, every 15 minutes**, in case a delivery is lost (`sync-rmg-models-read-copy`).
+3. **Update now** on the Importer Settings page (superusers only), which also shows the read copy's
+   branch and commit and the result of the last check.
+
+The read copy must be on master for any of these to move it. On production it is on
+`fix/sun-ch2oh-merges` until the fix branches are merged into master.
 
 ## Before the first job in a draft on production (read-only checks)
 

@@ -23,6 +23,37 @@
         <a class="app-link" href="{% url 'importer_dashboard:index' %}">← Back to import jobs</a>
     </header>
 
+    <!-- The read copy of RMG-models and its updates from GitHub (read_copy_sync.py) -->
+    <section class="app-panel im-section im-sync" aria-labelledby="im-sync-title">
+        <div class="im-sync__head">
+            <div class="im-section__head">
+                <h2 class="app-panel__title" id="im-sync-title">{% include "importer_dashboard/im_icon.html" with icon="git-branch" size=18 %}RMG-models on this server</h2>
+                <p>Merges to {{ rmg_models.github_repo }} {{ rmg_models.upstream }} reach this copy by a fast-forward only: never a merge, a reset or a discard.</p>
+            </div>
+            <form method="post" action="{% url 'importer_dashboard:git_pull' %}">
+                {% csrf_token %}
+                <button type="submit" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Update now</button>
+            </form>
+        </div>
+        <dl class="im-sync__facts">
+            <div><dt>Read copy</dt><dd><code>{{ rmg_models.path }}</code></dd></div>
+            <div><dt>Now at</dt><dd>{% if rmg_models.sha %}<code>{{ rmg_models.sha|slice:":8" }}</code> on {% if rmg_models.branch %}<code>{{ rmg_models.branch }}</code>{% else %}a detached HEAD{% endif %}{% else %}<span class="im-faint">Not a git repository</span>{% endif %}</dd></div>
+            <div><dt>GitHub webhook</dt><dd>{% if rmg_models.webhook_on %}On, at <code>{{ rmg_models.webhook_url }}</code>{% else %}Off: set <code>GITHUB_WEBHOOK_SECRET</code> in <code>.env</code> to the App's webhook secret{% endif %}</dd></div>
+            <div><dt>Also checked</dt><dd>Every 15 minutes, by Celery Beat</dd></div>
+        </dl>
+        {% with last=rmg_models.last %}
+        {% if last %}
+        <div class="im-sync__last">
+            <span class="im-status im-status--{% if last.status == 'updated' or last.status == 'current' %}completed{% elif last.status == 'refused' %}pending{% else %}failed{% endif %}">{% if last.status == 'updated' %}Updated{% elif last.status == 'current' %}Up to date{% elif last.status == 'refused' %}Not updated{% else %}Failed{% endif %}</span>
+            <p>{{ last.message }}</p>
+            <p class="im-faint">Checked {{ last.checked_at|date:"M d, Y H:i" }} ({% if last.reason == 'webhook' %}GitHub webhook{% elif last.reason == 'manual' %}Update now{% else %}every 15 minutes{% endif %}){% if last.updated_at %} · last updated {{ last.updated_at|date:"M d, Y H:i" }}{% endif %}</p>
+        </div>
+        {% else %}
+        <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" %}<span>Not checked yet. Select Update now, or wait for the next check.</span></p>
+        {% endif %}
+        {% endwith %}
+    </section>
+
     <div class="im-settings__layout">
         <!-- Settings form -->
         <form method="post" class="settings-form im-settings__form" id="settingsForm">
@@ -394,6 +425,22 @@
 {% block extra_css %}
 {% include "importer_dashboard/im_styles.html" %}
 <style>
+/* RMG-models on this server: the read copy and its last update from GitHub */
+.im-sync { margin-bottom: 24px; }
+.im-sync__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px; }
+.im-sync__head form { margin: 0; }
+.im-sync__facts { display: grid; gap: 8px; margin: 0; font-size: 13px; }
+.im-sync__facts > div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; }
+.im-sync__facts dt { font-weight: 500; color: var(--color-gray-600); }
+.im-sync__facts dd { margin: 0; color: var(--color-gray-900); overflow-wrap: anywhere; }
+.im-sync__facts code { font-size: 12px; background: none; padding: 0; color: var(--color-gray-800); }
+.im-sync__last { display: grid; justify-items: start; gap: 6px; padding: 14px 16px; border-radius: 10px; background: var(--color-gray-50); border: 1px solid var(--color-gray-200); }
+.im-sync__last p { margin: 0; font-size: 13px; color: var(--color-gray-800); }
+.im-sync__last p.im-faint { font-size: 12px; }
+@media (max-width: 575.98px) {
+    .im-sync__facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+
 /* Form beside a support column, as on the kinetic model form */
 .im-settings__layout {
     display: grid;

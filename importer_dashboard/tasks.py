@@ -400,6 +400,17 @@ def refresh_evidence_index():
     return {'status': 'ok', 'summary': summary}
 
 
+@shared_task(name='importer_dashboard.sync_rmg_models_read_copy')
+def sync_rmg_models_read_copy(reason='schedule'):
+    """
+    Fast-forward the read copy of RMG-models to GitHub's master, when that is safe
+    (importer_dashboard/read_copy_sync.py). The GitHub webhook queues it on a push to master,
+    and Celery Beat every 15 minutes.
+    """
+    from .read_copy_sync import sync
+    return sync(reason)
+
+
 @shared_task(name='importer_dashboard.ping')
 def ping(sent_at=None):
     """Lightweight probe used to measure enqueue -> worker-pickup latency.
