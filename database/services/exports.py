@@ -892,8 +892,9 @@ def _generate_chemkin_files(kinetic_model, strict=False):
 
     use_camelcase = getattr(save_chemkin_file, "__name__", "") == "saveChemkinFile"
 
+    kept_index = []
     species_map, missing_species = _build_rmg_species_map(
-        kinetic_model, NASAPolynomial, NASA, TransportData, RmgSpecies
+        kinetic_model, NASAPolynomial, NASA, TransportData, RmgSpecies, kept_index=kept_index
     )
     if strict and missing_species:
         sample = ", ".join(str(species_id) for species_id in missing_species[:5])
@@ -950,7 +951,8 @@ def _generate_chemkin_files(kinetic_model, strict=False):
         # After _write_stored_digits, which needs the entries as RMG-Py wrote them.
         if reverse:
             written = _write_reverse_rates(written, reactions, reverse)
-        reactions_content = _left_out_header(left_out, species_map, kinetic_model) + written.encode("utf-8")
+        reactions_content = (_left_out_header(left_out, species_map, kinetic_model)
+                             + _kept_index_header(kept_index) + written.encode("utf-8"))
 
         files = {f"{model_slug}_chem.inp": reactions_content}
         if transport_path:
@@ -1251,7 +1253,64 @@ def _left_out_header(left_out, species_map, kinetic_model=None):
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
-def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls):
+# RMG-Py's get_species_identifier writes a species as label(index) when that has 16 characters or
+# fewer, else formula(index), else S(index): AramcoMech 1.3's CH2CHOOHCOCH3 came out C4H7O3(29). With
+# no index (-1) it writes the label itself. CHEMKIN-III and CHEMKIN-PRO take names of up to 16
+# characters, RMG-Py's thermo writer gives the name 16 columns, and RMG-Py writes the formula for a
+# label with a character other than A-Z a-z 0-9 - _ , ( ) * # . : [ ].
+_CHEMKIN_NAME_LENGTH = 16
+_RMG_REFUSED_CHARACTER = re.compile(r"[^A-Za-z0-9\-_,()*#.:\[\]]")
+
+
+def _write_model_names(species):
+    """Write each RMG species of a download under its label, the model's name, without RMG-Py's
+    index: CH2CHOOHCOCH3, not C4H7O3(29). A species keeps what RMG-Py writes with the index
+    (label(index), else formula(index)) when its label has more than 16 characters, has a character
+    RMG-Py does not write (a SMILES name as [CH2]C=O), or would be written as another species is.
+    Each species gets index -1 and the label to write, so RMG-Py writes the label as it is, and
+    save_chemkin_file keeps the species in their order. Returns (label, written) of each species
+    that keeps the index."""
+    from collections import Counter
+    from rmgpy.chemkin import get_species_identifier
+
+    species = list(species)
+    with_index = {id(s): get_species_identifier(s) for s in species}
+    written = {id(s): s.label if (0 < len(s.label) <= _CHEMKIN_NAME_LENGTH
+                                  and not _RMG_REFUSED_CHARACTER.search(s.label)) else with_index[id(s)]
+               for s in species}
+    # A model's name that another species is written as keeps the index too: a name C2H3O(5) (names
+    # as Allen's OH(19) end in digits in brackets) and RMG-Py's C2H3O(5) for a SMILES name. Each
+    # round only moves names to the identifiers with the index, which are distinct, so it ends.
+    while True:
+        counts = Counter(written.values())
+        clash = [s for s in species if counts[written[id(s)]] > 1 and written[id(s)] != with_index[id(s)]]
+        if not clash:
+            break
+        for s in clash:
+            written[id(s)] = with_index[id(s)]
+    kept = [(s.label, written[id(s)]) for s in species if written[id(s)] != s.label]
+    for s in species:
+        s.label = written[id(s)]
+        s.index = -1
+    return kept
+
+
+def _kept_index_header(kept):
+    """CHEMKIN comment lines that name the species written with RMG-Py's index (_write_model_names)."""
+    if not kept:
+        return b""
+    lines = [f"! Prometheus writes {len(kept)} species of this model with RMG-Py's index: CHEMKIN cannot take",
+             "! the name (more than 16 characters, or a character it does not take), or another species",
+             "! of this file has that name. The model's name, then the name in this file:"]
+    lines += [f"! {label} as {written}" for label, written in kept]
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls, rmg_species_cls,
+                           kept_index=None):
+    """record id -> RMG species of the download, each under the model's name (_write_model_names),
+    and the ids of the records with no thermo. When ``kept_index`` (a list) is given, it gets
+    (the model's name, the name written) of each species written with RMG-Py's index."""
     from collections import defaultdict
     from django.db.models import F
     from database.models import Species, SpeciesName, Stoichiometry, Structure, Thermo, Transport
@@ -1289,7 +1348,9 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
         labels.add(label)
         return label
 
-    species_list = list(kinetic_model.species.all())
+    # Each record once. The many-to-many has a row per name, so a record that the model names twice
+    # came twice, and its second label got "01": Malewicki's BZCOOH01(1988) for BZCOOH and C6H5CH2OOH.
+    species_list = list(dict.fromkeys(kinetic_model.species.all()))
     # Species of the model's reactions, and their specific colliders, that the model does not name.
     reaction_species_ids = set(Stoichiometry.objects.filter(
         reaction__kinetics__kineticscomment__kinetic_model=kinetic_model
@@ -1391,6 +1452,9 @@ def _build_rmg_species_map(kinetic_model, nasa_poly_cls, nasa_cls, transport_cls
 
         species_map[db_species.id] = rmg_species
 
+    kept = _write_model_names(species_map.values())
+    if kept_index is not None:
+        kept_index.extend(kept)
     return species_map, missing_thermo
 
 
