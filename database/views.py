@@ -22,7 +22,7 @@ from rmgpy.molecule.draw import MoleculeDrawer
 
 from database import models
 from database.services import (
-    chemistry_index, curves, landing, reaction_search, rmg_matching, shared_chemistry, sub_mechanisms,
+    chemistry_index, coverage, curves, landing, reaction_search, rmg_matching, shared_chemistry, sub_mechanisms,
 )
 from database.services.chemical_identity import rates_match
 from .models import (
@@ -490,6 +490,15 @@ class KineticModelDetail(DetailView):
         # Count every model in each block, not just the one this page is filtered on.
         context["blocks"] = (models.ChemistryBlock.objects.filter(pk__in=kinetic_model.chemistry_blocks.values("pk"))
                              .select_related("origin").annotate(model_count=Count("kinetic_models")).order_by("-size")[:6])
+        # How many lines of the model's own CHEMKIN file the generated downloads have (a model with
+        # uploaded files downloads those), and whether the model's own files can be downloaded as they are.
+        summary = None if kinetic_model.chemkin_reactions_file else coverage.cached_summary(kinetic_model)
+        context["coverage"] = summary and {
+            "file": summary["file"], "complete": summary["complete"], "lines": f"{summary['lines']:,}",
+            "in_download": f"{summary['in_download']:,}",
+            "left_out": [f"{count:,} lines with {coverage.REASONS[status]}" for status, count in summary["left_out"].items()],
+        }
+        context["has_original"] = exports.has_original_files(kinetic_model)
 
         return context
 
@@ -505,6 +514,11 @@ class KineticModelDownloadView(View):
                 result = exports.build_chemkin_bundle(kinetic_model, strict=strict)
             elif format in {"cantera", "cantera-yaml", "yaml"}:
                 result = exports.build_cantera_yaml(kinetic_model, strict=strict)
+            # The original mechanism: the model's own CHEMKIN files, as written.
+            elif format == "chemkin-original":
+                result = exports.build_original_chemkin_bundle(kinetic_model)
+            elif format == "cantera-original":
+                result = exports.build_original_cantera_yaml(kinetic_model)
             else:
                 return HttpResponseBadRequest("Unknown download format.")
         except exports.ExportError as exc:
