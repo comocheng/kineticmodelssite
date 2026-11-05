@@ -101,7 +101,7 @@ contribute:
             - |-
               cat > <model>/source.txt <<'EOF'
               <authors> (<year>). <title>. <journal>. https://doi.org/<doi>
-              Obtained from <address of the model files>
+              Downloaded from <address of the model files>
               EOF
             - |-
               cat > <model>/SMILES.txt <<'EOF'

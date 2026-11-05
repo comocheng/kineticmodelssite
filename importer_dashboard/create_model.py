@@ -56,8 +56,10 @@ class NewModelForm(forms.Form):
     smiles = forms.FileField(
         required=False,
         label='SMILES.txt',
-        help_text=('Species you already know, one "name SMILES" a line. '
-                   'Leave it out to start with none.'),
+        help_text=(
+            'The species you know already, one a line: the name in the mechanism, then its SMILES. '
+            'Leave it out to start with none; see the example below.'
+        ),
     )
     citation = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3}),
@@ -67,7 +69,15 @@ class NewModelForm(forms.Form):
     doi = forms.CharField(
         required=False, label='DOI', help_text='For example 10.1016/j.proci.2018.05.116'
     )
-    url = forms.URLField(required=False, label='Where the files come from')
+    url = forms.URLField(
+        required=False,
+        label='Downloaded from',
+        help_text=(
+            'The web page you downloaded the files from, if it is not the paper (for example the '
+            "group's mechanism page). Leave it empty if the files are the paper's "
+            'supplementary material.'
+        ),
+    )
     start = forms.BooleanField(
         required=False, initial=True, label='Start the import when the files pass Check files'
     )
@@ -138,7 +148,7 @@ def source_txt(cleaned, original_names, user):
     if cleaned.get('doi'):
         lines.append(f"DOI: https://doi.org/{cleaned['doi']}")
     if cleaned.get('url'):
-        lines.append(f"Obtained from {cleaned['url']}")
+        lines.append(f"Downloaded from {cleaned['url']}")
     lines.append(
         'Original files: '
         + '; '.join(f'{ours} = {theirs}' for ours, theirs in original_names.items())
@@ -238,8 +248,10 @@ def start_checked_job(job, manager):
         JobLog.objects.create(
             job=job,
             log_type='error',
-            message=(f'The files passed Check files, but the import could not start: {e}. '
-                     'Start it again.'),
+            message=(
+                f'The files passed Check files, but the import could not start: {e}. '
+                'Start it again.'
+            ),
         )
         return 'failed'
     ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=task_id)

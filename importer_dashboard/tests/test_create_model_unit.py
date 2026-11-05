@@ -57,6 +57,10 @@ class CreatePageTests(CreateModelTestCase):
             self.assertContains(response, name)
         self.assertNotContains(response, '--port')
         self.assertContains(response, 'Create and import')
+        # SMILES.txt has an example, with the spin notation the importer reads
+        self.assertContains(response, 'What SMILES.txt looks like')
+        self.assertContains(response, 'singlet[CH2]')
+        self.assertContains(response, 'Downloaded from')
 
     def test_anonymous_visitors_are_asked_to_sign_in(self):
         self.client.logout()
@@ -79,6 +83,7 @@ class CreatePageTests(CreateModelTestCase):
         self.assertEqual(open(os.path.join(folder, 'mechanism.txt'), 'rb').read(), MECHANISM)
         source = open(os.path.join(folder, 'source.txt')).read()
         self.assertIn('DOI: https://doi.org/10.1016/j.proci.2026.101', source)
+        self.assertIn('Downloaded from https://example.org/model', source)  # as in RMG-models' source.txt files
         self.assertIn('mechanism.txt = chem.inp; thermo.txt = therm.dat; transport.txt = tran.dat', source)
         self.assertEqual(create_model.dois_in(source), {'10.1016/j.proci.2026.101'})
         script = open(os.path.join(folder, 'import.sh')).read()

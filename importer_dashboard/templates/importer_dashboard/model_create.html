@@ -47,6 +47,24 @@
                 <label class="im-create__check">{{ form.thermo_in_mechanism }} {{ form.thermo_in_mechanism.label }}</label>
                 {% include "importer_dashboard/im_create_field.html" with field=form.transport %}
                 {% include "importer_dashboard/im_create_field.html" with field=form.smiles %}
+                <details class="im-create__example">
+                    <summary>What SMILES.txt looks like</summary>
+                    <pre class="im-create__code">N2	N#N
+AR	[Ar]
+CH4	C
+H2O	O
+C2H3	[CH]=C
+CH2(S)	singlet[CH2]	! singlet methylene: [CH2] alone is the triplet
+OHV	excited[OH]	! OH(A), the excited state
+CH3CF	singletC[C]F	! Confirmed by lekia</pre>
+                    <ul class="im-create__rules">
+                        <li>One species a line: its name in the mechanism's SPECIES block, a tab or spaces, then its SMILES.</li>
+                        <li>Text after <code>!</code> is a comment. The Importer adds <code>! Confirmed by &lt;name&gt;</code> to each species it identifies.</li>
+                        <li>When the SMILES alone gives the wrong spin, write the spin in front of it: <code>singlet</code>, <code>doublet</code> or <code>triplet</code> (for example <code>singletC[C]F</code>).</li>
+                        <li>A few molecules have special names: <code>singlet[CH2]</code>, <code>triplet[CH2]</code>, <code>singletC=[C]</code>, <code>[C]</code>, <code>[O]singlet</code>, <code>excited[OH]</code>, <code>excited[CH]</code> and others in importChemkin.py.</li>
+                        <li>You can leave it out. The Importer identifies small molecules by their formula, and you confirm the others on the Importer page; each confirmation is written to SMILES.txt.</li>
+                    </ul>
+                </details>
             </fieldset>
 
             <fieldset>
@@ -70,7 +88,7 @@
                 <li><code>thermo.txt</code> your thermo file (none if the thermo is in the mechanism)</li>
                 <li><code>transport.txt</code> your transport file, if any</li>
                 <li><code>SMILES.txt</code> your SMILES.txt, or an empty one</li>
-                <li><code>source.txt</code> the citation, the DOI, where the files come from, and their original names</li>
+                <li><code>source.txt</code> the citation, the DOI, the page the files were downloaded from, and their original names</li>
                 <li><code>import.sh</code> written by Prometheus</li>
             </ul>
             <p class="im-create__text">The files are kept byte for byte. import.sh sets no port: the Importer gives each run a free one.</p>
@@ -96,6 +114,9 @@
 .im-create__side { display: grid; gap: 10px; padding: 20px 22px; }
 .im-create__files { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
 .im-create__text { margin: 0; font-size: 13px; color: var(--color-gray-600); }
+.im-create__example summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--color-primary); }
+.im-create__example .im-create__code { margin-top: 8px; tab-size: 10; }
+.im-create__rules { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--color-gray-600); display: grid; gap: 4px; }
 .im-create__code { margin: 0; font-size: 12px; white-space: pre; overflow-x: auto; padding: 10px; border-radius: 6px; background: var(--color-gray-50, #f9fafb); }
 </style>
 {% endblock %}
