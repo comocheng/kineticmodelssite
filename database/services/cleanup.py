@@ -378,7 +378,7 @@ def merge_groups(groups, log=print, report=None):
 # ---------------------------------------------------------------------------
 
 def variant_column():
-    """Whether database_species still has the variant column (migration 0021 removes it)."""
+    """Whether database_species still has the variant column (migration 0022 removes it)."""
     from django.db import connection
     with connection.cursor() as cursor:
         return "variant" in {c.name for c in connection.introspection.get_table_description(
@@ -492,7 +492,7 @@ def model_links(model):
     and kinetics links (with the later names each writes, see link_names)."""
     kinetics = list(db.KineticsComment.objects.filter(kinetic_model=model)
                     .values("id", "kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key",
-                            "comment", "reversible"))
+                            "comment", "reversible", "reverse_rate"))
     names = link_names([k["id"] for k in kinetics])
     for k in kinetics:
         k["names"] = names.get(k.pop("id"), ())
@@ -729,10 +729,11 @@ def rebuild_model_links(model, thermo_path, kinetics_path):
         db.ThermoComment(thermo_id=t["thermo_id"], kinetic_model=model, comment=t["comment"],
                          species_name_id=name_rows.get((t["thermo__species_id"], t["name"])) if t["name"] else None)
         for t in keep_thermo.values()])
-    # A kept link keeps its arrow too: its library entry failed, so nothing can set it again.
+    # A kept link keeps its arrow and the model's reverse rate too: its library entry failed, so
+    # nothing can set them again (the importer set the reverse rates before these links came back).
     kept_links = db.KineticsComment.objects.bulk_create([
         db.KineticsComment(kinetics_id=k["kinetics_id"], kinetic_model=model, comment=k["comment"][:1000],
-                           reversible=k["reversible"])
+                           reversible=k["reversible"], reverse_rate=k["reverse_rate"])
         for k in keep_kinetics.values()])
     db.KineticsCommentName.objects.bulk_create([
         db.KineticsCommentName(kinetics_comment=link, species_name_id=first_row[name], reactant=reactant)

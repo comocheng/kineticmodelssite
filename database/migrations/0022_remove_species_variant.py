@@ -16,7 +16,7 @@ def no_variant_records(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("database", "0020_model_level_names"),
+        ("database", "0021_model_level_names"),
     ]
 
     operations = [

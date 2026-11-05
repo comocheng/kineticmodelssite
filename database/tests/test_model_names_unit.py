@@ -8,6 +8,7 @@ link that writes the later name names it, so the downloads give back the model a
 """
 import hashlib
 import os
+import re
 import shutil
 import tempfile
 from unittest import mock
@@ -18,6 +19,7 @@ from rmgpy.molecule import Molecule
 
 from chemked_database.species_links import _by_standard_inchi, standard_inchi
 from database import models as db
+from database.scripts import explicit_reverse
 from database.scripts import import_rmg_models as importer
 from database.scripts.import_rmg_models import (
     get_or_create_species, get_reaction_hash, get_species_hash, import_kinetics, import_thermo)
@@ -367,6 +369,78 @@ class ModelNamesExportTests(TestCase):
                          f"{names['furop1']} + {names['H']} <=> {names['CH2CO']} + {names['C2H3']}",
                          f"{names['furop2']} + {names['H']} <=> {names['CH2CO']} + {names['C2H3']}"):
             self.assertIn(sides(equation), equations)
+
+
+# The model's CHEMKIN file: each line of a name has its own REV, also where the forward rates are one.
+REV_CHEMKIN = """ELEMENTS C H O END
+SPECIES furop1 furop2 H CH2CO C2H3 C2H4 END
+REACTIONS
+furop1<=>furop2            1.000E+12   0.000  30000.0
+    REV / 3.0E+11 0.0 28000.0 /
+furop1+H<=>CH2CO+C2H3      1.000E+13   0.000   2000.0
+    REV / 1.0E+11 0.0 1000.0 /
+furop2+H<=>CH2CO+C2H3      1.000E+13   0.000   2000.0
+    REV / 5.0E+11 0.0 1500.0 /
+END
+"""
+
+
+class ModelNamesReverseRateTests(TestCase):
+    """The model's REV of a line goes to the link of that line's names: furop1 + H and furop2 + H
+    are one reaction record with one rate row, and each link keeps its own REV."""
+
+    @classmethod
+    def setUpTestData(cls):
+        directory = tempfile.mkdtemp()
+        try:
+            cls.model = db.KineticModel.objects.create(model_name="m")
+            rate = REACTIONS[1][1]
+            reactions = (REACTIONS[0], ("furop1 + H <=> CH2CO + C2H3", rate), ("furop2 + H <=> CH2CO + C2H3", rate))
+            thermo_path, kinetics_path = model_folder(directory, "m", reactions=reactions)
+            folder = os.path.join(directory, "m")
+            with open(os.path.join(folder, "import.sh"), "w") as handle:
+                handle.write("python import.py \\\n\t--species chem.inp \\\n\t--reactions chem.inp \\\n")
+            with open(os.path.join(folder, "chem.inp"), "w") as handle:
+                handle.write(REV_CHEMKIN)
+            import_thermo(thermo_path, cls.model, MODELS)
+            cls.counts = import_kinetics(kinetics_path, cls.model, MODELS)
+            cls.report = explicit_reverse.attach(cls.model, folder, MODELS, apply=False)
+        finally:
+            shutil.rmtree(directory)
+
+    def link(self, equation):
+        return db.KineticsComment.objects.get(
+            kinetic_model=self.model, comment=f"The chemkin file reaction is {equation}")
+
+    def rev(self, equation):
+        (term,) = self.link(equation).reverse_rate["terms"]
+        return term["line"], term["arrhenius"]["a"], term["arrhenius"]["e"]
+
+    def test_each_name_keeps_its_own_rev(self):
+        self.assertEqual(self.counts["reverse_rates"], 3)
+        one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
+        self.assertEqual(one.kinetics_id, two.kinetics_id)
+        # The line of the reaction each REV is written under.
+        self.assertEqual(self.rev("furop1 + H <=> CH2CO + C2H3"), (6, 1e11, 1000.0))
+        self.assertEqual(self.rev("furop2 + H <=> CH2CO + C2H3"), (8, 5e11, 1500.0))
+        self.assertEqual(self.rev("furop1 <=> furop2"), (4, 3e11, 28000.0))
+        # Reading the file again gives the same REVs to the same links.
+        self.assertEqual((self.report["set"], self.report["cleared"], self.report["unchanged"]), (0, 0, 3))
+        self.assertEqual(self.report["status"], {"matched": 3})
+
+    def test_the_chemkin_export_writes_each_rev_after_its_names(self):
+        files = exports._generate_chemkin_files(self.model)
+        (text,) = [v.decode() for k, v in files.items() if k.endswith("_chem.inp")]
+        lines = text.split("REACTIONS", 1)[1].splitlines()
+        key = lambda equation: tuple(tuple(sorted(side.split("+"))) for side in equation.split("<=>"))
+        after = {}
+        for number, line in enumerate(lines):
+            if "=" in line.split("!", 1)[0] and not line.lstrip().upper().startswith("REV"):
+                rev = next((x for x in lines[number + 1:number + 4] if x.strip().upper().startswith("REV")), None)
+                after[key(re.sub(r"\(\d+\)", "", line.split()[0]))] = rev.split("/")[1].split()[0] if rev else None
+        self.assertEqual(after[key("furop1+H<=>CH2CO+C2H3")], "1e+11")
+        self.assertEqual(after[key("furop2+H<=>CH2CO+C2H3")], "5e+11")
+        self.assertEqual(after[key("furop1<=>furop2")], "3e+11")
 
 
 class FoldVariantsTests(TestCase):

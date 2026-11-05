@@ -281,7 +281,9 @@ class SpeciesDetail(DetailView):
         context["names_models"] = sorted(list(names_models.items()), key=lambda x: -len(x[1]))
         context["adjlists"] = structures.values_list("adjacency_list", flat=True)
         context["smiles"] = structures.values_list("smiles", flat=True)
-        context["thermo_list"] = Thermo.objects.filter(species=species)
+        # Only the models' own entries: the polynomials fitted to reference records are listed
+        # under "Thermochemistry sources" (thermo_records below).
+        context["thermo_list"] = Thermo.objects.filter(species=species, provider_record__isnull=True).order_by("pk")
         # Include records matched through a resonance form drawn under another isomer,
         # and the ATcT-constrained thermo derived from any of them.
         shown = models.ThermoRecord.objects.filter(

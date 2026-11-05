@@ -173,6 +173,26 @@ class NASARecordTests(TestCase):
         self.assertContains(page, "Burcat")
         self.assertContains(page, "Source record and provenance")
 
+    def test_thermo_datasets_list_only_model_entries(self):
+        record = sources.save_record(Molecule().from_smiles("C"), provider="burcat", external_id="test:methane",
+                                     source_version="test", label="Methane", nasa=nasa_fixture(),
+                                     enthalpy_298=-73000)
+        species = record.species
+        page = self.client.get(reverse("species-detail", args=[species.pk]))
+        # A reference polynomial alone gives no "Thermo datasets" section; it is a thermochemistry source.
+        self.assertNotContains(page, 'id="spd-datasets"')
+        self.assertContains(page, "Burcat")
+        model = models.KineticModel.objects.create(model_name="Test model")
+        own = models.Thermo.objects.create(species=species, coeffs_poly1=[4, 0, 0, 0, 0, -9000, 1],
+                                           coeffs_poly2=[4, 0, 0, 0, 0, -9000, 1], temp_min_1=200,
+                                           temp_max_1=1000, temp_min_2=1000, temp_max_2=3000)
+        models.ThermoComment.objects.create(thermo=own, kinetic_model=model)
+        page = self.client.get(reverse("species-detail", args=[species.pk]))
+        self.assertEqual(list(page.context["thermo_list"]), [own])
+        self.assertContains(page, 'id="spd-datasets"')
+        self.assertContains(page, reverse("thermo-detail", args=[own.pk]))
+        self.assertNotContains(page, "No kinetic model")
+
     def test_invalid_polynomial_rolls_back_species_creation(self):
         bad = nasa_fixture()
         bad.polynomials[1].Tmin = (1100, "K")
