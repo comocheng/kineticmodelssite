@@ -2,7 +2,7 @@
 {% comment %}
 Breadcrumb, title, actions and tabs of one import job, from the Figma "Prometheus · Importer failed
 job" (182:4610 and 182:4623). Include it with current="overview", "log" or "errors". The overview
-carries the job actions; the two log pages carry a Refresh button instead.
+carries the job actions; the log pages carry a Refresh button instead, and the Files page none.
 {% endcomment %}
 <nav aria-label="Breadcrumb">
     <ol class="im-crumbs">
@@ -12,7 +12,7 @@ carries the job actions; the two log pages carry a Refresh button instead.
         <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Job {{ job.id }}</span></li>
         {% else %}
         <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'importer_dashboard:job_detail' job.id %}">Job {{ job.id }}</a></li>
-        <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{% if current == "log" %}RMG log{% else %}Error log{% endif %}</span></li>
+        <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{% if current == "log" %}RMG log{% elif current == "files" %}Files{% else %}Error log{% endif %}</span></li>
         {% endif %}
     </ol>
 </nav>
@@ -56,7 +56,7 @@ carries the job actions; the two log pages carry a Refresh button instead.
             </button>
         </form>
         {% endif %}
-        {% else %}
+        {% elif current != "files" %}
         <button type="button" class="im-btn" onclick="location.reload()">
             {% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh
         </button>
@@ -68,4 +68,5 @@ carries the job actions; the two log pages carry a Refresh button instead.
     <a class="im-tab{% if current == 'overview' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_detail' job.id %}"{% if current == 'overview' %} aria-current="page"{% endif %}>Overview</a>
     <a class="im-tab{% if current == 'log' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_log' job.id %}"{% if current == 'log' %} aria-current="page"{% endif %}>RMG log</a>
     <a class="im-tab{% if current == 'errors' %} is-active{% endif %}" href="{% url 'importer_dashboard:job_error_log' job.id %}"{% if current == 'errors' %} aria-current="page"{% endif %}>Error log</a>
+    <a class="im-tab{% if current == 'files' %} is-active{% endif %}" href="{% url 'importer_dashboard:draft_files' job.id %}"{% if current == 'files' %} aria-current="page"{% endif %}>Files</a>
 </nav>

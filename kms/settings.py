@@ -389,6 +389,28 @@ IMPORTER_PORT_RANGE = (8100, 8999)
 IMPORTER_EVIDENCE_INDEX = os.getenv('IMPORTER_EVIDENCE_INDEX',
                                     os.path.join(os.path.dirname(RMG_MODELS_PATH), 'evidence_index.sqlite'))
 
+# Drafts (importer_dashboard/drafts.py): each import job runs in its model's own git worktree of
+# RMG-models, on branch importer/<folder>/<id> from RMG_MODELS_REMOTE/RMG_MODELS_BASE_BRANCH, and
+# its identifications are committed there. RMG_MODELS_PATH stays the read copy. Turn drafts off
+# with IMPORTER_WORKSPACES=false (jobs then run in the read copy and nothing is committed).
+IMPORTER_WORKSPACES = os.getenv('IMPORTER_WORKSPACES', 'true').lower() in ('1', 'true', 'yes', 'on')
+RMG_MODELS_WORKSPACES_PATH = os.getenv('RMG_MODELS_WORKSPACES_PATH',
+                                       os.path.join(os.path.dirname(RMG_MODELS_PATH), 'RMG-models-drafts'))
+RMG_MODELS_REMOTE = os.getenv('RMG_MODELS_REMOTE', 'origin')
+RMG_MODELS_BASE_BRANCH = os.getenv('RMG_MODELS_BASE_BRANCH', 'master')
+RMG_MODELS_GITHUB_REPO = os.getenv('RMG_MODELS_GITHUB_REPO', 'comocheng/RMG-models')
+# The Prometheus GitHub App: people connect their own GitHub account and open pull requests of
+# drafts with it (importer_dashboard/github.py, importer_dashboard/SETUP.md). The App needs
+# Contents and Pull requests (read and write) on RMG_MODELS_GITHUB_REPO, and the callback URL
+# https://<host>/importer/github/callback/. The tokens are encrypted with
+# GITHUB_TOKEN_ENCRYPTION_KEY (a Fernet key), or with a key derived from SECRET_KEY.
+GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID', '')
+GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET', '')
+GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
+# The committer of draft commits (the author is the person, when known)
+IMPORTER_GIT_NAME = os.getenv('IMPORTER_GIT_NAME', 'Prometheus Importer')
+IMPORTER_GIT_EMAIL = os.getenv('IMPORTER_GIT_EMAIL', 'importer@pr.omethe.us')
+
 # 'local' = Celery on office server, 'cluster' = SSH/SLURM on Explorer
 IMPORTER_MODE = 'local'
 

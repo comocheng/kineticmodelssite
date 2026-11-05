@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+{# Edit one text file of a job's draft: preview the change against the draft, then commit it #}
+
+{% block title %}{{ name }} | {{ job.name }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-job">
+
+    {% include "importer_dashboard/im_job_header.html" with current="files" %}
+
+    <section class="app-panel im-edit" aria-labelledby="im-edit-title">
+        <div class="im-edit__head">
+            <h2 class="app-panel__title" id="im-edit-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}{{ name }}{% if is_new %} (new){% endif %}</h2>
+            <span class="app-panel__meta">{{ draft.model_folder }} · branch <code>{{ draft.branch }}</code> · {{ encoding }}, {{ newline }} line ends (kept on save)</span>
+        </div>
+
+        {% for e in errors %}<p class="im-edit__error">{{ e }}</p>{% endfor %}
+        {% for w in warnings|slice:":20" %}<p class="im-edit__warning">{{ w }}</p>{% endfor %}
+        {% if warnings|length > 20 %}<p class="im-edit__warning">... and {{ warnings|length|add:"-20" }} more.</p>{% endif %}
+
+        {% if preview is not None %}
+        <div>
+            <h3 class="im-edit__sub">Your change</h3>
+            {% if preview %}
+            <pre class="im-edit__diff">{% for line in preview %}<span class="{% if line|slice:':1' == '+' %}is-added{% elif line|slice:':1' == '-' %}is-removed{% elif line|slice:':2' == '@@' %}is-hunk{% endif %}">{{ line }}</span>
+{% endfor %}</pre>
+            {% else %}<p class="im-edit__text">No change.</p>{% endif %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="im-edit__form">
+            {% csrf_token %}
+            <label for="im-edit-content" class="visually-hidden">Contents of {{ name }}</label>
+            <textarea id="im-edit-content" name="content" spellcheck="false" wrap="off" rows="28"{% if editing_blocked %} readonly{% endif %}>
+{{ text }}</textarea>
+            {% if not editing_blocked %}
+            <label class="im-edit__message">What you changed (the commit message)
+                <input type="text" name="message" value="{{ message }}" required placeholder="e.g. CH2(S) is singlet methylene, as in the authors' thermo comments">
+            </label>
+            <div class="im-edit__actions">
+                <button type="submit" name="action" value="preview" class="im-btn">Preview the change</button>
+                {% if preview is not None and preview and not errors %}
+                <button type="submit" name="action" value="save" class="app-btn">Commit</button>
+                {% endif %}
+                <a href="{% url 'importer_dashboard:draft_files' job.id %}">Back to the files</a>
+            </div>
+            {% endif %}
+        </form>
+    </section>
+</div>
+
+<style>
+.im-edit { display: grid; gap: 12px; }
+.im-edit__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.im-edit__sub { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.im-edit__text { margin: 0; font-size: 14px; color: var(--color-gray-600); }
+.im-edit__error { margin: 0; color: var(--color-danger, #b42318); font-size: 14px; }
+.im-edit__warning { margin: 0; color: var(--color-warning-700, #b54708); font-size: 13px; }
+.im-edit__form { display: grid; gap: 10px; }
+.im-edit__form textarea { width: 100%; min-height: 24rem; font-family: var(--app-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px; line-height: 1.45; padding: 10px; border: 1px solid var(--color-gray-300, #d0d5dd); border-radius: 8px; tab-size: 8; white-space: pre; }
+.im-edit__message { display: grid; gap: 4px; font-size: 13px; font-weight: 500; }
+.im-edit__message input { padding: 6px 8px; border: 1px solid var(--color-gray-300, #d0d5dd); border-radius: 6px; font: inherit; }
+.im-edit__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.im-edit__diff { margin: 0; max-height: 24rem; overflow: auto; font-size: 12px; white-space: pre; padding: 8px; border-radius: 6px; background: var(--color-gray-50, #f9fafb); }
+.im-edit__diff .is-added { color: var(--color-success, #067647); }
+.im-edit__diff .is-removed { color: var(--color-danger, #b42318); }
+.im-edit__diff .is-hunk { color: var(--color-gray-500); }
+</style>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+{% endblock %}

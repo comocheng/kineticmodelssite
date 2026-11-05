@@ -66,17 +66,53 @@ def apply_progress(job, progress):
     return True
 
 
+def reset_progress(job):
+    """Set the job's counts to zero, so a new run shows none of the counts of the run before it."""
+    for field in PROGRESS_FIELDS:
+        setattr(job, field, 0)
+    job.save(update_fields=PROGRESS_FIELDS)
+
+
 def read_importer_state(job_path):
     """What the importer last reported doing, as a dict ({} if it never wrote the file)."""
     return _read_json(os.path.join(job_path, STATE_FILE)) or {}
 
 
 def clear_importer_state(job_path):
-    """Remove the state file left by an earlier run, so it isn't mistaken for the new run's."""
-    try:
-        os.remove(os.path.join(job_path, STATE_FILE))
-    except FileNotFoundError:
-        pass
+    """
+    Remove the state and progress files left by an earlier run, so they aren't mistaken for the
+    new run's. Without this, a run that fails before it writes progress.json shows the counts of
+    the run before it (for example 253 of 253 identified, next to Failed).
+    """
+    for path in (os.path.join(job_path, STATE_FILE),
+                 os.path.join(job_path, PROGRESS_FILE),
+                 os.path.join(job_path, 'RMG-Py-output', PROGRESS_FILE)):
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+
+
+def outcome_from_state(state):
+    """
+    How an importer that no longer runs ended, from the state it last reported in
+    importer_state.json: (ImportJobStatus value, log type, message).
+    """
+    from .models import ImportJobStatus
+
+    last_state = state.get('state')
+    if last_state == 'finished':
+        return ImportJobStatus.COMPLETED, 'info', 'Import job completed successfully'
+    if last_state == 'stopped':
+        return (ImportJobStatus.CANCELLED, 'info',
+                'Stopped with the Kill job button on the importer page')
+    if state.get('error'):
+        reason = f": {state['error']}"
+    elif last_state:
+        reason = f" (the last thing it reported was {last_state!r})"
+    else:
+        reason = ' before it reported anything'
+    return ImportJobStatus.FAILED, 'error', f'The importer stopped unexpectedly{reason}.'
 
 
 def is_process_alive(pid, expect_in_cmdline=None):

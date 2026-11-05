@@ -1,5 +1,6 @@
 from django.urls import path
 from database import views
+from importer_dashboard import draft_views as importer_draft_views
 
 urlpatterns = [
     path(r"", views.BaseView.as_view(), name="home"),
@@ -58,7 +59,8 @@ urlpatterns = [
     path(r"rmg/library/<str:kind>/<path:name>", views.RMGLibraryDetail.as_view(), name="rmg-library-detail"),
     path(r"rmg/families/", views.RMGFamilyList.as_view(), name="rmg-family-list"),
     path(r"rmg/family/<str:name>", views.RMGFamilyDetail.as_view(), name="rmg-family-detail"),
-    path(r"kineticmodel/create/", views.KineticModelCreateView.as_view(), name="kinetic-model-create"),
+    # A new model goes into a draft of RMG-models and through the Importer, not into the database
+    path(r"kineticmodel/create/", importer_draft_views.model_create, name="kinetic-model-create"),
     path(r"kineticmodel/<int:pk>/edit/", views.KineticModelUpdateView.as_view(), name="kinetic-model-update"),
     path(r"kineticmodel/<int:pk>/delete/", views.KineticModelDeleteView.as_view(), name="kinetic-model-delete"),
     

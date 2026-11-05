@@ -163,6 +163,11 @@ class ClusterJob(models.Model):
     config = models.ForeignKey('ImportJobConfig', on_delete=models.SET_NULL, 
                               null=True, blank=True,
                               help_text="Configuration used for this job")
+
+    # The draft (git branch and worktree of RMG-models) the job runs in; None runs it in the
+    # read copy at settings.RMG_MODELS_PATH, as before drafts
+    draft = models.ForeignKey('Draft', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='jobs', help_text="Draft the job runs in")
     
     # Progress Tracking (matches progress_json() from importChemkin.py)
     total_species = models.IntegerField(default=0)
@@ -225,25 +230,32 @@ class ClusterJob(models.Model):
             return 0
         return int((self.identified_species / self.total_species) * 100)
     
+    # These save only the fields they change: a full save of an object read earlier would put
+    # back counts or a status that the Celery task or the status refresh changed since
+
     def mark_as_running(self, host=None):
         """Mark job as running"""
         self.status = ImportJobStatus.RUNNING
         self.host = host
         if not self.started_at:
             self.started_at = timezone.now()
-        self.save()
-    
+        self.save(update_fields=['status', 'host', 'started_at', 'updated_at'])
+
     def mark_as_completed(self):
         """Mark job as completed"""
         self.status = ImportJobStatus.COMPLETED
         self.completed_at = timezone.now()
-        self.save()
-    
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
+
     def mark_as_failed(self):
         """Mark job as failed"""
         self.status = ImportJobStatus.FAILED
         self.completed_at = timezone.now()
-        self.save()
+        self.save(update_fields=['status', 'completed_at', 'updated_at'])
+
+    def drafts_closed(self):
+        """Earlier drafts of this job's model folder that were merged or discarded, newest first."""
+        return Draft.objects.filter(model_folder=self.name).exclude(status=DraftStatus.OPEN).order_by('-updated_at')
 
     @property
     def ood_url(self):
@@ -254,6 +266,90 @@ class ClusterJob(models.Model):
             return None
         # OOD expects a trailing slash after port
         return f"{self.config.ood_base_url}/{self.host}/{self.port}/"
+
+
+class DraftStatus(models.TextChoices):
+    OPEN = 'open', 'Open'
+    MERGED = 'merged', 'Merged'
+    DISCARDED = 'discarded', 'Discarded'
+
+
+class Draft(models.Model):
+    """
+    A model's work in progress: a git branch of RMG-models with its own worktree on the server.
+    Import jobs run in it, and the identifications they make are committed to the branch
+    (importer_dashboard/drafts.py). A model folder has at most one open draft.
+    """
+    model_folder = models.CharField(max_length=500, help_text="Folder in RMG-models, e.g. PCI2019/555-Sun")
+    branch = models.CharField(max_length=255, blank=True)
+    base_branch = models.CharField(max_length=255, blank=True, help_text="Branch the draft started from")
+    base_sha = models.CharField(max_length=40, blank=True, help_text="Commit the draft started from")
+    path = models.CharField(max_length=1000, blank=True, help_text="Worktree on the server")
+    status = models.CharField(max_length=20, choices=DraftStatus.choices, default=DraftStatus.OPEN)
+    is_new_model = models.BooleanField(default=False, help_text="The model is not in RMG-models yet")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='importer_drafts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_checkpoint_at = models.DateTimeField(null=True, blank=True)
+    # Start the job of this draft when Check files passes (the create page)
+    start_job_after_check = models.BooleanField(default=False)
+
+    # Its pull request on GitHub (importer_dashboard/github.py)
+    pr_number = models.IntegerField(null=True, blank=True)
+    pr_url = models.URLField(blank=True)
+    pr_state = models.CharField(max_length=20, blank=True, help_text="open, closed or merged")
+    last_pushed_sha = models.CharField(max_length=40, blank=True,
+                                       help_text="The commit the last push sent to GitHub")
+    pushed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='importer_pushes')
+    pushed_at = models.DateTimeField(null=True, blank=True)
+    pr_checked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(fields=['model_folder'], condition=models.Q(status='open'),
+                                    name='one_open_draft_per_model_folder'),
+        ]
+
+    def __str__(self):
+        return f"{self.model_folder} ({self.branch or 'no branch'}, {self.status})"
+
+    @property
+    def is_open(self):
+        return self.status == DraftStatus.OPEN
+
+
+class GitHubAccount(models.Model):
+    """
+    A Prometheus user's GitHub account, linked through the Prometheus GitHub App. Its user access
+    token acts as that person, and only where both the App and the person have access, so pull
+    requests and pushes carry their name and nobody shares a token. The tokens are stored
+    encrypted (importer_dashboard/github.py) and are never shown, logged or put in a URL.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='github_account')
+    github_id = models.BigIntegerField(unique=True)
+    login = models.CharField(max_length=100)
+    name = models.CharField(max_length=255, blank=True)
+    access_token = models.TextField(help_text="Encrypted")
+    access_token_expires_at = models.DateTimeField(null=True, blank=True)
+    refresh_token = models.TextField(blank=True, help_text="Encrypted")
+    refresh_token_expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"@{self.login} ({self.user.username})"
+
+    @property
+    def commit_name(self):
+        return self.name or self.login
+
+    @property
+    def commit_email(self):
+        """GitHub's noreply address: commits count for the account without showing its email."""
+        return f"{self.github_id}+{self.login}@users.noreply.github.com"
 
 
 class PortReservation(models.Model):
