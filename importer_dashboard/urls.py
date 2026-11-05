@@ -3,7 +3,7 @@ URL configuration for the importer dashboard
 """
 
 from django.urls import path
-from . import views
+from . import draft_views, views
 
 app_name = 'importer_dashboard'
 
@@ -17,11 +17,14 @@ urlpatterns = [
     path('job/<int:job_id>/kill/', views.job_kill, name='job_kill'),
     path('job/<int:job_id>/log/', views.job_log_view, name='job_log'),
     path('job/<int:job_id>/error-log/', views.job_error_log_view, name='job_error_log'),
-    path('job/<int:job_id>/draft/discard/', views.draft_discard, name='draft_discard'),
-    path('job/<int:job_id>/draft/pull-request/', views.draft_pull_request, name='draft_pull_request'),
-    path('github/connect/', views.github_connect, name='github_connect'),
-    path('github/callback/', views.github_callback, name='github_callback'),
-    path('github/disconnect/', views.github_disconnect, name='github_disconnect'),
+    path('job/<int:job_id>/draft/discard/', draft_views.draft_discard, name='draft_discard'),
+    path('job/<int:job_id>/draft/pull-request/', draft_views.draft_pull_request, name='draft_pull_request'),
+    path('job/<int:job_id>/draft/open/', draft_views.draft_open, name='draft_open'),
+    path('job/<int:job_id>/files/', draft_views.draft_files, name='draft_files'),
+    path('job/<int:job_id>/files/<path:name>', draft_views.draft_file_edit, name='draft_file_edit'),
+    path('github/connect/', draft_views.github_connect, name='github_connect'),
+    path('github/callback/', draft_views.github_callback, name='github_callback'),
+    path('github/disconnect/', draft_views.github_disconnect, name='github_disconnect'),
     
     # Dashboard actions
     path('refresh-jobs/', views.refresh_jobs, name='refresh_jobs'),

@@ -22,9 +22,12 @@ from importer_dashboard.tasks import run_import_job
 GIT_ID = ['-c', 'user.name=Richard West', '-c', 'user.email=r.west@example.org']
 
 # A stand-in for importChemkin.py: confirms CH4 (appends to SMILES.txt, as save_match_to_file
-# does), writes the thermo library, reports 'finished' and exits.
+# does), writes the thermo library, reports 'finished' and exits. With --minimal it only exits.
 FAKE_IMPORTER = """#!{python}
-import json, os
+import json, os, sys
+if '--minimal' in sys.argv:  # Check files: read the files and stop
+    print('Read species, thermo and reactions; the file BAD makes this fail')
+    sys.exit(1 if os.path.exists('BAD') else 0)
 with open('SMILES.txt', 'a') as f:
     f.write('CH4\\tC\\t! Confirmed by lekia\\n')
 os.makedirs('RMG-Py-thermo-library', exist_ok=True)
@@ -245,10 +248,14 @@ class JobInDraftTests(DraftTestCase):
         self.assertFalse(os.path.exists(os.path.join(self.read, self.model, 'output.log')))
         self.assertEqual(out('status', '--short', cwd=self.read), '')
         # Its identification and library are on the draft's branch, by the person who started it
-        shown = out('show', '--format=%an%n%s', '--name-only', draft.branch, cwd=self.read).splitlines()
-        self.assertEqual(shown[0], 'Lekia Prosper')
-        self.assertEqual(shown[1], f'{self.model}: identify 1 species, update the RMG libraries')
-        self.assertIn(f'{self.model}/RMG-Py-thermo-library/ThermoLibrary.py', shown)
+        # (one commit, or two when the task's checkpoint commits SMILES.txt before the run ends)
+        log = out('log', '--format=%an|%s', f'{draft.base_sha}..{draft.branch}', cwd=self.read).splitlines()
+        self.assertEqual({entry.split('|')[0] for entry in log}, {'Lekia Prosper'})
+        subjects = ', '.join(entry.split('|')[1] for entry in reversed(log))
+        self.assertIn('identify 1 species', subjects)
+        self.assertIn('update the RMG libraries', subjects)
+        changed = out('diff', '--name-only', draft.base_sha, draft.branch, cwd=self.read).splitlines()
+        self.assertIn(f'{self.model}/RMG-Py-thermo-library/ThermoLibrary.py', changed)
         self.assertIn('CH4\tC\t! Confirmed by lekia', out('show', f'{draft.branch}:{self.model}/SMILES.txt', cwd=self.read))
 
         response = self.client.get(reverse('importer_dashboard:job_detail', args=[self.job.id]))

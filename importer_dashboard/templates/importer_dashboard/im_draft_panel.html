@@ -64,6 +64,7 @@ importer_dashboard/drafts.py), what it changes, and its actions. Include it on t
         <button type="button" class="app-btn" disabled aria-describedby="im-pr-reason">{{ pull_request.label }}</button>
         <span class="im-draft__reason" id="im-pr-reason">{{ pull_request.reason }}</span>
         {% endif %}
+        <a class="im-btn" href="{% url 'importer_dashboard:draft_files' job.id %}">{% include "importer_dashboard/im_icon.html" with icon="file" %}Files</a>
         {% if draft.pr_url %}
         <a class="im-btn" href="{{ draft.pr_url }}" target="_blank" rel="noopener">{% include "importer_dashboard/im_icon.html" with icon="external" %}Pull request #{{ draft.pr_number }}{% if draft.pr_state and draft.pr_state != 'open' %} ({{ draft.pr_state }}){% endif %}</a>
         {% endif %}

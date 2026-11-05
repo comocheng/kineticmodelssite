@@ -46,6 +46,29 @@ model's draft branch on the server, then, when someone opens a pull request, to 
    start opens a new draft from master. Loading the merged model into the database
    (`import_rmg_models`, `rebuild_model_links`) is still a separate step.
 
+## Editing a model's files
+
+The **Files** tab of a job lists the files of its draft. If the job has no draft, select **Open a
+draft to edit the files**.
+
+- `SMILES.txt`, `source.txt` and the CHEMKIN files, up to 5 MB each, are edited in the browser:
+  1. Select **Preview the change** to see the diff.
+  2. Select **Commit**. The commit message is required, and the commit is on the draft's branch,
+     with your name.
+  - A file keeps its encoding (UTF-8 or Latin-1) and its line ends (LF or CRLF).
+  - Before a `SMILES.txt` is saved, its format is checked: two words per line, no species given
+    two SMILES. Names that are not species of the mechanism give a warning.
+- Larger files, and new files (for example `transport.txt`), are uploaded. The file is kept
+  byte for byte.
+- `import.sh`, the RMG-Py libraries and the files the importer writes are not edited here.
+- While the job is pending, running or awaiting input, the files can be read but not changed.
+- **Check files** runs `importChemkin.py --minimal` on the draft. It reads the species, thermo,
+  `SMILES.txt` (formulas and spin notation, with the importer's own rules) and reactions, then
+  stops. Its log goes outside the model folder, so the job's `RMG.log` stays.
+
+When the files are ready, start the job from the same page. Its identifications go to the same
+branch. Then open the pull request.
+
 ## Server set-up
 
 - The read copy must have the remote `origin` = `comocheng/RMG-models`, and must be able to
