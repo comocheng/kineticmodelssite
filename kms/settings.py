@@ -399,6 +399,9 @@ RMG_MODELS_WORKSPACES_PATH = os.getenv('RMG_MODELS_WORKSPACES_PATH',
 RMG_MODELS_REMOTE = os.getenv('RMG_MODELS_REMOTE', 'origin')
 RMG_MODELS_BASE_BRANCH = os.getenv('RMG_MODELS_BASE_BRANCH', 'master')
 RMG_MODELS_GITHUB_REPO = os.getenv('RMG_MODELS_GITHUB_REPO', 'comocheng/RMG-models')
+# Each import job's output.log, error.log and a copy of RMG.log, in <path>/<job id>/ (importer_dashboard/
+# job_logs.py). Default: importer-logs next to the read copy of RMG-models.
+IMPORTER_LOGS_PATH = os.getenv('IMPORTER_LOGS_PATH', '')
 # The Prometheus GitHub App: people connect their own GitHub account and open pull requests of
 # drafts with it (importer_dashboard/github.py, importer_dashboard/SETUP.md). The App needs
 # Contents and Pull requests (read and write) on RMG_MODELS_GITHUB_REPO, and the callback URL

@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from .importer_files import (EXIT_KILLED_FROM_WEB_PAGE, apply_progress, clear_importer_state,
                              read_importer_state, read_progress, reset_progress)
+from .job_logs import keep_logs, kept_path, logs_folder
 from .job_paths import job_folder
 from .port_allocator import NoFreePortError, apply_port_to_command, release_port, reserve_port
 
@@ -72,8 +73,9 @@ def run_import_job(self, job_id):
     conda_env = getattr(settings, 'CONDA_ENV_NAME', 'rmg_env')
     conda_base = getattr(settings, 'CONDA_BASE_PATH', '/home/prometheus/miniconda3')
     job_path = job_folder(job)
-    output_log = os.path.join(job_path, 'output.log')
-    error_log = os.path.join(job_path, 'error.log')
+    # In the job's own log folder, which outlives a draft's worktree (job_logs.py)
+    output_log = kept_path(job, 'output.log')
+    error_log = kept_path(job, 'error.log')
 
     def finish(status, log_type, message, result):
         """Record how this run ended, unless someone else (the Kill button) already did."""
@@ -81,6 +83,7 @@ def run_import_job(self, job_id):
             apply_progress(job, read_progress(job_path))
             JobLog.objects.create(job=job, log_type=log_type, message=message)
         commit_identifications(job, final=True)
+        _keep_logs(job)
         return {'job_id': job_id, **result}
 
     poll_seconds = getattr(settings, 'IMPORTER_STATE_POLL_SECONDS', 10)
@@ -131,6 +134,7 @@ def run_import_job(self, job_id):
             # without them if the index hasn't been built yet)
             proc_env['RMG_EVIDENCE_INDEX'] = evidence_index
 
+        os.makedirs(logs_folder(job), exist_ok=True)
         with open(output_log, 'w') as stdout_f, open(error_log, 'w') as stderr_f:
             process = subprocess.Popen(
                 command,
@@ -216,6 +220,14 @@ def run_import_job(self, job_id):
             release_port(job)  # a detached importer still serves its page on this port
         if process is not None and not detached:
             schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
+
+
+def _keep_logs(job):
+    """Keep the run's RMG.log in the job's log folder; a failure to copy must not change the run's end."""
+    try:
+        keep_logs(job)
+    except OSError as e:
+        logger.warning(f"Could not keep the logs of {job.name}: {e}")
 
 
 def _set_final_status(job, status):
