@@ -11,3 +11,7 @@ MIGRATION_MODULES = {
 # The SQL console tests run through the test database. The restriction of the real login is
 # a PostgreSQL role, which manage.py livequery_role creates and checks outside the tests.
 DATABASES["livequery"] = {**DATABASES["default"], "TEST": {"MIRROR": "default"}}
+
+# Tests that need drafts (git worktrees of RMG-models) turn them on with their own temporary
+# repositories; the others must not touch the developer's RMG-models clone.
+IMPORTER_WORKSPACES = False

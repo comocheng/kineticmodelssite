@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+{# The files of a job's draft (a branch of RMG-models): edit, replace, check (importer_dashboard/editor.py) #}
+
+{% block title %}{{ job.name }} | Files | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-job">
+
+    {% include "importer_dashboard/im_job_header.html" with current="files" %}
+
+    {% if not drafts_enabled %}
+    <div class="im-alert im-alert--info">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="info" size=26 %}</span>
+        <div class="im-alert__body"><p class="im-alert__title">Drafts are off on this server</p>
+            <p class="im-alert__text">Model files are edited in a draft: a branch of RMG-models. Turn drafts on with <code>IMPORTER_WORKSPACES</code>.</p></div>
+    </div>
+    {% elif not draft %}
+    <section class="app-panel im-files">
+        <h2 class="app-panel__title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}Files of {{ job.name }}</h2>
+        <p class="im-files__text">The files are edited in a draft: a branch of RMG-models master on this server, where every save is a commit. Nothing reaches GitHub until you open a pull request from the job page.</p>
+        <form method="post" action="{% url 'importer_dashboard:draft_open' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="app-btn">Open a draft to edit the files</button>
+        </form>
+    </section>
+    {% else %}
+
+    {% if editing_blocked %}
+    <div class="im-alert im-alert--warning">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body"><p class="im-alert__title">The job is {{ job.get_status_display|lower }}</p>
+            <p class="im-alert__text">The importer may be writing these files. You can read them; to change them, kill the job first.</p></div>
+    </div>
+    {% endif %}
+
+    <section class="app-panel im-files" aria-labelledby="im-files-title">
+        <div class="im-files__head">
+            <h2 class="app-panel__title" id="im-files-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}Files of {{ draft.model_folder }}</h2>
+            <span class="app-panel__meta">Branch <code>{{ draft.branch }}</code></span>
+        </div>
+        <table class="im-files__table">
+            <thead><tr><th scope="col">File</th><th scope="col">Role</th><th scope="col" class="is-end">Size</th><th scope="col" class="is-end">Actions</th></tr></thead>
+            <tbody>
+            {% for f in files %}
+            <tr>
+                <td><code>{{ f.name }}</code></td>
+                <td>{{ f.roles|join:", "|default:"-" }}</td>
+                <td class="is-end">{{ f.size|filesizeformat }}</td>
+                <td class="is-end">
+                    {% if f.editable %}<a href="{% url 'importer_dashboard:draft_file_edit' job.id f.name %}">{% if editing_blocked %}View{% else %}Edit{% endif %}</a>
+                    {% elif f.read_only and f.text %}<a href="{% url 'importer_dashboard:draft_file_edit' job.id f.name %}" aria-disabled="true" class="im-faint" title="import.sh is not changed here">Read-only</a>
+                    {% else %}<span class="im-faint" title="Larger than {{ max_edit_mb }} MB or not text: replace it by upload">Upload only</span>{% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No files.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if not editing_blocked %}
+        <p class="im-files__text"><a href="{% url 'importer_dashboard:draft_file_edit' job.id 'SMILES.txt' %}">Edit SMILES.txt</a> · <a href="{% url 'importer_dashboard:draft_file_edit' job.id 'source.txt' %}">Edit source.txt</a></p>
+        {% endif %}
+    </section>
+
+    {% if not editing_blocked %}
+    <section class="app-panel im-files" aria-labelledby="im-upload-title">
+        <h2 class="app-panel__title" id="im-upload-title">Replace or add a file</h2>
+        <form method="post" enctype="multipart/form-data" class="im-files__form">
+            {% csrf_token %}
+            <label>File <input type="file" name="file" required></label>
+            <label>Name in the folder <input type="text" name="name" list="im-file-names" placeholder="the uploaded file's name"></label>
+            <datalist id="im-file-names">{% for f in files %}<option value="{{ f.name }}">{% endfor %}</datalist>
+            <label class="is-wide">What you changed (the commit message) <input type="text" name="message" required placeholder="e.g. Use the authors' corrected thermo file of 2 March 2021"></label>
+            <button type="submit" class="app-btn">Commit the file</button>
+        </form>
+        <p class="im-files__text">The file is kept as uploaded, byte for byte.</p>
+    </section>
+    {% endif %}
+
+    <section class="app-panel im-files" aria-labelledby="im-check-title">
+        <div class="im-files__head">
+            <h2 class="app-panel__title" id="im-check-title">Check files</h2>
+            {% if check %}<span class="im-status im-status--{% if check.state == 'passed' %}completed{% elif check.state == 'running' %}running{% else %}failed{% endif %}">{{ check.state|capfirst }}</span>{% endif %}
+        </div>
+        <p class="im-files__text">Reads the species, thermo, SMILES.txt and reactions as an import would (importChemkin.py --minimal), then stops. It checks that each SMILES.txt formula is the thermo formula, and that every species has thermo.</p>
+        {% if check.log %}<div class="log-viewer im-log" tabindex="0" role="region" aria-label="Check log">{{ check.log }}</div>{% endif %}
+        {% if not editing_blocked %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="check">
+            <button type="submit" class="im-btn"{% if check.state == 'running' %} disabled{% endif %}>{% if check %}Check again{% else %}Check files{% endif %}</button>
+        </form>
+        {% endif %}
+        {% if check.state == 'running' %}<script>setTimeout(function () { location.reload(); }, 5000);</script>{% endif %}
+    </section>
+    {% endif %}
+</div>
+
+<style>
+.im-files { display: grid; gap: 12px; }
+.im-files__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.im-files__text { margin: 0; font-size: 14px; color: var(--color-gray-600); }
+.im-files__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.im-files__table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--color-gray-500); text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; border-bottom: 1px solid var(--color-gray-200); }
+.im-files__table td { padding: 8px; border-bottom: 1px solid var(--color-gray-100, #f2f4f7); overflow-wrap: anywhere; }
+.im-files__table .is-end { text-align: right; }
+.im-files__form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; align-items: end; }
+.im-files__form label { display: grid; gap: 4px; font-size: 13px; font-weight: 500; }
+.im-files__form .is-wide { grid-column: 1 / -1; }
+.im-files__form input[type=text] { padding: 6px 8px; border: 1px solid var(--color-gray-300, #d0d5dd); border-radius: 6px; font: inherit; }
+</style>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+{% endblock %}

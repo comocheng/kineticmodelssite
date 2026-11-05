@@ -90,9 +90,9 @@ contribute:
           text: "Make a folder for the model. Put the mechanism file and the thermo file in it, and the transport file if the model has one."
           commands:
             - "mkdir <model>"
-            - "cp <path>/<mechanism file> <model>/<model>_kinetics.txt"
-            - "cp <path>/<thermo file> <model>/<model>_thermo.txt"
-            - "cp <path>/<transport file> <model>/<model>_transport.txt"
+            - "cp <path>/<mechanism file> <model>/mechanism.txt"
+            - "cp <path>/<thermo file> <model>/thermo.txt"
+            - "cp <path>/<transport file> <model>/transport.txt"
           output:
             - "# Leave out the transport file if the model has none."
         - title: "Describe the source and the species"
@@ -115,9 +115,9 @@ contribute:
               cat > <model>/import.sh <<'EOF'
               #!/bin/bash
               python $RMGpy/importChemkin.py \
-                  --species <model>_kinetics.txt \
-                  --reactions <model>_kinetics.txt \
-                  --thermo <model>_thermo.txt \
+                  --species mechanism.txt \
+                  --reactions mechanism.txt \
+                  --thermo thermo.txt \
                   --known SMILES.txt
               EOF
         - title: "Open a pull request"
@@ -136,19 +136,19 @@ contribute:
       method: "Web upload"
       kind: "web"
       steps:
-        - title: "Add the source"
-          text: "Add the paper of the model as a source, if Prometheus does not have it yet."
-        - title: "Fill in the model form"
-          text: "Give the name of the model and select its source. Upload the mechanism file, the thermo file and the transport file if the model has one."
-        - title: "Save the model"
-          text: "Save the form. The site then opens the page of the new model."
+        - title: "Upload the files"
+          text: "Give the folder name of the model in RMG-models. Upload the mechanism file, the thermo file, the transport file if the model has one, and SMILES.txt if you know some species. Give the citation and the DOI."
+        - title: "Let the Importer check and import"
+          text: "Prometheus puts the files in a draft (a branch of RMG-models), writes import.sh, and checks the files. Then the import job starts, and you confirm the species on the Importer page."
+        - title: "Open a pull request"
+          text: "When the job is complete, open a pull request to RMG-models from the job page, with your own GitHub account. After the merge, the model goes into the database."
       links:
+        - label: "Add a kinetic model"
+          text: "Mechanism, thermo and transport files, through the Importer"
+          url: "kinetic-model-create"
         - label: "Add a source"
           text: "The paper or the report of the model"
           url: "source-create"
-        - label: "Add a kinetic model"
-          text: "Mechanism, thermo and transport files"
-          url: "kinetic-model-create"
     - key: "data-git"
       label: "Experimental data"
       method: "Pull request on GitHub"

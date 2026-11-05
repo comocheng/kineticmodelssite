@@ -1,0 +1,120 @@
+{% comment %}
+"Changes in RMG-models": the job's draft (a branch of RMG-models with a worktree on the server,
+importer_dashboard/drafts.py), what it changes, and its actions. Include it on the job page.
+{% endcomment %}
+<section class="app-panel im-draft" aria-labelledby="im-draft-title" id="draft">
+    <div class="im-draft__head">
+        <h2 class="app-panel__title" id="im-draft-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}Changes in RMG-models</h2>
+        {% if draft %}
+        <span class="app-panel__meta">Branch <code>{{ draft.branch }}</code> from {{ draft.base_branch }} <code>{{ draft.base_sha|slice:":8" }}</code></span>
+        {% endif %}
+    </div>
+
+    {% if not drafts_enabled %}
+    <p class="im-draft__text">Jobs run in the read copy of RMG-models, and nothing is committed (drafts are off: <code>IMPORTER_WORKSPACES</code>).</p>
+    {% elif not draft and last_draft and last_draft.status == 'merged' %}
+    <p class="im-draft__text">The last draft, <code>{{ last_draft.branch }}</code>, was merged{% if last_draft.pr_url %} in <a href="{{ last_draft.pr_url }}" target="_blank" rel="noopener">pull request #{{ last_draft.pr_number }}</a>{% endif %}. Starting the job again opens a new draft from {{ base_branch }}.</p>
+    {% elif not draft %}
+    <p class="im-draft__text">This job has no draft. Starting it opens one: a branch of RMG-models {{ base_branch }} on this server. Each identification the job makes is committed to that branch within a minute; nothing reaches GitHub until someone opens a pull request.</p>
+    {% elif draft_error %}
+    <p class="im-draft__text im-draft__text--error">Could not read the draft: {{ draft_error }}</p>
+    {% else %}
+    {% if draft.is_new_model %}
+    <p class="im-draft__text">A new model: <code>{{ draft.model_folder }}</code> is not in RMG-models {{ draft.base_branch }} yet.</p>
+    {% endif %}
+    {% if draft.start_job_after_check %}
+    <p class="im-draft__text" role="status">Checking the files (importChemkin.py --minimal). The import starts when they pass.</p>
+    <script>setTimeout(function () { location.reload(); }, 5000);</script>
+    {% elif draft_check.state == 'failed' and job.status == 'idle' %}
+    <p class="im-draft__text im-draft__text--error">Check files failed, so the import did not start. <a href="{% url 'importer_dashboard:draft_files' job.id %}">See the check and correct the files</a>.</p>
+    {% endif %}
+    <dl class="im-draft__metrics">
+        <div><dt>Commits</dt><dd>{{ draft_changes.commits|length }}</dd></div>
+        <div><dt>SMILES.txt lines added</dt><dd>{{ draft_changes.smiles_added|length }}</dd></div>
+        <div><dt>SMILES.txt lines removed</dt><dd>{{ draft_changes.smiles_removed|length }}</dd></div>
+        <div><dt>Files changed</dt><dd>{{ draft_changes.files|length }}</dd></div>
+        <div><dt>Not yet committed</dt><dd>{{ draft_changes.pending|length }}</dd></div>
+    </dl>
+    {% if draft_changes.pending %}
+    <p class="im-draft__text">Not yet committed: {{ draft_changes.pending|join:", " }}. {% if job.status == 'running' or job.status == 'awaiting_input' %}The next checkpoint commits them within a minute.{% else %}They are committed when the job ends.{% endif %}</p>
+    {% endif %}
+    {% if draft_changes.smiles_added or draft_changes.smiles_removed %}
+    <details class="im-draft__details">
+        <summary>SMILES.txt changes</summary>
+        <pre class="im-draft__diff">{% for line in draft_changes.smiles_removed %}<span class="is-removed">- {{ line }}</span>
+{% endfor %}{% for line in draft_changes.smiles_added %}<span class="is-added">+ {{ line }}</span>
+{% endfor %}</pre>
+    </details>
+    {% endif %}
+    {% if draft_changes.files %}
+    <details class="im-draft__details">
+        <summary>Files changed</summary>
+        <ul class="im-draft__list">{% for f in draft_changes.files %}<li><code>{{ f.status }}</code> {{ f.name }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    {% if draft_changes.commits %}
+    <details class="im-draft__details">
+        <summary>Commits</summary>
+        <ul class="im-draft__list">{% for c in draft_changes.commits|slice:":30" %}<li><code>{{ c.sha }}</code> {{ c.subject }} <span class="im-faint">{{ c.author }}, {{ c.date }}</span></li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    {% endif %}
+
+    {% if draft %}
+    <div class="im-draft__actions">
+        {% if pull_request.kind == 'open' or pull_request.kind == 'update' %}
+        <form method="post" action="{% url 'importer_dashboard:draft_pull_request' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="external" %}{{ pull_request.label }}</button>
+        </form>
+        {% elif pull_request.kind == 'connect' %}
+        <a class="app-btn" href="{% url 'importer_dashboard:github_connect' %}?next={{ request.path|urlencode }}">{% include "importer_dashboard/im_icon.html" with icon="external" %}{{ pull_request.label }}</a>
+        {% elif pull_request %}
+        <button type="button" class="app-btn" disabled aria-describedby="im-pr-reason">{{ pull_request.label }}</button>
+        <span class="im-draft__reason" id="im-pr-reason">{{ pull_request.reason }}</span>
+        {% endif %}
+        <a class="im-btn" href="{% url 'importer_dashboard:draft_files' job.id %}">{% include "importer_dashboard/im_icon.html" with icon="file" %}Files</a>
+        {% if draft.pr_url %}
+        <a class="im-btn" href="{{ draft.pr_url }}" target="_blank" rel="noopener">{% include "importer_dashboard/im_icon.html" with icon="external" %}Pull request #{{ draft.pr_number }}{% if draft.pr_state and draft.pr_state != 'open' %} ({{ draft.pr_state }}){% endif %}</a>
+        {% endif %}
+        {% if job.status != 'running' and job.status != 'pending' and job.status != 'awaiting_input' %}
+        <form method="post" action="{% url 'importer_dashboard:draft_discard' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="im-btn im-btn--danger" onclick="return confirm('Discard this draft? Its branch and its uncommitted files are deleted from the server. A pull request that is already open on GitHub stays open.')">Discard draft</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if github_configured and user.is_authenticated %}
+    <p class="im-draft__account">
+        {% if github_account %}
+        GitHub: <strong>@{{ github_account.login }}</strong>. Pushes and pull requests are made with this account.
+        <form method="post" action="{% url 'importer_dashboard:github_disconnect' %}?next={{ request.path|urlencode }}" class="im-inline">{% csrf_token %}<button type="submit" class="im-textbtn">Disconnect</button></form>
+        {% else %}
+        <a href="{% url 'importer_dashboard:github_connect' %}?next={{ request.path|urlencode }}">Connect GitHub</a> to open pull requests with your own account.
+        {% endif %}
+    </p>
+    {% endif %}
+</section>
+
+<style>
+.im-draft { display: grid; gap: 12px; }
+.im-draft__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.im-draft__head code, .im-draft__list code { font-size: 12px; }
+.im-draft__text { margin: 0; color: var(--color-gray-600); font-size: 14px; }
+.im-draft__text--error { color: var(--color-danger, #b42318); }
+.im-draft__metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0; }
+.im-draft__metrics dt { font-size: 12px; color: var(--color-gray-500); font-weight: 500; }
+.im-draft__metrics dd { margin: 2px 0 0; font-size: 20px; font-weight: 600; }
+.im-draft__details summary { cursor: pointer; font-size: 14px; font-weight: 500; }
+.im-draft__diff { margin: 8px 0 0; max-height: 22rem; overflow: auto; font-size: 12px; white-space: pre; }
+.im-draft__diff .is-added { color: var(--color-success, #067647); }
+.im-draft__diff .is-removed { color: var(--color-danger, #b42318); }
+.im-draft__list { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+.im-draft__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.im-draft__actions form { margin: 0; }
+.im-draft__reason { font-size: 13px; color: var(--color-gray-600); }
+.im-draft__account { margin: 0; font-size: 13px; color: var(--color-gray-600); }
+.im-inline { display: inline; margin: 0; }
+</style>

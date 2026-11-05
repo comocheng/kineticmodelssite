@@ -18,7 +18,8 @@
         </div>
         <div class="im-actions">
             <a href="{% url 'importer_dashboard:settings' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="settings" %}Settings</a>
-            <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
+            <a href="{% url 'importer_dashboard:refresh_jobs' %}" class="im-btn">{% include "importer_dashboard/im_icon.html" with icon="refresh" %}Refresh jobs</a>
+            <a href="{% url 'kinetic-model-create' %}" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="file" %}Add a model</a>
         </div>
     </header>
 
@@ -90,12 +91,15 @@
                     </td>
                     <td class="im-mono">{{ job.slurm_job_id|default:"-" }}</td>
                     <td class="im-jobs__state">
-                        <span class="im-status im-status--{{ job.status }}"{% if job.status == 'awaiting_input' %} title="Waiting for someone to confirm a match on the importer page"{% endif %}>{{ job.get_status_display }}</span>
+                        <span class="im-status im-status--{{ job.status }}"{% if job.status == 'awaiting_input' %} title="Waiting for someone to confirm a match on the importer page"{% elif job.status == 'failed' and job.last_error %} title="{{ job.last_error|truncatechars:600 }}"{% endif %}>{{ job.get_status_display }}</span>
                         {% if job.total_species %}
                         <span class="im-progress" data-progress-job="{{ job.id }}">
                             <span class="im-progress__track" aria-hidden="true"><span class="im-progress__value" style="width: {{ job.progress_percentage }}%;"></span></span>
-                            <span class="im-progress__pct" title="Identified of total species">{{ job.progress_percentage }}%</span>
+                            <span class="im-progress__pct" title="Identified of total species. This is not the progress of the whole job: the importer still checks reactions after it identifies every species.">{{ job.progress_percentage }}% identified</span>
                         </span>
+                        {% endif %}
+                        {% if job.status == 'failed' and job.last_error %}
+                        <small class="im-jobs__reason">{{ job.last_error|truncatechars:90 }}</small>
                         {% endif %}
                     </td>
                     <td class="job-stat is-number" data-job-id="{{ job.id }}" data-stat="processed">{{ job.processed_species|default:"-" }}</td>
@@ -413,11 +417,21 @@
     min-width: 170px;
 }
 
+.im-jobs__reason {
+    display: block;
+    max-width: 220px;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
 .im-progress {
     display: flex;
     align-items: center;
     gap: 7px;
-    width: 128px;
+    width: 170px;
     margin-top: 6px;
 }
 
@@ -856,7 +870,7 @@
                 if (progress && stats.total > 0) {
                     const percent = Math.floor((stats.identified || 0) / stats.total * 100);
                     progress.querySelector('.im-progress__value').style.width = percent + '%';
-                    progress.querySelector('.im-progress__pct').textContent = percent + '%';
+                    progress.querySelector('.im-progress__pct').textContent = percent + '% identified';
                 }
             }
         } catch (error) {

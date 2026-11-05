@@ -14,12 +14,13 @@ from pathlib import Path
 from datetime import datetime
 
 from celery import shared_task
-from celery.exceptions import SoftTimeLimitExceeded
+from celery.exceptions import Retry, SoftTimeLimitExceeded
 from django.conf import settings
 from django.utils import timezone
 
 from .importer_files import (EXIT_KILLED_FROM_WEB_PAGE, apply_progress, clear_importer_state,
-                             read_importer_state, read_progress)
+                             read_importer_state, read_progress, reset_progress)
+from .job_paths import job_folder
 from .port_allocator import NoFreePortError, apply_port_to_command, release_port, reserve_port
 
 logger = logging.getLogger(__name__)
@@ -29,11 +30,15 @@ logger = logging.getLogger(__name__)
 def run_import_job(self, job_id):
     """
     Run an RMG import job locally via Celery.
-    
+
     This replaces:
       - SSHJobManager.start_job() (which ran sbatch on the cluster)
       - The import.sh SLURM script
-    
+
+    The job's status, counts and log are written here only while the job still has the status
+    this task gave it: the Kill button and refresh_statuses also change statuses, and a full save
+    of the job object read at the start would put back the counts and status of that moment.
+
     Args:
         job_id: ID of the ClusterJob to run
     """
@@ -51,8 +56,11 @@ def run_import_job(self, job_id):
     job.status = ImportJobStatus.RUNNING
     job.host = 'localhost'
     job.started_at = timezone.now()
+    job.completed_at = None
     job.worker_pid = None  # the previous run's PID, until Popen below sets this run's
-    job.save()
+    job.save(update_fields=['celery_task_id', 'status', 'host', 'started_at', 'completed_at',
+                            'worker_pid', 'updated_at'])
+    reset_progress(job)
 
     JobLog.objects.create(
         job=job,
@@ -60,64 +68,68 @@ def run_import_job(self, job_id):
         message=f'Import job started via Celery (task: {self.request.id})'
     )
 
-    # Build paths
-    models_root = getattr(settings, 'RMG_MODELS_PATH', '/path/to/rmg_models')
     rmg_py_path = getattr(settings, 'RMG_PY_PATH', '/path/to/RMG-Py')
     conda_env = getattr(settings, 'CONDA_ENV_NAME', 'rmg_env')
     conda_base = getattr(settings, 'CONDA_BASE_PATH', '/home/prometheus/miniconda3')
-    job_path = os.path.join(models_root, job.name)
-
-    # Parse the actual import.sh to get the correct command for this mechanism.
-    # Each import.sh has different filenames (species, thermo, reactions, etc.)
-    import_sh_path = os.path.join(job_path, 'import.sh')
-    command = _build_command_from_import_sh(import_sh_path, rmg_py_path, conda_env, job_path)
-
-    # Reserve a free port for this run instead of the one hard-coded in import.sh
-    try:
-        port = reserve_port(job)
-    except NoFreePortError as e:
-        # Every port is busy: put the job back in the queue and try again later
-        job.status = ImportJobStatus.PENDING
-        job.save(update_fields=['status'])
-        JobLog.objects.create(job=job, log_type='warning',
-                              message=f'{e}; retrying in 5 minutes')
-        raise self.retry(countdown=300, max_retries=None)
-    except Exception as e:
-        logger.exception(f"Could not reserve a port for {job.name}")
-        job.status = ImportJobStatus.FAILED
-        job.completed_at = timezone.now()
-        job.save()
-        JobLog.objects.create(job=job, log_type='error',
-                              message=f'Could not reserve a port: {e}')
-        return {'status': 'error', 'job_id': job_id, 'error': str(e)}
-    command = apply_port_to_command(command, port)
-
-    # Set up log files (same structure as the cluster)
+    job_path = job_folder(job)
     output_log = os.path.join(job_path, 'output.log')
     error_log = os.path.join(job_path, 'error.log')
 
-    logger.info(f"Starting import for {job.name} at {job_path}")
-    logger.info(f"Command: {command}")
-
-    conda_bin = os.path.join(conda_base, 'envs', conda_env, 'bin')
-    proc_env = {
-        **os.environ,
-        'PYTHONPATH': rmg_py_path,
-        'RMG': rmg_py_path,
-        'PATH': f'{conda_bin}:{os.environ.get("PATH", "")}',
-    }
-    evidence_index = getattr(settings, 'IMPORTER_EVIDENCE_INDEX', '')
-    if evidence_index:
-        # The RMG-database libraries and earlier imports vote too (the importer carries on
-        # without them if the index hasn't been built yet)
-        proc_env['RMG_EVIDENCE_INDEX'] = evidence_index
+    def finish(status, log_type, message, result):
+        """Record how this run ended, unless someone else (the Kill button) already did."""
+        if _set_final_status(job, status):
+            apply_progress(job, read_progress(job_path))
+            JobLog.objects.create(job=job, log_type=log_type, message=message)
+        commit_identifications(job, final=True)
+        return {'job_id': job_id, **result}
 
     poll_seconds = getattr(settings, 'IMPORTER_STATE_POLL_SECONDS', 10)
     process = None
     detached = False  # set when the importer is left running without this task
+    reserved = False
     try:
+        clear_importer_state(job_path)
+
+        # Parse the actual import.sh to get the correct command for this mechanism.
+        # Each import.sh has different filenames (species, thermo, reactions, etc.)
+        try:
+            command = _build_command_from_import_sh(os.path.join(job_path, 'import.sh'),
+                                                    rmg_py_path, conda_env, job_path)
+        except (OSError, ValueError) as e:
+            logger.error(f"Could not read import.sh of {job.name}: {e}")
+            return finish(ImportJobStatus.FAILED, 'error', f'Could not read import.sh: {e}',
+                          {'status': 'error', 'error': str(e)})
+
+        # Reserve a free port for this run instead of the one hard-coded in import.sh
+        try:
+            port = reserve_port(job)
+            reserved = True
+        except NoFreePortError as e:
+            # Every port is busy: put the job back in the queue and try again later
+            ClusterJob.objects.filter(pk=job.pk, status=ImportJobStatus.RUNNING).update(
+                status=ImportJobStatus.PENDING)
+            JobLog.objects.create(job=job, log_type='warning',
+                                  message=f'{e}; retrying in 5 minutes')
+            raise self.retry(countdown=300, max_retries=None)
+        command = apply_port_to_command(command, port)
+
+        logger.info(f"Starting import for {job.name} at {job_path}")
+        logger.info(f"Command: {command}")
+
+        conda_bin = os.path.join(conda_base, 'envs', conda_env, 'bin')
+        proc_env = {
+            **os.environ,
+            'PYTHONPATH': rmg_py_path,
+            'RMG': rmg_py_path,
+            'PATH': f'{conda_bin}:{os.environ.get("PATH", "")}',
+        }
+        evidence_index = getattr(settings, 'IMPORTER_EVIDENCE_INDEX', '')
+        if evidence_index:
+            # The RMG-database libraries and earlier imports vote too (the importer carries on
+            # without them if the index hasn't been built yet)
+            proc_env['RMG_EVIDENCE_INDEX'] = evidence_index
+
         with open(output_log, 'w') as stdout_f, open(error_log, 'w') as stderr_f:
-            clear_importer_state(job_path)
             process = subprocess.Popen(
                 command,
                 shell=True,
@@ -130,7 +142,7 @@ def run_import_job(self, job_id):
 
             # Store PID for potential cancellation
             job.worker_pid = process.pid
-            job.save()
+            job.save(update_fields=['worker_pid'])
 
             # Wait for the importer to exit, or to start waiting for someone to confirm a
             # match on its page. Then it has nothing to compute, so free this worker slot
@@ -140,105 +152,87 @@ def run_import_job(self, job_id):
                 try:
                     returncode = process.wait(timeout=poll_seconds)
                 except subprocess.TimeoutExpired:
+                    # Each identification goes into the draft's branch within a minute
+                    commit_identifications(job)
                     if read_importer_state(job_path).get('state') == 'awaiting_input':
                         detached = True
                         break
 
         if detached:
-            job.status = ImportJobStatus.AWAITING_INPUT
-            job.save(update_fields=['status'])
-            apply_progress(job, read_progress(job_path))
-            JobLog.objects.create(
-                job=job,
-                log_type='info',
-                message=('Waiting for someone to confirm a match on the importer page. The importer '
-                         'keeps running and keeps its port; its worker slot is free for other jobs.')
-            )
+            commit_identifications(job, final=True)
+            if _set_final_status(job, ImportJobStatus.AWAITING_INPUT):
+                apply_progress(job, read_progress(job_path))
+                JobLog.objects.create(
+                    job=job,
+                    log_type='info',
+                    message=('Waiting for someone to confirm a match on the importer page. The importer '
+                             'keeps running and keeps its port; its worker slot is free for other jobs.')
+                )
             logger.info(f"Job {job.name} is awaiting input; freed its worker slot")
             return {'status': 'awaiting_input', 'job_id': job_id}
 
         if returncode == EXIT_KILLED_FROM_WEB_PAGE:
-            job.status = ImportJobStatus.CANCELLED
-            job.completed_at = timezone.now()
-            job.save()
-            _update_completion_stats(job, job_path)
-            JobLog.objects.create(
-                job=job,
-                log_type='info',
-                message='Stopped with the Kill job button on the importer page'
-            )
-            return {'status': 'cancelled', 'job_id': job_id}
+            return finish(ImportJobStatus.CANCELLED, 'info',
+                          'Stopped with the Kill job button on the importer page',
+                          {'status': 'cancelled'})
 
         if returncode == 0:
-            job.status = ImportJobStatus.COMPLETED
-            job.completed_at = timezone.now()
-            job.save()
-
-            # Try to read final progress
-            _update_completion_stats(job, job_path)
-
-            JobLog.objects.create(
-                job=job,
-                log_type='info',
-                message='Import job completed successfully'
-            )
             logger.info(f"Job {job.name} completed successfully")
-            return {'status': 'completed', 'job_id': job_id}
-        else:
-            job.status = ImportJobStatus.FAILED
-            job.completed_at = timezone.now()
-            job.save()
+            return finish(ImportJobStatus.COMPLETED, 'info', 'Import job completed successfully',
+                          {'status': 'completed'})
 
-            # Read last few lines of error log
-            error_tail = _tail_file(error_log, 20)
-            output_tail = _tail_file(output_log, 20)
-            reason = ''
-            if returncode < 0:
-                # Negative code = killed by signal; -9 on a big job is usually the OOM killer
-                reason = f' (killed by signal {-returncode}{", likely out of memory" if returncode == -9 else ""})'
-            JobLog.objects.create(
-                job=job,
-                log_type='error',
-                message=(
-                    f'Job failed with exit code {returncode}{reason}.\n'
-                    f'error.log:\n{error_tail}\n\noutput.log:\n{output_tail}'
-                )
-            )
-            logger.error(f"Job {job.name} failed with exit code {returncode}")
-            return {'status': 'failed', 'job_id': job_id, 'returncode': returncode}
+        reason = ''
+        if returncode < 0:
+            # Negative code = killed by signal; -9 on a big job is usually the OOM killer
+            reason = f' (killed by signal {-returncode}{", likely out of memory" if returncode == -9 else ""})'
+        logger.error(f"Job {job.name} failed with exit code {returncode}")
+        return finish(
+            ImportJobStatus.FAILED, 'error',
+            (f'Job failed with exit code {returncode}{reason}.\n'
+             f'error.log:\n{_tail_file(error_log, 20)}\n\noutput.log:\n{_tail_file(output_log, 20)}'),
+            {'status': 'failed', 'returncode': returncode})
 
     except SoftTimeLimitExceeded:
         logger.warning(f"Job {job.name} hit time limit")
         if process:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-        job.status = ImportJobStatus.FAILED
-        job.completed_at = timezone.now()
-        job.save()
-        JobLog.objects.create(
-            job=job,
-            log_type='error',
-            message='Job exceeded time limit and was terminated'
-        )
-        return {'status': 'timeout', 'job_id': job_id}
+        return finish(ImportJobStatus.FAILED, 'error', 'Job exceeded time limit and was terminated',
+                      {'status': 'timeout'})
+
+    except Retry:
+        raise
 
     except Exception as e:
         logger.exception(f"Job {job.name} encountered an error: {e}")
         if process and process.poll() is None:
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-        job.status = ImportJobStatus.FAILED
-        job.completed_at = timezone.now()
-        job.save()
-        JobLog.objects.create(
-            job=job,
-            log_type='error',
-            message=f'Unexpected error: {str(e)}'
-        )
-        return {'status': 'error', 'job_id': job_id, 'error': str(e)}
+        return finish(ImportJobStatus.FAILED, 'error', f'Unexpected error: {e}',
+                      {'status': 'error', 'error': str(e)})
 
     finally:
-        if not detached:
+        if reserved and not detached:
             release_port(job)  # a detached importer still serves its page on this port
+        if process is not None and not detached:
             schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
+
+
+def _set_final_status(job, status):
+    """
+    Give the job the status this run ended with, but only if it still has a status that this
+    run set (Running, or Pending while it waited for a port). The Kill button sets Cancelled,
+    and that must stay. Returns True if the status was set.
+    """
+    from importer_dashboard.models import ClusterJob, ImportJobStatus
+
+    fields = {'status': status, 'updated_at': timezone.now()}
+    if status != ImportJobStatus.AWAITING_INPUT:
+        fields['completed_at'] = timezone.now()
+    changed = ClusterJob.objects.filter(
+        pk=job.pk, status__in=[ImportJobStatus.RUNNING, ImportJobStatus.PENDING]).update(**fields)
+    if changed:
+        for name, value in fields.items():
+            setattr(job, name, value)
+    return bool(changed)
 
 
 def _build_command_from_import_sh(import_sh_path, rmg_py_path, conda_env, job_path):
@@ -319,11 +313,10 @@ def _build_command_from_import_sh(import_sh_path, rmg_py_path, conda_env, job_pa
     # Collapse multiple spaces
     import_cmd = re.sub(r'\s+', ' ', import_cmd).strip()
 
-    import_cmd = re.sub(
-        r'^python\b',
-        f'/home/prometheus/miniconda3/envs/{conda_env}/bin/python',
-        import_cmd
-    )
+    # The python of the importers' conda environment (settings.CONDA_BASE_PATH), not the one on PATH
+    conda_python = os.path.join(getattr(settings, 'CONDA_BASE_PATH', '/home/prometheus/miniconda3'),
+                                'envs', conda_env, 'bin', 'python')
+    import_cmd = re.sub(r'^python\b', lambda _: shlex.quote(conda_python), import_cmd)
 
     # Wrap with conda activation and cd
     # stderr is left alone so Popen routes it to error.log (the Errors page)
@@ -416,3 +409,15 @@ def ping(sent_at=None):
     """
     import time
     return time.monotonic()
+
+
+def commit_identifications(job, final=False):
+    """Commit the job's identifications to its draft (drafts.checkpoint_job); never raises."""
+    if getattr(job, 'draft_id', None) is None:
+        return None
+    from .drafts import checkpoint_job
+    try:
+        return checkpoint_job(job, final=final)
+    except Exception:
+        logger.exception(f"Could not commit the identifications of {job.name}")
+        return None

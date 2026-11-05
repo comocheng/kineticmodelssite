@@ -1,0 +1,6 @@
+<div class="im-create__field">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span class="im-faint">(optional)</span>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="im-create__help" id="{{ field.id_for_label }}-help">{{ field.help_text }}</p>{% endif %}
+    {% for e in field.errors %}<p class="im-create__error" role="alert">{{ e }}</p>{% endfor %}
+</div>

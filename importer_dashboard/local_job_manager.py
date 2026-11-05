@@ -22,12 +22,16 @@ from django.utils import timezone
 from celery.result import AsyncResult
 
 from .models import ClusterJob, ImportJobConfig, ImportJobStatus, JobLog
-from .tasks import run_import_job, schedule_evidence_index_refresh, _tail_file
-from .importer_files import apply_progress, is_process_alive, read_importer_state, read_progress
+from .tasks import commit_identifications, run_import_job, schedule_evidence_index_refresh, _tail_file
+from .importer_files import (STATE_FILE, apply_progress, is_process_alive, outcome_from_state,
+                             read_importer_state, read_progress)
+from .job_paths import job_folder
 from .port_allocator import release_port, release_stale_ports
 
 # Statuses whose importer may still be running, and so still holds its port
 ACTIVE_STATUSES = [ImportJobStatus.RUNNING, ImportJobStatus.PENDING, ImportJobStatus.AWAITING_INPUT]
+# Statuses whose importer runs and can make identifications
+LIVE = [ImportJobStatus.RUNNING, ImportJobStatus.AWAITING_INPUT]
 
 logger = logging.getLogger(__name__)
 
@@ -128,12 +132,15 @@ class LocalJobManager:
         
         Returns (task_id, host) to match the SLURM interface.
         """
-        result = run_import_job.delay(job.id)
-
-        job.celery_task_id = result.id
+        # Pending before the task is queued: a worker can start the task (and set Running, or even
+        # finish it) before delay() returns, and a save after it would put Pending back
         job.status = ImportJobStatus.PENDING
         job.worker_pid = None  # the previous run's PID would make the job look alive
-        job.save()
+        job.save(update_fields=['status', 'worker_pid', 'updated_at'])
+
+        result = run_import_job.delay(job.id)
+        job.celery_task_id = result.id
+        ClusterJob.objects.filter(pk=job.pk).update(celery_task_id=result.id)
 
         logger.info(f"Submitted Celery task {result.id} for job {job.name}")
         return result.id, 'localhost'
@@ -159,30 +166,32 @@ class LocalJobManager:
 
         job.status = ImportJobStatus.CANCELLED
         job.completed_at = timezone.now()
-        job.save()
+        job.save(update_fields=['status', 'completed_at', 'updated_at'])
+        apply_progress(job, read_progress(job_folder(job, self.root_path)))
         release_port(job)
+        commit_identifications(job, final=True)
 
     def get_log_tail(self, job: ClusterJob, lines: Optional[int] = 50):
         """
         Read RMG.log tail, or the complete log when lines is None.
         Replaces SSHJobManager.get_log_tail() which used SSH.
         """
-        log_path = os.path.join(self.root_path, job.name, 'RMG-Py-output', 'RMG.log')
+        log_path = os.path.join(job_folder(job, self.root_path), 'RMG-Py-output', 'RMG.log')
         return self._tail_local_file(log_path, lines)
 
     def get_console_output(self, job: ClusterJob):
         """Read output.log from local filesystem."""
-        log_path = os.path.join(self.root_path, job.name, 'output.log')
+        log_path = os.path.join(job_folder(job, self.root_path), 'output.log')
         return self._read_local_file(log_path)
 
     def get_error_log(self, job: ClusterJob):
         """Read error.log from local filesystem."""
-        log_path = os.path.join(self.root_path, job.name, 'error.log')
+        log_path = os.path.join(job_folder(job, self.root_path), 'error.log')
         return self._read_local_file(log_path)
 
     def get_completion_stats(self, job: ClusterJob):
         """The importer's progress counts (its progress.json), or None."""
-        return read_progress(os.path.join(self.root_path, job.name))
+        return read_progress(job_folder(job, self.root_path))
 
     def get_live_progress(self, job: ClusterJob):
         """
@@ -197,6 +206,10 @@ class LocalJobManager:
         against Celery; jobs awaiting input, whose task has already freed its worker
         slot, are checked against their importer process.
         Replaces update_running_jobs_status() which parsed squeue output.
+
+        A job is never marked Failed from Celery alone. When its task is gone (a worker
+        restart loses it) or its process has ended, the importer's own state file says how
+        it ended: an importer that reported 'finished' is Completed.
         """
         active_jobs = ClusterJob.objects.filter(
             status__in=[ImportJobStatus.RUNNING, ImportJobStatus.PENDING],
@@ -205,34 +218,34 @@ class LocalJobManager:
 
         for job in active_jobs:
             result = AsyncResult(job.celery_task_id)
-            new_status, fields = job.status, {}
 
             if result.state in ('PENDING', 'RETRY'):
                 # Celery also answers PENDING for a task it has no record of, e.g. once
                 # the result has expired, so trust a live importer over it. RETRY means
                 # the task is waiting for a free port, before any importer starts.
                 if not (job.status == ImportJobStatus.RUNNING and self._is_pid_running(job.worker_pid)):
-                    new_status = ImportJobStatus.PENDING
+                    self._set_status(job, ImportJobStatus.PENDING)
             elif result.state == 'STARTED':
                 if job.worker_pid and not self._is_pid_running(job.worker_pid):
-                    new_status = ImportJobStatus.FAILED
-                    fields['completed_at'] = timezone.now()
-                    logger.warning(
-                        f"Marking job {job.name} as failed: worker PID {job.worker_pid} is not running"
-                    )
+                    self._end_without_task(job, f'its import process {job.worker_pid} has ended')
                 else:
-                    new_status = ImportJobStatus.RUNNING
-            elif result.state == 'SUCCESS':
-                new_status = ImportJobStatus.COMPLETED
-                fields['completed_at'] = timezone.now()
-            elif result.state in ('FAILURE', 'REVOKED'):
-                new_status = ImportJobStatus.FAILED
-                fields['completed_at'] = timezone.now()
-
-            self._set_status(job, new_status, **fields)
+                    self._set_status(job, ImportJobStatus.RUNNING)
+            elif result.state in ('SUCCESS', 'FAILURE', 'REVOKED'):
+                # The task normally records the outcome itself; this job still being active
+                # means it couldn't (e.g. its worker was killed)
+                self._end_without_task(job, f'its Celery task ended ({result.state})')
 
         for job in ClusterJob.objects.filter(status=ImportJobStatus.AWAITING_INPUT):
             self._refresh_detached_job(job)
+
+        # Models added on the create page start once Check files passes
+        from .create_model import start_checked_job
+        for job in ClusterJob.objects.filter(draft__status='open', draft__start_job_after_check=True):
+            start_checked_job(job, self)
+
+        # Identifications made on the importer pages go into the drafts' branches
+        for job in ClusterJob.objects.filter(status__in=LIVE, draft__status='open').select_related('draft'):
+            commit_identifications(job)
 
         # A worker killed mid-job never reaches its `finally`, so sweep up here
         release_stale_ports(ACTIVE_STATUSES)
@@ -252,41 +265,67 @@ class LocalJobManager:
                 setattr(job, name, value)
         return bool(changed)
 
+    def _current_state(self, job, job_path):
+        """
+        importer_state.json, if this run wrote it. A file older than the start of the run is
+        from an earlier run (a task can be lost before it removes the old file).
+        """
+        state = read_importer_state(job_path)
+        if state and job.started_at:
+            try:
+                written = os.path.getmtime(os.path.join(job_path, STATE_FILE))
+            except OSError:
+                return {}
+            if written < job.started_at.timestamp() - 1:
+                return {}
+        return state
+
+    def _end_without_task(self, job, why):
+        """
+        The job's Celery task can no longer report on it. Follow the importer itself if it
+        still runs, otherwise record how it ended from the state it last reported.
+        """
+        job_path = job_folder(job, self.root_path)
+        state = self._current_state(job, job_path)
+        if self._importer_alive(job, state):
+            awaiting = state.get('state') == 'awaiting_input'
+            if awaiting and self._set_status(job, ImportJobStatus.AWAITING_INPUT):
+                JobLog.objects.create(job=job, log_type='info', message=(
+                    f'The dashboard lost track of this job ({why}), but its importer still '
+                    f'runs and is waiting for someone to confirm a match.'))
+            elif job.status == ImportJobStatus.PENDING:
+                self._set_status(job, ImportJobStatus.RUNNING)
+            return
+        self._record_end(job, state, job_path, f' The dashboard lost track of the run: {why}.')
+
+    def _record_end(self, job, state, job_path, note=''):
+        """Give an importer that has exited its final status, from the state it last reported."""
+        new_status, log_type, message = outcome_from_state(state)
+        message += note
+        if new_status == ImportJobStatus.FAILED:
+            message += (f'\nerror.log:\n{_tail_file(os.path.join(job_path, "error.log"), 20)}\n\n'
+                        f'output.log:\n{_tail_file(os.path.join(job_path, "output.log"), 20)}')
+        if self._set_status(job, new_status, completed_at=timezone.now()):
+            apply_progress(job, read_progress(job_path))
+            JobLog.objects.create(job=job, log_type=log_type, message=message)
+            release_port(job)
+            commit_identifications(job, final=True)
+            schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
+            logger.info(f"Job {job.name} ended: {new_status}")
+            return True
+        return False
+
     def _refresh_detached_job(self, job):
         """
         Check on an importer left running, awaiting input, after its Celery task freed
         its worker slot. Once it exits, record why, using the state it last reported.
         """
-        job_path = os.path.join(self.root_path, job.name)
-        state = read_importer_state(job_path)
+        job_path = job_folder(job, self.root_path)
+        state = self._current_state(job, job_path)
         if self._importer_alive(job, state):
             apply_progress(job, read_progress(job_path))
             return
-
-        last_state = state.get('state')
-        if last_state == 'finished':
-            new_status, log_type, message = ImportJobStatus.COMPLETED, 'info', 'Import job completed successfully'
-        elif last_state == 'stopped':
-            new_status, log_type, message = (ImportJobStatus.CANCELLED, 'info',
-                                             'Stopped with the Kill job button on the importer page')
-        else:
-            if state.get('error'):
-                reason = f": {state['error']}"
-            elif last_state:
-                reason = f" (the last thing it reported was {last_state!r})"
-            else:
-                reason = ''
-            new_status, log_type = ImportJobStatus.FAILED, 'error'
-            message = (f'The importer stopped unexpectedly while awaiting input{reason}.\n'
-                       f'error.log:\n{_tail_file(os.path.join(job_path, "error.log"), 20)}\n\n'
-                       f'output.log:\n{_tail_file(os.path.join(job_path, "output.log"), 20)}')
-
-        if self._set_status(job, new_status, completed_at=timezone.now()):
-            apply_progress(job, read_progress(job_path))
-            JobLog.objects.create(job=job, log_type=log_type, message=message)
-            release_port(job)
-            schedule_evidence_index_refresh()  # the import has rewritten its model's libraries
-            logger.info(f"Job {job.name} ended while awaiting input: {new_status}")
+        self._record_end(job, state, job_path)
 
     def _importer_alive(self, job, state):
         """Is this job's importer still running? Prefers the PID the importer reported itself."""
@@ -305,7 +344,7 @@ class LocalJobManager:
         Read progress.json for a job (running or completed).
         Matches SSHJobManager.get_progress_json() signature.
         """
-        return read_progress(os.path.join(self.root_path, job.name))
+        return read_progress(job_folder(job, self.root_path))
 
     def refresh_all_progress(self):
         """
