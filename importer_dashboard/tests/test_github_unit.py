@@ -36,6 +36,9 @@ class FakeGitHub:
         self.calls = []
         self.push_allowed = True
         self.merged = False
+        self.head = None  # the merged pull request's head: {'ref', 'sha', 'repo'}
+        self.refs = {}  # branches on GitHub: {name: commit}
+        self.delete_status = None  # GitHub's answer to a DELETE of a branch, if not the usual
         self.tokens = iter([('ghu_first', 'ghr_first'), ('ghu_second', 'ghr_second')])
 
     def post(self, url, data=None, headers=None, timeout=None, **kwargs):
@@ -56,7 +59,22 @@ class FakeGitHub:
             return FakeResponse(201, {'number': 7, 'state': 'open',
                                       'html_url': 'https://github.com/comocheng/RMG-models/pull/7'})
         if path == '/repos/comocheng/RMG-models/pulls/7':
-            return FakeResponse(200, {'number': 7, 'state': 'closed' if self.merged else 'open', 'merged': self.merged})
+            pr = {'number': 7, 'state': 'closed' if self.merged else 'open', 'merged': self.merged}
+            if self.head:
+                pr['head'] = self.head
+            return FakeResponse(200, pr)
+        ref = path.partition('/repos/comocheng/RMG-models/git/ref/heads/')[2]
+        if ref and method == 'GET':
+            if ref in self.refs:
+                return FakeResponse(200, {'ref': f'refs/heads/{ref}', 'object': {'sha': self.refs[ref]}})
+            return FakeResponse(404, {'message': 'Not Found'})
+        ref = path.partition('/repos/comocheng/RMG-models/git/refs/heads/')[2]
+        if ref and method == 'DELETE':
+            if self.delete_status:
+                return FakeResponse(self.delete_status, {'message': 'Resource not accessible by integration'})
+            if self.refs.pop(ref, None) is None:
+                return FakeResponse(422, {'message': 'Reference does not exist'})
+            return FakeResponse(204, {})
         return FakeResponse(404, {'message': 'Not Found'})
 
     def made(self, method, path):
@@ -210,18 +228,85 @@ class PullRequestTests(GitHubTestCase):
         self.assertIn('H2O\tO', out('show', f'{draft.branch}:{self.model}/SMILES.txt', cwd=self.remote))
         self.assertEqual(len(self.gh.made('POST', '/repos/comocheng/RMG-models/pulls')), 1)
 
-    def test_a_merged_pull_request_closes_the_draft(self):
+    def merged_draft(self):
+        """A draft whose pull request #7 was merged on GitHub, its branch still there."""
         draft = self.completed_job_with_a_change()
         self.connect_github()
         self.client.post(reverse('importer_dashboard:draft_pull_request', args=[self.job.id]))
-        self.gh.merged = True
         draft.refresh_from_db()
+        sha = out('rev-parse', draft.branch, cwd=self.remote).strip()
+        self.gh.merged = True
+        self.gh.head = {'ref': draft.branch, 'sha': sha, 'repo': {'full_name': 'comocheng/RMG-models'}}
+        self.gh.refs[draft.branch] = sha
+        return draft
+
+    def branch_deletes(self, draft):
+        return self.gh.made('DELETE', f'/repos/comocheng/RMG-models/git/refs/heads/{draft.branch}')
+
+    def test_a_merged_pull_request_closes_the_draft_and_deletes_its_branch(self):
+        draft = self.merged_draft()
         github.refresh_pull_request(draft, self.user, max_age=0)
         draft.refresh_from_db()
         self.assertEqual(draft.status, DraftStatus.MERGED)
         self.assertFalse(os.path.exists(draft.path))
+        self.assertEqual([call[3] for call in self.branch_deletes(draft)], ['Bearer ghu_first'])
+        self.assertNotIn(draft.branch, self.gh.refs)
         response = self.client.get(reverse('importer_dashboard:job_detail', args=[self.job.id]))
         self.assertContains(response, 'was merged')
+        self.assertEqual(len(self.branch_deletes(draft)), 1)  # once
+
+    def test_a_branch_with_commits_pushed_after_the_merge_is_kept(self):
+        draft = self.merged_draft()
+        self.gh.refs[draft.branch] = 'f' * 40
+        with self.assertLogs('importer_dashboard.github', 'INFO') as logs:
+            github.refresh_pull_request(draft, self.user, max_age=0)
+        self.assertEqual(self.branch_deletes(draft), [])
+        self.assertIn('has commits that were pushed after the merge', '\n'.join(logs.output))
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, DraftStatus.MERGED)
+
+    def test_a_branch_github_already_deleted_closes_the_draft(self):
+        draft = self.merged_draft()
+        del self.gh.refs[draft.branch]  # "Automatically delete head branches" is on
+        github.refresh_pull_request(draft, self.user, max_age=0)
+        draft.refresh_from_db()
+        self.assertEqual((draft.status, self.branch_deletes(draft)), (DraftStatus.MERGED, []))
+
+    def test_a_refused_delete_still_closes_the_draft(self):
+        draft = self.merged_draft()
+        self.gh.delete_status = 403
+        with self.assertLogs('importer_dashboard.github', 'WARNING') as logs:
+            github.refresh_pull_request(draft, self.user, max_age=0)
+        self.assertIn('not deleted: GitHub answered 403', '\n'.join(logs.output))
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, DraftStatus.MERGED)
+
+    def test_a_draft_with_a_running_job_is_closed_when_the_job_stops(self):
+        draft = self.merged_draft()
+        ClusterJob.objects.filter(pk=self.job.pk).update(status=ImportJobStatus.RUNNING)
+        github.refresh_pull_request(draft, self.user, max_age=0)
+        draft.refresh_from_db()
+        self.assertEqual((draft.status, draft.pr_state), (DraftStatus.OPEN, 'merged'))
+        self.assertTrue(os.path.exists(draft.path))  # the job's folder
+        self.assertEqual(self.branch_deletes(draft), [])
+        reads = len(self.gh.made('GET', '/repos/comocheng/RMG-models/pulls/7'))
+        github.refresh_pull_request(draft, self.user, max_age=0)  # a job page view meanwhile
+        self.assertEqual(len(self.gh.made('GET', '/repos/comocheng/RMG-models/pulls/7')), reads)
+
+        ClusterJob.objects.filter(pk=self.job.pk).update(status=ImportJobStatus.COMPLETED)
+        github.refresh_pull_request(draft, self.user)  # within 5 minutes of the last check
+        draft.refresh_from_db()
+        self.assertEqual(draft.status, DraftStatus.MERGED)
+        self.assertEqual(len(self.branch_deletes(draft)), 1)
+
+    def test_the_webhook_task_closes_the_draft_with_the_pushers_token(self):
+        from importer_dashboard.tasks import close_merged_draft
+        draft = self.merged_draft()
+        self.client.logout()
+        result = close_merged_draft.apply(args=[draft.pk]).get()
+        self.assertEqual((result['status'], result['pr_state']), (DraftStatus.MERGED, 'merged'))
+        self.assertEqual([call[3] for call in self.branch_deletes(draft)], ['Bearer ghu_first'])
+        self.assertEqual(close_merged_draft.apply(args=[draft.pk]).get()['skipped'], 'the draft is closed')
 
     def test_anonymous_visitors_cannot_open_pull_requests(self):
         self.completed_job_with_a_change()

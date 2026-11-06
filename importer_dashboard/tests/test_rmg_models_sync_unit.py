@@ -14,7 +14,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from importer_dashboard import read_copy_sync
-from importer_dashboard.models import ClusterJob, ImportJobStatus
+from importer_dashboard.models import ClusterJob, Draft, DraftStatus, ImportJobStatus
 from importer_dashboard.tests.test_drafts_unit import DraftTestCase, out, run
 
 SECRET = 'webhook-secret-for-tests'
@@ -154,6 +154,37 @@ class WebhookTests(TestCase):
             with self.subTest(event=event, payload=payload):
                 response, delay = self.deliver(event, payload)
                 self.assertEqual(response.status_code, 202)
+                delay.assert_not_called()
+
+    def merged(self, number=7, action='closed', merged=True, repository='comocheng/RMG-models'):
+        return {'action': action, 'number': number, 'repository': {'full_name': repository},
+                'pull_request': {'number': number, 'merged': merged,
+                                 'head': {'ref': 'importer/ANL-Brown/2'}}}
+
+    def deliver_pull_request(self, payload):
+        body = json.dumps(payload).encode()
+        with patch('importer_dashboard.tasks.close_merged_draft.delay') as delay:
+            response = self.client.post(self.url, body, content_type='application/json',
+                                        HTTP_X_GITHUB_EVENT='pull_request',
+                                        HTTP_X_HUB_SIGNATURE_256=signed(body))
+        return response, delay
+
+    def test_a_merged_pull_request_of_a_draft_queues_its_close(self):
+        draft = Draft.objects.create(model_folder='ANL-Brown', branch='importer/ANL-Brown/2', pr_number=7)
+        response, delay = self.deliver_pull_request(self.merged())
+        self.assertEqual(response.status_code, 202)
+        delay.assert_called_once_with(draft.pk)
+
+    def test_pull_requests_that_are_not_a_merged_draft_are_ignored(self):
+        Draft.objects.create(model_folder='ANL-Brown', branch='importer/ANL-Brown/2', pr_number=7)
+        Draft.objects.create(model_folder='Old', branch='importer/Old/1', pr_number=5, status=DraftStatus.MERGED)
+        for payload in (self.merged(merged=False), self.merged(action='opened', merged=False),
+                        self.merged(number=8), self.merged(number=5),
+                        self.merged(repository='LekiaAnonim/RMG-models')):
+            with self.subTest(payload=payload):
+                response, delay = self.deliver_pull_request(payload)
+                self.assertEqual(response.status_code, 202)
+                self.assertIn('ignored', response.json())
                 delay.assert_not_called()
 
     def test_githubs_ping_is_answered(self):
