@@ -1,4 +1,5 @@
 from rest_flex_fields import FlexFieldsModelSerializer
+from rest_flex_fields.serializers import FlexFieldsSerializerMixin
 from rest_framework import serializers
 from drf_writable_nested.serializers import NestedCreateMixin
 
@@ -119,6 +120,10 @@ class KineticsSerializer(NestedModelSerializer):
     class Meta:
         model = models.Kinetics
         exclude = ["species", "raw_data", "efficiencies_hash"]
+        extra_kwargs = {"rate_fingerprint": {"help_text": (
+            "log10 of the rate coefficient in SI units (m, mol, s) at 500, 1000 and 1500 K and 1 bar, "
+            "calculated from data as written: colliders at efficiency 1, a duplicate entry alone. "
+            "Empty when the rate cannot be evaluated.")}}
 
     # The efficiencies are part of the rate's identity (Kinetics.efficiencies_hash).
     def create(self, validated_data):
@@ -159,7 +164,8 @@ class KineticsCommentSerializer(serializers.ModelSerializer):
         exclude = ["kinetic_model"]
 
 
-class KineticModelSerializer(NestedModelSerializer):
+# FlexFieldsSerializerMixin: ?fields= and ?omit= leave out the long species, thermo and rate lists.
+class KineticModelSerializer(FlexFieldsSerializerMixin, NestedModelSerializer):
     speciesname_set = SpeciesNameSerializer(many=True)
     thermocomment_set = ThermoCommentSerializer(many=True)
     transportcomment_set = TransportCommentSerializer(many=True)
