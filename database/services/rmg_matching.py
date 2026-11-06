@@ -70,7 +70,8 @@ def entry_reaction_key(entry):
 
 def site_reaction_index():
     index = defaultdict(list)
-    for pk, key, direction in models.Reaction.objects.exclude(canonical_key="").values_list(
+    # In id order: a library entry goes to the first of these reactions, whatever order the rows come in.
+    for pk, key, direction in models.Reaction.objects.exclude(canonical_key="").order_by("pk").values_list(
             "pk", "canonical_key", "canonical_direction"):
         index[key].append((pk, direction))
     return index
@@ -196,8 +197,12 @@ def match_thermo_library(label, path, version, structures_by_key):
 
 
 def structures_by_key():
+    """structure key -> the structure with the lowest id. Resonance drawings of one species (Cc1ccccc1 and
+    CC1=CC=CC=C1) share a key; without the order the lookup could give another drawing on each run, and
+    save_record then refuses the library's existing record ("A source ID changed structure")."""
     found = {}
-    for structure in models.Structure.objects.exclude(structure_key="").filter(isomer__species__isnull=False).distinct():
+    for structure in models.Structure.objects.exclude(structure_key="").filter(
+            isomer__species__isnull=False).distinct().order_by("pk"):
         found.setdefault(structure.structure_key, structure)
     return found
 
@@ -213,7 +218,7 @@ def kinetics_overlaps(version):
     # merges them); plain and third-body rates of the same reaction stay separate.
     parts = defaultdict(list)
     for model_id, key, direction, kind, fingerprint in models.KineticsComment.objects.exclude(
-            kinetics__reaction__canonical_key="").values_list(
+            kinetics__reaction__canonical_key="").order_by("pk").values_list(
             "kinetic_model_id", "kinetics__reaction__canonical_key", "kinetics__reaction__canonical_direction",
             "kinetics__raw_data__type", "kinetics__rate_fingerprint"):
         parts[(model_id, key, direction, rate_class(kind))].append(fingerprint)
@@ -247,7 +252,7 @@ def thermo_overlaps(version):
             "raw_data__library", "structure__isomer_id", "raw_data__thermo_values"):
         library_values[library][isomer_id].append(values)
     isomer_of_species = {}
-    for species_id, isomer_id in models.Species.isomers.through.objects.values_list("species_id", "isomer_id"):
+    for species_id, isomer_id in models.Species.isomers.through.objects.order_by("pk").values_list("species_id", "isomer_id"):
         isomer_of_species.setdefault(species_id, isomer_id)
     per_model, cache = defaultdict(list), {}
     for comment in models.ThermoComment.objects.select_related("thermo"):

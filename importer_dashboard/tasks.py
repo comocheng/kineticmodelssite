@@ -438,6 +438,22 @@ def sync_rmg_models_read_copy(reason='schedule'):
     return sync(reason)
 
 
+@shared_task(name='importer_dashboard.close_merged_draft')
+def close_merged_draft(draft_id):
+    """
+    Read the state of a draft's pull request now, with the token of the person who pushed it: a
+    merged one deletes the draft's branch on GitHub and closes the draft
+    (github.refresh_pull_request). The GitHub webhook queues it when a pull request is merged.
+    """
+    from . import github
+    from .models import Draft
+    draft = Draft.objects.filter(pk=draft_id).first()
+    if draft is None or not draft.is_open:
+        return {'draft_id': draft_id, 'skipped': 'the draft is closed'}
+    draft = github.refresh_pull_request(draft, max_age=0)
+    return {'draft_id': draft_id, 'status': draft.status, 'pr_state': draft.pr_state}
+
+
 @shared_task(name='importer_dashboard.ping')
 def ping(sent_at=None):
     """Lightweight probe used to measure enqueue -> worker-pickup latency.

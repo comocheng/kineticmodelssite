@@ -44,9 +44,17 @@ model's draft branch on the server, then, when someone opens a pull request, to 
      - the pull request already has every commit;
      - the person has no write access to RMG-models.
    - Nothing is pushed to master directly.
-7. **After the merge.** The job page reads the pull request's state (at most every 5 minutes).
-   A merged pull request closes the draft: its worktree and local branch are removed. The next
-   start opens a new draft from master. The read copy follows master by itself (see
+7. **After the merge.** The App's webhook (a "Pull request" event) closes the draft within
+   seconds of the merge; the job page also reads the pull request's state (at most every
+   5 minutes), in case a delivery is lost. A merged pull request:
+   - deletes the draft's branch on GitHub with the token of the person who pushed it, as
+     GitHub's **Automatically delete head branches** setting does. A branch that has commits
+     pushed after the merge is kept; a branch that is already deleted is fine;
+   - closes the draft: its worktree and local branch are removed;
+   - waits while a job runs in the draft (the worktree is its folder), and is done at the first
+     check after the job stops.
+
+   The next start opens a new draft from master. The read copy follows master by itself (see
    "Updates from GitHub"). Loading the merged model into the database (`import_rmg_models`,
    `rebuild_model_links`) is still a separate step.
 
@@ -171,12 +179,13 @@ Three things start it:
    - App settings, **General**, **Webhook**: select **Active**. Webhook URL:
      `https://pr.omethe.us/importer/github/webhook/`. Webhook secret: the secret. Keep SSL
      verification on.
-   - **Permissions & events**, **Subscribe to events**: select **Push**. (It uses the Contents
-     permission that the App already has.)
+   - **Permissions & events**, **Subscribe to events**: select **Push** and **Pull request**.
+     (They use the Contents and Pull requests permissions that the App already has.)
    - Put the same secret in the server's `.env` as `GITHUB_WEBHOOK_SECRET`, and restart gunicorn.
    - The webhook accepts only deliveries signed with the secret (`X-Hub-Signature-256`). It
      answers GitHub's ping, queues the update for a push to `RMG_MODELS_GITHUB_REPO`'s
-     `RMG_MODELS_BASE_BRANCH`, and ignores other pushes and events. Its answer is under
+     `RMG_MODELS_BASE_BRANCH`, queues the close of an open draft whose pull request was merged
+     (`close_merged_draft`), and ignores other pushes, pull requests and events. Its answer is under
      **Advanced**, **Recent deliveries** in the App settings, where a delivery can be sent again.
 2. **Celery Beat, every 15 minutes**, in case a delivery is lost (`sync-rmg-models-read-copy`).
 3. **Update now** on the Importer Settings page (superusers only), which also shows the read copy's

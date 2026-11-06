@@ -20,7 +20,7 @@ import os
 import secrets
 import stat
 from datetime import timedelta
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
@@ -427,14 +427,55 @@ def open_or_update_pull_request(draft, job, user, job_url):
     return draft
 
 
+def delete_merged_branch(draft, pr, token):
+    """
+    Delete the draft's branch on GitHub after its pull request `pr` (the API's answer) was merged,
+    as GitHub's "Automatically delete head branches" setting does. Only the pull request's own
+    branch in RMG-models, and only while it is still at the commit that was merged: a commit
+    pushed after the merge keeps the branch. Returns 'deleted', 'gone' (already deleted) or
+    the reason it was kept.
+    """
+    head = pr.get('head') or {}
+    branch = head.get('ref') or ''
+    in_repository = ((head.get('repo') or {}).get('full_name') or '').lower() == repository().lower()
+    if not draft.branch or branch != draft.branch or not in_repository:
+        return f'kept: the pull request is from {branch or "another branch"}, not {draft.branch}'
+    ref = f'/repos/{repository()}/git/refs/heads/{quote(branch, safe="/")}'
+    try:
+        now = _api('GET', f'/repos/{repository()}/git/ref/heads/{quote(branch, safe="/")}', token)
+    except GitHubError as e:
+        if getattr(e, 'status', None) == 404:
+            return 'gone'
+        raise
+    if (now.get('object') or {}).get('sha') != head.get('sha'):
+        return f'kept: {branch} has commits that were pushed after the merge'
+    try:
+        _api('DELETE', ref, token)
+    except GitHubError as e:
+        if getattr(e, 'status', None) in (404, 422):  # "Reference does not exist": deleted meanwhile
+            return 'gone'
+        raise
+    return 'deleted'
+
+
+def _job_running_in(draft):
+    from .local_job_manager import ACTIVE_STATUSES
+    return draft.jobs.filter(status__in=ACTIVE_STATUSES).exists()
+
+
 def refresh_pull_request(draft, user=None, max_age=300):
     """
     Read the state of the draft's pull request (at most every `max_age` seconds), with the token
-    of `user` or of the person who pushed. A merged pull request closes the draft.
+    of `user` or of the person who pushed. A merged pull request deletes the draft's branch on
+    GitHub (delete_merged_branch) and closes the draft, once no job runs in the draft.
     """
     if not draft.pr_number or not configured():
         return draft
-    if draft.pr_checked_at and (timezone.now() - draft.pr_checked_at).total_seconds() < max_age:
+    waiting_to_close = draft.pr_state == 'merged' and draft.is_open  # its job was running
+    if waiting_to_close and _job_running_in(draft):
+        return draft  # nothing to ask GitHub until the job stops
+    if (draft.pr_checked_at and not waiting_to_close
+            and (timezone.now() - draft.pr_checked_at).total_seconds() < max_age):
         return draft
     account = None
     for person in (user, draft.pushed_by):
@@ -445,7 +486,8 @@ def refresh_pull_request(draft, user=None, max_age=300):
     if account is None:
         return draft
     try:
-        pr = _api('GET', f'/repos/{repository()}/pulls/{draft.pr_number}', access_token(account))
+        token = access_token(account)
+        pr = _api('GET', f'/repos/{repository()}/pulls/{draft.pr_number}', token)
     except GitHubError as e:
         logger.warning(f'Could not read pull request #{draft.pr_number}: {e}')
         return draft
@@ -453,6 +495,17 @@ def refresh_pull_request(draft, user=None, max_age=300):
     draft.pr_checked_at = timezone.now()
     draft.save(update_fields=['pr_state', 'pr_checked_at', 'updated_at'])
     if draft.pr_state == 'merged' and draft.is_open:
+        if _job_running_in(draft):
+            # Its worktree is the job's folder: close it at the first check after the job ends
+            logger.info(f'Pull request #{draft.pr_number} was merged; draft {draft.pk} is closed '
+                        f'when its job stops.')
+            return draft
+        try:
+            outcome = delete_merged_branch(draft, pr, token)
+        except GitHubError as e:
+            outcome = f'not deleted: {e}'
+        log = logger.warning if outcome.startswith('not deleted') else logger.info
+        log(f'Pull request #{draft.pr_number} was merged; branch {draft.branch} on GitHub: {outcome}')
         drafts.close_draft(draft, DraftStatus.MERGED)
     return draft
 

@@ -16,32 +16,40 @@ MIN_BLOCK_SIZE = 10
 
 
 def rate_identities():
-    """(model_id, canonical_key, layer, rate id) for every model rate. Rates of one reaction and direction whose fingerprints agree within tolerance share a rate id."""
+    """(model_id, canonical_key, layer, rate id, reaction id) for every model rate. Rates of one reaction and direction whose fingerprints agree within tolerance share a rate id."""
     # A model's rate for a reaction is the sum of its DUPLICATE expressions of one kind; plain and
     # third-body rates of the same reaction (A = B, A (+M) = B (+M)) are separate rates.
+    # The rows are read in id order, so the reaction that stands for a rate, the sums and the order of the
+    # results do not change with the order in which PostgreSQL returns the rows.
     groups = defaultdict(list)
     for model_id, kinetics_id, reaction_id, key, direction, layer, kind, fingerprint in models.KineticsComment.objects.exclude(
-            kinetics__reaction__canonical_key="").values_list(
+            kinetics__reaction__canonical_key="").order_by("pk").values_list(
             "kinetic_model_id", "kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key",
             "kinetics__reaction__canonical_direction", "kinetics__reaction__layer", "kinetics__raw_data__type",
             "kinetics__rate_fingerprint"):
         groups[(model_id, key, (direction, rate_class(kind)))].append((kinetics_id, reaction_id, layer, fingerprint))
+    totals = {group: combine_fingerprints([p[3] for p in parts]) for group, parts in groups.items()}
+    # Tolerance is not transitive: with A ~ B and B ~ C but not A ~ C, the groups depend on which rate comes
+    # first. So each reaction's rates are grouped from the lowest fingerprint up: a rate joins the first group
+    # whose first rate matches it. This depends only on the rate values, not on row ids or row order.
     clusters = defaultdict(list)  # (key, direction and kind) -> representative fingerprints
+    index_of = {}
+    for model_id, key, direction in sorted((g for g, f in totals.items() if f), key=lambda g: (g[1], g[2], totals[g], g[0])):
+        group = clusters[(key, direction)]
+        fingerprint = totals[(model_id, key, direction)]
+        index = next((i for i, f in enumerate(group) if rates_match(f, fingerprint)), None)
+        if index is None:
+            group.append(fingerprint)
+            index = len(group) - 1
+        index_of[(model_id, key, direction)] = index
     identities = []
     for (model_id, key, direction), parts in groups.items():
-        kinetics_ids = tuple(sorted(p[0] for p in parts))
         reaction_id, layer = parts[0][1], parts[0][2]
-        fingerprint = combine_fingerprints([p[3] for p in parts])
-        if not fingerprint:
+        if not totals[(model_id, key, direction)]:
             # Unevaluable: identical only to the very same kinetics rows.
-            rate = (key, direction, f"k{kinetics_ids}")
+            rate = (key, direction, f"k{tuple(sorted(p[0] for p in parts))}")
         else:
-            group = clusters[(key, direction)]
-            index = next((i for i, f in enumerate(group) if rates_match(f, fingerprint)), None)
-            if index is None:
-                group.append(fingerprint)
-                index = len(group) - 1
-            rate = (key, direction, index)
+            rate = (key, direction, index_of[(model_id, key, direction)])
         identities.append((model_id, key, layer, rate, reaction_id))
     return identities
 
@@ -128,7 +136,7 @@ def _model_rates(model):
     """canonical key -> [(reaction id, direction, layer, total fingerprint)], duplicates summed."""
     parts = defaultdict(list)
     for reaction_id, key, direction, layer, kind, fingerprint in models.KineticsComment.objects.filter(
-            kinetic_model=model).exclude(kinetics__reaction__canonical_key="").values_list(
+            kinetic_model=model).exclude(kinetics__reaction__canonical_key="").order_by("pk").values_list(
             "kinetics__reaction_id", "kinetics__reaction__canonical_key", "kinetics__reaction__canonical_direction",
             "kinetics__reaction__layer", "kinetics__raw_data__type", "kinetics__rate_fingerprint"):
         parts[(key, (direction, rate_class(kind)))].append((reaction_id, layer, fingerprint))
