@@ -46,7 +46,7 @@ class IsomerViewSet(PermissionsViewSet):
 class SpeciesViewSet(PermissionsViewSet):
     queryset = models.Species.objects.all()
     serializer_class = serializers.SpeciesSerializer
-    filterset_fields = ["prime_id", "cas_number", "isomers__formula"]
+    filterset_class = filters.SpeciesFilter
     search_fields = ["prime_id", "cas_number", "hash", "isomers__inchi"]
     ordering_fields = ["id"]
 
@@ -59,7 +59,7 @@ class SpeciesViewSet(PermissionsViewSet):
 class ReactionViewSet(PermissionsViewSet):
     queryset = models.Reaction.objects.all()
     serializer_class = serializers.ReactionSerializer
-    filterset_fields = ["prime_id", "reversible"]
+    filterset_class = filters.ReactionFilter
     search_fields = ["prime_id", "hash"]
     ordering_fields = ["id"]
 
@@ -68,6 +68,7 @@ class ReactionViewSet(PermissionsViewSet):
 class ThermoViewSet(PermissionsViewSet):
     queryset = models.Thermo.objects.select_related("provider_record").all()
     serializer_class = serializers.ThermoSerializer
+    filterset_class = filters.ThermoFilter
     ordering_fields = ["id"]
 
 
@@ -100,6 +101,7 @@ class TransportViewSet(PermissionsViewSet):
 class KineticsViewSet(PermissionsViewSet):
     queryset = models.Kinetics.objects.all()
     serializer_class = serializers.KineticsSerializer
+    filterset_class = filters.KineticsFilter
     ordering_fields = ["id"]
 
 

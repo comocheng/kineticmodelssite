@@ -562,3 +562,92 @@ class DatapointResultFilter(FilterSet):
             "datapoint": ["exact", "in"],
             "datapoint__dataset": ["exact", "in"],
         }
+
+
+# ---------------------------------------------------------------------------
+# Species, reactions, rate records and thermochemistry of the kinetic models
+# ---------------------------------------------------------------------------
+class SpeciesFilter(FilterSet):
+    inchi = df.CharFilter(
+        field_name="isomers__inchi", method="filter_inchi",
+        help_text="Exact InChI of an isomer, with or without 'InChI='. A standard InChI also matches "
+                  "the records that add RMG's /u and /lp layers (for example both spin states of O2); "
+                  "an InChI with those layers matches that record only.")
+    has_electronic_state = df.BooleanFilter(
+        field_name="electronic_state", method="filter_has_electronic_state",
+        help_text="true: records with an electronic-state label, such as the excited OH* and CH*; "
+                  "false: records without one. Spin states are in the structures' multiplicity.")
+    multiplicity = df.NumberFilter(
+        field_name="isomers__structure__multiplicity",
+        help_text="Spin multiplicity of a structure of the species, for example 3 for triplet O2.")
+    kinetic_model = df.ModelMultipleChoiceFilter(
+        field_name="speciesname__kinetic_model", queryset=dm.KineticModel.objects.all(),
+        help_text="ID of a kinetic model; repeat for the species of any of the models given.")
+
+    class Meta:
+        model = dm.Species
+        fields = {"id": ["in"], "prime_id": ["exact"], "cas_number": ["exact"],
+                  "isomers__formula": ["exact"], "electronic_state": ["exact"]}
+
+    def filter_inchi(self, queryset, name, value: str):
+        bare = _bare_inchi(value)
+        standard = _RMG_LAYERS.sub("", bare)
+        if standard != bare:  # the client gave RMG's layers: that record only
+            return queryset.filter(isomers__inchi__in=[bare, f"InChI={bare}"])
+        q = Q(isomers__inchi__in=[standard, f"InChI={standard}"])
+        for prefix in ("InChI=", ""):
+            for layer in ("/u", "/lp"):
+                q |= Q(isomers__inchi__startswith=f"{prefix}{standard}{layer}")
+        return queryset.filter(q)
+
+    def filter_has_electronic_state(self, queryset, name, value):
+        if value is None:
+            return queryset
+        return queryset.exclude(electronic_state="") if value else queryset.filter(electronic_state="")
+
+
+class ReactionFilter(FilterSet):
+    species = df.ModelMultipleChoiceFilter(
+        field_name="species", queryset=dm.Species.objects.all(), conjoined=True,
+        help_text="ID of a species record; repeat for the reactions that contain every species given.")
+    kinetic_model = df.ModelMultipleChoiceFilter(
+        field_name="kinetics__kineticmodel", queryset=dm.KineticModel.objects.all(),
+        help_text="ID of a kinetic model; repeat for the reactions of any of the models given.")
+    canonical_key = df.CharFilter(
+        field_name="canonical_key",
+        help_text="Direction-insensitive identity: selects a reaction and the record of its reverse.")
+
+    class Meta:
+        model = dm.Reaction
+        fields = {"id": ["in"], "prime_id": ["exact"], "reversible": ["exact"], "layer": ["exact", "in"]}
+
+
+class KineticsFilter(FilterSet):
+    kinetic_model = df.ModelMultipleChoiceFilter(
+        field_name="kineticmodel", queryset=dm.KineticModel.objects.all(),
+        help_text="ID of a kinetic model; repeat for the rate records of any of the models given.")
+    species = df.ModelMultipleChoiceFilter(
+        field_name="reaction__species", queryset=dm.Species.objects.all(), conjoined=True,
+        help_text="ID of a species record; repeat for the rate records of reactions that contain "
+                  "every species given.")
+    canonical_key = df.CharFilter(
+        field_name="reaction__canonical_key",
+        help_text="Rate records of a reaction in either direction (the reaction's canonical_key).")
+
+    class Meta:
+        model = dm.Kinetics
+        fields = {"id": ["in"], "reaction": ["exact", "in"], "reverse": ["exact"]}
+
+
+class ThermoFilter(FilterSet):
+    kinetic_model = df.ModelMultipleChoiceFilter(
+        field_name="kineticmodel", queryset=dm.KineticModel.objects.all(),
+        help_text="ID of a kinetic model; repeat for the entries of any of the models given.")
+    reference = df.BooleanFilter(
+        field_name="provider_record", lookup_expr="isnull", exclude=True,
+        help_text="true: polynomials fitted to reference records (/api/thermo-record/); false: the "
+                  "entries of the kinetic models.")
+
+    class Meta:
+        model = dm.Thermo
+        fields = {"id": ["in"], "species": ["exact", "in"]}

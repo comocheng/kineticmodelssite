@@ -7,13 +7,15 @@ an admin token.
 
 | Endpoint | Useful filters / search |
 |----------|-------------------------|
-| `/api/kineticmodel/` | filter `prime_id`, `source`, `species` (a species ID; repeat for models with every species given); search `model_name`, `prime_id`, `info`, `source__doi`; order `model_name` |
-| `/api/species/` | filter `prime_id`, `cas_number`; search `prime_id`, `cas_number`, `hash`, `isomers__inchi` |
-| `/api/reaction/` | filter `prime_id`, `reversible`; search `prime_id`, `hash` |
+| `/api/kineticmodel/` | filter `id__in`, `prime_id`, `source`, `species` (a species ID; repeat for models with every species given); search `model_name`, `prime_id`, `info`, `source__doi`; order `model_name`; `fields`/`omit` (for example `fields=id,model_name` leaves out the long species, thermo and rate lists) |
+| `/api/species/` | filter `inchi` (exact; see below), `multiplicity`, `has_electronic_state`, `electronic_state`, `kinetic_model`, `id__in`, `prime_id`, `cas_number`, `isomers__formula`; search `prime_id`, `cas_number`, `hash`, `isomers__inchi` (substring) |
+| `/api/reaction/` | filter `species` (repeat: every species given), `kinetic_model`, `canonical_key` (both directions), `layer`, `id__in`, `prime_id`, `reversible`; search `prime_id`, `hash` |
 | `/api/isomer/` | filter `formula`; search `inchi` |
 | `/api/formula/` | filter/search `formula` |
 | `/api/structure/` | filter `multiplicity`; search `smiles`, `adjacency_list` |
-| `/api/thermo/`, `/api/transport/`, `/api/kinetics/` | order by `id` |
+| `/api/thermo/` | filter `species`, `species__in`, `kinetic_model`, `reference` (`true`: polynomials fitted to reference records; `false`: model entries), `id__in`; order by `id` |
+| `/api/kinetics/` | filter `reaction`, `reaction__in`, `canonical_key` (both directions), `species` (repeat: every species given), `kinetic_model`, `reverse`, `id__in`; order by `id` |
+| `/api/transport/` | order by `id` |
 | `/api/source/` | filter `publication_year`, `journal_name`, `prime_id`; search `doi`, `source_title`, `journal_name` |
 | `/api/author/` | search `firstname`, `lastname` |
 
@@ -52,6 +54,32 @@ gives an explicit reverse rate (`REV / A n Ea /`), `reverse_rate` holds it: `{"t
 one Arrhenius rate (A per mole, in cm) or `null` per rate term, with the CHEMKIN line and its text.
 Without it, the reverse rate comes from thermochemistry. The CHEMKIN download writes it as `REV`,
 and the Cantera download as a second, irreversible reaction.
+
+## One species or one reaction across models
+
+`inchi` on `/api/species/` is an exact match, unlike `search`. A standard InChI (as in ChemKED)
+also matches the records that add RMG's `/u` and `/lp` layers, so `inchi=1S/O2/c1-2` gives the
+triplet and the singlet O2 records; add `multiplicity=3` for the triplet. `has_electronic_state=false`
+leaves out labelled excited states such as OH*. An InChI with RMG's layers matches that record only.
+
+```bash
+curl "https://pr.omethe.us/api/species/?inchi=1S/CH3O/c1-2/h1H3&has_electronic_state=false"  # -> 33
+curl "https://pr.omethe.us/api/thermo/?species=33&reference=false&page_size=1000"        # every model's entry
+curl "https://pr.omethe.us/api/thermo-record/?species=33&provider=atct"                  # the ATcT value
+```
+
+A reaction written in the other direction is a second reaction record with the same
+`canonical_key` (`canonical_direction` is +1 or -1). Filter by `canonical_key` to get both:
+
+```bash
+curl "https://pr.omethe.us/api/reaction/?species=5&species=9&species=10&species=6"       # H2 + OH = H2O + H
+curl "https://pr.omethe.us/api/kinetics/?canonical_key=<key>&page_size=1000"             # every model's rate
+curl "https://pr.omethe.us/api/kinetics/?reaction=10179&kinetic_model=125"              # one model's rate
+```
+
+`rate_fingerprint` on a rate record is log10 k in SI units (m, mol, s) at 500, 1000 and 1500 K and
+1 bar, calculated from `data` as written: colliders at efficiency 1, and a duplicate entry alone
+(not summed with its partner). It is empty when the rate cannot be evaluated.
 
 ## Downloads and the original mechanism
 

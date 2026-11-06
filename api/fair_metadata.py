@@ -147,7 +147,10 @@ def experiment_dataset_jsonld(dataset):
         "chemked:experimentType": dataset.experiment_type,
         "prom:filePath": dataset.chemked_file_path,
         "prom:doi": dataset.file_doi or dataset.reference_doi,
-        "schema:identifier": _doi_uri(dataset.file_doi or dataset.reference_doi),
+        # The dataset's own identifier: its DOI when it has one, else its record URL. The DOI of the
+        # paper that reported the data is the citation, not the identifier of the dataset.
+        "schema:identifier": _doi_uri(dataset.file_doi) or f"{base}/api/experiment-dataset/{dataset.pk}/",
+        "schema:citation": _doi_uri(dataset.reference_doi) or None,
         "schema:license": _license_uri(dataset),
         "schema:distribution": (
             {"@type": "schema:DataDownload", "schema:contentUrl": dataset.data_repository_url}
