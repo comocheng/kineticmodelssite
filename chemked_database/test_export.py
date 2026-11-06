@@ -13,7 +13,7 @@ from django.test import TestCase
 from django.urls import reverse
 from pyked import chemked
 
-from .models import ExperimentDataset, IgnitionDelayDatapoint
+from .models import ExperimentDataset, IgnitionDelayDatapoint, RCMData
 
 # Shortened from ammonia/Shu_2019 of ChemKED-database (no DOI, as in hydrogen/Naumann_2011),
 # with the uncertainty forms found in ChemKED-database added.
@@ -389,6 +389,132 @@ class HistoryApiTests(TestCase):
     def test_history_type_filter(self):
         self.assertEqual(self._api("/api/time-history/", history_type="volume")["count"], 1)
         self.assertEqual(self._api("/api/time-history/", history_type="pressure")["count"], 0)
+
+
+RCM_FILE = """\
+file-authors:
+  - name: Test Author
+file-version: 0
+chemked-version: 0.5.0
+reference:
+  authors:
+    - name: G. Mittal
+  journal: Combustion and Flame
+  year: 2007
+  volume: 149
+  pages: 1-11
+experiment-type: ignition delay
+apparatus:
+  kind: rapid compression machine
+common-properties:
+  composition: &comp
+    kind: mole fraction
+    species:
+      - {species-name: C7H8, InChI: 1S/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3, amount: [0.0119]}
+      - {species-name: O2, InChI: 1S/O2/c1-2, amount: [0.2096]}
+      - {species-name: N2, InChI: 1S/N2/c1-2, amount: [0.7785]}
+  ignition-type: &ign
+    target: pressure
+    type: d/dt max
+datapoints:
+  - temperature: [297 K]
+    pressure: [0.6 bar]
+    ignition-delay: [40 ms]
+    composition: *comp
+    ignition-type: *ign
+    rcm-data:
+      compressed-temperature: [1022 K]
+      compressed-pressure: [45.6 bar]
+      compression-time: [27 ms]
+  - temperature: [297 K]
+    pressure: [0.5 bar]
+    ignition-delay: [55 ms]
+    composition: *comp
+    ignition-type: *ign
+"""
+
+
+class RCMDataApiTests(TestCase):
+    """The REST API and the YAML export give the rcm-data of a file: the compressed state."""
+
+    def setUp(self):
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        rel = "Toluene/Mittal_2007_rcm.yaml"
+        (root / rel).parent.mkdir(parents=True)
+        (root / rel).write_text(RCM_FILE)
+        call_command(
+            "sync_chemked", path=str(root), files=[rel], stdout=io.StringIO(), stderr=io.StringIO()
+        )
+        self.dataset = ExperimentDataset.objects.get(chemked_file_path=rel)
+
+    def _api(self, path, **params):
+        response = self.client.get(path, params)
+        self.assertEqual(response.status_code, 200, response.content[:300])
+        return response.json()
+
+    def test_rcm_data_endpoint_gives_the_compressed_state(self):
+        (row,) = self._api("/api/rcm-data/", datapoint__dataset=self.dataset.pk)["results"]
+
+        self.assertEqual(row["compressed_temperature"], 1022.0)
+        self.assertAlmostEqual(row["compressed_pressure"], 45.6e5)
+        self.assertAlmostEqual(row["compression_time"], 0.027)
+        self.assertEqual(row["compressed_temperature_quantity"]["value"], 1022.0)
+        self.assertEqual(row["compressed_temperature_quantity"]["units"], "K")
+        self.assertEqual(row["compressed_pressure_quantity"]["units"], "bar")
+        self.assertIsNone(row["stroke_quantity"])
+
+    def test_rcm_data_expands_to_its_datapoint(self):
+        (row,) = self._api(
+            "/api/rcm-data/", datapoint__dataset=self.dataset.pk, expand="datapoint.dataset"
+        )["results"]
+
+        self.assertEqual(row["datapoint"]["dataset"]["chemked_file_path"], self.dataset.chemked_file_path)
+        self.assertAlmostEqual(row["datapoint"]["pressure"], 0.6e5)
+
+    def test_rcm_data_filters(self):
+        self.assertEqual(self._api("/api/rcm-data/", compressed_temperature__gte=1000)["count"], 1)
+        self.assertEqual(self._api("/api/rcm-data/", compressed_temperature__gte=1100)["count"], 0)
+        points = self._api("/api/experiment-datapoint/", dataset=self.dataset.pk, has_rcm_data="true")
+        self.assertEqual(points["count"], 1)
+        self.assertEqual(
+            self._api("/api/experiment-dataset/", has_rcm_data="true", id__in=self.dataset.pk)["count"], 1
+        )
+
+    def test_a_dataset_with_two_rcm_datapoints_is_listed_once(self):
+        second = self.dataset.datapoints.filter(rcm_data__isnull=True).get()
+        RCMData.objects.create(datapoint=second, compressed_temperature=980.0)
+
+        listed = self._api("/api/experiment-dataset/", has_rcm_data="true", id__in=self.dataset.pk)
+        self.assertEqual(listed["count"], 1)
+        self.assertEqual(self._api("/api/rcm-data/", datapoint__dataset=self.dataset.pk)["count"], 2)
+
+    def test_datapoints_expand_their_rcm_data(self):
+        points = self._api(
+            "/api/experiment-datapoint/", dataset=self.dataset.pk, expand="rcm_data", ordering="-pressure",
+        )["results"]
+
+        self.assertEqual(points[0]["rcm_data"]["compressed_temperature"], 1022.0)
+        self.assertIsNone(points[1].get("rcm_data"))
+
+    def test_export_writes_the_rcm_data_of_the_file(self):
+        response = self.client.get(
+            reverse("chemked_database:dataset-export", args=[self.dataset.pk]), {"format": "yaml"}
+        )
+        export = yaml.safe_load(response.content)
+        written = [dp.get("rcm-data") for dp in export["datapoints"]]
+
+        self.assertIn(
+            {"compressed-temperature": ["1022.0 K"], "compressed-pressure": ["45.6 bar"],
+             "compression-time": ["27.0 ms"]},
+            written,
+        )
+        self.assertEqual(sum(1 for entry in written if entry), 1)
+        loaded = load_in_pyked(export)
+        temperatures = sorted(
+            dp.rcm_data.compressed_temperature.magnitude for dp in loaded.datapoints if dp.rcm_data
+        )
+        self.assertEqual(temperatures, [1022.0])
 
 
 SPECIATION_KEYS = ("independent-variables", "concentration-profiles", "auxiliary-profiles")

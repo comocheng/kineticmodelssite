@@ -40,6 +40,7 @@ from .models import (
     IgnitionDelayDatapoint,
     LaminarBurningVelocityMeasurementDatapoint,
     RateCoefficientDatapoint,
+    RCMData,
     MeasurementType,
     SpeciationMeasurementDatapoint,
     Apparatus,
@@ -3931,6 +3932,7 @@ class DatasetExportView(View):
                 'datapoints__composition__species',
                 'datapoints__time_histories',
                 'datapoints__volume_history',
+                'datapoints__rcm_data',
                 'datapoints__speciation_measurement__independent_variables',
                 'datapoints__speciation_measurement__concentration_profiles__species',
                 'datapoints__speciation_measurement__auxiliary_profiles',
@@ -4276,6 +4278,20 @@ class DatasetExportView(View):
                     'volume': {'units': dp.volume_history.volume_units, 'column': 1},
                     'values': dp.volume_history.values,
                 }
+
+            # RCM data: the conditions at the end of compression and the machine parameters
+            if hasattr(dp, 'rcm_data'):
+                rcm_entry = {}
+                for key, field, si_units in RCMData.CHEMKED_QUANTITIES:
+                    entry = _serialize_quantity(
+                        getattr(dp.rcm_data, f'{field}_quantity'),
+                        fallback_value=getattr(dp.rcm_data, field),
+                        fallback_units=si_units or None,
+                    )
+                    if entry:
+                        rcm_entry[key] = entry
+                if rcm_entry:
+                    dp_dict['rcm-data'] = rcm_entry
 
             # Laminar burning velocity
             if hasattr(dp, 'laminar_burning_velocity_measurement'):

@@ -37,6 +37,7 @@ router.register(r"concentration-profile", chemked_views.ConcentrationProfileView
 router.register(r"auxiliary-profile", chemked_views.AuxiliaryProfileViewSet, basename="api-auxiliary-profile")
 router.register(r"time-history", chemked_views.TimeHistoryViewSet, basename="api-time-history")
 router.register(r"volume-history", chemked_views.VolumeHistoryViewSet, basename="api-volume-history")
+router.register(r"rcm-data", chemked_views.RCMDataViewSet, basename="api-rcm-data")
 
 # analysis: simulation results and agreement metrics (read-only)
 router.register(r"simulation-run", analysis_views.SimulationRunViewSet, basename="api-simulation-run")

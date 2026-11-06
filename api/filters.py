@@ -215,6 +215,9 @@ class ExperimentDatapointFilter(MixtureFilterSet):
     has_volume_history = HasFilter(
         field_name="volume_history", help_text="true: datapoints with a volume history."
     )
+    has_rcm_data = HasFilter(
+        field_name="rcm_data", help_text="true: datapoints with RCM data (compressed conditions)."
+    )
 
     class Meta:
         model = cm.ExperimentDatapoint
@@ -294,6 +297,10 @@ class ExperimentDatasetFilter(FilterSet):
     has_volume_history = HasFilter(
         field_name="datapoints__volume_history",
         help_text="true: datasets with a volume history in one of their datapoints.",
+    )
+    has_rcm_data = HasFilter(
+        field_name="datapoints__rcm_data",
+        help_text="true: datasets with RCM data (compressed conditions) in one of their datapoints.",
     )
     has_common_properties = HasFilter(
         field_name="common_properties", help_text="true: datasets with common properties."
@@ -492,6 +499,17 @@ class VolumeHistoryFilter(FilterSet):
         fields = {
             "datapoint": ["exact", "in"],
             "datapoint__dataset": ["exact", "in"],
+        }
+
+
+class RCMDataFilter(FilterSet):
+    class Meta:
+        model = cm.RCMData
+        fields = {
+            "datapoint": ["exact", "in"],
+            "datapoint__dataset": ["exact", "in"],
+            "compressed_temperature": ["gte", "lte"],
+            "compressed_pressure": ["gte", "lte"],
         }
 
 
