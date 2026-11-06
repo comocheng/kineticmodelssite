@@ -1,5 +1,6 @@
 from collections import Counter
 
+from django.db.models import F
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from rmgpy import kinetics as rmg_kinetics
@@ -149,3 +150,51 @@ class SharedChemistryTests(TestCase):
         self.assertContains(listing, "Other 2016 H2/O2")
         self.assertNotContains(self.client.get(reverse("sub-mechanism-list"), {"shared": "1"}), "Other 2016 H2/O2")
         self.assertContains(self.client.get(reverse("kinetic-model-detail", args=[self.copy.pk])), "v1 of 2")
+
+
+class RateGroupingOrderTests(TestCase):
+    """Tolerance is not transitive. Three models give one reaction rates a factor 10**0.008 apart, so low ~
+    middle and middle ~ high, but not low ~ high. The groups must not depend on the order of the rows."""
+    FACTORS = {"low": 1.0, "middle": 10 ** 0.008, "high": 10 ** 0.016}
+
+    def build(self, order):
+        h, o2, oh, o = (sources._species_and_structure(Molecule().from_smiles(s), s)[0] for s in ("[H]", "[O][O]", "[OH]", "[O]"))
+        reaction = models.Reaction.objects.create(hash="h-o2-oh-o", reversible=True)
+        for side, sign in (([h, o2], -1), ([oh, o], 1)):
+            for species in side:
+                models.Stoichiometry.objects.create(reaction=reaction, species=species, coeff=sign)
+        self.models = {name: models.KineticModel.objects.create(model_name=name) for name in self.FACTORS}
+        self.comments = {}
+        for name in order:
+            kinetics = models.Kinetics.objects.create(reaction=reaction, raw_data=rate(1e12 * self.FACTORS[name]))
+            self.comments[name] = models.KineticsComment.objects.create(kinetics=kinetics, kinetic_model=self.models[name], comment="")
+        chemistry_index.index_reactions()
+        chemistry_index.index_kinetics()
+
+    def groups(self):
+        rate_of = {model_id: rate for model_id, _, _, rate, _ in shared_chemistry.rate_identities()}
+        return {name: rate_of[model.pk] for name, model in self.models.items()}
+
+    def assert_grouped_from_lowest(self):
+        groups = self.groups()
+        self.assertEqual(groups["low"], groups["middle"])
+        self.assertNotEqual(groups["middle"], groups["high"])
+        self.assertEqual(shared_chemistry.analyze()["rates"], 2)
+
+    def test_middle_rate_first(self):
+        self.build(["middle", "low", "high"])
+        self.assert_grouped_from_lowest()
+
+    def test_high_rate_first(self):
+        self.build(["high", "middle", "low"])
+        self.assert_grouped_from_lowest()
+
+    def test_rows_moved_on_disk(self):
+        self.build(["low", "middle", "high"])
+        before = self.groups()
+        # An UPDATE writes a new row version at the end of the table, so a scan now reads "low" last (both
+        # its link and its rate, whichever table the join reads first).
+        models.KineticsComment.objects.filter(pk=self.comments["low"].pk).update(comment="moved")
+        models.Kinetics.objects.filter(pk=self.comments["low"].kinetics_id).update(rate_fingerprint=F("rate_fingerprint"))
+        self.assertEqual(self.groups(), before)
+        self.assert_grouped_from_lowest()

@@ -147,7 +147,7 @@ def _variant_rates(layer, model_ids):
     parts = defaultdict(list)
     for model_id, kinetics_id, reaction_id, key, direction, kind, fingerprint in models.KineticsComment.objects.filter(
             kinetic_model_id__in=model_ids, kinetics__reaction__layer=layer).exclude(
-            kinetics__reaction__canonical_key="").values_list(
+            kinetics__reaction__canonical_key="").order_by("pk").values_list(
             "kinetic_model_id", "kinetics_id", "kinetics__reaction_id", "kinetics__reaction__canonical_key",
             "kinetics__reaction__canonical_direction", "kinetics__raw_data__type", "kinetics__rate_fingerprint"):
         parts[(model_id, key, (direction, rate_class(kind)))].append((reaction_id, fingerprint, kinetics_id))

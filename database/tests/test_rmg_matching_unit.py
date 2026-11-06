@@ -115,3 +115,35 @@ class LibraryMatchingTests(TestCase):
         self.assertContains(family, "https://rmg.mit.edu/database/kinetics/families/H_Abstraction/")
         self.assertContains(self.client.get(reverse("reaction-detail", args=[forward.pk])), family_url)
         self.assertEqual(self.client.get(reverse("rmg-family-detail", args=["Missing"])).status_code, 404)
+
+
+class RowOrderTests(TestCase):
+    """The lookups give the lowest id, whatever order PostgreSQL returns the rows in."""
+
+    def move_to_end(self, model, pk, **values):
+        # An UPDATE writes a new row version at the end of the table, so a scan reads this row last.
+        model.objects.filter(pk=pk).update(**values)
+
+    def test_resonance_drawings_give_the_lowest_structure_id(self):
+        species, first = sources._species_and_structure(Molecule().from_smiles("Cc1ccccc1"), "toluene")
+        kekule = models.Structure.objects.create(
+            adjacency_list=first.adjacency_list + "\n", smiles="CC1=CC=CC=C1", multiplicity=first.multiplicity,
+            isomer=first.isomer, structure_key=first.structure_key)
+        self.assertLess(first.pk, kekule.pk)
+        self.move_to_end(models.Structure, first.pk, smiles=first.smiles)
+        self.assertEqual(rmg_matching.structures_by_key()[first.structure_key].pk, first.pk)
+
+    def test_reactions_of_one_key_in_id_order(self):
+        h, o2, oh, o = (sources._species_and_structure(Molecule().from_smiles(SPECIES[name]), SPECIES[name])[0]
+                        for name in ("H", "O2", "OH", "O"))
+        rows = []
+        for hash_ in ("first", "second"):
+            reaction = models.Reaction.objects.create(hash=hash_, reversible=True)
+            for side, sign in (([h, o2], -1), ([oh, o], 1)):
+                for one in side:
+                    models.Stoichiometry.objects.create(reaction=reaction, species=one, coeff=sign)
+            rows.append(reaction)
+        chemistry_index.index_reactions()
+        self.move_to_end(models.Reaction, rows[0].pk, reversible=True)
+        rows[0].refresh_from_db()
+        self.assertEqual([pk for pk, _ in rmg_matching.site_reaction_index()[rows[0].canonical_key]], [r.pk for r in rows])
