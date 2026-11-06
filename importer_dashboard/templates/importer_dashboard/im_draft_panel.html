@@ -32,7 +32,7 @@ head, the count tiles of the Species summary, the collapsible results with count
         <div><dt>SMILES.txt lines added</dt><dd>{{ draft_changes.smiles_added|length }}</dd></div>
         <div><dt>SMILES.txt lines removed</dt><dd>{{ draft_changes.smiles_removed|length }}</dd></div>
         <div><dt>Files changed</dt><dd>{{ draft_changes.files|length }}</dd></div>
-        <div><dt>Not yet committed</dt><dd>{{ draft_changes.pending|length }}</dd></div>
+        <div><dt>Files not yet committed</dt><dd>{{ draft_changes.pending|length }}</dd></div>
     </dl>
 
     {% if draft_changes.pending %}

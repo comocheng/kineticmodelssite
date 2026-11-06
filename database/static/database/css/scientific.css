@@ -1641,6 +1641,16 @@ a:focus-visible {
     text-decoration: none;
 }
 
+/* A disabled button looks disabled on every page, and does not darken on hover. `button.`
+   outranks the page rules such as `.im-page .app-btn { cursor: pointer }`. */
+button.app-btn:disabled,
+button.app-btn:disabled:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .app-search__examples {
     display: flex;
     flex-wrap: wrap;
