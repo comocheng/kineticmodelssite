@@ -19,7 +19,7 @@ from django.views.decorators.http import require_http_methods
 from kms.access import actor_name, sign_in_redirect, site_login_required, write_login_required
 
 from . import create_model, drafts, editor, github
-from .models import ClusterJob, ImportJobStatus, JobLog
+from .models import ClusterJob, Draft, DraftStatus, ImportJobStatus, JobLog
 from .views import attach_draft
 
 
@@ -368,10 +368,11 @@ def model_create(request):
 def github_webhook(request):
     """
     The webhook of the Prometheus GitHub App. A push to the base branch of RMG-models (a merged
-    pull request) queues a fast-forward of the read copy (read_copy_sync.py); other events are
-    acknowledged and ignored. GitHub signs each delivery with the webhook secret
-    (X-Hub-Signature-256), so a request without that signature changes nothing. With no
-    GITHUB_WEBHOOK_SECRET the address is off.
+    pull request) queues a fast-forward of the read copy (read_copy_sync.py). A merged pull
+    request of an open draft queues its close (tasks.close_merged_draft), which deletes the
+    draft's branch on GitHub. Other events are acknowledged and ignored. GitHub signs each
+    delivery with the webhook secret (X-Hub-Signature-256), so a request without that signature
+    changes nothing. With no GITHUB_WEBHOOK_SECRET the address is off.
     """
     secret = getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')
     if not secret:
@@ -383,13 +384,15 @@ def github_webhook(request):
     event = request.headers.get('X-GitHub-Event', '')
     if event == 'ping':
         return JsonResponse({'ok': True, 'message': 'Prometheus received the ping.'})
-    if event != 'push':
+    if event not in ('push', 'pull_request'):
         return JsonResponse({'ignored': f'{event} events are not used.'}, status=202)
     try:
         payload = json.loads(request.body)
     except ValueError:
         return JsonResponse({'error': 'The body is not JSON.'}, status=400)
     repository = (payload.get('repository') or {}).get('full_name', '')
+    if event == 'pull_request':
+        return _merged_pull_request(payload, repository)
     ref, wanted = payload.get('ref', ''), f'refs/heads/{drafts.base_branch()}'
     if repository.lower() != github.repository().lower() or ref != wanted:
         return JsonResponse({'ignored': f'A push to {ref} of {repository}; only {wanted} of '
@@ -401,3 +404,24 @@ def github_webhook(request):
     except Exception as e:  # the broker is down: Celery Beat catches up later
         return JsonResponse({'error': f'Could not queue the update: {e}'}, status=503)
     return JsonResponse({'queued': True, 'after': payload.get('after', '')}, status=202)
+
+
+def _merged_pull_request(payload, repository):
+    """A pull_request delivery: queue the close of the open draft whose pull request was merged."""
+    pr = payload.get('pull_request') or {}
+    number = pr.get('number')
+    if repository.lower() != github.repository().lower():
+        return JsonResponse({'ignored': f'A pull request of {repository}.'}, status=202)
+    if payload.get('action') != 'closed' or not pr.get('merged'):
+        return JsonResponse({'ignored': f'Pull request #{number} was {payload.get("action")}, '
+                                        f'not merged.'}, status=202)
+    draft = Draft.objects.filter(status=DraftStatus.OPEN, pr_number=number).first()
+    if draft is None:
+        return JsonResponse({'ignored': f'No open draft has pull request #{number}.'}, status=202)
+
+    from .tasks import close_merged_draft
+    try:
+        close_merged_draft.delay(draft.pk)
+    except Exception as e:  # the broker is down: the job page closes it at the next view
+        return JsonResponse({'error': f'Could not queue the close of draft {draft.pk}: {e}'}, status=503)
+    return JsonResponse({'queued': True, 'draft': draft.pk, 'pull_request': number}, status=202)
