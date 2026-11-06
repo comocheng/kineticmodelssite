@@ -29,8 +29,8 @@ file's value and unit in `<field>_quantity` and its SI value in `<field>`.
 
 | Endpoint | Useful filters |
 |----------|----------------|
-| `/api/experiment-dataset/` | `experiment_type(__in)`, `species`, `inchi`, `cas`, `temperature__gte/lte`, `pressure__gte/lte`, `equivalence_ratio__gte/lte` (on one datapoint), `reference_doi`, `reference_year__gte/lte`, `apparatus__kind`, `apparatus__mode`, `is_valid`, `id__in`, `has_time_histories`, `has_volume_history`, `has_license` |
-| `/api/experiment-datapoint/` | `temperature__gte/lte`, `pressure__gte/lte`, `equivalence_ratio__gte/lte`, `species`, `inchi`, `cas`, `dataset(__in)`, `has_time_histories`, `has_volume_history` |
+| `/api/experiment-dataset/` | `experiment_type(__in)`, `species`, `inchi`, `cas`, `temperature__gte/lte`, `pressure__gte/lte`, `equivalence_ratio__gte/lte` (on one datapoint), `reference_doi`, `reference_year__gte/lte`, `apparatus__kind`, `apparatus__mode`, `is_valid`, `id__in`, `has_time_histories`, `has_volume_history`, `has_rcm_data`, `has_license` |
+| `/api/experiment-datapoint/` | `temperature__gte/lte`, `pressure__gte/lte`, `equivalence_ratio__gte/lte`, `species`, `inchi`, `cas`, `dataset(__in)`, `has_time_histories`, `has_volume_history`, `has_rcm_data` |
 | `/api/ignition-delay/` | `ignition_delay__gte/lte`, `ignition_target`, `ignition_type`, `has_ignition_type`, `has_pressure_rise`, `species`, `inchi`, `cas`, `datapoint__temperature__gte/lte`, `datapoint__dataset(__in)` |
 | `/api/laminar-burning-velocity/` | `laminar_burning_velocity__gte/lte`, `stretch__gte/lte`, `datapoint__equivalence_ratio__gte/lte` |
 | `/api/speciation-measurement/` | `datapoint__dataset__apparatus__kind`, `independent_variables__name`, `concentration_profiles__species__species_name`, `concentration_profiles__species__inchi`, `residence_time__gte/lte`, `reactor_volume__gte/lte`, `flow_rate__gte/lte` |
@@ -38,6 +38,7 @@ file's value and unit in `<field>_quantity` and its SI value in `<field>`.
 | `/api/auxiliary-profile/` | `profile_type`, `independent_name`, `measurement__datapoint__dataset` |
 | `/api/time-history/` | `datapoint(__in)`, `datapoint__dataset(__in)`, `history_type(__in)` |
 | `/api/volume-history/` | `datapoint(__in)`, `datapoint__dataset(__in)` |
+| `/api/rcm-data/` | `datapoint(__in)`, `datapoint__dataset(__in)`, `compressed_temperature__gte/lte`, `compressed_pressure__gte/lte` |
 | `/api/composition-species/` | `species_name`, `cas`, `inchi`, `smiles`, `amount__gte/lte` (search across all) |
 | `/api/apparatus/` | `kind`, `mode`, `institution`, `facility` |
 

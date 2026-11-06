@@ -1398,6 +1398,16 @@ class RCMData(models.Model):
         on_delete=models.CASCADE,
         related_name='rcm_data'
     )
+
+    # ChemKED rcm-data key, field, SI unit of the field; <field>_quantity keeps the file's value and unit
+    CHEMKED_QUANTITIES = (
+        ("compressed-pressure", "compressed_pressure", "Pa"),
+        ("compressed-temperature", "compressed_temperature", "K"),
+        ("compression-time", "compression_time", "s"),
+        ("stroke", "stroke", "m"),
+        ("clearance", "clearance", "m"),
+        ("compression-ratio", "compression_ratio", ""),
+    )
     
     # Compressed conditions
     compressed_temperature = models.FloatField(

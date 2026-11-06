@@ -139,6 +139,28 @@ class VolumeHistorySerializer(FlexFieldsModelSerializer):
         fields = "__all__"
 
 
+class RCMDataSerializer(FlexFieldsModelSerializer):
+    """The ChemKED ``rcm-data`` of a datapoint: the conditions at the end of compression and the
+    machine parameters. ``<field>_quantity`` is the file's value and unit, ``<field>`` its SI value
+    (K, Pa, s, m)."""
+
+    compressed_temperature_quantity = ValueWithUnitSerializer(read_only=True)
+    compressed_pressure_quantity = ValueWithUnitSerializer(read_only=True)
+    compression_time_quantity = ValueWithUnitSerializer(read_only=True)
+    stroke_quantity = ValueWithUnitSerializer(read_only=True)
+    clearance_quantity = ValueWithUnitSerializer(read_only=True)
+    compression_ratio_quantity = ValueWithUnitSerializer(read_only=True)
+
+    class Meta:
+        model = models.RCMData
+        fields = "__all__"
+
+    # by path: the datapoint serializer is defined below and expands to this one
+    expandable_fields = {
+        "datapoint": ("api.chemked_views.ExperimentDatapointSerializer", {"read_only": True}),
+    }
+
+
 class ExperimentDatapointSerializer(FlexFieldsModelSerializer):
     temperature_quantity = ValueWithUnitSerializer(read_only=True)
     pressure_quantity = ValueWithUnitSerializer(read_only=True)
@@ -153,6 +175,7 @@ class ExperimentDatapointSerializer(FlexFieldsModelSerializer):
         "dataset": (ExperimentDatasetSerializer, {"read_only": True}),
         "time_histories": (TimeHistorySerializer, {"read_only": True, "many": True}),
         "volume_history": (VolumeHistorySerializer, {"read_only": True}),
+        "rcm_data": (RCMDataSerializer, {"read_only": True}),
     }
 
 
@@ -377,4 +400,15 @@ class VolumeHistoryViewSet(ReadOnlyViewSet):
     serializer_class = VolumeHistorySerializer
     filterset_class = filters.VolumeHistoryFilter
     ordering_fields = ["id"]
+
+
+@extend_schema(tags=["experimental-data"])
+class RCMDataViewSet(ReadOnlyViewSet):
+    queryset = models.RCMData.objects.select_related(
+        "compressed_temperature_quantity", "compressed_pressure_quantity", "compression_time_quantity",
+        "stroke_quantity", "clearance_quantity", "compression_ratio_quantity",
+    ).order_by("id")
+    serializer_class = RCMDataSerializer
+    filterset_class = filters.RCMDataFilter
+    ordering_fields = ["compressed_temperature", "compressed_pressure", "id"]
 

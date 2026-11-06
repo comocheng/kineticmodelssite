@@ -44,6 +44,7 @@ reference is the live [Swagger UI and ReDoc](../reference.md).
 | `/api/auxiliary-profile/` | Temperature, pressure, volume or velocity profiles measured with the species |
 | `/api/time-history/` | Signals measured against time for a datapoint (ChemKED `time-histories`, e.g. volume profiles); `/api/experiment-datapoint/?expand=time_histories` puts them inline |
 | `/api/volume-history/` | Volume against time for a datapoint (ChemKED `volume-history`); `?expand=volume_history` on datapoints |
+| `/api/rcm-data/` | RCM conditions at the end of compression and machine parameters for a datapoint (ChemKED `rcm-data`); `?expand=rcm_data` on datapoints |
 | `/api/apparatus/` | Apparatus (kind, mode, facility) |
 | `/api/common-properties/` | Dataset-level common properties |
 | `/api/composition/`, `/api/composition-species/` | Mixture compositions and species amounts |
