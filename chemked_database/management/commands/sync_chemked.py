@@ -38,7 +38,7 @@ from chemked_database.models import (
 from chemked_database.species_links import SpeciesLinker
 from chemked_database.units import UnitConversionError, quantity_to_si
 from chemked_database.utils.chemistry import infer_smiles_and_atomic_composition
-from chemked_database.licences import assign_repository_licence
+from provenance.data_licence import apply_data_licence
 
 # A number may end in a decimal point ("660. K").
 VALUE_UNIT_RE = re.compile(r"^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*(.*)$")
@@ -1043,7 +1043,7 @@ class Command(BaseCommand):
                 failed += 1
 
         if not options["dry_run"]:
-            assign_repository_licence(base_path, ExperimentDataset.objects.all(), self.stdout.write)
+            apply_data_licence([ExperimentDataset.objects.all()], self.stdout.write)
 
         # Non-zero exit so the chemked-ingest workflow reports failed files
         if failed:
