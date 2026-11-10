@@ -83,6 +83,7 @@ nav:
       - Kinetic models & species: api/kinetic-models.md
       - Analysis & agreement: api/analysis.md
       - Provenance & FAIR metadata: api/provenance.md
+      - Canonical URLs: api/canonical-urls.md
   - Examples:
       - cURL: examples/curl.md
       - Python: examples/python.md

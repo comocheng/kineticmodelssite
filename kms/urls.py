@@ -32,6 +32,8 @@ urlpatterns = [
     # Dereferenceable FAIR identifiers (slug IRIs fall through after the
     # integer detail routes in database.urls).
     path("", include("provenance.resolver_urls")),
+    # Canonical URLs of the records, made from their keys (provenance.record_keys).
+    path("id/", include("provenance.id_urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     # ReDoc inside the site header and footer

@@ -2,6 +2,7 @@ from .agents import Institution, Person
 from .identifiers import ExternalIdentifier, IdentifierScheme
 from .licensing import License
 from .mappings import SemanticMapping
+from .record_keys import RecordKey
 
 __all__ = [
     "Institution",
@@ -10,4 +11,5 @@ __all__ = [
     "IdentifierScheme",
     "License",
     "SemanticMapping",
+    "RecordKey",
 ]
