@@ -3,6 +3,7 @@ from django.db import transaction
 
 from chemked_database.models import Apparatus, FileAuthor, ReferenceAuthor
 from database.models import Author
+from provenance import institution_curation as curation
 from provenance.models import Institution, Person, SemanticMapping
 
 
@@ -71,12 +72,18 @@ class Command(BaseCommand):
             .values_list("institution", flat=True)
             .distinct()
         ):
-            inst, made = Institution.objects.get_or_create(
-                name=name.strip(),
-                parent=None,
-                defaults={"ror_id": ror_for_institution(name.strip())},
-            )
-            inst_count += int(made)
+            if name.strip() in curation.INSTITUTIONS:
+                # Checked by hand: one record per institution, linked to its parent, with its own ROR id.
+                made = []
+                inst = curation.institution_for(name.strip(), made)
+                inst_count += len(made)
+            else:
+                inst, made = Institution.objects.get_or_create(
+                    name=name.strip(),
+                    parent=None,
+                    defaults={"ror_id": ror_for_institution(name.strip())},
+                )
+                inst_count += int(made)
             Apparatus.objects.filter(
                 institution=name, institution_ref__isnull=True
             ).update(institution_ref=inst)
