@@ -1,0 +1,389 @@
+# Copy for the home page (database/templates/database/home.html).
+#
+# Change the words here. The template only lays them out, and the tests in
+# database/tests/test_landing_unit.py check this file after each change.
+#
+# Rules for this file:
+# - Put every value in double quotes. YAML 1.1 reads a bare No, Yes, On or Off
+#   as true or false.
+# - "url" is a Django URL name, for example "species-search". "href" is a path
+#   or a full address. Give one of the two.
+# - A word in braces, for example {models}, is a live number from the database.
+#   database/services/landing.py lists the keys. The tests fail on an unknown key.
+# - The text is public, so it follows ASD-STE100 Simplified Technical English:
+#   at most 25 words in a sentence, active voice, no -ing verb forms.
+# - The name of the project is "Prometheus". "Pr.omethe.us" is only the
+#   wordmark and the web address.
+
+meta:
+  title: "Prometheus: open cyberinfrastructure for combustion kinetics"
+  description: "Prometheus keeps kinetic models and experimental data for combustion in one open database, with the same identity for each molecule on both sides."
+
+hero:
+  eyebrow: "Open cyberinfrastructure for combustion kinetics"
+  title: "The chemistry of fire,"
+  title_highlight: "open to all who study it."
+  lede: "Prometheus keeps kinetic models and experimental data in one database. Both use the same identity for each molecule. Thus, you can test a model against the experiments that it describes, and keep the result on record."
+  actions:
+    - label: "Explore kinetic models"
+      url: "kinetic-model-list"
+      style: "primary"
+    - label: "Read the API documentation"
+      url: "docs"
+      style: "ghost"
+  note: "Read access through the API is public. You do not need an account to read data."
+  # Shown under the 3D flame, which releases these species as rising labels
+  flame_note: "Each name that rises from the flame is one of the {flame_species} species that the most models in Prometheus use."
+
+holdings:
+  title: "In the database today"
+  note: "The database supplies these numbers. They update automatically."
+  items:
+    - key: "models"
+      label: "Kinetic models"
+      url: "kinetic-model-list"
+    - key: "species"
+      label: "Species"
+      url: "species-search"
+    - key: "reactions"
+      label: "Reactions"
+      url: "reaction-search"
+    - key: "datasets"
+      label: "Experimental datasets"
+      url: "chemked_database:dataset-list"
+    - key: "datapoints"
+      label: "Experimental datapoints"
+      url: "chemked_database:dataset-list"
+    - key: "sources"
+      label: "Sources"
+      url: "source-search"
+
+# The contribution band at the bottom of the hero. Each route is one way to send
+# models or data; a "terminal" route types its commands, a "web" route links to
+# the pages of this site. "pull_request" is the button under a terminal.
+# - "commands" and "output" are what a terminal shows. They are not prose, so the
+#   STE check skips them. A command with double quotes goes in single quotes.
+# - Write {{ and }} for a brace that the page must show.
+# - Text in angle brackets, for example <model>, is for the contributor to replace.
+contribute:
+  title: "Contribute to Prometheus"
+  intro: "Send your kinetic models and experimental data to Prometheus. Open a pull request on GitHub, or upload the files on this site."
+  routes:
+    - key: "model-git"
+      label: "Kinetic model"
+      method: "Pull request on GitHub"
+      kind: "terminal"
+      terminal: "RMG-models"
+      pull_request:
+        label: "Open a pull request to RMG-models"
+        href: "https://github.com/comocheng/RMG-models/compare"
+      steps:
+        - title: "Fork and clone"
+          text: "Fork the RMG-models repository of the CoMoChEng group on GitHub. Then clone your fork and make a branch."
+          link: "Fork the repository"
+          href: "https://github.com/comocheng/RMG-models/fork"
+          commands:
+            - "git clone https://github.com/<your-username>/RMG-models.git"
+            - "cd RMG-models"
+            - "git switch -c add-<model>"
+        - title: "Add the model files"
+          text: "Make a folder for the model. Put the mechanism file and the thermo file in it, and the transport file if the model has one."
+          commands:
+            - "mkdir <model>"
+            - "cp <path>/<mechanism file> <model>/mechanism.txt"
+            - "cp <path>/<thermo file> <model>/thermo.txt"
+            - "cp <path>/<transport file> <model>/transport.txt"
+          output:
+            - "# Leave out the transport file if the model has none."
+        - title: "Describe the source and the species"
+          text: "In source.txt, give the citation of the model and where you got it. In SMILES.txt, give each species that you know, one for each line."
+          commands:
+            - |-
+              cat > <model>/source.txt <<'EOF'
+              <authors> (<year>). <title>. <journal>. https://doi.org/<doi>
+              Downloaded from <address of the model files>
+              EOF
+            - |-
+              cat > <model>/SMILES.txt <<'EOF'
+              <species name in the mechanism> <SMILES>
+              C2H2 C#C
+              EOF
+        - title: "Write import.sh"
+          text: "import.sh tells the importer which file has the species, the reactions and the thermo. The importer gives each run a free port, so you do not set one."
+          commands:
+            - |-
+              cat > <model>/import.sh <<'EOF'
+              #!/bin/bash
+              python $RMGpy/importChemkin.py \
+                  --species mechanism.txt \
+                  --reactions mechanism.txt \
+                  --thermo thermo.txt \
+                  --known SMILES.txt
+              EOF
+        - title: "Open a pull request"
+          text: "Push the branch to your fork and open a pull request to the master branch. After the merge, the Prometheus importer runs import.sh."
+          link: "Open a pull request"
+          href: "https://github.com/comocheng/RMG-models/compare"
+          commands:
+            - "git add <model>"
+            - 'git commit -m "Add the <model> kinetic model"'
+            - "git push -u origin add-<model>"
+            - "gh pr create --repo comocheng/RMG-models --base master --fill"
+          output:
+            - "# gh is the GitHub CLI. You can also open the pull request on GitHub."
+    - key: "model-web"
+      label: "Kinetic model"
+      method: "Web upload"
+      kind: "web"
+      steps:
+        - title: "Upload the files"
+          text: "Give the folder name of the model in RMG-models. Upload the mechanism file, the thermo file, the transport file if the model has one, and SMILES.txt if you know some species. Give the citation and the DOI."
+        - title: "Let the Importer check and import"
+          text: "Prometheus puts the files in a draft (a branch of RMG-models), writes import.sh, and checks the files. Then the import job starts, and you confirm the species on the Importer page."
+        - title: "Open a pull request"
+          text: "When the job is complete, open a pull request to RMG-models from the job page, with your own GitHub account. After the merge, the model goes into the database."
+      links:
+        - label: "Add a kinetic model"
+          text: "Mechanism, thermo and transport files, through the Importer"
+          url: "kinetic-model-create"
+        - label: "Add a source"
+          text: "The paper or the report of the model"
+          url: "source-create"
+    - key: "data-git"
+      label: "Experimental data"
+      method: "Pull request on GitHub"
+      kind: "terminal"
+      terminal: "ChemKED-database"
+      pull_request:
+        label: "Open a pull request to ChemKED-database"
+        href: "https://github.com/pr-omethe-us/ChemKED-database/compare"
+      steps:
+        - title: "Fork and clone"
+          text: "Fork the ChemKED-database repository of the Prometheus organization on GitHub. Then clone your fork and make a branch."
+          link: "Fork the repository"
+          href: "https://github.com/pr-omethe-us/ChemKED-database/fork"
+          commands:
+            - "git clone https://github.com/<your-username>/ChemKED-database.git"
+            - "cd ChemKED-database"
+            - "git switch -c add-<author>-<year>"
+        - title: "Add your file"
+          text: "Put each ChemKED file in the folder of its fuel, in a subfolder Author_Year for the paper."
+          commands:
+            - "mkdir -p <fuel>/<Author>_<Year>"
+            - "cp <path>/<file>.yaml <fuel>/<Author>_<Year>/"
+        - title: "Check the file"
+          text: "Check the file with the PyKED version and the script that the CI uses. Each file needs a DOI and at least one file author."
+          commands:
+            - 'pip install "pyked @ git+https://github.com/pr-omethe-us/PyKED@main" pyyaml cerberus pint habanero'
+            - "python scripts/validate_chemked.py <fuel>/<Author>_<Year>/<file>.yaml"
+          output:
+            - "  [PASS] <fuel>/<Author>_<Year>/<file>.yaml"
+            - "Results: 1 passed, 0 failed out of 1 file(s)"
+        - title: "Open a pull request"
+          text: "Push the branch to your fork and open a pull request to the main branch. The CI checks the PyKED schema and the ORCID iDs of the file authors."
+          link: "Open a pull request"
+          href: "https://github.com/pr-omethe-us/ChemKED-database/compare"
+          commands:
+            - "git add <fuel>/<Author>_<Year>"
+            - 'git commit -m "Add <Author> <Year> data for <fuel>"'
+            - "git push -u origin add-<author>-<year>"
+            - "gh pr create --repo pr-omethe-us/ChemKED-database --base main --fill"
+          output:
+            - "# gh is the GitHub CLI. You can also open the pull request on GitHub."
+    - key: "data-web"
+      label: "Experimental data"
+      method: "Web upload"
+      kind: "web"
+      steps:
+        - title: "Choose files and contributor"
+          text: "Choose ChemKED YAML or ReSpecTh XML files. Give your name and your ORCID iD, which the pull request credits."
+        - title: "Preview and duplicate check"
+          text: "Check the preview. It shows the folder for each file and any file in the repository with the same data."
+        - title: "Submit for review"
+          text: "Submit the files. The site checks each file with PyKED and opens a pull request. Nothing enters the database before the merge."
+      links:
+        - label: "Upload files"
+          text: "ChemKED YAML or ReSpecTh XML files"
+          url: "chemked_database:dataset-upload"
+        - label: "Enter data in a form"
+          text: "One experiment, field by field"
+          url: "chemked_database:dataset-create"
+
+why:
+  eyebrow: "01 · Why"
+  title: "Why do models and experiments need one shared record?"
+  paragraphs:
+    - "Engineers use kinetic models to design engines, gas turbines and new fuels. A kinetic model lists the species and reactions of a fuel, with a rate for each reaction."
+    - "Experiments test the models. Shock tubes and rapid compression machines measure ignition delay. Flame experiments measure the laminar burning velocity. Jet-stirred and flow reactors give species profiles."
+    - "Each research group publishes its model and its data in its own files, with its own names for the same molecules. Thus, each comparison of a model with data starts with manual work. Other people cannot easily repeat it."
+  name:
+    label: "Why the name"
+    title: "Prometheus"
+    text: "In Greek myth, the Titan Prometheus took fire from the gods and gave it to people. This platform gives the combustion community open access to what it knows about fire."
+    image_alt: "A hand that holds a flame, the logo of Prometheus"
+
+problem:
+  eyebrow: "02 · The problem"
+  title: "What goes wrong when names are the only link?"
+  intro: "Propyne and allene are two different molecules with the same formula. Each model gives them its own names. The tags below are the real names in the {models} models in Prometheus."
+  # The two molecules of the scene. "key" names their live numbers, for
+  # example {propyne_names} and {propyne_models}. "inchi" finds the record.
+  species:
+    - key: "propyne"
+      name: "Propyne"
+      condensed: "CH3–C≡CH"
+      inchi: "InChI=1S/C3H4/c1-3-2/h1H,2H3"
+    - key: "allene"
+      name: "Allene"
+      condensed: "CH2=C=CH2"
+      inchi: "InChI=1S/C3H4/c1-3-2/h1-2H2"
+  shared_name: "C3H4"
+  shared_name_note: "{shared_name_models} models write only this formula. Which molecule is it?"
+  shared_name_pill: "no structure"
+  caption: "Each tag is a name in a model. The number on a tag is the number of models that use that name."
+  steps:
+    - "Propyne and allene have the same formula, C3H4, but different structures."
+    - "The models in Prometheus use {propyne_names} names for propyne and {allene_names} names for allene."
+    - "Some models write only C3H4. A match of names cannot tell which molecule they mean."
+    - "An experiment reports C3H4-P. A person must find the model name for the same molecule."
+    - "If nobody records that decision, nobody can check the comparison later."
+
+fix:
+  eyebrow: "03 · The fix"
+  title: "How does Prometheus connect the names?"
+  intro: "Prometheus does not match strings. It finds the molecular structure behind each name, and it gives that structure one identity."
+  shared_name_note: "Each model that writes this formula now points to one structure."
+  shared_name_pill: "resolved"
+  record_label: "One identity"
+  no_experiments: "No experiments yet"
+  caption: "These are the same tags. Each tag now points to one structure. An experiment tag counts entries in experimental mixtures."
+  steps:
+    - "The Importer finds the molecular structure of each species in a CHEMKIN mechanism."
+    - "Prometheus keeps one record for each structure. Its InChI identifier is the key."
+    - "Each model keeps its own name. The name points to a species with that structure."
+    - "Species in experimental mixtures point to the same records. Now, {linked_percent} of {composition_entries} mixture entries have this link."
+    - "Before a simulation, a reviewer can correct a species match. Prometheus records the correction, the person and the reason."
+
+how:
+  eyebrow: "04 · How it works"
+  title: "How does a mechanism file become a tested, citable record?"
+  steps:
+    - title: "Import"
+      text: "The Importer reads a CHEMKIN mechanism. It links each species, reaction, rate expression, thermochemistry entry and transport entry to a database record."
+    - title: "Curate"
+      text: "Experiments arrive as ChemKED files, and PyKED validates each file. Each value keeps its units, its uncertainty and its origin: reported, digitized or estimated."
+    - title: "Compare"
+      text: "Cantera simulates an experiment with a model. Prometheus stores the results, and it records which pairs of model and dataset have results."
+    - title: "Share"
+      text: "A documented REST API gives access to the records. Each model exports as CHEMKIN or Cantera YAML. JSON-LD metadata describes sources, models and datasets."
+
+capabilities:
+  eyebrow: "05 · Use it today"
+  title: "What can you do with Prometheus now?"
+  cards:
+    - title: "Kinetic models"
+      text: "Browse {models} kinetic models. See the chemistry that two models share. Download a model as CHEMKIN or Cantera YAML."
+      url: "kinetic-model-list"
+      link_label: "Browse models"
+    - title: "Experimental data"
+      text: "Search {datasets} ChemKED datasets: ignition delays, laminar burning velocities and species profiles from shock tubes, reactors and flames."
+      url: "chemked_database:home"
+      link_label: "Open ChemKED data"
+    - title: "Model and data analysis"
+      text: "Simulate experiments with a model in Cantera. Review the species matches. See which pairs of model and dataset have results."
+      url: "analysis:dashboard"
+      link_label: "Open analysis"
+    - title: "Species and thermochemistry"
+      text: "Search by formula, SMILES, InChI or CAS number. Compare the thermochemistry and transport data from each source."
+      url: "species-search"
+      link_label: "Search species"
+    - title: "Reactions and rate laws"
+      text: "Find the models that contain a reaction. Each rate expression has a type: Arrhenius, PLOG, Chebyshev, Lindemann, Troe or third-body."
+      url: "reaction-search"
+      link_label: "Search reactions"
+    - title: "Open API"
+      text: "Read the records from Python, R, MATLAB, Java, JavaScript or cURL. Read access is public. Contributions need a token."
+      url: "swagger-ui"
+      link_label: "Try the API"
+  contribute:
+    title: "Contribute your data"
+    text: "Upload a ChemKED dataset. Prometheus validates it, opens a pull request on GitHub and imports it. Your ORCID iD stays with the record."
+    url: "chemked_database:dataset-upload"
+    link_label: "Upload a dataset"
+
+impact:
+  eyebrow: "06 · What it means"
+  title: "What does this change for the field?"
+  lead: "The aim of Prometheus is to move combustion kinetics from publish-and-archive to contribute-and-continuously-validate."
+  points:
+    - title: "Comparisons that others can repeat"
+      text: "A comparison keeps its model, its data and its species matches. Another group can examine the comparison or run it again."
+    - title: "Credit for shared data"
+      text: "Contributors have ORCID iDs, and licenses have SPDX identifiers. Thus, people can count and cite each shared dataset."
+    - title: "Data that machines can find and use"
+      text: "The records follow the FAIR principles: findable, accessible, interoperable and reusable. Open formats and a public API connect them to other tools."
+
+next:
+  eyebrow: "07 · What comes next"
+  title: "Which parts are still in development?"
+  intro: "The data layer is in use now. These parts of the research program are not complete."
+  status_label: "In development"
+  items:
+    - title: "Continuous validation"
+      text: "Test each new contribution against each applicable model, automatically."
+    - title: "Dataset consistency"
+      text: "Find if one set of rate parameters can reproduce each measurement within its uncertainty. The method is Bound-to-Bound Data Collaboration."
+    - title: "Sensitivity analysis and optimization"
+      text: "Find the rates that control a prediction, and adjust them against the data, directly on the stored records."
+
+community:
+  eyebrow: "08 · Who builds it"
+  title: "Who builds Prometheus, and on what?"
+  intro: "Prometheus builds on open formats and tools from the combustion community."
+  tools:
+    - name: "ChemKED and PyKED"
+      role: "Format and validation of experiment files"
+    - name: "PyTeCK"
+      role: "Agreement between models and experiments"
+    - name: "Cantera"
+      role: "Simulation of experiments"
+    - name: "RMG"
+      role: "Species structures and the RMG-models collection"
+    - name: "ReSpecTh"
+      role: "Experimental records, converted to ChemKED with PyKED"
+  prior_art: "Earlier work, for example PrIMe, ReSpecTh and SciExpeM, showed the value of linked records, curated experiments and integrated analysis. Prometheus puts these ideas in one database that you can query."
+  team:
+    - group: "CoMoChEng group, Northeastern University"
+      lead: "Richard West"
+    - group: "Niemeyer Research Group, Oregon State University"
+      lead: "Kyle Niemeyer"
+  funding: "Supported by the U.S. National Science Foundation."
+  # The award numbers; leave it empty to hide them. The footer of every page links each award.
+  award: "Grant Nos. 1403171, 2531937, and 2531938"
+  cite_title: "How to cite"
+  cite_intro: "If you use Prometheus, please cite it as follows. The text comes from CITATION.cff in the repository."
+  code_label: "Source code:"
+
+closing:
+  title: "Start with a species, a model or a dataset."
+  # The square-bullet list of the Figma closing frame
+  links_label: "Platform"
+  links:
+    - label: "Platform overview"
+      href: "#why"
+    - label: "API documentation"
+      url: "docs"
+    - label: "Kinetic models"
+      url: "kinetic-model-list"
+    - label: "ChemKED data standard"
+      url: "chemked_database:home"
+  actions:
+    - label: "Search species"
+      url: "species-search"
+      style: "primary"
+    - label: "Browse kinetic models"
+      url: "kinetic-model-list"
+      style: "ghost"
+    - label: "Open ChemKED data"
+      url: "chemked_database:home"
+      style: "ghost"

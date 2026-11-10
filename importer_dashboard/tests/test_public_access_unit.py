@@ -1,0 +1,132 @@
+from unittest.mock import Mock, patch
+
+from django.contrib.auth.models import AnonymousUser, User
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.test import Client, RequestFactory, SimpleTestCase, override_settings
+from django.urls import include, path
+from django.views import View
+from django.views.decorators.http import require_POST
+
+from importer_dashboard import views
+from importer_dashboard.models import ClusterJob, ImportJobConfig, ImportJobStatus
+from kms.access import SiteLoginRequiredMixin, site_access, site_login_required
+
+
+@site_login_required
+@require_POST
+def protected_action(request):
+    return HttpResponse('ok')
+
+
+class ProtectedPage(SiteLoginRequiredMixin, View):
+    def get(self, request):
+        return HttpResponse('ok')
+
+
+urlpatterns = [
+    path('importer/', include('importer_dashboard.urls')),
+    path('action/', protected_action),
+    path('page/', ProtectedPage.as_view()),
+    path('login/', lambda request: HttpResponse('login'), name='login'),
+]
+
+
+@override_settings(
+    SITE_REQUIRE_LOGIN=False,
+    ROOT_URLCONF=__name__,
+    LOGIN_URL='/login/',
+    ALLOWED_HOSTS=['testserver'],
+)
+class PublicAccessTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.request = self.factory.get('/importer/')
+        self.request.user = AnonymousUser()
+
+    def test_anonymous_class_based_page_and_navigation_are_available(self):
+        self.assertEqual(ProtectedPage.as_view()(self.request).status_code, 200)
+        self.assertTrue(site_access(self.request)['site_access_allowed'])
+
+    @override_settings(ROOT_URLCONF='kms.urls')
+    def test_anonymous_navigation_shows_site_tools(self):
+        html = render_to_string('base.html', request=self.request).split('</nav>')[0]
+        self.assertIn('href="/importer/"', html)
+        self.assertIn('id="dataDropdown"', html)
+        self.assertNotIn('id="userDropdown"', html)
+
+    @override_settings(ROOT_URLCONF='kms.urls', SITE_REQUIRE_LOGIN=True)
+    def test_private_navigation_hides_tools_from_anonymous_users(self):
+        html = render_to_string('base.html', request=self.request).split('</nav>')[0]
+        self.assertNotIn('href="/importer/"', html)
+        self.assertNotIn('id="dataDropdown"', html)
+
+    @override_settings(SITE_REQUIRE_LOGIN=True)
+    def test_login_requirement_can_be_restored_for_pages_and_navigation(self):
+        response = ProtectedPage.as_view()(self.request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/?next=/importer/')
+        self.assertFalse(site_access(self.request)['site_access_allowed'])
+
+    @override_settings(SITE_REQUIRE_LOGIN=True)
+    def test_login_requirement_can_be_restored_for_importer(self):
+        self.assertEqual(views.get_logs(self.request).status_code, 302)
+
+    @override_settings(SITE_REQUIRE_LOGIN=True)
+    def test_signed_in_user_retains_access(self):
+        self.request.user = User(username='tester')
+        self.assertEqual(ProtectedPage.as_view()(self.request).status_code, 200)
+        self.assertEqual(views.get_logs(self.request).status_code, 200)
+
+    def test_anonymous_log_polling_and_stream(self):
+        with patch.object(views, 'dashboard_logger') as logger:
+            logger.get_recent_messages.return_value = []
+            self.assertEqual(views.get_logs(self.request).status_code, 200)
+            self.assertEqual(views.stream_logs(self.request).status_code, 200)
+
+    @override_settings(IMPORTER_MODE='local')
+    def test_anonymous_full_log_page(self):
+        job = Mock(id=159, config=Mock(root_path='/models'), host='localhost')
+        job.name = 'ANL-Brown'
+        log = {'name': 'output.log', 'exists': True, 'text': 'First line\nLast line\n'}
+        with (
+            patch.object(views, 'get_object_or_404', return_value=job),
+            patch.object(views, 'read_log', return_value=log) as read_log,
+            patch.object(views, 'ClusterJob'),
+            patch.object(views, 'render', return_value=HttpResponse('log')) as render,
+        ):
+            response = views.job_log_view(self.request, job.id)
+        self.assertEqual(response.status_code, 200)
+        read_log.assert_called_once_with(job, 'output.log')
+        self.assertEqual(render.call_args.args[2]['log'], log)
+
+    @override_settings(IMPORTER_MODE='local')
+    def test_anonymous_job_start_asks_to_sign_in(self):
+        # Reading stays public; starting a job acts on the server, so it needs a name on it
+        request = self.factory.post('/importer/job/159/start/', HTTP_REFERER='http://testserver/importer/job/159/')
+        request.user = AnonymousUser()
+        manager = Mock()
+        with (
+            patch.object(views, 'get_job_manager', return_value=manager),
+            patch('django.contrib.messages.info') as message,
+        ):
+            response = views.job_start(request, 159)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login/?next=%2Fimporter%2Fjob%2F159%2F')
+        manager.start_job.assert_not_called()
+        self.assertIn('Sign in', message.call_args.args[1])
+
+    def test_job_actions_still_require_post(self):
+        for action in [views.job_start, views.job_kill]:
+            with self.subTest(action=action.__name__):
+                self.assertEqual(action(self.request, 159).status_code, 405)
+
+    @override_settings(MIDDLEWARE=[
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+    ])
+    def test_public_actions_still_require_csrf(self):
+        client = Client(enforce_csrf_checks=True)
+        self.assertEqual(client.post('/action/').status_code, 403)
+        self.assertEqual(client.post('/importer/job/159/start/').status_code, 403)

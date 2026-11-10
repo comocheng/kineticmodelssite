@@ -1,52 +1,699 @@
-{% extends "database/base.html" %}
-
-{% load crispy_forms_tags %}
+{% extends "base.html" %}
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# The species search, from the Figma "Prometheus · Species database" (node 81:3372) #}
+
+{% block title %}Species database | Prometheus{% endblock %}
 
 {% block content %}
-<h1>Species Search</h1>
-<form method="get">
-    {{ filter.form.media }}
-    {{ filter.form|crispy }}
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
-<br />
-<div class="list-group">
-    {% for species in object_list %}
-    <a
-        href="{% url 'species-detail' species.pk %}"
-        class="list-group-item list-group-item-action flex-column align-items-start"
-    >
-        <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">{{ species.formula }}</h5>
-            <small>ID: {{ species.pk }}</small>
+<div class="sp-search">
+
+    <!-- Search workspace (Figma 80:2008) -->
+    <section class="app-workspace" aria-labelledby="sp-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="sp-search__top">
+            <div class="app-workspace__intro">
+                <nav class="sp-crumbs" aria-label="Breadcrumb">
+                    <a href="{% url 'database-home' %}">Kinetic Models Database</a>
+                    <img class="app-icon" src="{% static 'database/images/icons/chevron-right-white-12.svg' %}" alt="" width="12" height="12">
+                    <span aria-current="page">Species</span>
+                </nav>
+                <h1 id="sp-title" class="app-title"><span class="app-title__accent">Species</span> database</h1>
+                <p class="app-lede">Find species, inspect thermochemical data, and explore associated kinetic models.</p>
+            </div>
+            <a class="app-pill sp-search__browse" href="{% url 'reaction-search' %}">Browse reactions <span class="app-pill__plus"><img class="app-icon" src="{% static 'database/images/icons/arrow-small-right-white-13.svg' %}" alt="" width="13" height="11"></span></a>
         </div>
-        {% if species.enthalpy_formation %}
-        <p class="mb-1">
-            $\Delta H_f^\circ = {{ species.enthalpy_formation }} \left(\frac{J}{mol}\right)$
+
+        <!-- Search panel (Figma 80:2028) -->
+        <form class="app-search sp-search__panel" method="get" action="{% url 'species-search' %}" id="species-search-form" role="search">
+            <div class="app-search__head">
+                <label for="{{ filter.form.q.id_for_label }}" class="sp-search__label">Search species</label>
+                <a class="sp-search__clear" href="{% url 'species-search' %}">Clear search</a>
+            </div>
+            <div class="sp-search__controls">
+                <div class="sp-search__field">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-607185-18.svg' %}" alt="" width="18" height="18">
+                    {{ filter.form.q }}
+                </div>
+                <button type="submit" class="app-btn sp-search__submit">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-white-18.svg' %}" alt="" width="18" height="18">Search
+                </button>
+            </div>
+            {% for field in filter.form %}
+                {% for error in field.errors %}<p class="sp-search__error" role="alert">{{ error }}</p>{% endfor %}
+            {% endfor %}
+            <div class="sp-search__guidance">
+                <p id="species-search-help">A formula finds all matching isomers. A name or structure narrows the results.</p>
+                <div class="app-search__examples">
+                    <span>Try</span>
+                    <a class="app-chip" href="?q=methane">methane</a>
+                    <a class="app-chip" href="?q=CH4">CH₄</a>
+                    <a class="app-chip" href="?q=C2H6O">C₂H₆O</a>
+                    <a class="app-chip" href="?q=smiles%3ACCO">smiles:CCO</a>
+                </div>
+            </div>
+            <p class="sp-search__tips">
+                Search by name, formula, CAS number, PrIMe ID, database ID, SMILES, or InChI.
+                For ambiguous text, use <code>formula:CO</code> or <code>smiles:CO</code>;
+                use <code>isomer:123</code> or <code>structure:123</code> to look up those IDs.
+            </p>
+            {% if legacy_filters %}
+            <p class="sp-search__tips">Saved filters are active. Submit a new search or select Clear search to replace them.</p>
+            {% endif %}
+        </form>
+    </section>
+
+    <!-- Species results (Figma 81:3439) -->
+    <section class="sp-results" aria-labelledby="sp-results-title">
+        <div class="sp-results__toolbar">
+            <h2 id="sp-results-title" class="app-section-title sp-results__title">{% if filter.form.q.value or legacy_filters %}Search results{% else %}All species{% endif %}</h2>
+            <span class="sp-count">{{ page_obj.paginator.count|default:0|floatformat:"0g" }} {% if page_obj.paginator.count == 1 %}result{% else %}results{% endif %}</span>
+        </div>
+
+        <div class="app-panel sp-table">
+            {# position: relative keeps the visually hidden link text inside the scroller, so the page itself never scrolls sideways #}
+            <div class="sp-table__scroll" tabindex="0" role="region" aria-label="Species search results">
+                <table class="app-table sp-table__grid">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="sp-col-id" aria-sort="ascending"><span class="sp-sort">ID <img class="app-icon" src="{% static 'database/images/icons/arrow-down-ce4801-12.svg' %}" alt="" width="12" height="12"></span></th>
+                            <th scope="col" class="sp-col-structure">Structure</th>
+                            <th scope="col" class="sp-col-formula">Formula</th>
+                            <th scope="col">Names</th>
+                            <th scope="col" class="sp-col-pubchem">PubChem</th>
+                            <th scope="col" class="sp-col-enthalpy is-end">H°<sub>298</sub> (J/mol)</th>
+                            <th scope="col" class="sp-col-action"><span class="visually-hidden">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for species in object_list %}
+                        <tr class="clickable-row" data-href="{% url 'species-detail' species.pk %}">
+                            <td class="sp-id">{{ species.pk }}</td>
+                            <td class="sp-structure">
+                                {% if species.search_structure %}
+                                {% with species.search_structure as structure %}
+                                <img src="{% url 'draw-structure' structure.pk %}" alt="" class="sp-thumb" width="52" height="38" loading="lazy">
+                                {% endwith %}
+                                {% else %}
+                                <span class="sp-faint">—</span>
+                                {% endif %}
+                            </td>
+                            <td><a href="{% url 'species-detail' species.pk %}" class="sp-formula">{{ species.search_formula|default:"View species" }}</a></td>
+                            <td>
+                                {% if species.search_names %}
+                                {% with species.search_names as names_list %}
+                                <span class="sp-names">
+                                    <span>{{ names_list.0 }}</span>
+                                    {% if names_list|length > 1 %}
+                                    <span class="sp-alias" title="{{ names_list|slice:'1:'|join:', ' }}">+{{ names_list|length|add:"-1" }}<span class="visually-hidden"> more names</span></span>
+                                    {% endif %}
+                                </span>
+                                {% endwith %}
+                                {% else %}<span class="sp-faint">—</span>{% endif %}
+                            </td>
+                            <td>
+                                {% for cid in species.search_pubchem_cids %}
+                                <a href="https://pubchem.ncbi.nlm.nih.gov/compound/{{ cid }}" class="sp-cid" target="_blank" rel="noopener noreferrer">
+                                    CID {{ cid }} <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12">
+                                    <span class="visually-hidden">(opens in a new tab)</span>
+                                </a>
+                                {% empty %}
+                                <span class="sp-faint">No linked record</span>
+                                {% endfor %}
+                            </td>
+                            <td class="sp-enthalpy is-end">{% if species.search_enthalpy %}{{ species.search_enthalpy }}{% else %}—{% endif %}</td>
+                            <td class="sp-action"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="sp-empty">
+                                <img class="app-icon" src="{% static 'database/images/icons/search-607185-18.svg' %}" alt="" width="18" height="18">
+                                No species found. Try another name, formula, or structure.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (Figma 81:3824) -->
+            {% if page_obj.paginator.count %}
+            <div class="sp-pager">
+                <p class="sp-pager__position">
+                    <span><strong>{{ page_obj.start_index|floatformat:"0g" }}–{{ page_obj.end_index|floatformat:"0g" }}</strong> of <strong>{{ page_obj.paginator.count|floatformat:"0g" }}</strong> species</span>
+                    <span class="sp-pager__pages">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </p>
+                {% if page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Pagination">
+                    <ul class="sp-pager__controls">
+                        {% if page_obj.has_previous %}
+                        <li><a class="sp-pager__action" href="?{% param_replace page=1 %}">First</a></li>
+                        <li><a class="sp-pager__action" href="?{% param_replace page=page_obj.previous_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-left-8390a0-18.svg' %}" alt="" width="18" height="18">Previous</a></li>
+                        {% else %}
+                        <li><span class="sp-pager__action is-disabled" aria-disabled="true">First</span></li>
+                        <li><span class="sp-pager__action is-disabled" aria-disabled="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-left-8390a0-18.svg' %}" alt="" width="18" height="18">Previous</span></li>
+                        {% endif %}
+                        {% with current=page_obj.number last=page_obj.paginator.num_pages %}
+                        {% for n in page_obj.paginator.page_range %}
+                        {% if n == current %}
+                        <li><span class="sp-pager__page is-current" aria-current="page">{{ n }}</span></li>
+                        {% elif n == 1 or n == last or n >= current|add:"-2" and n <= current|add:"2" %}
+                        <li><a class="sp-pager__page" href="?{% param_replace page=n %}" aria-label="Page {{ n }}">{{ n }}</a></li>
+                        {% elif n == current|add:"-3" or n == current|add:"3" %}
+                        <li><span class="sp-pager__page is-gap" aria-hidden="true">…</span></li>
+                        {% endif %}
+                        {% endfor %}
+                        {% endwith %}
+                        {% if page_obj.has_next %}
+                        <li><a class="sp-pager__action is-strong" href="?{% param_replace page=page_obj.next_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-607185-18.svg' %}" alt="" width="18" height="18">Next</a></li>
+                        <li><a class="sp-pager__action is-strong" href="?{% param_replace page=page_obj.paginator.num_pages %}">Last</a></li>
+                        {% else %}
+                        <li><span class="sp-pager__action is-disabled" aria-disabled="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-607185-18.svg' %}" alt="" width="18" height="18">Next</span></li>
+                        <li><span class="sp-pager__action is-disabled" aria-disabled="true">Last</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <p class="sp-guide">
+            <img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="14" height="14">
+            Open a species to explore its associated model information. “+” indicates additional names; PubChem links open an external record.
         </p>
-        {% endif %} {% if species.names %}
-        <h6>Names</h6>
-        <ul class="list-group">
-            {% for name in species.names %}
-            <li class="list-group-item">{{ name }}</li>
-            {% endfor %}
-        </ul>
-        <br />
-        {% endif %} {% if species.structures %}
-        <h6>Structures</h6>
-        <ul class="list-group">
-            {% for structure in species.structures %}
-            <li class="list-group-item"><img src="{% url 'draw-structure' structure.pk %}" /></li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    </a>
-    {% endfor %}
+    </section>
 </div>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Colours of this Figma frame that have no token in scientific.css */
+.sp-search {
+    --sp-tint: #edf3ff;
+    --sp-head: #eef2f7;
+    --sp-faint: #8390a0;
+    --sp-alias: #eff2f6;
+    display: grid;
+    gap: 28px;
+}
+
+/* The frame crops the hero image centred, not bottom-aligned as on the database home */
+.sp-search .app-workspace {
+    background-position: center;
+    background-size: cover;
+}
+
+.sp-search__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.sp-search .app-workspace__intro {
+    display: grid;
+    gap: 10px;
+}
+
+.sp-search .app-title {
+    margin: 0;
+}
+
+.sp-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-white);
+}
+
+.sp-crumbs a {
+    color: inherit;
+}
+
+.sp-crumbs a:hover {
+    color: var(--color-white);
+}
+
+.sp-crumbs [aria-current] {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.sp-search__browse {
+    flex-shrink: 0;
+    padding: 10px 10px 10px 13px;
+    border-color: transparent;
+}
+
+.sp-search__panel {
+    gap: 16px;
+}
+
+.sp-search__label {
+    font-size: 14px;
+    color: var(--color-gray-900);
+}
+
+.sp-search__clear {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-search__clear:hover {
+    color: var(--color-primary);
+}
+
+.sp-search__controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sp-search__field {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+}
+
+.sp-search__field:focus-within {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.sp-search__field .form-control {
+    flex: 1;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 14px;
+    color: var(--color-gray-900);
+    box-shadow: none;
+}
+
+.sp-search__field .form-control::placeholder {
+    color: var(--sp-faint);
+}
+
+.sp-search__submit {
+    height: 48px;
+    padding: 0 24px;
+    font-size: 14px;
+}
+
+.sp-search__error {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-error);
+}
+
+.sp-search__guidance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 24px;
+}
+
+.sp-search__guidance p,
+.sp-search__tips {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-search__guidance .app-search__examples {
+    gap: 8px;
+    color: var(--color-gray-600);
+}
+
+.sp-search .app-chip {
+    padding: 5px 9px;
+    border-color: transparent;
+    background: var(--sp-tint);
+}
+
+.sp-search .app-chip:hover {
+    border-color: var(--color-primary);
+}
+
+.sp-search__tips code {
+    font-size: 11px;
+    color: var(--color-gray-800);
+}
+
+/* Results */
+.sp-results {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.sp-results__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.sp-results__title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 400;
+}
+
+.sp-count {
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: var(--sp-tint);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.sp-table {
+    overflow: hidden;
+}
+
+.sp-table__scroll {
+    position: relative;
+    overflow-x: auto;
+}
+
+.sp-table__scroll:focus-visible {
+    outline-offset: -2px;
+}
+
+.sp-table__grid {
+    min-width: 1000px;
+}
+
+.sp-table__grid th {
+    height: 48px;
+    padding: 0 10px;
+    border-top: 0;
+    background: var(--sp-head);
+    font-size: 11px;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.sp-table__grid td {
+    height: 56px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.sp-table__grid th:first-child,
+.sp-table__grid td:first-child {
+    padding-left: 20px;
+}
+
+.sp-table__grid th:last-child,
+.sp-table__grid td:last-child {
+    padding-right: 20px;
+}
+
+.sp-table__grid tbody tr:nth-child(even) {
+    background: var(--color-gray-50);
+}
+
+.sp-table__grid tbody tr:last-child td {
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.sp-table__grid .is-end {
+    text-align: right;
+}
+
+.sp-col-id { width: 64px; }
+.sp-col-structure { width: 98px; text-align: center; }
+.sp-col-formula { width: 156px; }
+.sp-col-pubchem { width: 220px; }
+.sp-col-enthalpy { width: 180px; }
+.sp-table__grid th.sp-col-enthalpy { text-transform: none; }
+.sp-col-action { width: 36px; }
+
+.sp-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-gray-900);
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.sp-table__grid tbody tr.clickable-row:hover {
+    background: var(--color-primary-bg);
+}
+
+.sp-table__grid .sp-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-structure {
+    text-align: center;
+}
+
+.sp-thumb {
+    display: block;
+    width: 52px;
+    height: 38px;
+    margin: 0 auto;
+    border-radius: 3px;
+    object-fit: contain;
+    background: var(--color-white);
+}
+
+.sp-formula {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.sp-formula:hover {
+    color: var(--color-primary);
+}
+
+.sp-names {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sp-alias {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--sp-alias);
+    font-size: 11px;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.sp-cid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sp-faint {
+    font-size: 12px;
+    color: var(--sp-faint);
+}
+
+.sp-enthalpy {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.sp-action .app-icon {
+    display: block;
+    margin-left: auto;
+}
+
+.sp-table__grid .sp-empty {
+    height: auto;
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--color-gray-600);
+}
+
+.sp-empty .app-icon {
+    margin-right: 6px;
+}
+
+/* Pagination */
+.sp-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.sp-pager__position {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.sp-pager__position strong {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.sp-pager__pages {
+    font-size: 11px;
+}
+
+.sp-pager__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sp-pager__action,
+.sp-pager__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.sp-pager__action {
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.sp-pager__action.is-strong {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.sp-pager__action.is-disabled {
+    background: var(--color-gray-50);
+    color: var(--sp-faint);
+}
+
+a.sp-pager__action:hover,
+a.sp-pager__page:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.sp-pager__page {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--color-gray-600);
+}
+
+.sp-pager__page.is-current {
+    background: var(--sp-tint);
+    color: var(--color-primary);
+}
+
+.sp-pager__page.is-gap {
+    min-width: 20px;
+    color: var(--sp-faint);
+}
+
+.sp-guide {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-guide .app-icon {
+    margin-top: 1px;
+}
+
+@media (max-width: 767.98px) {
+    .sp-search__top {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sp-search__controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sp-search__field {
+        flex: none;
+    }
+
+    .sp-search__submit {
+        width: 100%;
+    }
+
+    .sp-search__guidance {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sp-pager {
+        padding: 16px 14px;
+    }
+
+    .sp-pager__action {
+        padding: 0 12px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Make table rows clickable
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function(event) {
+        if (event.target.closest('a') || window.getSelection().toString()) return;
+        window.location.href = this.dataset.href;
+    });
+});
+</script>
 {% endblock %}

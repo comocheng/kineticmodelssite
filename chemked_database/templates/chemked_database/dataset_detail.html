@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+{% load static %}
+{% load math_filters %}
+{# A ChemKED dataset, from the Figma "ChemKED · Dataset x_2018" (node 107:2812) #}
+
+{% block title %}{{ dataset.chemked_file_path|truncatechars:60 }} | ChemKED | Prometheus{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-dataset">
+    <nav class="ck-crumbs ck-crumbs--icons" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}"><i class="bi bi-house" aria-hidden="true"></i><span class="visually-hidden">Home</span></a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li><a href="{% url 'chemked_database:dataset-list' %}">Datasets</a></li>
+            <li aria-current="page">{{ dataset.chemked_file_path|truncatechars:40 }}</li>
+        </ol>
+    </nav>
+
+    <!-- Dataset identity and downloads (Figma 107:2848) -->
+    <header class="ck-dataset__head">
+        <div class="ck-dataset__identity">
+            <span class="ck-dataset__symbol"><img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="26" height="26"></span>
+            <div class="ck-dataset__titles">
+                <div class="ck-heading__title">
+                    <h1>{{ dataset.chemked_file_path }}</h1>
+                    {% if dataset.is_valid %}
+                    <span class="ck-status ck-status--valid"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Valid</span>
+                    {% else %}
+                    <span class="ck-status ck-status--invalid"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>Not valid</span>
+                    {% endif %}
+                </div>
+                <p class="ck-dataset__summary">
+                    <span>Dataset {{ dataset.pk }}</span>
+                    <span aria-hidden="true">·</span>
+                    {% include "chemked_database/partials/ck_type.html" with type=dataset.experiment_type %}
+                    <span aria-hidden="true">·</span>
+                    <span>{{ datapoints.paginator.count }} datapoint{{ datapoints.paginator.count|pluralize }}</span>
+                </p>
+            </div>
+        </div>
+        <div class="ck-dataset__exports">
+            <span class="ck-dataset__exports-label">Download dataset</span>
+            <div class="ck-actions">
+                <a class="ck-btn" href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=yaml" title="Export as ChemKED YAML"><img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="" width="17" height="17">YAML</a>
+                <a class="ck-btn" href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=xml" title="Export as ReSpecTh XML">XML</a>
+                <a class="ck-btn" href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=csv" title="Export datapoints as CSV">CSV</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Experimental conditions (Figma 107:2874) -->
+    <section class="app-panel ck-dataset__conditions" aria-labelledby="ck-conditions-title">
+        <h2 id="ck-conditions-title" class="ck-panel__title"><i class="bi bi-thermometer-half" aria-hidden="true"></i>Experimental conditions</h2>
+        <dl class="ck-dataset__ranges">
+            <div>
+                <dt>Temperature range</dt>
+                <dd>{% if temp_range.min_temp %}<span class="ck-dataset__range">{{ temp_range.min_temp|floatformat:1 }} – {{ temp_range.max_temp|floatformat:1 }}</span><span class="ck-dataset__unit">K</span>{% else %}<span class="ck-dataset__range">—</span>{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Pressure range</dt>
+                <dd>{% if pressure_range.min_pressure %}<span class="ck-dataset__range">{{ pressure_range.min_pressure|floatformat:0 }} – {{ pressure_range.max_pressure|floatformat:0 }}</span><span class="ck-dataset__unit">Pa</span>{% else %}<span class="ck-dataset__range">—</span>{% endif %}</dd>
+                {% if pressure_range.min_pressure %}<dd class="ck-dataset__alt">{{ pressure_range.min_pressure|divide:101325|floatformat:4 }} – {{ pressure_range.max_pressure|divide:101325|floatformat:4 }} atm</dd>{% endif %}
+            </div>
+            {% if ignition_stats %}
+            <div>
+                <dt>Ignition delay range</dt>
+                <dd>{% if ignition_stats.min_delay %}<span class="ck-dataset__range">{{ ignition_stats.min_delay|floatformat:6 }} – {{ ignition_stats.max_delay|floatformat:6 }}</span><span class="ck-dataset__unit">s</span>{% else %}<span class="ck-dataset__range">—</span>{% endif %}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </section>
+
+    <div class="ck-columns ck-dataset__columns">
+        <div class="ck-stack">
+            {% if common_species %}
+            <!-- Common composition (Figma 107:2898) -->
+            <section class="app-panel" aria-labelledby="ck-composition-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-composition-title" class="ck-panel__title"><i class="bi bi-pie-chart" aria-hidden="true"></i>Common composition</h2>
+                    <span class="ck-panel__meta">{{ common_species|length }} species</span>
+                </div>
+                <div class="ck-table-wrap">
+                    <table class="ck-table ck-dataset__species">
+                        <thead>
+                            <tr>
+                                <th scope="col">Species</th>
+                                <th scope="col">InChI / SMILES</th>
+                                <th scope="col" class="is-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for species in common_species %}
+                            <tr>
+                                <td><a href="{% url 'chemked_database:species-datapoints' species.species_name %}">{{ species.species_name }}</a></td>
+                                <td>
+                                    {% if species.inchi %}
+                                    <span class="ck-id" title="{{ species.inchi }}">{{ species.inchi }}</span>
+                                    {% elif species.smiles %}
+                                    <span class="ck-id" title="{{ species.smiles }}">{{ species.smiles }}</span>
+                                    {% else %}
+                                    <span class="is-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="is-number">{{ species.amount|floatformat:4 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if common_properties.composition.kind %}
+                <p class="ck-panel__foot ck-dataset__basis"><span>Composition specified as <strong>{{ common_properties.composition.kind }}</strong></span></p>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {% if profile_chart %}
+            <!-- Profiles of the first speciation datapoint -->
+            <section class="app-panel" aria-labelledby="ck-profiles-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-profiles-title" class="ck-panel__title"><i class="bi bi-graph-up" aria-hidden="true"></i>Species Profiles</h2>
+                    <a class="ck-panel__meta" href="{% url 'chemked_database:datapoint-detail' chart_datapoint.pk %}">Datapoint {{ chart_datapoint.pk }}</a>
+                </div>
+                <div class="ck-panel__body">
+                    {% include "chemked_database/partials/speciation_chart.html" %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Datapoints (Figma 107:2923) -->
+            <section class="app-panel" id="ck-datapoints" aria-labelledby="ck-datapoints-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-datapoints-title" class="ck-panel__title"><i class="bi bi-table" aria-hidden="true"></i>Datapoints <span class="ck-count">{{ datapoints.paginator.count }}</span></h2>
+                    <a class="ck-btn ck-btn--sm" href="{% url 'chemked_database:dataset-export' pk=dataset.pk %}?format=csv"><img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="" width="16" height="16">Export CSV</a>
+                </div>
+                {% if datapoints %}
+                <div class="ck-table-wrap">
+                    <table class="ck-table ck-dataset__points">
+                        <thead>
+                            <tr>
+                                <th scope="col">T (K)</th>
+                                <th scope="col">P (Pa)</th>
+                                {% if speciation %}
+                                <th scope="col">τ (s)</th>
+                                <th scope="col">Independent variables</th>
+                                <th scope="col">Species profiles</th>
+                                {% endif %}
+                                <th scope="col">φ</th>
+                                {% if dataset.experiment_type == 'ignition delay' %}
+                                <th scope="col">τ<sub>ign</sub> (s)</th>
+                                <th scope="col">Target</th>
+                                {% endif %}
+                                {% if has_species_data %}
+                                <th scope="col">Species</th>
+                                {% endif %}
+                                <th scope="col"><span class="visually-hidden">Details</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dp in datapoints %}
+                            <tr>
+                                <td class="is-mono">{{ dp.temperature|floatformat:1|default:"—" }}</td>
+                                <td class="is-mono">{{ dp.pressure|floatformat:0 }}</td>
+                                {% if speciation %}
+                                {% with measurement=dp.speciation_measurement %}
+                                <td class="is-mono">{{ measurement.residence_time|floatformat:4|default:"—" }}</td>
+                                <td>
+                                    <span class="ck-dataset__tags">{% for variable in measurement.independent_variables.all %}<span class="ck-tag{% if variable.primary %} ck-tag--primary{% endif %}">{{ variable.name }} ({{ variable.units }})</span>{% endfor %}</span>
+                                </td>
+                                <td>
+                                    <span class="ck-dataset__profiles">{% for profile in measurement.concentration_profiles.all %}{{ profile.species.species_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+                                    {% if measurement.auxiliary_profiles.all %}<span class="ck-tag">+ {{ measurement.auxiliary_profiles.all|length }} auxiliary</span>{% endif %}
+                                </td>
+                                {% endwith %}
+                                {% endif %}
+                                <td class="is-mono">{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                {% if dataset.experiment_type == 'ignition delay' %}
+                                <td class="is-mono">{% if dp.ignition_delay %}{{ dp.ignition_delay.ignition_delay|floatformat:6|default:"—" }}{% else %}—{% endif %}</td>
+                                <td>{% if dp.ignition_delay %}{{ dp.ignition_delay.ignition_target|default:"—" }}{% else %}—{% endif %}</td>
+                                {% endif %}
+                                {% if has_species_data %}
+                                <td>{% if dp.composition %}<span class="ck-count">{{ dp.composition.species.count }}</span>{% else %}—{% endif %}</td>
+                                {% endif %}
+                                <td class="is-end"><a class="ck-open" href="{% url 'chemked_database:datapoint-detail' dp.pk %}" aria-label="Details of datapoint {{ dp.pk }}">Details<img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% include "chemked_database/partials/ck_pager.html" with page=datapoints noun="datapoints" label="Datapoint pages" anchor="#ck-datapoints" legend="— not reported" %}
+                {% else %}
+                <p class="ck-empty"><i class="bi bi-inbox" aria-hidden="true"></i>No datapoints in this dataset.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Dataset provenance (Figma 107:2994) -->
+        <aside class="ck-stack">
+            <section class="app-panel" aria-labelledby="ck-info-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-info-title" class="ck-panel__title"><i class="bi bi-info-circle" aria-hidden="true"></i>Dataset information</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Database ID</dt><dd class="is-mono">{{ dataset.pk }}</dd></div>
+                    <div><dt>ChemKED version</dt><dd class="is-mono">{{ dataset.chemked_version }}</dd></div>
+                    {% if dataset.respecth_version %}<div><dt>ReSpecTh version</dt><dd class="is-mono">{{ dataset.respecth_version }}</dd></div>{% endif %}
+                    {% if dataset.file_doi %}
+                    <div><dt>File DOI</dt><dd><a class="ck-dataset__doi" href="https://doi.org/{{ dataset.file_doi }}" target="_blank" rel="noopener">{{ dataset.file_doi|truncatechars:28 }}<img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a></dd></div>
+                    {% endif %}
+                    <div><dt>File version</dt><dd class="is-mono">{{ dataset.file_version }}</dd></div>
+                    <div><dt>Experiment type</dt><dd>{{ dataset.experiment_type|capfirst }}</dd></div>
+                    <div><dt>Datapoints</dt><dd class="is-mono">{{ datapoints.paginator.count }}</dd></div>
+                    <div><dt>Valid</dt><dd>{% if dataset.is_valid %}<span class="ck-dataset__yes"><i class="bi bi-check-circle" aria-hidden="true"></i>Yes</span>{% else %}<span class="ck-dataset__no"><i class="bi bi-x-circle" aria-hidden="true"></i>No</span>{% endif %}</dd></div>
+                    {% if dataset.first_publication_date %}<div><dt>First published</dt><dd>{{ dataset.first_publication_date }}</dd></div>{% endif %}
+                    {% if dataset.last_modification_date %}<div><dt>Last modified</dt><dd>{{ dataset.last_modification_date }}</dd></div>{% endif %}
+                </dl>
+            </section>
+
+            {% if common_conditions %}
+            <!-- Common properties, as the file gives them -->
+            <section class="app-panel" aria-labelledby="ck-common-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-common-title" class="ck-panel__title"><i class="bi bi-droplet" aria-hidden="true"></i>Common properties</h2>
+                </div>
+                <dl class="ck-facts">
+                    {% for condition in common_conditions %}
+                    <div>
+                        <dt>{{ condition.key }}</dt>
+                        <dd class="is-mono">
+                            {{ condition.quantity.value|default_if_none:condition.quantity.value_text }} {{ condition.quantity.units }}
+                            {% if condition.quantity.uncertainty is not None %}<span class="ck-sub">± {{ condition.quantity.uncertainty }} ({{ condition.quantity.uncertainty_type }})</span>{% endif %}
+                        </dd>
+                    </div>
+                    {% endfor %}
+                </dl>
+            </section>
+            {% endif %}
+
+            {% if common_properties and common_properties.ignition_target %}
+            <!-- Common ignition type -->
+            <section class="app-panel" aria-labelledby="ck-ignition-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-ignition-title" class="ck-panel__title"><i class="bi bi-lightning" aria-hidden="true"></i>Ignition detection</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Target</dt><dd>{{ common_properties.ignition_target }}</dd></div>
+                    {% if common_properties.ignition_type %}<div><dt>Type</dt><dd>{{ common_properties.ignition_type }}</dd></div>{% endif %}
+                </dl>
+            </section>
+            {% endif %}
+
+            {% if dataset.apparatus %}
+            <!-- Apparatus (Figma 107:3042) -->
+            <section class="app-panel" aria-labelledby="ck-apparatus-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-apparatus-title" class="ck-panel__title"><i class="bi bi-gear" aria-hidden="true"></i>Apparatus</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Type</dt><dd>{{ dataset.apparatus.kind|capfirst }}</dd></div>
+                    {% if dataset.apparatus.institution %}<div><dt>Institution</dt><dd>{{ dataset.apparatus.institution }}</dd></div>{% endif %}
+                    {% if dataset.apparatus.facility %}<div><dt>Facility</dt><dd>{{ dataset.apparatus.facility }}</dd></div>{% endif %}
+                </dl>
+            </section>
+            {% endif %}
+
+            <!-- Reference (Figma 107:3050) -->
+            <section class="app-panel" aria-labelledby="ck-reference-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-reference-title" class="ck-panel__title"><i class="bi bi-journal-text" aria-hidden="true"></i>Reference</h2>
+                </div>
+                <dl class="ck-facts">
+                    {% if dataset.reference_doi %}
+                    <div><dt>DOI</dt><dd><a class="ck-dataset__doi" href="https://doi.org/{{ dataset.reference_doi }}" target="_blank" rel="noopener">{{ dataset.reference_doi|truncatechars:32 }}<img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a></dd></div>
+                    {% endif %}
+                    {% if dataset.reference_journal %}<div><dt>Journal</dt><dd>{{ dataset.reference_journal }}</dd></div>{% endif %}
+                    {% if dataset.reference_year %}<div><dt>Year</dt><dd class="is-mono">{{ dataset.reference_year }}</dd></div>{% endif %}
+                    {% if dataset.reference_volume %}<div><dt>Volume</dt><dd>{{ dataset.reference_volume }}</dd></div>{% endif %}
+                    {% if dataset.reference_pages %}<div><dt>Pages</dt><dd>{{ dataset.reference_pages }}</dd></div>{% endif %}
+                    {% if dataset.reference_title %}<div><dt>Title</dt><dd>{{ dataset.reference_title }}</dd></div>{% endif %}
+                    {% if dataset.reference_table %}<div><dt>Table</dt><dd>{{ dataset.reference_table }}</dd></div>{% endif %}
+                    {% if dataset.reference_figure %}<div><dt>Figure</dt><dd>{{ dataset.reference_figure }}</dd></div>{% endif %}
+                    {% if dataset.reference_location %}<div><dt>Location</dt><dd>{{ dataset.reference_location }}</dd></div>{% endif %}
+                </dl>
+                {% if not dataset.reference_doi and not dataset.reference_journal and not dataset.reference_year and not dataset.reference_volume and not dataset.reference_pages and not dataset.reference_title and not dataset.reference_table and not dataset.reference_figure and not dataset.reference_location %}
+                <p class="ck-empty">No reference details in this file.</p>
+                {% endif %}
+            </section>
+
+            {% if dataset.reference_authors.exists %}
+            <!-- Authors -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#authorsSection" aria-expanded="true" aria-controls="authorsSection">
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                    <span>Authors <span class="ck-count">{{ dataset.reference_authors.count }}</span></span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse show" id="authorsSection">
+                    <ul class="ck-plain-list ck-dataset__people">
+                        {% for author in dataset.reference_authors.all %}
+                        <li>
+                            <span>{{ author.name }}</span>
+                            {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener" title="ORCID">{{ author.orcid }}</a>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if dataset.file_authors.exists %}
+            <!-- File authors (Figma 117:3489) -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#fileAuthorsSection" aria-expanded="false" aria-controls="fileAuthorsSection">
+                    <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                    <span>File authors <span class="ck-count">{{ dataset.file_authors.count }}</span></span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse" id="fileAuthorsSection">
+                    <ul class="ck-plain-list ck-dataset__people">
+                        {% for author in dataset.file_authors.all %}
+                        <li>
+                            <span>{{ author.name }}</span>
+                            {% if author.orcid %}<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener" title="ORCID">{{ author.orcid }}</a>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-dataset__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px 32px;
+}
+
+.ck-dataset__identity {
+    display: flex;
+    flex: 1 1 480px;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+}
+
+.ck-dataset__symbol {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background: var(--color-white);
+}
+
+.ck-dataset__titles {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ck-dataset__titles h1 {
+    font-size: 28px;
+    line-height: 1.25;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.ck-dataset__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.ck-dataset__exports {
+    display: grid;
+    justify-items: end;
+    gap: 8px;
+}
+
+.ck-dataset__exports-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+/* Experimental conditions */
+.ck-dataset__conditions {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+}
+
+.ck-dataset__ranges {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 32px;
+    margin: 0;
+}
+
+.ck-dataset__ranges > div {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ck-dataset__ranges dt {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.ck-dataset__ranges dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.ck-dataset__range {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.ck-dataset__unit {
+    margin-left: 6px;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.ck-dataset__alt {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.ck-dataset__columns {
+    grid-template-columns: minmax(0, 1fr) 448px;
+}
+
+.ck-dataset__species {
+    min-width: 520px;
+}
+
+.ck-dataset__species th:nth-child(2) {
+    width: 66%;
+}
+
+.ck-dataset__basis {
+    margin: 0;
+}
+
+.ck-dataset__basis strong {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-dataset__points {
+    min-width: 560px;
+}
+
+.ck-dataset__tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.ck-dataset__profiles {
+    font-size: 12px;
+}
+
+.ck-dataset__doi {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.ck-dataset__yes {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-success);
+}
+
+.ck-dataset__no {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-error);
+}
+
+.ck-dataset__people a {
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.ck-dataset .ck-panel__toggle {
+    border-radius: 10px;
+}
+
+.ck-dataset .collapse .ck-plain-list,
+.ck-dataset .collapsing .ck-plain-list {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.ck-dataset .speciation-chart {
+    width: 100%;
+}
+
+@media (max-width: 1199.98px) {
+    .ck-dataset__columns {
+        grid-template-columns: minmax(0, 1fr) 360px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .ck-dataset__columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ck-dataset__exports {
+        justify-items: start;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ck-dataset__ranges {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ck-dataset__identity {
+        flex-basis: 100%;
+    }
+
+    .ck-dataset__symbol {
+        display: none;
+    }
+
+    .ck-dataset__titles h1 {
+        font-size: 22px;
+    }
+
+    .ck-dataset__conditions {
+        padding: 18px 16px;
+    }
+
+    .ck-dataset__range {
+        font-size: 18px;
+    }
+}
+</style>
+{% endblock %}

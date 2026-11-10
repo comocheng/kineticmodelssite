@@ -1,6 +1,9 @@
+from rest_flex_fields import FlexFieldsModelSerializer
+from rest_flex_fields.serializers import FlexFieldsSerializerMixin
 from rest_framework import serializers
 from drf_writable_nested.serializers import NestedCreateMixin
 
+from api.record_key_fields import RecordKeyFieldsMixin
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
 from database.models.kinetic_data import validate_kinetics_data
@@ -21,26 +24,36 @@ class NestedModelSerializer(NestedCreateMixin, serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class FormulaSerializer(serializers.ModelSerializer):
+class FormulaSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = models.Formula
         fields = "__all__"
 
 
-class IsomerSerializer(serializers.ModelSerializer):
+class IsomerSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = models.Isomer
         fields = "__all__"
 
+    expandable_fields = {
+        "formula": (FormulaSerializer, {"read_only": True}),
+    }
 
-class SpeciesSerializer(serializers.ModelSerializer):
+
+class SpeciesSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "species"
+
     class Meta:
         model = models.Species
         exclude = ["hash"]
 
+    expandable_fields = {
+        "isomers": (IsomerSerializer, {"many": True, "read_only": True}),
+    }
+
     def create(self, validated_data):
         isomers = models.Isomer.objects.filter(pk__in=validated_data["isomers"])
-        validated_data["hash"] = get_species_hash(isomers)
+        validated_data["hash"] = get_species_hash(isomers, validated_data.get("electronic_state", ""))
 
         return super().update(validated_data)
 
@@ -51,7 +64,9 @@ class StoichiometrySerializer(serializers.ModelSerializer):
         exclude = ["reaction"]
 
 
-class ReactionSerializer(NestedModelSerializer):
+class ReactionSerializer(RecordKeyFieldsMixin, NestedModelSerializer):
+    record_kind = "reaction"
+
     stoichiometry_set = StoichiometrySerializer(many=True)
     models = [models.Stoichiometry]
 
@@ -68,13 +83,33 @@ class ReactionSerializer(NestedModelSerializer):
         return super().create(validated_data)
 
 
-class ThermoSerializer(serializers.ModelSerializer):
+class ThermoSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "thermo"
+
+    provider_record = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = models.Thermo
         fields = "__all__"
 
 
-class TransportSerializer(serializers.ModelSerializer):
+class ThermoRecordSerializer(RecordKeyFieldsMixin, serializers.ModelSerializer):
+    record_kind = "thermo-record"
+
+    provider_name = serializers.CharField(source="get_provider_display", read_only=True)
+
+    class Meta:
+        model = models.ThermoRecord
+        fields = "__all__"
+
+
+class ThermoEnrichmentJobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.ThermoEnrichmentJob
+        exclude = ["lease_token"]
+
+
+class TransportSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = models.Transport
         fields = "__all__"
@@ -86,14 +121,31 @@ class EfficiencySerializer(serializers.ModelSerializer):
         exclude = ["kinetics"]
 
 
-class KineticsSerializer(NestedModelSerializer):
+class KineticsSerializer(RecordKeyFieldsMixin, NestedModelSerializer):
+    record_kind = "kinetics"
+
     efficiency_set = EfficiencySerializer(many=True)
     models = [models.Efficiency]
     data = serializers.JSONField(source="raw_data", validators=[validate_kinetics_data])
 
     class Meta:
         model = models.Kinetics
-        exclude = ["species", "raw_data"]
+        exclude = ["species", "raw_data", "efficiencies_hash"]
+        extra_kwargs = {"rate_fingerprint": {"help_text": (
+            "log10 of the rate coefficient in SI units (m, mol, s) at 500, 1000 and 1500 K and 1 bar, "
+            "calculated from data as written: colliders at efficiency 1, a duplicate entry alone. "
+            "Empty when the rate cannot be evaluated.")}}
+
+    # The efficiencies are part of the rate's identity (Kinetics.efficiencies_hash).
+    def create(self, validated_data):
+        kinetics = super().create(validated_data)
+        kinetics.refresh_efficiencies_hash()
+        return kinetics
+
+    def update(self, instance, validated_data):
+        kinetics = super().update(instance, validated_data)
+        kinetics.refresh_efficiencies_hash()
+        return kinetics
 
 
 class SpeciesNameSerializer(serializers.ModelSerializer):
@@ -123,7 +175,10 @@ class KineticsCommentSerializer(serializers.ModelSerializer):
         exclude = ["kinetic_model"]
 
 
-class KineticModelSerializer(NestedModelSerializer):
+# FlexFieldsSerializerMixin: ?fields= and ?omit= leave out the long species, thermo and rate lists.
+class KineticModelSerializer(RecordKeyFieldsMixin, FlexFieldsSerializerMixin, NestedModelSerializer):
+    record_kind = "kineticmodel"
+
     speciesname_set = SpeciesNameSerializer(many=True)
     thermocomment_set = ThermoCommentSerializer(many=True)
     transportcomment_set = TransportCommentSerializer(many=True)
@@ -147,3 +202,33 @@ class KineticModelSerializer(NestedModelSerializer):
             "thermo",
             "transport",
         ]
+
+
+class AuthorSerializer(FlexFieldsModelSerializer):
+    class Meta:
+        model = models.Author
+        fields = "__all__"
+
+
+class SourceSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "source"
+
+    class Meta:
+        model = models.Source
+        fields = "__all__"
+
+    expandable_fields = {
+        "authors": (AuthorSerializer, {"many": True, "read_only": True}),
+    }
+
+
+class StructureSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "structure"
+
+    class Meta:
+        model = models.Structure
+        fields = "__all__"
+
+    expandable_fields = {
+        "isomer": (IsomerSerializer, {"read_only": True}),
+    }

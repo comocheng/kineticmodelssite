@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{# The output log of one import job; no Figma frame, so it follows the job page "Importer failed job" (182:4578) #}
+
+{% block title %}{{ job.name }} | Output log | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-job">
+
+    {% include "importer_dashboard/im_job_header.html" with current="log" %}
+
+    {% include "importer_dashboard/im_log_panel.html" with title="Output log" icon="file" missing="The job has written no output.log yet. Start the job: the importer writes all that it prints to output.log." %}
+
+    {% if rmg_log %}
+    <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" %}<span>RMG-Py also writes <code>RMG-Py-output/RMG.log</code> ({{ rmg_log.size|filesizeformat }}), with only what RMG-Py logs. <a href="{% url 'importer_dashboard:job_log_download' job.id 'RMG.log' %}">Download RMG.log</a></span></p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+{% endblock %}

@@ -1,0 +1,372 @@
+# Local Setup Guide (Without Docker)
+
+This guide walks you through setting up and running the **kineticmodelssite** Django project directly on your machine — no Docker required.
+
+---
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Python** | 3.9 | Required (RMG compatibility) |
+| **PostgreSQL** | 12+ | [Postgres.app](https://postgresapp.com/) recommended on macOS |
+| **Conda** | Any | [Miniforge](https://github.com/conda-forge/miniforge) recommended |
+| **Git** | Any | For cloning RMG-models |
+
+---
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/comocheng/kineticmodelssite.git
+cd kineticmodelssite
+```
+
+---
+
+## 2. Create the Conda Environment
+
+```bash
+conda env create -f environment.yml
+conda activate kms
+```
+
+> **Apple Silicon (M1/M2/M3) note:** RMG 3.3.0 is only available for `linux-64`. You can still install the rest of the environment and comment out the `rmg=3.3.0` line in `environment.yml` if RMG is not needed for your workflow. Alternatively, install RMG separately from source ([RMG-Py](https://github.com/ReactionMechanismGenerator/RMG-Py)).
+
+---
+
+## 3. Set Up PostgreSQL
+
+### Install PostgreSQL (if not already installed)
+
+**macOS (Homebrew):**
+```bash
+brew install postgresql@15
+brew services start postgresql@15
+```
+
+**macOS (Postgres.app):**  
+Download from [postgresapp.com](https://postgresapp.com/) and launch.
+
+**Ubuntu/Debian:**
+```bash
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+### Create the Database
+
+```bash
+createdb kms
+```
+
+Or via `psql`:
+```bash
+psql -U postgres -c "CREATE DATABASE kms;"
+```
+
+---
+
+## 4. Configure Environment Variables
+
+The project uses a `.env.dev` file for configuration. Create or edit it in the project root:
+
+```bash
+cp .env.dev .env.dev  # or create a new one
+```
+
+Edit `.env.dev` with your local paths:
+
+```bash
+# RMG-Py path (if installed)
+RMGpy=/path/to/RMG-Py
+PYTHONPATH=${RMGpy}:${PYTHONPATH}
+
+# PostgreSQL settings
+POSTGRES_DB=kms
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+DB_HOST=localhost
+DATABASE_URL=postgresql://localhost/kms
+
+# Django settings
+DJANGO_SECRET_KEY="your-secret-key-here"
+DEBUG=True
+ALLOWED_HOSTS=*
+
+# RMG-models path (for importing kinetic models)
+RMGMODELSPATH=/path/to/RMG-models
+
+# ChemKED-database clone (for sync_chemked and the chemked-ingest workflow).
+# Default: ../ChemKED-database next to this project.
+CHEMKED_DATABASE_PATH=/path/to/ChemKED-database
+
+# Read-only login of the SQL console at /livequery/ (see step 6). Without it the
+# console runs no queries. Use a new password, not the one of POSTGRES_USER.
+LIVEQUERY_DB_USER=kms_livequery
+LIVEQUERY_DB_PASSWORD=<a long random password>
+```
+
+---
+
+## 5. Clone RMG-models (for Data Import)
+
+If you plan to import kinetic models into the database:
+
+```bash
+git clone https://github.com/comocheng/RMG-models.git /path/to/RMG-models
+```
+
+Update `RMGMODELSPATH` in `.env.dev` to point to this directory.
+
+---
+
+## 6. Run Database Migrations
+
+```bash
+conda activate kms
+python manage.py migrate
+python manage.py livequery_role
+```
+
+`livequery_role` creates the PostgreSQL login of the SQL console, or updates it. The login can
+read the data tables and nothing else: not users, API tokens, sessions, importer settings or
+files on the server. Run it again after each `migrate`, so the console can read new tables.
+
+If the login of the site cannot create roles (on a server it should not), a PostgreSQL superuser
+creates the console login once. The command writes the SQL for this step. The SQL holds the
+password from `.env`, so pipe it into `psql` instead of showing it:
+
+```bash
+python manage.py livequery_role --admin-sql | sudo -u postgres psql
+python manage.py livequery_role
+```
+
+The second command grants the tables, which the login of the site owns. Run the first command
+again only to change the password.
+
+---
+
+## 7. Load Pre-existing Data (Optional)
+
+If a database fixture is available, decompress and load it to start with existing data:
+
+```bash
+gunzip -k fixtures/full_database.json.gz
+python manage.py loaddata fixtures/full_database.json
+```
+
+This populates the database with kinetic models, species, reactions, and thermochemistry data so you don't need to run the full import process.
+
+> **To create a fixture from an existing database** (for sharing with others):
+> ```bash
+> mkdir -p fixtures
+> python manage.py dumpdata \
+>     --natural-foreign \
+>     --natural-primary \
+>     --indent 2 \
+>     --exclude sessions \
+>     --exclude admin.logentry \
+>     -o fixtures/full_database.json
+> ```
+
+---
+
+## 8. Create a Superuser (Optional)
+
+```bash
+python manage.py createsuperuser
+```
+
+---
+
+## 9. Run the Development Server
+
+```bash
+python manage.py runserver
+```
+
+Visit [http://localhost:8000](http://localhost:8000) in your browser.
+
+- **Admin panel:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
+- **REST API:** [http://localhost:8000/api/](http://localhost:8000/api/)
+- **Importer Dashboard:** [http://localhost:8000/importer/](http://localhost:8000/importer/)
+
+---
+
+## Quick Start Summary
+
+```bash
+# 1. Clone and enter the project
+git clone https://github.com/comocheng/kineticmodelssite.git
+cd kineticmodelssite
+
+# 2. Create conda environment
+conda env create -f environment.yml
+conda activate kms
+
+# 3. Set up PostgreSQL
+createdb kms
+
+# 4. Edit .env.dev with your local paths
+
+# 5. Migrate and load data
+python manage.py migrate
+gunzip -k fixtures/full_database.json.gz    # decompress fixture
+python manage.py loaddata fixtures/full_database.json  # if available
+
+# 6. Run
+python manage.py runserver
+```
+
+---
+
+## Importing Kinetic Models
+
+To populate the database by importing from RMG-models:
+
+```bash
+# Make sure RMGMODELSPATH is set in .env.dev
+python manage.py migrate
+python manage.py import_rmg_models                 # all models
+python manage.py import_rmg_models --model <name>  # one model
+```
+
+> **Note:** `migrate` does not import models. The import process can take a while depending on the number of models.
+
+---
+
+## REST API Authentication
+
+Token authentication is required for write operations (POST, PUT, DELETE):
+
+```bash
+# Generate a token
+python manage.py drf_create_token <username>
+
+# Use -r to regenerate
+python manage.py drf_create_token -r <username>
+```
+
+Include the token in your API requests:
+```bash
+curl -H "Authorization: Token <your-token>" http://localhost:8000/api/...
+```
+
+---
+
+## Code Style
+
+```bash
+# Check style
+python -m flake8
+
+# Format code
+black .
+```
+
+---
+
+## Running Tests
+
+```bash
+python manage.py test
+```
+
+---
+
+## Troubleshooting
+
+### `psycopg2` build errors
+If `psycopg2-binary` fails to install, try:
+```bash
+pip install psycopg2-binary --no-cache-dir
+```
+
+### `createdb: command not found`
+Add PostgreSQL to your PATH. For Postgres.app on macOS:
+```bash
+export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
+```
+
+### RMG import errors on Apple Silicon
+RMG packages are compiled for x86_64. You may need to:
+1. Use Rosetta 2: `arch -x86_64 conda create ...`
+2. Or skip RMG and work with pre-loaded fixture data instead
+
+### `django.db.utils.OperationalError: could not connect to server`
+Make sure PostgreSQL is running:
+```bash
+# Homebrew
+brew services start postgresql@15
+
+# Postgres.app
+# Just open the app
+
+# Linux
+sudo systemctl start postgresql
+```
+
+### Database already exists
+```bash
+dropdb kms && createdb kms
+python manage.py migrate
+python manage.py loaddata fixtures/full_database.json
+```
+
+---
+
+## Deploying an Update
+
+On the server, in the checkout that gunicorn serves, with the `kms` environment active:
+
+```bash
+git pull
+bin/deploy.sh
+```
+
+Then restart gunicorn. `bin/deploy.sh` does these steps:
+
+1. It applies the migrations.
+2. It collects the static files.
+3. It grants the SQL console login the tables of those migrations (`livequery_role`). If the
+   checks of the login fail, the script stops. Do not restart gunicorn until they pass.
+4. It rebuilds the guide into `DOCS_ROOT` (default `docs_site/`). A restart of gunicorn does
+   not rebuild the guide. nginx serves `/docs/` from a folder, so its `location /docs/` must
+   point to `DOCS_ROOT`, or `DOCS_ROOT` in `.env` must name the folder that nginx serves.
+5. It loads the identifier mappings into the database. `import_sssom` copies the rows of
+   `mappings/sssom/prometheus.sssom.tsv`, in the `mappings/` folder next to the checkout.
+   Then `link_semantic_mappings` links the rows to the species, sources, kinetic models and
+   datasets of the server's database. The identifier pages (`/species/` and
+   `/species/<name>`, for example) show these rows. The `mappings/` folder is not in this
+   repository, so clone or copy it to the server, and update it when it changes.
+
+The Docker image does steps 1 to 4 in `bin/entrypoint.sh` each time the container starts.
+It has no `mappings/` folder, so it does not do step 5.
+
+## Temporary Public Access
+
+The site's web pages and tools, including importer job controls and data editing,
+currently work without signing in. Anonymous importer actions are logged as
+`anonymous`, and jobs started anonymously have no `started_by` user.
+
+Set `SITE_REQUIRE_LOGIN=True` in the deployment environment and restart the web
+service to restore the previous login requirements. Django admin and REST API
+write permissions remain separately enforced. POST actions still require CSRF tokens.
+
+## Project Structure
+
+```
+kineticmodelssite/
+├── kms/                  # Main Django project settings
+├── database/             # Core app: models, views for kinetic data
+├── api/                  # REST API app
+├── importer_dashboard/   # Web UI for importing kinetic models
+├── analysis/             # Jupyter notebooks for data analysis
+├── fixtures/             # Database fixtures for quick setup
+├── scripts/              # Utility scripts
+├── manage.py             # Django management entry point
+├── environment.yml       # Conda environment specification
+├── .env.dev              # Environment variables (local config)
+└── pyproject.toml        # Black formatter config
+```

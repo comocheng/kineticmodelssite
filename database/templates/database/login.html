@@ -1,27 +1,75 @@
-{% extends "database/base.html" %}
+{% extends "base.html" %}
+{% load static %}
+{# Sign in, from the Figma "Prometheus · Sign in" (node 180:2451) #}
 
-{% load crispy_forms_tags %}
+{% block title %}Sign in | Prometheus{% endblock %}
+
+{% block body_class %} class="acct-auth"{% endblock %}
 
 {% block content %}
+<div class="acct-page">
+    <!-- Research welcome (Figma 229:2306) -->
+    <div class="acct-welcome" aria-hidden="true">
+        <img src="{% static 'database/images/landing/prometheus-gift.png' %}" alt="" width="720" height="631">
+    </div>
 
-{% if form.errors %}
-<p>Your username and password didn't match. Please try again.</p>
-{% endif %}
+    <!-- Sign in panel (Figma 180:2475) -->
+    <div class="acct-panel">
+        <section class="acct-card" aria-labelledby="acct-title">
+            <div class="acct-welcome-text">
+                <p class="acct-eyebrow">Kinetic Models Database</p>
+                <h1 id="acct-title" class="acct-title">Welcome back</h1>
+                <p class="acct-lede">Sign in to your account.</p>
+            </div>
 
-{% if next %}
-    {% if user.is_authenticated %}
-    <p>Your account doesn't have access to this page. To proceed,
-    please login with an account that has access.</p>
-    {% else %}
-    <p>Please login to see this page.</p>
-    {% endif %}
-{% endif %}
+            {% if form.errors or next %}
+            <div class="acct-alerts">
+                {% if form.errors %}
+                <p class="acct-alert acct-alert--error" role="alert">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                    <span>Your username and password didn't match. Please try again.</span>
+                </p>
+                {% endif %}
+                {% if next %}
+                {% if user.is_authenticated %}
+                <p class="acct-alert acct-alert--warning" role="alert">
+                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+                    <span>Your account doesn't have access to this page. Please login with an account that has access.</span>
+                </p>
+                {% else %}
+                <p class="acct-alert acct-alert--info">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>Please login to access this page.</span>
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
 
-<form method="post" action="{% url 'login' %}">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <input type="submit" class="btn btn-primary" value="login">
-    <input type="hidden" name="next" value="{{ next }}">
-</form>
-Need an Account? <a href="{% url 'register' %}">Register Here</a>
+            <form method="post" action="{% url 'login' %}" class="acct-form">
+                {% csrf_token %}
+                <div class="acct-fields">
+                    {% include "database/account_field.html" with field=form.username placeholder="Enter your username" only %}
+                    {% include "database/account_field.html" with field=form.password placeholder="Enter your password" toggle=True only %}
+                </div>
+                <input type="hidden" name="next" value="{{ next }}">
+                <button type="submit" class="app-btn acct-submit">Sign in</button>
+            </form>
+
+            <!-- Register invitation (Figma 180:2529) -->
+            <p class="acct-switch">
+                <span>Don't have an account?</span>
+                <a href="{% url 'register' %}">Register here</a>
+            </p>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/account_styles.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "database/account_scripts.html" %}
 {% endblock %}

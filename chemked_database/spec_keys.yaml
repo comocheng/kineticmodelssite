@@ -1,0 +1,24 @@
+Narayanaswamy:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"
+Gasoline_2:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"
+Gasoline_Surrogate:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"
+Biomass:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"
+EL24115:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"
+n-heptane.yaml:
+    Ar: "AR01(634)"
+    O2: "C2H3CHCHO(215)"
+    nC7H16: "N-C7H1601(1017)"

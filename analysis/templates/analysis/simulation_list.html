@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load static %}
+{% load param_replace from utils %}
+{# All simulation runs, from the Figma "Prometheus · Simulation runs" (node 184:2304) #}
+
+{% block title %}Simulation runs | Prometheus{% endblock %}
+
+{% block content %}
+<div class="an-runs an-list">
+
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Simulation runs</span></li>
+        </ol>
+    </nav>
+
+    <!-- Runs heading (Figma 184:2304 "Runs heading") -->
+    <header class="an-heading">
+        <div class="an-heading__intro">
+            <h1>Simulation runs</h1>
+            <p class="an-lede">All PyTeCK simulation runs, newest first.</p>
+        </div>
+        <div class="an-actions">
+            {% if retryable_failed_count > 0 %}
+            <form method="post" action="{% url 'analysis:retry-failed' %}"
+                  onsubmit="return confirm('This will re-run {{ retryable_failed_count }} failed simulation(s) that have no completed runs. Continue?');">
+                {% csrf_token %}
+                <button type="submit" class="an-btn"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Retry failed ({{ retryable_failed_count }})</button>
+            </form>
+            {% endif %}
+            {% if stale_count > 0 %}
+            <form method="post" action="{% url 'analysis:cleanup-stale' %}"
+                  onsubmit="return confirm('This will mark {{ stale_count }} stale simulation(s) as failed. Continue?');">
+                {% csrf_token %}
+                <button type="submit" class="an-btn">Cleanup stale ({{ stale_count }})</button>
+            </form>
+            {% endif %}
+            <a class="app-btn" href="{% url 'analysis:run-create' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="16" height="16">New simulation</a>
+        </div>
+    </header>
+
+    <!-- Run filters (Figma 184:2304 "Run filters") -->
+    <form class="app-panel an-list__filters" method="get" id="filter-form" aria-labelledby="an-filters-title">
+        <div class="an-list__filters-head">
+            <h2 class="an-list__filters-title" id="an-filters-title"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="16" height="16">Filters</h2>
+            <a class="app-link" href="{% url 'analysis:run-list' %}">Clear filters</a>
+        </div>
+        <div class="an-list__filters-row">
+            <div class="an-field">
+                <label for="an-filter-status">Status</label>
+                <select name="status" id="an-filter-status" class="form-select">
+                    <option value="">All</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="an-field">
+                <label for="an-filter-model">Kinetic model</label>
+                <select name="model" id="an-filter-model" class="form-select">
+                    <option value="">All Models</option>
+                    {% for model in models %}
+                    <option value="{{ model.id }}" {% if request.GET.model == model.id|stringformat:"s" %}selected{% endif %}>{{ model.model_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="an-field">
+                <label for="an-filter-type">Experiment type</label>
+                <select name="experiment_type" id="an-filter-type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="ignition_delay" {% if request.GET.experiment_type == 'ignition_delay' %}selected{% endif %}>Ignition Delay</option>
+                    <option value="laminar_flame_speed" {% if request.GET.experiment_type == 'laminar_flame_speed' %}selected{% endif %}>Laminar Flame Speed</option>
+                    <option value="speciation" {% if request.GET.experiment_type == 'speciation' %}selected{% endif %}>Speciation</option>
+                </select>
+            </div>
+            <button type="submit" class="app-btn an-list__apply">Apply filters</button>
+        </div>
+    </form>
+
+    <!-- Run results (Figma 184:2304 "Run results") -->
+    <section class="app-panel an-list__results" aria-labelledby="an-results-title">
+        <h2 class="visually-hidden" id="an-results-title">Results</h2>
+        <div class="an-list__views">
+            {% with current=request.GET.status|default:"" %}
+            <nav class="an-list__tabs" aria-label="Run outcome">
+                <a class="an-list__tab{% if not current %} is-active{% endif %}" href="?{% param_replace status='' page='' %}"{% if not current %} aria-current="page"{% endif %}>All runs</a>
+                <a class="an-list__tab{% if current == 'completed' %} is-active{% endif %}" href="?{% param_replace status='completed' page='' %}"{% if current == 'completed' %} aria-current="page"{% endif %}>Completed</a>
+                <a class="an-list__tab{% if current == 'failed' %} is-active{% endif %}" href="?{% param_replace status='failed' page='' %}"{% if current == 'failed' %} aria-current="page"{% endif %}>Failed</a>
+            </nav>
+            {% endwith %}
+            <span class="an-list__sort">Newest first <img class="app-icon" src="{% static 'database/images/icons/arrow-down-ce4801-12.svg' %}" alt="" width="12" height="12"></span>
+        </div>
+
+        <div class="an-table-wrap" tabindex="0" role="region" aria-label="Simulation runs">
+            <table class="an-table an-list__table">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Kinetic model</th>
+                        <th scope="col">Dataset</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="is-end">Error</th>
+                        <th scope="col">Date</th>
+                        <th scope="col"><span class="visually-hidden">Open</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in runs %}
+                    <tr>
+                        <td class="is-mono"><a href="{% url 'analysis:run-detail' run.pk %}">#{{ run.pk }}</a></td>
+                        <td class="an-list__model"><a href="{% url 'kinetic-model-detail' run.kinetic_model.id %}">{{ run.kinetic_model.model_name }}</a></td>
+                        <td class="is-muted an-list__dataset">{% if run.dataset %}{{ run.dataset.short_name }}{% else %}<span class="an-faint">Dataset removed</span>{% endif %}</td>
+                        <td>{% include "analysis/an_runs_type.html" with type=run.dataset.experiment_type %}</td>
+                        <td>{% include "analysis/an_runs_status.html" with status=run.status label=run.get_status_display %}</td>
+                        <td class="is-end">
+                            {% if run.result and run.result.average_error_function %}
+                            <span class="an-error {% if run.result.average_error_function < 1 %}is-good{% elif run.result.average_error_function < 2 %}is-fair{% else %}is-poor{% endif %}">{{ run.result.average_error_function|floatformat:2 }}</span>
+                            {% else %}<span class="an-faint">—</span>{% endif %}
+                        </td>
+                        <td class="is-muted an-list__date"><time datetime="{{ run.created_at|date:'c' }}">{{ run.created_at|date:"M d, Y" }}</time></td>
+                        <td class="is-end"><a class="an-open" href="{% url 'analysis:run-detail' run.pk %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"><span class="visually-hidden">Open run #{{ run.pk }}</span></a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="an-empty">No simulation runs found. <a href="{% url 'analysis:run-create' %}">Create your first run</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.count %}
+        <div class="an-pager">
+            <span><strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> run{{ page_obj.paginator.count|pluralize }}</span>
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Pagination">
+                <ul class="an-pager__pages">
+                    <li class="an-pager__size">{{ page_obj.paginator.per_page }} per page</li>
+                    {% if page_obj.has_previous %}
+                    <li><a class="an-pager__step" href="?{% param_replace page=page_obj.previous_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-left-8390a0-18.svg' %}" alt="" width="16" height="16"><span class="visually-hidden">Previous page</span></a></li>
+                    {% else %}
+                    <li><span class="an-pager__step is-disabled" aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-left-8390a0-18.svg' %}" alt="" width="16" height="16"></span></li>
+                    {% endif %}
+                    {% with current=page_obj.number last=page_obj.paginator.num_pages %}
+                    {% for n in page_obj.paginator.page_range %}
+                    {% if n == current %}
+                    <li><span class="an-pager__page is-current" aria-current="page">{{ n }}</span></li>
+                    {% elif n == 1 or n == last or n >= current|add:"-2" and n <= current|add:"2" %}
+                    <li><a class="an-pager__page" href="?{% param_replace page=n %}" aria-label="Page {{ n }}">{{ n }}</a></li>
+                    {% elif n == current|add:"-3" or n == current|add:"3" %}
+                    <li><span class="an-pager__page" aria-hidden="true">…</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    {% endwith %}
+                    {% if page_obj.has_next %}
+                    <li><a class="an-pager__step" href="?{% param_replace page=page_obj.next_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"><span class="visually-hidden">Next page</span></a></li>
+                    {% else %}
+                    <li><span class="an-pager__step is-disabled" aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"></span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <p class="an-note">
+        <img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="14" height="14">
+        Error is the run's average PyTeCK error function; lower values mean closer agreement between model and experiment.
+    </p>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_runs_styles.html" %}
+<style>
+.an-list {
+    gap: 20px;
+}
+
+.an-list__filters {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+}
+
+.an-list__filters-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.an-list__filters-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-list__filters-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 16px;
+}
+
+.an-list__filters .form-select {
+    min-height: 44px;
+}
+
+.an-runs .an-list__apply {
+    height: 44px;
+}
+
+/* Outcome tabs and the sort note (Figma "Result views") */
+.an-list__views {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0 20px;
+    padding: 0 20px;
+}
+
+.an-list__tabs {
+    display: flex;
+    gap: 26px;
+}
+
+.an-list__tab {
+    display: inline-flex;
+    align-items: center;
+    min-height: 56px;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+.an-list__tab:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.an-list__tab.is-active {
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-list__sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.an-list__table {
+    min-width: 960px;
+}
+
+.an-list__table td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.an-list__model {
+    max-width: 240px;
+    overflow-wrap: anywhere;
+}
+
+.an-list__dataset {
+    overflow-wrap: anywhere;
+}
+
+.an-list__date {
+    white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+    .an-list__filters-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-list__filters {
+        padding: 16px 14px;
+    }
+
+    .an-list__filters-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-list__views {
+        padding: 0 14px;
+    }
+
+    .an-list__tabs {
+        gap: 18px;
+    }
+}
+</style>
+{% endblock %}

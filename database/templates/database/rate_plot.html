@@ -1,0 +1,25 @@
+{# The rate-coefficient chart panel (Figma 161:5798) for the reaction and kinetics pages; styles come from reaction_styles.html #}
+{% if rate_plot.series %}
+<section class="app-panel rx-plot" data-plot-section aria-labelledby="rate-plot-title">
+    <div class="rx-panel-head">
+        <h2 class="app-panel__title" id="rate-plot-title">Rate coefficient against 1000/T</h2>
+        <div class="rx-plot__pressure d-none" data-pressure-control>
+            <label for="rate-plot-pressure">Pressure</label>
+            <select id="rate-plot-pressure" class="rx-select"></select>
+        </div>
+    </div>
+    <div class="rx-panel-body rx-plot__body">
+        <div id="rate-plot" class="rx-plot__canvas" role="img" aria-label="Rate coefficient of each model against inverse temperature"></div>
+        <p class="rx-plot__note">Each rate over its stated temperature range, or 300–3000 K when none is given. Falloff, PLOG and Chebyshev rates follow the pressure selector; others do not depend on it.</p>
+        {% if reverse_reactions %}
+        <p class="rx-plot__note">Also written in reverse, not plotted here because the reverse rate needs thermo:
+            {% for other in reverse_reactions %}<a href="{% url 'reaction-detail' other.pk %}">reaction {{ other.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+        {% endif %}
+        <details class="rx-plot__values">
+            <summary>Values table</summary>
+            <div id="rate-plot-table" class="rx-table-wrap"></div>
+        </details>
+    </div>
+</section>
+{{ rate_plot|json_script:"rate-plot-data" }}
+{% endif %}

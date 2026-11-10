@@ -1,20 +1,608 @@
-{% extends "database/base.html" %}
-
-{% load crispy_forms_tags %}
+{% extends "base.html" %}
+{% load static %}
 {% load utils %}
-{% load renders %}
+{# The reaction search, from the Figma "Reaction search" (node 152:3985) #}
+
+{% block title %}Reaction search | Prometheus{% endblock %}
 
 {% block content %}
-<h1>Reaction</h1>
-<form action="" method="get">
-    {{ filter.form.media }}
-    {{ filter.form|crispy }}
-    <button type="submit" class="btn btn-primary">Submit</button>
-</form>
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
-<br />
-{{ object_list|render_reaction_list }}
-<br />
-{% render_pagination objects=page_obj page_name="page" %}
+<div class="rx-page rx-search">
+
+    <!-- Search workspace (Figma 187:3123) -->
+    <section class="app-workspace rx-search__hero" aria-labelledby="rx-search-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="app-workspace__intro rx-search__intro">
+            <nav aria-label="Breadcrumb">
+                <ol class="rx-search__crumbs">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-white-12.svg' %}" alt="" width="12" height="12"></li>
+                    <li><a href="{% url 'database-home' %}">Database</a></li>
+                    <li aria-hidden="true"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-white-12.svg' %}" alt="" width="12" height="12"></li>
+                    <li aria-current="page">Reactions</li>
+                </ol>
+            </nav>
+            <h1 id="rx-search-title" class="app-title"><span class="app-title__accent">Reaction</span> search</h1>
+            <p class="app-lede">Find reactions, compare rate expressions, and explore their kinetic models.</p>
+        </div>
+
+        {# Species go to the filter's species field; a reaction ID goes to the lookup that SidebarLookup opens #}
+        <form class="app-search rx-search__lookup" id="rx-search" method="get" action="{% url 'reaction-search' %}" role="search">
+            <div class="app-search__head">
+                <h2 class="app-search__title">Search reactions</h2>
+                {% if request.GET %}<a class="rx-search__clear" href="{% url 'reaction-search' %}">Clear search</a>{% endif %}
+            </div>
+            <div class="app-search__field">
+                <label class="visually-hidden" for="rx-scope">Search by</label>
+                <select class="app-search__scope" id="rx-scope">
+                    <option value="species" data-name="species" data-placeholder="{{ species_placeholder }}"{% if not reaction_invalid %} selected{% endif %}>Species</option>
+                    <option value="id" data-name="reaction_pk" data-placeholder="Enter a reaction ID"{% if reaction_invalid %} selected{% endif %}>Reaction ID</option>
+                </select>
+                <div class="app-search__query">
+                    <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="rx-query">Search text</label>
+                    {% if reaction_invalid %}
+                    <input class="app-search__input" id="rx-query" type="search" name="reaction_pk" value="{{ request.GET.reaction_pk }}" placeholder="Enter a reaction ID"
+                           inputmode="numeric" pattern="[0-9]+" required title="A reaction ID is a whole number" aria-invalid="true" aria-describedby="rx-lookup-error">
+                    {% else %}
+                    <input class="app-search__input" id="rx-query" type="search" name="species" value="{{ species_query }}" placeholder="{{ species_placeholder }}"
+                           autocapitalize="none" spellcheck="false">
+                    {% endif %}
+                </div>
+                <button class="app-btn" type="submit">Search reactions <img class="app-icon" src="{% static 'database/images/icons/arrow-right-white.svg' %}" alt="" width="16" height="16"></button>
+            </div>
+            {% if reaction_invalid %}<p class="rx-search__error" id="rx-lookup-error" role="alert">{{ reaction_invalid }}.</p>{% endif %}
+            <div class="app-search__examples" id="rx-examples"{% if reaction_invalid %} hidden{% endif %}>
+                <span>Try a search</span>
+                {% for example in species_examples %}<a class="app-chip" href="{{ example.href }}">{{ example.label }}</a>{% endfor %}
+                <span>Separate species with + to find one reaction</span>
+            </div>
+        </form>
+    </section>
+
+    <!-- Results and filters (Figma 152:4047) -->
+    <div class="rx-search__body">
+        <aside class="app-panel rx-filters" aria-labelledby="rx-filters-title">
+            <form method="get" id="reaction-search-form" action="{% url 'reaction-search' %}">
+                {# DAL's Select2 needs jQuery, which base.html does not load #}
+                <script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+                {{ filter.form.media }}
+                {# The filters narrow the species search, so they keep it #}
+                {% if species_query %}<input type="hidden" name="species" value="{{ species_query }}">{% endif %}
+                <div class="rx-filters__head">
+                    <h2 class="rx-filters__title" id="rx-filters-title"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="18" height="18">Filters</h2>
+                    <a class="rx-filters__reset" href="{% url 'reaction-search' %}">Reset</a>
+                </div>
+
+                {% if filter.form.non_field_errors %}<div class="rx-filters__error" role="alert">{{ filter.form.non_field_errors }}</div>{% endif %}
+
+                <fieldset class="rx-filter">
+                    <legend class="rx-filter__label">Reactants</legend>
+                    <label class="visually-hidden" for="{{ filter.form.reactant1.id_for_label }}">First reactant</label>
+                    {{ filter.form.reactant1 }}
+                    {% for error in filter.form.reactant1.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                    <label class="visually-hidden" for="{{ filter.form.reactant2.id_for_label }}">Second reactant</label>
+                    {{ filter.form.reactant2 }}
+                    {% for error in filter.form.reactant2.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </fieldset>
+
+                <fieldset class="rx-filter">
+                    <legend class="rx-filter__label">Products</legend>
+                    <label class="visually-hidden" for="{{ filter.form.product1.id_for_label }}">First product</label>
+                    {{ filter.form.product1 }}
+                    {% for error in filter.form.product1.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                    <label class="visually-hidden" for="{{ filter.form.product2.id_for_label }}">Second product</label>
+                    {{ filter.form.product2 }}
+                    {% for error in filter.form.product2.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </fieldset>
+
+                <hr class="rx-filters__divider">
+
+                {# The "reversible" filter, with direction labels in place of Unknown / Yes / No #}
+                <div class="rx-filter">
+                    <label class="rx-filter__label" for="{{ filter.form.reversible.id_for_label }}">Reaction direction</label>
+                    {% with direction=filter.form.reversible.value %}
+                    <select class="rx-select" name="{{ filter.form.reversible.html_name }}" id="{{ filter.form.reversible.id_for_label }}">
+                        <option value="unknown"{% if direction is None %} selected{% endif %}>All directions</option>
+                        <option value="true"{% if direction is True %} selected{% endif %}>Reversible (&lt;=&gt;)</option>
+                        <option value="false"{% if direction is False %} selected{% endif %}>Irreversible (-&gt;)</option>
+                    </select>
+                    {% endwith %}
+                    {% for error in filter.form.reversible.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </div>
+
+                <div class="rx-filter">
+                    <label class="rx-filter__label" for="{{ filter.form.prime_id.id_for_label }}">PrIMe ID</label>
+                    <input class="rx-text" type="text" name="{{ filter.form.prime_id.html_name }}" id="{{ filter.form.prime_id.id_for_label }}" value="{{ filter.form.prime_id.value|default_if_none:'' }}" placeholder="Any PrIMe ID">
+                    {% for error in filter.form.prime_id.errors %}<p class="rx-filters__error">{{ error }}</p>{% endfor %}
+                </div>
+
+                <p class="rx-filters__hint">Use reactant and product filters to narrow a reaction pathway.</p>
+                <button type="submit" class="app-btn rx-filters__apply">Apply filters</button>
+            </form>
+        </aside>
+
+        <section class="app-panel rx-results" aria-labelledby="rx-results-count">
+            <div class="rx-results__toolbar">
+                <p class="rx-results__count" id="rx-results-count"><strong>{{ page_obj.paginator.count|default:0|floatformat:"0g" }}</strong> {% if page_obj.paginator.count == 1 %}reaction{% else %}reactions{% endif %}{% if species_terms %}
+                    that {% if page_obj.paginator.count == 1 %}includes{% else %}include{% endif %}
+                    {% for item in species_terms %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<span class="rx-results__term">{{ item.term }}</span>{% endfor %}{% endif %}</p>
+                {% for item in species_terms %}{% if not item.matches %}
+                <p class="rx-results__note" role="status">No species matches “{{ item.term }}”. Try its formula, a SMILES string with smiles:, or another name.</p>
+                {% endif %}{% endfor %}
+            </div>
+            <div class="rx-table-wrap">
+                <table class="rx-table rx-results__table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="rx-results__id">Reaction ID</th>
+                            <th scope="col">Reaction</th>
+                            <th scope="col" class="rx-results__count-col">Rates</th>
+                            <th scope="col" class="rx-results__count-col">Kinetic models</th>
+                            <th scope="col" class="rx-results__open"><span class="visually-hidden">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reaction in object_list %}
+                        <tr class="clickable-row" data-href="{% url 'reaction-detail' reaction.pk %}">
+                            <td class="is-mono rx-results__id">{{ reaction.pk }}</td>
+                            <td class="rx-results__equation">
+                                <a href="{% url 'reaction-detail' reaction.pk %}">{{ reaction.equation }}</a>
+                                {% if reaction.prime_id %}<span class="rx-results__prime">PrIMe ID {{ reaction.prime_id }}</span>{% endif %}
+                            </td>
+                            <td>{{ reaction.kinetics_count }}</td>
+                            <td>{{ reaction.kinetic_model_count }}</td>
+                            <td class="rx-results__open"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16"></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="rx-empty">No reactions found. Try adjusting your filters.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (Figma 152:4169) -->
+            {% if page_obj.paginator.count %}
+            <nav class="rx-pager" aria-label="Pagination">
+                <p class="rx-pager__range">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count|floatformat:"0g" }} reactions · {{ page_obj.paginator.per_page }} per page</p>
+                {% if page_obj.paginator.num_pages > 1 %}
+                {% with last=page_obj.paginator.num_pages %}
+                <div class="rx-pager__controls">
+                    {% if page_obj.has_previous %}
+                    <a class="rx-pager__step" href="?{% param_replace page=page_obj.previous_page_number %}">Previous</a>
+                    {% else %}
+                    <span class="rx-pager__step is-disabled" aria-disabled="true">Previous</span>
+                    {% endif %}
+                    {% if page_obj.number > 2 %}<a class="rx-pager__page" href="?{% param_replace page=1 %}">1</a>{% endif %}
+                    {% if page_obj.number > 3 %}<span class="rx-pager__gap" aria-hidden="true">…</span>{% endif %}
+                    {% if page_obj.has_previous %}<a class="rx-pager__page" href="?{% param_replace page=page_obj.previous_page_number %}">{{ page_obj.previous_page_number }}</a>{% endif %}
+                    <span class="rx-pager__page is-current" aria-current="page">{{ page_obj.number }}</span>
+                    {% if page_obj.has_next %}<a class="rx-pager__page" href="?{% param_replace page=page_obj.next_page_number %}">{{ page_obj.next_page_number }}</a>{% endif %}
+                    {% if page_obj.number < last|add:"-2" %}<span class="rx-pager__gap" aria-hidden="true">…</span>{% endif %}
+                    {% if page_obj.number < last|add:"-1" %}<a class="rx-pager__page" href="?{% param_replace page=last %}">{{ last }}</a>{% endif %}
+                    {% if page_obj.has_next %}
+                    <a class="rx-action rx-pager__next" href="?{% param_replace page=page_obj.next_page_number %}"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16">Next</a>
+                    {% else %}
+                    <span class="rx-action rx-pager__next is-disabled" aria-disabled="true"><img class="app-icon" src="{% static 'database/images/icons/arrow-right-111827-24.svg' %}" alt="" width="16" height="16">Next</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% endif %}
+            </nav>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/reaction_styles.html" %}
+<style>
+.rx-search {
+    gap: 24px;
+}
+
+/* Hero: the shared dark workspace, with the breadcrumb inside it (Figma 187:3134) */
+.rx-search__intro {
+    display: grid;
+    gap: 10px;
+}
+
+.rx-search__intro .app-title {
+    margin: 0;
+}
+
+.rx-search__crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-white);
+}
+
+.rx-search__crumbs a {
+    color: var(--color-white);
+}
+
+.rx-search__crumbs [aria-current] {
+    font-weight: 600;
+}
+
+/* Lookup panel (Figma 187:3142) */
+.rx-search__lookup {
+    gap: 16px;
+}
+
+.rx-search__clear {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.rx-search__error {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+/* Filters beside the results (Figma 152:4048) */
+.rx-search__body {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.rx-filters form {
+    display: grid;
+    gap: 22px;
+    padding: 20px;
+}
+
+.rx-filters__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.rx-filters__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--color-gray-900);
+}
+
+.rx-filters__reset {
+    font-size: 11px;
+}
+
+.rx-filter {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.rx-filter__label {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-gray-900);
+}
+
+.rx-filters__divider {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-gray-200);
+    opacity: 1;
+}
+
+.rx-filters__hint {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+.rx-filters__apply {
+    width: 100%;
+}
+
+.rx-filters__error,
+.rx-filters__error ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+/* The species pickers: DAL's Select2 boxes, drawn as the Figma 40 px inputs */
+/* DAL's select2.css gives every container a 20em minimum, wider than this column */
+.rx-filters .select2-container {
+    width: 100% !important;
+    min-width: 0;
+}
+
+.rx-filters .select2-container--default .select2-selection--single {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 12px;
+    padding-right: 36px;
+    font-size: 13px;
+    line-height: 38px;
+    color: var(--color-gray-900);
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: var(--color-gray-500);
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__arrow {
+    top: 0;
+    right: 12px;
+    width: 16px;
+    height: 38px;
+    background: url("{% static 'database/images/icons/chevron-down-111827-24.svg' %}") center / 16px no-repeat;
+}
+
+.rx-filters .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    display: none;
+}
+
+.rx-filters .select2-container--focus .select2-selection--single,
+.rx-filters .select2-container--open .select2-selection--single {
+    border-color: var(--color-primary-light);
+}
+
+/* The dropdown hangs off body; keep the species cards the search returns compact */
+.select2-container--open .select2-results__option .list-group-item {
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    color: inherit;
+}
+
+.select2-container--open .select2-results__option img {
+    max-width: 120px;
+    height: auto;
+}
+
+/* Results (Figma 152:4084) */
+.rx-results {
+    overflow: hidden;
+}
+
+.rx-results__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 0;
+    min-height: 58px;
+    padding: 12px 20px;
+}
+
+.rx-results__count {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.rx-results__count strong {
+    margin-right: 6px;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-gray-900);
+}
+
+.rx-results__term {
+    font-family: var(--font-mono);
+    color: var(--color-gray-900);
+}
+
+.rx-results__note {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+.rx-results__table td {
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+.rx-results__id {
+    width: 108px;
+}
+
+.rx-results__count-col {
+    width: 120px;
+}
+
+.rx-results__open {
+    width: 56px;
+    text-align: right;
+}
+
+/* break-word, not anywhere: the column keeps its width and lines break between species */
+.rx-results__equation a {
+    color: var(--color-primary);
+    overflow-wrap: break-word;
+}
+
+.rx-results__prime {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.rx-results .clickable-row {
+    cursor: pointer;
+}
+
+.rx-results .clickable-row:hover td {
+    background: var(--rx-hover);
+}
+
+/* Pagination footer */
+.rx-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    min-height: 62px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.rx-pager__range {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.rx-pager__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.rx-pager__step,
+.rx-pager__page {
+    color: var(--color-gray-500);
+}
+
+.rx-pager__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border-radius: 4px;
+}
+
+.rx-pager__step:hover,
+.rx-pager__page:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.rx-pager__page.is-current {
+    background: var(--rx-tint);
+    color: var(--color-primary);
+}
+
+.rx-pager__gap {
+    color: var(--color-gray-500);
+}
+
+.rx-pager .rx-action {
+    height: 36px;
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.rx-pager .is-disabled {
+    color: var(--color-gray-400);
+    pointer-events: none;
+}
+
+.rx-pager .rx-action.is-disabled {
+    opacity: 0.5;
+}
+
+@media (max-width: 991.98px) {
+    .rx-search__body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .rx-results__id {
+        width: auto;
+    }
+
+    .rx-results__count-col {
+        width: auto;
+    }
+
+    .rx-results__table th {
+        white-space: normal;
+    }
+
+    /* The whole row opens the reaction, so the arrow column can go */
+    .rx-results__open {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Give the search box the field, checks and examples of the chosen scope
+(() => {
+    const scope = document.getElementById('rx-scope');
+    const input = document.getElementById('rx-query');
+    const examples = document.getElementById('rx-examples');
+    if (!scope || !input) return;
+    const apply = () => {
+        const option = scope.selectedOptions[0];
+        const byId = option.value === 'id';
+        input.name = option.dataset.name;
+        input.placeholder = option.dataset.placeholder;
+        input.required = byId;
+        if (byId) {
+            input.pattern = '[0-9]+';
+            input.inputMode = 'numeric';
+            input.title = 'A reaction ID is a whole number';
+        } else {
+            input.removeAttribute('pattern');
+            input.removeAttribute('inputmode');
+            input.removeAttribute('title');
+        }
+        if (examples) examples.hidden = byId;
+    };
+    scope.addEventListener('change', () => { input.value = ''; apply(); input.focus(); });
+    // A page restored from history keeps the chosen scope, so match the box to it
+    apply();
+})();
+
+document.querySelectorAll('.rx-search .clickable-row').forEach(row => {
+    row.addEventListener('click', function (event) {
+        if (event.target.closest('a')) return;
+        window.location.href = this.dataset.href;
+    });
+});
+</script>
 {% endblock %}

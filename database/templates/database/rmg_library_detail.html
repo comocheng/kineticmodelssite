@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+{# One RMG-database library; no Figma frame, so it takes the detail look of the database pages (catalog_styles.html) #}
+
+{% block title %}{{ name }} | RMG-database libraries | Prometheus{% endblock %}
+
+{% block content %}
+<div class="cat-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'rmg-library-list' %}">RMG-database libraries</a></li>
+            <li><span aria-current="page">{{ name }}</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <div class="cat-heading__title">
+                <h1>{{ name }}</h1>
+                <span class="cat-pill">{{ kind_label }}</span>
+            </div>
+            <p class="cat-lede">RMG-database {{ kind }} library · {{ version }}</p>
+        </div>
+        <ul class="cat-links">
+            <li><a class="app-link" href="{{ links.website }}" target="_blank" rel="noopener noreferrer">RMG website <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"><span class="visually-hidden">(opens in a new tab)</span></a></li>
+            <li><a class="app-link" href="{{ links.github }}" target="_blank" rel="noopener noreferrer">Source file <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"><span class="visually-hidden">(opens in a new tab)</span></a></li>
+        </ul>
+    </header>
+
+    <section class="app-panel" aria-labelledby="rmg-models-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rmg-models-title">Models sharing its data <span class="cat-pill cat-pill--count">{{ overlaps|length }}</span></h2>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col" class="is-end">Identical to the library</th>
+                        <th scope="col" class="is-end">Same {% if kind == "kinetics" %}reaction{% else %}species{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for overlap in overlaps %}
+                    <tr>
+                        <td><a href="{% url 'kinetic-model-detail' overlap.kinetic_model_id %}">{{ overlap.kinetic_model.model_name }}</a></td>
+                        <td class="is-number">{{ overlap.identical }} of {{ overlap.model_total }} <span class="is-muted">({% widthratio overlap.identical overlap.model_total 100 %}%)</span></td>
+                        <td class="is-number">{{ overlap.shared }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="cat-empty">No model has data identical to this library.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if other_models %}<p class="cat-panel-note">{{ other_models }} more model{{ other_models|pluralize }} {{ other_models|pluralize:"has,have" }} some of its {% if kind == "kinetics" %}reactions{% else %}species{% endif %}, none with identical data.</p>{% endif %}
+    </section>
+
+    <section class="app-panel" aria-labelledby="rmg-entries-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rmg-entries-title">Entries on this site <span class="cat-pill cat-pill--count">{{ page.paginator.count }}</span></h2>
+            {% if page.has_other_pages %}<span class="app-panel__meta">Showing {{ page.start_index }}–{{ page.end_index }}</span>{% endif %}
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table">
+                {% if kind == "kinetics" %}
+                <thead>
+                    <tr>
+                        <th scope="col">Reaction</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" class="is-end">Models with this reaction</th>
+                        <th scope="col">RMG entry</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in rows %}
+                    <tr>
+                        <td class="is-wrap"><a href="{% url 'reaction-detail' record.reaction_id %}">{{ record.label }}</a></td>
+                        <td class="is-mono">{{ record.type }}</td>
+                        <td class="is-number">{{ record.model_count }}</td>
+                        <td class="is-mono">{% if record.entry_url %}<a href="{{ record.entry_url }}" target="_blank" rel="noopener noreferrer">{{ record.external_id }} <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"><span class="visually-hidden">(opens in a new tab)</span></a>{% else %}{{ record.external_id }}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% else %}
+                <thead>
+                    <tr>
+                        <th scope="col">Species</th>
+                        <th scope="col" class="is-end"><span class="cat-unit">ΔfH° (298.15 K), J/mol</span></th>
+                        <th scope="col">Polynomial</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in rows %}
+                    <tr>
+                        <td class="is-wrap">{% if record.species_id %}<a href="{% url 'species-detail' record.species_id %}">{{ record.label }}</a>{% else %}{{ record.label }}{% endif %}</td>
+                        <td class="is-number">{{ record.enthalpy_298|floatformat:2 }}</td>
+                        <td>{% if record.nasa_thermo_id %}<a href="{% url 'thermo-detail' record.nasa_thermo_id %}">NASA polynomial</a>{% else %}<span class="is-muted">–</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% endif %}
+            </table>
+        </div>
+        {% include "database/catalog_pager.html" with page=page label="Entry pages" %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+{% endblock %}

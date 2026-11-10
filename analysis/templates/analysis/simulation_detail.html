@@ -1,0 +1,971 @@
+{% extends "base.html" %}
+{% load static %}
+{# One simulation run, from the Figma "Prometheus · Simulation run details" (node 73:3529). Pending and running runs poll api-run-status; keep the ids the script uses. #}
+
+{% block title %}Simulation run #{{ run.id }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="an-runs an-detail">
+
+    <!-- Run overview (Figma 73:3529 "Run overview") -->
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:run-list' %}">Runs</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Run #{{ run.id }}</span></li>
+        </ol>
+    </nav>
+
+    <header class="an-heading">
+        <div class="an-heading__intro">
+            <div class="an-heading__title">
+                <h1>Simulation run #{{ run.id }}</h1>
+                {% include "analysis/an_runs_status.html" with status=run.status label=run.get_status_display live=True %}
+            </div>
+            <p class="an-lede">{{ run.kinetic_model.model_name }} vs {% if run.dataset %}{{ run.dataset.short_name }}{% else %}a removed dataset{% endif %}</p>
+        </div>
+        <div class="an-actions">
+            {% if run.status == 'pending' %}
+            <a class="an-btn" href="{% url 'analysis:mapping-review' run.id %}"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Review Mapping</a>
+            <form method="post" action="{% url 'analysis:run-execute' run.id %}">
+                {% csrf_token %}
+                <button type="submit" class="app-btn"><img class="app-icon" src="{% static 'database/images/icons/play-ffffff-16.svg' %}" alt="" width="16" height="16">Execute Now</button>
+            </form>
+            {% endif %}
+            {% if run.status == 'pending' or run.status == 'running' %}
+            <form method="post" action="{% url 'analysis:run-cancel' run.id %}"
+                  onsubmit="return confirm('Are you sure you want to cancel this simulation?');">
+                {% csrf_token %}
+                <button type="submit" class="an-btn an-btn--danger"><i class="bi bi-x-circle" aria-hidden="true"></i>Cancel</button>
+            </form>
+            {% endif %}
+            <a class="an-btn" href="{% url 'analysis:run-list' %}"><i class="bi bi-list-ul" aria-hidden="true"></i>All runs</a>
+            {% if run.status == 'completed' or run.status == 'failed' or run.status == 'cancelled' %}
+            <form method="post" action="{% url 'analysis:run-rerun' run.id %}">
+                {% csrf_token %}
+                <button type="submit" class="an-btn"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Re-run</button>
+            </form>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if run.status == 'pending' or run.status == 'running' %}
+    <!-- Progress (no frame; the script below updates the dots, bar and status pill) -->
+    <section class="app-panel an-detail__progress" id="progress-tracker" aria-labelledby="an-progress-title">
+        <h2 class="an-label" id="an-progress-title">Simulation progress</h2>
+        <div class="an-steps">
+            <div class="an-steps__item">
+                <span class="an-steps__dot {% if run.status == 'pending' %}is-active{% else %}is-done{% endif %}"><i class="bi {% if run.status == 'pending' %}bi-clock{% else %}bi-check{% endif %}"></i></span>
+                <span class="an-steps__label{% if run.status == 'pending' %} is-current{% endif %}">Queued</span>
+            </div>
+            <span class="an-steps__line{% if run.status != 'pending' %} is-done{% endif %}" aria-hidden="true"></span>
+            <div class="an-steps__item">
+                <span class="an-steps__dot {% if run.status == 'running' %}is-active pulse-animation{% endif %}"><i class="bi bi-gear{% if run.status == 'running' %}-fill{% endif %}"></i></span>
+                <span class="an-steps__label{% if run.status == 'running' %} is-current{% endif %}">Running</span>
+            </div>
+            <span class="an-steps__line" aria-hidden="true"></span>
+            <div class="an-steps__item">
+                <span class="an-steps__dot"><i class="bi bi-check-lg"></i></span>
+                <span class="an-steps__label">Complete</span>
+            </div>
+        </div>
+        <div class="progress an-detail__bar">
+            <div class="progress-bar progress-bar-striped progress-bar-animated {% if run.status == 'running' %}bg-primary{% else %}bg-warning{% endif %}"
+                 role="progressbar"
+                 aria-label="Simulation progress"
+                 id="simulation-progress-bar"
+                 style="width: {% if run.status == 'running' %}50{% else %}10{% endif %}%">
+            </div>
+        </div>
+        <div class="an-detail__progress-meta">
+            <span><i class="bi bi-clock" aria-hidden="true"></i> Started: {{ run.created_at|date:"H:i:s" }}</span>
+            <span id="elapsed-time"><i class="bi bi-stopwatch" aria-hidden="true"></i> Elapsed: <span id="elapsed-seconds">--</span></span>
+            <span class="an-status {% if run.status == 'running' %}an-status--running{% else %}an-status--pending{% endif %}">
+                {% if run.status == 'running' %}<i class="bi bi-arrow-repeat spin" aria-hidden="true"></i>Processing...{% else %}<i class="bi bi-hourglass" aria-hidden="true"></i>Waiting...{% endif %}
+            </span>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Configuration and provenance (Figma 73:3529) -->
+    <section class="app-panel an-detail__config" aria-labelledby="an-config-title">
+        <h2 class="an-label" id="an-config-title">Configuration and provenance</h2>
+        <dl class="an-detail__meta">
+            <div>
+                <dt>Model</dt>
+                <dd><a href="{% url 'kinetic-model-detail' run.kinetic_model.pk %}">{{ run.kinetic_model.model_name }}</a></dd>
+            </div>
+            <div>
+                <dt>Dataset</dt>
+                <dd>{% if run.dataset %}<a href="{% url 'chemked_database:dataset-detail' run.dataset.id %}">{{ run.dataset.short_name }}</a>{% else %}<span class="an-faint">Dataset removed</span>{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Experiment type</dt>
+                <dd>{% if run.dataset.experiment_type %}{{ run.dataset.experiment_type|capfirst }}{% else %}<span class="an-faint">—</span>{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Created</dt>
+                <dd>{{ run.created_at|date:"M d, Y H:i" }}</dd>
+            </div>
+            <div>
+                <dt>Completed</dt>
+                <dd>{% if run.completed_at %}{{ run.completed_at|date:"M d, Y H:i" }}{% else %}<span class="an-faint">—</span>{% endif %}</dd>
+            </div>
+        </dl>
+    </section>
+
+    {% if run.status == 'completed' and run.result %}
+    <!-- Results summary (Figma 73:3529) -->
+    <dl class="an-detail__summary">
+        <div class="app-panel an-detail__metric">
+            <dt>Average error function</dt>
+            <dd class="an-error {% if run.result.average_error_function < 1 %}is-good{% elif run.result.average_error_function < 2 %}is-fair{% else %}is-poor{% endif %}">{{ run.result.average_error_function|floatformat:4 }}</dd>
+            <dd class="an-detail__metric-context">Lower means closer agreement</dd>
+        </div>
+        <div class="app-panel an-detail__metric">
+            <dt>Standard deviation</dt>
+            <dd>{{ run.result.std_error_function|floatformat:4|default:"—" }}</dd>
+            <dd class="an-detail__metric-context">Of the error function</dd>
+        </div>
+        <div class="app-panel an-detail__metric">
+            <dt>Total datapoints</dt>
+            <dd>{{ run.result.datapoint_results.count }}</dd>
+            <dd class="an-detail__metric-context">{% if run.result.num_failed > 0 %}Ignition not detected for {{ run.result.num_failed }} of {{ run.result.num_datapoints }}{% else %}No ignition failures{% endif %}</dd>
+        </div>
+    </dl>
+
+    {% if run.result.num_failed > 0 %}
+    <div class="an-detail__warning" role="note">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <div>
+            <strong>Ignition not detected for {{ run.result.num_failed }} datapoint{{ run.result.num_failed|pluralize }}.</strong>
+            <p>
+                A sentinel value of <code>1×10<sup>10</sup> s</code> was used in place of the
+                simulated ignition delay for the affected point{{ run.result.num_failed|pluralize }}.
+                This typically occurs when the conditions (temperature, pressure, composition)
+                are outside the range where the kinetic model predicts ignition.
+                These datapoints are highlighted in the table below with a
+                <span class="an-status an-status--running"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>No ignition</span> badge.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <div class="an-detail__body">
+        <div class="an-detail__main">
+            {% if run.status == 'completed' and run.result %}
+            <!-- Datapoint results (Figma 73:3529) -->
+            <section class="app-panel" aria-labelledby="an-points-title">
+                <div class="app-panel__head">
+                    <div class="an-panel-intro">
+                        <div class="an-detail__title-row">
+                            <h2 class="app-panel__title" id="an-points-title">Datapoint results</h2>
+                            <span class="an-pill an-pill--count">{{ run.result.datapoint_results.count }} point{{ run.result.datapoint_results.count|pluralize }}</span>
+                        </div>
+                        <p>Experimental and simulated ignition delay at each condition, by temperature.</p>
+                    </div>
+                    <a class="an-btn" href="{% url 'analysis:api-run-log' run.id %}"><img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="" width="18" height="18">Download log</a>
+                </div>
+                <div class="an-table-wrap" tabindex="0" role="region" aria-label="Datapoint results">
+                    <table class="an-table an-detail__points">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col" class="is-end">T (K)</th>
+                                <th scope="col" class="is-end">P (atm)</th>
+                                <th scope="col" class="is-end">φ</th>
+                                <th scope="col" class="is-end">τ<sub>exp</sub> (s)</th>
+                                <th scope="col" class="is-end">τ<sub>sim</sub> (s)</th>
+                                <th scope="col" class="is-end">Ratio</th>
+                                <th scope="col" class="is-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dp in run.result.datapoint_results.all %}
+                            <tr{% if not dp.success %} class="is-warning"{% endif %}>
+                                <td class="is-muted is-mono">{{ forloop.counter }}</td>
+                                <td class="is-number">{{ dp.temperature|floatformat:1 }}</td>
+                                <td class="is-number">{{ dp.pressure_atm|floatformat:2 }}</td>
+                                <td class="is-number">{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                <td class="is-number">{{ dp.experimental_ignition_delay|stringformat:"e" }}</td>
+                                <td class="is-number">
+                                    {% if not dp.success %}
+                                    <span class="an-error is-fair" title="{{ dp.error_message }}">{{ dp.simulated_ignition_delay|stringformat:"e" }} <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i></span>
+                                    {% else %}
+                                    {{ dp.simulated_ignition_delay|stringformat:"e" }}
+                                    {% endif %}
+                                </td>
+                                <td class="is-number">
+                                    {% if not dp.success %}
+                                    <span class="an-faint">—</span>
+                                    {% elif dp.error_value %}
+                                    <span class="an-error {% if dp.error_value < 0.5 %}is-good{% elif dp.error_value < 1 %}is-fair{% else %}is-poor{% endif %}">{{ dp.error_value|floatformat:3 }}</span>
+                                    {% else %}
+                                    <span class="an-error {% if dp.ignition_delay_ratio %}{% if dp.ignition_delay_ratio > 0.5 and dp.ignition_delay_ratio < 2 %}is-good{% elif dp.ignition_delay_ratio > 0.1 and dp.ignition_delay_ratio < 10 %}is-fair{% else %}is-poor{% endif %}{% endif %}">{{ dp.ignition_delay_ratio|floatformat:3|default:"—" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="is-end">
+                                    {% if dp.success %}
+                                    <span class="an-status an-status--completed"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>OK</span>
+                                    {% else %}
+                                    <span class="an-status an-status--running" title="{{ dp.error_message }}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>No ignition</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="8" class="an-empty">No datapoint results</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="an-detail__notes">
+                    <p><span>Showing all {{ run.result.datapoint_results.count }} datapoint{{ run.result.datapoint_results.count|pluralize }}</span><span>Ratio = τ<sub>sim</sub> / τ<sub>exp</sub>, or the point's error value when one is stored</span></p>
+                    <p>— means no value is available.</p>
+                </div>
+            </section>
+
+            {% elif run.status == 'failed' %}
+            <!-- Failure details (no frame) -->
+            <section class="app-panel an-detail__failure" aria-labelledby="an-failure-title">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="an-failure-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Simulation Failed</h2>
+                    <a class="an-btn" href="{% url 'analysis:api-run-log' run.id %}"><img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="" width="18" height="18">View log</a>
+                </div>
+                <div class="an-detail__failure-body">
+                    <p class="an-label">Primary error</p>
+                    <p class="an-detail__failure-message">{{ run.error_message|default:"No error message recorded" }}</p>
+                    {% if run.traceback %}
+                    <details class="an-detail__traceback">
+                        <summary>Show full traceback</summary>
+                        <pre>{{ run.traceback }}</pre>
+                    </details>
+                    {% endif %}
+                </div>
+            </section>
+
+            {% else %}
+            <!-- Other states: results appear here once the run completes -->
+            <section class="app-panel" aria-labelledby="an-state-title">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="an-state-title">Results</h2>
+                    <a class="an-btn" href="{% url 'analysis:api-run-log' run.id %}"><img class="app-icon" src="{% static 'database/images/icons/download-111827-24.svg' %}" alt="" width="18" height="18">Download log</a>
+                </div>
+                <p class="an-empty an-detail__state">
+                    {% if run.status == 'pending' or run.status == 'running' or run.status == 'queued' %}Results appear here when the run completes; this page refreshes itself.{% elif run.status == 'cancelled' %}This run was cancelled{% if run.error_message %}: {{ run.error_message }}{% endif %}.{% else %}This run has no stored results.{% endif %}
+                </p>
+            </section>
+            {% endif %}
+        </div>
+
+        <!-- Analysis and context (Figma 73:3529) -->
+        <div class="an-detail__side">
+            {% if run.status == 'completed' and run.result and chart_data %}
+            <section class="app-panel an-detail__plot" aria-labelledby="an-plot-title">
+                <div class="an-detail__plot-head">
+                    <h2 class="app-panel__title" id="an-plot-title">Parity plot</h2>
+                    <span class="an-pill">Log scale</span>
+                </div>
+                <p class="an-detail__plot-text">Simulated against experimental ignition delay for each datapoint.</p>
+                <div id="parity-plot" class="an-detail__plot-area"></div>
+                <p class="an-detail__plot-text">Both axes are logarithmic. Points on the dashed line agree exactly.</p>
+            </section>
+            {% endif %}
+
+            {% if run.status == 'completed' and run.result %}
+            <section class="app-panel an-detail__reading" aria-labelledby="an-reading-title">
+                <h2 class="an-detail__reading-title" id="an-reading-title"><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="16" height="16">Reading the results</h2>
+                <p>Ratio is τ<sub>sim</sub> / τ<sub>exp</sub>; 1 is perfect agreement. Green is within 0.5–2, amber within 0.1–10, red outside.</p>
+                <p>OK means the simulation ignited; No ignition means the 1×10<sup>10</sup> s sentinel was used.</p>
+            </section>
+            {% endif %}
+
+            {% if related_runs %}
+            <section class="app-panel an-detail__related" aria-labelledby="an-related-title">
+                <h2 class="an-detail__side-title" id="an-related-title">Related runs</h2>
+                <ul>
+                    {% for other in related_runs %}
+                    <li>
+                        <a href="{% url 'analysis:run-detail' other.pk %}">
+                            <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                            <strong>Run #{{ other.pk }}</strong>
+                            <span class="an-faint">{{ other.created_at|date:"M d" }}</span>
+                            {% if other.result %}<span class="an-chip {% if other.result.average_error_function < 1 %}is-good{% elif other.result.average_error_function < 2 %}is-fair{% else %}is-poor{% endif %}">{{ other.result.average_error_function|floatformat:2 }}</span>{% endif %}
+                            <img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="16" height="16">
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endif %}
+
+            {% if species_mappings %}
+            <section class="app-panel" aria-labelledby="an-mapping-title">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="an-mapping-title">Species mapping</h2>
+                </div>
+                <div class="an-table-wrap" tabindex="0" role="region" aria-label="Species mapping">
+                    <table class="an-table">
+                        <thead>
+                            <tr><th scope="col">ChemKED</th><th scope="col">Model</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for mapping in species_mappings %}
+                            <tr>
+                                <td class="is-mono">{{ mapping.chemked_name }}</td>
+                                <td class="is-mono">{{ mapping.model_name }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_runs_styles.html" %}
+<style>
+.an-detail {
+    gap: 22px;
+}
+
+/* Progress tracker */
+.an-detail__progress {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+}
+
+.an-steps {
+    display: flex;
+    align-items: flex-start;
+}
+
+.an-steps__item {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 72px;
+}
+
+.an-steps__dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-gray-100);
+    font-size: 16px;
+    color: var(--color-gray-500);
+}
+
+.an-steps__dot.is-active {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.an-steps__dot.is-done {
+    background: var(--color-success);
+    color: var(--color-white);
+}
+
+.an-steps__label {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-steps__label.is-current {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-steps__line {
+    flex: 1;
+    height: 2px;
+    margin-top: 17px;
+    background: var(--color-gray-200);
+}
+
+.an-steps__line.is-done {
+    background: var(--color-success);
+}
+
+.an-detail__bar {
+    height: 8px;
+}
+
+/* The script sets Bootstrap's colour classes on the bar; use the page palette for them */
+.an-detail__bar .bg-warning {
+    background-color: var(--color-warning) !important;
+}
+
+.an-detail__bar .bg-success {
+    background-color: var(--color-success) !important;
+}
+
+.an-detail__bar .bg-danger {
+    background-color: var(--color-error) !important;
+}
+
+.an-detail__progress-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 20px;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+/* Configuration: five fields in a row (Figma "Run metadata") */
+.an-detail__config {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+}
+
+.an-detail__meta {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin: 0;
+}
+
+.an-detail__meta > div {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.an-detail__meta dt {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.an-detail__meta dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.an-detail__meta a {
+    color: var(--color-primary);
+}
+
+/* Result metrics: three cards (Figma "Results summary") */
+.an-detail__summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+}
+
+.an-detail__metric {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 20px;
+}
+
+.an-detail__metric dt {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.an-detail__metric dd {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.an-detail__metric dd.an-error.is-good {
+    color: var(--color-success);
+}
+
+.an-detail__metric dd.an-error.is-fair {
+    color: var(--color-warning);
+}
+
+.an-detail__metric dd.an-error.is-poor {
+    color: var(--color-error);
+}
+
+.an-detail__metric .an-detail__metric-context {
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--color-gray-500);
+}
+
+.an-detail__warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    border-radius: 10px;
+    background: var(--color-warning-bg);
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-detail__warning > .bi {
+    margin-top: 2px;
+    color: var(--color-warning);
+}
+
+.an-detail__warning p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-700);
+}
+
+/* Datapoint table and the context column (Figma 920 + 560 px) */
+.an-detail__body {
+    display: grid;
+    grid-template-columns: minmax(0, 23fr) minmax(0, 14fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.an-detail__main,
+.an-detail__side {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-width: 0;
+}
+
+.an-detail__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+.an-detail__points {
+    min-width: 760px;
+}
+
+.an-detail__points .is-number {
+    font-size: 12px;
+}
+
+.an-detail__points tr.is-warning td {
+    background: var(--color-warning-bg);
+}
+
+.an-detail__notes {
+    display: grid;
+    gap: 8px;
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-detail__notes p {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin: 0;
+}
+
+.an-detail__notes p + p {
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.an-detail__failure .app-panel__title {
+    color: var(--color-error);
+}
+
+.an-detail__failure-body {
+    display: grid;
+    gap: 8px;
+    padding: 0 20px 20px;
+}
+
+.an-detail__failure-message {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-error);
+    overflow-wrap: anywhere;
+}
+
+.an-detail__traceback summary {
+    font-size: 12px;
+    color: var(--color-gray-600);
+    cursor: pointer;
+}
+
+.an-detail__traceback pre {
+    max-height: 420px;
+    margin: 10px 0 0;
+    padding: 12px;
+    overflow: auto;
+    border-radius: 6px;
+    background: var(--color-error-bg);
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+.an-detail__state {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+/* Parity plot (Figma "Parity plot") */
+.an-detail__plot {
+    display: grid;
+    gap: 12px;
+    padding: 20px;
+}
+
+.an-detail__plot-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.an-detail__plot-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-detail__plot-area {
+    width: 100%;
+    height: 380px;
+    min-width: 0;
+}
+
+.an-detail__reading {
+    display: grid;
+    gap: 8px;
+    padding: 20px;
+}
+
+.an-detail__reading-title,
+.an-detail__side-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-detail__reading p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.an-detail__related {
+    display: grid;
+    gap: 12px;
+    padding: 20px;
+}
+
+.an-detail__related ul {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.an-detail__related a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.an-detail__related a:hover strong {
+    color: var(--color-primary);
+}
+
+.an-detail__related a .app-icon {
+    margin-left: auto;
+}
+
+.an-detail__related strong {
+    font-weight: 600;
+}
+
+@media (max-width: 1199.98px) {
+    .an-detail__body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-detail__meta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .an-detail__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-detail__meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .an-detail__plot-area {
+        height: 320px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-detail__progress,
+    .an-detail__config,
+    .an-detail__plot,
+    .an-detail__reading,
+    .an-detail__related {
+        padding: 16px 14px;
+    }
+
+    .an-detail__notes,
+    .an-detail__failure-body {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .an-steps__item {
+        min-width: 56px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_data %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('parity-plot')) return;
+    const plotData = {{ chart_data|safe }};
+    // y = x across the range of both series, for the agreement line
+    const values = plotData.experimental.concat(plotData.simulated).filter(v => v > 0);
+    const lo = Math.min(...values);
+    const hi = Math.max(...values);
+    const traces = [
+        {
+            x: plotData.experimental,
+            y: plotData.simulated,
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Datapoints',
+            text: plotData.temperatures.map(t => `T=${t} K`),
+            marker: {
+                size: 9,
+                color: '#ce4801',
+                line: {
+                    color: '#a93b01',
+                    width: 1
+                }
+            },
+            hovertemplate: '<b>%{text}</b><br>Exp: %{x:.2e} s<br>Sim: %{y:.2e} s<extra></extra>'
+        }
+    ];
+    if (values.length) {
+        traces.push({
+            x: [lo, hi],
+            y: [lo, hi],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Perfect agreement (y = x)',
+            line: { color: '#94a0af', width: 1.5, dash: 'dash' },
+            hoverinfo: 'skip'
+        });
+    }
+    // Draw once the web font is in, so Plotly measures the legend in Inter and does not clip it
+    const draw = () => Plotly.newPlot('parity-plot', traces, {
+        xaxis: { title: 'Experimental IDT (s)', type: 'log', dtick: 'D2', gridcolor: '#dfe6ef', exponentformat: 'power', automargin: true },
+        yaxis: { title: 'Simulated IDT (s)', type: 'log', dtick: 'D2', gridcolor: '#dfe6ef', exponentformat: 'power', automargin: true },
+        font: { family: 'Inter, sans-serif', size: 11, color: '#3c4c61' },
+        legend: { orientation: 'h', x: 0, y: -0.25 },
+        margin: { t: 10, r: 10, b: 50, l: 60 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)'
+    }, {responsive: true, displaylogo: false});
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(draw);
+});
+</script>
+{% endif %}
+
+<!-- Auto-refresh for pending/running simulations -->
+{% if run.status == 'pending' or run.status == 'running' %}
+<script>
+(function() {
+    const runId = {{ run.id }};
+    const statusUrl = '{% url "analysis:api-run-status" run.id %}';
+    const createdAt = new Date('{{ run.created_at|date:"c" }}');
+    const pollInterval = 3000; // 3 seconds
+    let pollCount = 0;
+    const maxPolls = 600; // Stop after 30 minutes (600 * 3s)
+    let progressValue = {{ run.status|yesno:"running,pending"|yesno:"50,10" }};
+
+    // Elapsed time counter
+    function updateElapsedTime() {
+        const now = new Date();
+        const elapsed = Math.floor((now - createdAt) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+
+        let timeStr = '';
+        if (hours > 0) timeStr += `${hours}h `;
+        if (minutes > 0 || hours > 0) timeStr += `${minutes}m `;
+        timeStr += `${seconds}s`;
+
+        const elapsedEl = document.getElementById('elapsed-seconds');
+        if (elapsedEl) elapsedEl.textContent = timeStr;
+    }
+
+    // Update elapsed time every second
+    updateElapsedTime();
+    setInterval(updateElapsedTime, 1000);
+
+    // Animate progress bar
+    function updateProgressBar(status) {
+        const progressBar = document.getElementById('simulation-progress-bar');
+        if (!progressBar) return;
+
+        if (status === 'running') {
+            // Slowly increase progress while running (cap at 90%)
+            if (progressValue < 90) {
+                progressValue += Math.random() * 2;
+                progressBar.style.width = Math.min(progressValue, 90) + '%';
+            }
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+        } else if (status === 'completed') {
+            progressBar.style.width = '100%';
+            progressBar.className = 'progress-bar bg-success';
+        } else if (status === 'failed') {
+            progressBar.className = 'progress-bar bg-danger';
+        }
+    }
+
+    // Update step indicators
+    function updateStepIndicators(status) {
+        const tracker = document.getElementById('progress-tracker');
+        if (!tracker) return;
+
+        const circles = tracker.querySelectorAll('.an-steps__dot');
+        if (circles.length < 3) return;
+
+        if (status === 'running') {
+            // Queued complete
+            circles[0].className = 'an-steps__dot is-done';
+            circles[0].innerHTML = '<i class="bi bi-check"></i>';
+            // Running active
+            circles[1].className = 'an-steps__dot is-active pulse-animation';
+            circles[1].innerHTML = '<i class="bi bi-gear-fill"></i>';
+        } else if (status === 'completed') {
+            circles[0].className = 'an-steps__dot is-done';
+            circles[0].innerHTML = '<i class="bi bi-check"></i>';
+            circles[1].className = 'an-steps__dot is-done';
+            circles[1].innerHTML = '<i class="bi bi-check"></i>';
+            circles[2].className = 'an-steps__dot is-done';
+            circles[2].innerHTML = '<i class="bi bi-check-lg"></i>';
+        }
+    }
+
+    // The heading's status pill carries data-status-badge
+    const statusIcons = {
+        completed: 'bi-check-circle-fill',
+        failed: 'bi-x-circle-fill',
+        running: 'bi-arrow-repeat',
+        cancelled: 'bi-slash-circle'
+    };
+
+    function updateStatusBadge(status) {
+        const badges = document.querySelectorAll('[data-status-badge]');
+        badges.forEach(badge => {
+            const labels = { completed: 'Completed', running: 'Running...', failed: 'Failed' };
+            badge.className = 'an-status an-status--' + status;
+            badge.innerHTML = '<i class="bi ' + (statusIcons[status] || 'bi-clock') + '" aria-hidden="true"></i><span></span>';
+            badge.querySelector('span').textContent = labels[status] || status;
+        });
+    }
+
+    async function checkStatus() {
+        pollCount++;
+        if (pollCount > maxPolls) {
+            return;
+        }
+
+        try {
+            const response = await fetch(statusUrl);
+            if (!response.ok) throw new Error('Failed to fetch status');
+
+            const data = await response.json();
+
+            // Update visuals
+            updateProgressBar(data.status);
+            updateStepIndicators(data.status);
+            updateStatusBadge(data.status);
+
+            if (data.status === 'completed' || data.status === 'failed') {
+                // Status changed - show completion then reload
+                updateProgressBar(data.status);
+                updateStepIndicators(data.status);
+
+                setTimeout(() => window.location.reload(), 1500);
+                return;
+            }
+
+            // Still running/pending - continue polling
+            setTimeout(checkStatus, pollInterval);
+
+        } catch (error) {
+            console.error('Status check failed:', error);
+            setTimeout(checkStatus, pollInterval * 2);
+        }
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .pulse-animation { animation: pulse 1.5s ease-in-out infinite; }
+    `;
+    document.head.appendChild(style);
+
+    // Start polling
+    setTimeout(checkStatus, pollInterval);
+})();
+</script>
+{% endif %}
+{% endblock %}

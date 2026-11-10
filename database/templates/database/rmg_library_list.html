@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{# The RMG-database libraries; no Figma frame, so it takes the list look of the database pages (catalog_styles.html) #}
+
+{% block title %}RMG-database libraries | Prometheus{% endblock %}
+
+{% block content %}
+<div class="cat-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">RMG-database libraries</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <div class="cat-heading__title">
+                <h1>RMG-database libraries</h1>
+                <span class="cat-pill cat-pill--count">{{ rows|length }}<span class="visually-hidden"> libraries</span></span>
+            </div>
+            <p class="cat-lede">Every RMG-database kinetics and thermo library with an entry whose reaction or species is on this site, and the model with the most identical data.</p>
+        </div>
+        <div class="cat-actions">
+            <a class="cat-btn" href="{% url 'rmg-family-list' %}">RMG reaction families</a>
+        </div>
+    </header>
+
+    <section class="app-panel" aria-labelledby="rmg-libraries-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rmg-libraries-title">Libraries</h2>
+            <span class="app-panel__meta">By data, then name</span>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table cat-table--wide">
+                <thead>
+                    <tr>
+                        <th scope="col">Library</th>
+                        <th scope="col">Data</th>
+                        <th scope="col" class="is-end">Entries on the site</th>
+                        <th scope="col" class="is-end">Models with identical data</th>
+                        <th scope="col">Closest model</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="is-wrap"><a href="{% url 'rmg-library-detail' row.kind row.name %}">{{ row.name }}</a></td>
+                        <td>{% if row.kind == "kinetics" %}<span class="cat-pill">Reactions</span>{% else %}<span class="cat-pill cat-pill--muted">Thermo</span>{% endif %}</td>
+                        <td class="is-number">{{ row.entries }}</td>
+                        <td class="is-number">{{ row.models }}</td>
+                        <td>{% if row.best %}<a href="{% url 'kinetic-model-detail' row.best.kinetic_model_id %}">{{ row.best.kinetic_model.model_name }}</a>
+                            <span class="cat-sub">{{ row.best.identical }} of {{ row.best.model_total }}</span>{% else %}<span class="is-muted">–</span>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="cat-empty">Run match_rmg_libraries to fill this page.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+{% endblock %}

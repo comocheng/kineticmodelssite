@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% load static %}
+{# The words come from database/content/landing.yaml; this template only lays them out. #}
+
+{% block title %}{{ copy.meta.title }}{% endblock %}
+{% block meta_description %}{{ copy.meta.description }}{% endblock %}
+{% block body_class %} class="landing"{% endblock %}
+{# One row with Analysis and the research tools in it needs about 1350 px; below 1400 px the menu button shows #}
+{% block nav_expand %}navbar-expand-xxl{% endblock %}
+
+{# nginx gives static files no cache lifetime, so browsers may keep an old copy: raise v when one of these files changes #}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'database/css/landing.css' %}?v=3">
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{% static 'database/js/landing-flame.js' %}?v=2"></script>
+<script src="{% static 'database/js/landing-contribute.js' %}?v=1" defer></script>
+<script>
+    // The header is clear over the hero and turns solid once the page scrolls under it
+    (() => {
+        const header = document.querySelector(".app-header");
+        if (!header) return;
+        const update = () => header.classList.toggle("is-scrolled", window.scrollY > 8);
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+    })();
+</script>
+{% endblock %}
+
+{% block content %}
+{% with problem=copy.problem fix=copy.fix shared=copy.problem.shared_name %}
+
+<!-- Hero: the goal and the reason -->
+<section class="lp-hero" aria-labelledby="lp-hero-title">
+    <div class="lp-container lp-hero__grid">
+        <div class="lp-hero__text">
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.hero.eyebrow }}</p>
+            <h1 id="lp-hero-title" class="lp-hero__title">
+                {{ copy.hero.title }}<br><span class="lp-accent">{{ copy.hero.title_highlight }}</span>
+            </h1>
+            <p class="lp-hero__lede">{{ copy.hero.lede }}</p>
+            <div class="lp-actions">
+                {% for action in copy.hero.actions %}
+                <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}{% if forloop.first %} <i class="bi bi-arrow-right" aria-hidden="true"></i>{% endif %}</a>
+                {% endfor %}
+            </div>
+            <p class="lp-hero__note"><i class="bi bi-unlock me-1" aria-hidden="true"></i>{{ copy.hero.note }}</p>
+        </div>
+        <div class="lp-hero__art">
+            {# landing-flame.js draws a 3D flame over the SVG; the SVG stays for no WebGL or reduced motion #}
+            <div class="lp-flame" id="lp-flame" aria-hidden="true" data-three="{% static 'database/vendor/three-0.160.0/three.module.min.js' %}">
+                <picture>
+                    <source srcset="{% static 'database/images/landing/flame-static.svg' %}" media="(prefers-reduced-motion: reduce)">
+                    <img src="{% static 'database/images/landing/flame.svg' %}" alt="" width="420" height="690">
+                </picture>
+            </div>
+            {% if flame_species %}<p class="lp-hero__flame-note">{{ copy.hero.flame_note }}</p>{% endif %}
+            {{ flame_species|json_script:"lp-flame-species" }}
+        </div>
+    </div>
+
+    <div class="lp-container">
+        <div class="lp-holdings" aria-label="{{ copy.holdings.title }}">
+            <p class="lp-holdings__title">{{ copy.holdings.title }}</p>
+            <div class="lp-holdings__grid">
+                {% for item in copy.holdings.items %}
+                <a class="lp-holding" href="{{ item.href }}">
+                    <span class="lp-holding__value">{{ item.value }}</span>
+                    <span class="lp-holding__label">{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            <p class="lp-holdings__note">{{ copy.holdings.note }}</p>
+        </div>
+    </div>
+
+    {% with contribute=copy.contribute %}
+    <div class="lp-container">
+        {# The ways to contribute. Without JavaScript every route shows its full text; landing-contribute.js switches routes and types the terminals. #}
+        <section class="lp-contribute" id="contribute" aria-labelledby="lp-contribute-title">
+            <div class="lp-contribute__head">
+                <h2 class="lp-contribute__title" id="lp-contribute-title">{{ contribute.title }}</h2>
+                <p class="lp-contribute__intro">{{ contribute.intro }}</p>
+            </div>
+            <div class="lp-contribute__body">
+                <div class="lp-contribute__routes" role="tablist" aria-label="{{ contribute.title }}" aria-orientation="vertical">
+                    {% for route in contribute.routes %}
+                    <button class="lp-contribute__route" type="button" role="tab" id="lp-route-{{ route.key }}" aria-controls="lp-route-panel-{{ route.key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"{% if not forloop.first %} tabindex="-1"{% endif %}>
+                        <span class="lp-contribute__route-label">{{ route.label }}</span>
+                        <span class="lp-contribute__route-method">{{ route.method }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+                <div class="lp-contribute__panels">
+                {% for route in contribute.routes %}
+                <div class="lp-contribute__panel" role="tabpanel" id="lp-route-panel-{{ route.key }}" aria-labelledby="lp-route-{{ route.key }}" data-route="{{ forloop.counter0 }}" data-kind="{{ route.kind }}">
+                    <ol class="lp-contribute__steps">
+                        {% for step in route.steps %}
+                        <li class="lp-contribute__step" data-step="{{ forloop.counter0 }}">
+                            {% if route.kind == "terminal" %}
+                            <button class="lp-contribute__step-head" type="button"><span class="lp-contribute__num">{{ forloop.counter|stringformat:"02d" }}</span>{{ step.title }}</button>
+                            {% else %}
+                            <p class="lp-contribute__step-head"><span class="lp-contribute__num">{{ forloop.counter|stringformat:"02d" }}</span>{{ step.title }}</p>
+                            {% endif %}
+                            <p class="lp-contribute__step-text">{{ step.text }}</p>
+                            {% if step.href %}<a class="lp-contribute__link" href="{{ step.href }}" target="_blank" rel="noopener noreferrer">{{ step.link }} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ol>
+                    <div class="lp-contribute__side">
+                        {% if route.kind == "terminal" %}
+                        <div class="lp-terminal">
+                            <div class="lp-terminal__bar">
+                                <span class="lp-terminal__title">{{ route.terminal }}</span>
+                                <button class="lp-terminal__action" type="button" data-action="copy" hidden>Copy step</button>
+                                <button class="lp-terminal__action" type="button" data-action="replay" hidden>Replay</button>
+                            </div>
+<pre class="lp-terminal__screen" tabindex="0" aria-label="Commands: {{ route.label }}, {{ route.method }}"><code>{% for step in route.steps %}<span class="lp-terminal__comment"># {{ forloop.counter|stringformat:"02d" }} {{ step.title }}</span>
+{% for command in step.commands %}<span class="lp-terminal__prompt">$ </span>{{ command }}
+{% endfor %}{% for line in step.output %}<span class="lp-terminal__out">{{ line }}</span>
+{% endfor %}{% if not forloop.last %}
+{% endif %}{% endfor %}</code></pre>
+                        </div>
+                        {% if route.pull_request %}<a class="lp-btn lp-btn--primary lp-contribute__pr" href="{{ route.pull_request.href }}" target="_blank" rel="noopener noreferrer">{{ route.pull_request.label }} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>{% endif %}
+                        {% if route.note %}<p class="lp-contribute__note">{{ route.note }}</p>{% endif %}
+                        {% else %}
+                        <div class="lp-contribute__links">
+                            {% for link in route.links %}
+                            <a class="lp-contribute__card" href="{{ link.href }}">
+                                <span class="lp-contribute__card-label">{{ link.label }} <span aria-hidden="true">→</span></span>
+                                <span class="lp-contribute__card-text">{{ link.text }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </section>
+    </div>
+    {{ contribute.routes|json_script:"lp-contribute-routes" }}
+    {% endwith %}
+</section>
+
+<!-- 01 Why -->
+<section class="lp-section lp-section--char lp-section--waves" id="why" aria-labelledby="lp-why-title">
+    {% include "database/landing_waves.html" %}
+    <div class="lp-container lp-split">
+        <div>
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.why.eyebrow }}</p>
+            <h2 id="lp-why-title" class="lp-h2 lp-h2--light">{{ copy.why.title }}</h2>
+            {% for paragraph in copy.why.paragraphs %}
+            <p class="lp-body lp-body--light">{{ paragraph }}</p>
+            {% endfor %}
+        </div>
+        <aside class="lp-cards-aside">
+            <div class="lp-note-card lp-note-card--name">
+                <img src="{% static 'database/images/landing/prometheus-gift.png' %}" alt="{{ copy.why.name.image_alt }}" class="lp-note-card__gift" width="720" height="631">
+                <p class="lp-note-card__label">{{ copy.why.name.label }}</p>
+                <p class="lp-note-card__title">{{ copy.why.name.title }}</p>
+                <p class="lp-note-card__text">{{ copy.why.name.text }}</p>
+            </div>
+        </aside>
+    </div>
+</section>
+
+<!-- 02 The problem scene -->
+<section class="lp-section" id="problem" aria-labelledby="lp-problem-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ problem.eyebrow }}</p>
+            <h2 id="lp-problem-title" class="lp-h2">{{ problem.title }}</h2>
+            <p class="lp-intro">{{ problem.intro }}</p>
+        </header>
+
+        <figure class="lp-scene lp-scene--problem">
+            {% for molecule in scene %}
+            {% if forloop.counter == 2 %}
+            <div class="lp-scene__middle">
+                <span class="lp-tag lp-tag--lost">{{ shared }}</span>
+                <p>{{ problem.shared_name_note }}</p>
+                <span class="lp-pill lp-pill--lost">{{ problem.shared_name_pill }}</span>
+            </div>
+            {% endif %}
+            <div class="lp-molecule">
+                <div class="lp-molecule__head">
+                    <span class="lp-molecule__name">{{ molecule.name }}</span>
+                    <span class="lp-mono">{{ molecule.condensed }}</span>
+                </div>
+                <ul class="lp-tags">
+                    {% for row in molecule.names %}{% if row.name != shared %}
+                    <li class="lp-tag">{{ row.name }}<span class="lp-tag__count" title="models">{{ row.models }}</span></li>
+                    {% endif %}{% endfor %}
+                </ul>
+                <p class="lp-molecule__foot">{{ molecule.names|length }} names in {{ molecule.models }} models</p>
+            </div>
+            {% endfor %}
+            <figcaption class="lp-scene__caption">{{ problem.caption }}</figcaption>
+        </figure>
+
+        <ol class="lp-steps">
+            {% for step in problem.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+    </div>
+</section>
+
+<!-- 03 The fix scene: the same objects in the same places -->
+<section class="lp-section lp-section--mist" id="fix" aria-labelledby="lp-fix-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ fix.eyebrow }}</p>
+            <h2 id="lp-fix-title" class="lp-h2">{{ fix.title }}</h2>
+            <p class="lp-intro">{{ fix.intro }}</p>
+        </header>
+
+        <figure class="lp-scene lp-scene--fix">
+            {% for molecule in scene %}
+            {% if forloop.counter == 2 %}
+            <div class="lp-scene__middle">
+                <span class="lp-tag lp-tag--kept">{{ shared }}</span>
+                <p>{{ fix.shared_name_note }}</p>
+                <ul class="lp-scene__targets">
+                    {% for target in scene %}{% if target.shared_name_models %}
+                    <li><i class="bi bi-arrow-right" aria-hidden="true"></i> {{ target.name }}, {{ target.shared_name_models }} model{{ target.shared_name_models|pluralize }}</li>
+                    {% endif %}{% endfor %}
+                </ul>
+                <span class="lp-pill lp-pill--kept">{{ fix.shared_name_pill }}</span>
+            </div>
+            {% endif %}
+            <div class="lp-molecule lp-molecule--resolved">
+                <div class="lp-molecule__head">
+                    <span class="lp-molecule__name">{{ molecule.name }}</span>
+                    <span class="lp-mono">{{ molecule.condensed }}</span>
+                </div>
+                <ul class="lp-tags">
+                    {% for row in molecule.names %}
+                    <li class="lp-tag{% if row.name == shared %} lp-tag--kept{% endif %}">{{ row.name }}<span class="lp-tag__count" title="models">{{ row.models }}</span></li>
+                    {% endfor %}
+                </ul>
+                <div class="lp-record" aria-label="Species record">
+                    <p class="lp-record__label"><i class="bi bi-link-45deg" aria-hidden="true"></i> {{ fix.record_label }}</p>
+                    <dl>
+                        <dt>InChI</dt><dd class="lp-mono">{{ molecule.inchi }}</dd>
+                        {% if molecule.smiles %}<dt>SMILES</dt><dd class="lp-mono">{{ molecule.smiles }}</dd>{% endif %}
+                        <dt>Models</dt><dd>{{ molecule.models }}</dd>
+                        <dt>Experiments</dt>
+                        <dd>{% for row in molecule.experiment_names %}<span class="lp-tag lp-tag--exp"><i class="bi bi-eyedropper" aria-hidden="true"></i>{{ row.species_name }}<span class="lp-tag__count" title="mixture entries">{{ row.entries }}</span></span>{% empty %}{{ fix.no_experiments }}{% endfor %}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endfor %}
+            <figcaption class="lp-scene__caption">{{ fix.caption }}</figcaption>
+        </figure>
+
+        <ol class="lp-steps">
+            {% for step in fix.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+    </div>
+</section>
+
+<!-- 04 How it works -->
+<section class="lp-section" id="how" aria-labelledby="lp-how-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.how.eyebrow }}</p>
+            <h2 id="lp-how-title" class="lp-h2">{{ copy.how.title }}</h2>
+        </header>
+        <ol class="lp-pipeline">
+            {% for step in copy.how.steps %}
+            <li class="lp-pipeline__step">
+                <span class="lp-pipeline__num">{{ forloop.counter|stringformat:"02d" }}</span>
+                <h3 class="lp-h3">{{ step.title }}</h3>
+                <p>{{ step.text }}</p>
+            </li>
+            {% endfor %}
+        </ol>
+    </div>
+</section>
+
+<!-- 05 Use it today -->
+<section class="lp-section lp-section--mist" id="explore" aria-labelledby="lp-cap-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.capabilities.eyebrow }}</p>
+            <h2 id="lp-cap-title" class="lp-h2">{{ copy.capabilities.title }}</h2>
+        </header>
+        <div class="lp-cards">
+            {% for card in copy.capabilities.cards %}
+            <a class="lp-card lp-card--{{ forloop.counter }}" href="{{ card.href }}">
+                <h3 class="lp-h3">{{ card.title }}</h3>
+                <p>{{ card.text }}</p>
+                <span class="lp-card__link">{{ card.link_label }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
+            {% endfor %}
+        </div>
+        {% with band=copy.capabilities.contribute %}
+        <div class="lp-band">
+            <div>
+                <h3 class="lp-h3">{{ band.title }}</h3>
+                <p>{{ band.text }}</p>
+            </div>
+            <a class="lp-btn lp-btn--primary" href="{{ band.href }}">{{ band.link_label }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        </div>
+        {% endwith %}
+    </div>
+</section>
+
+<!-- 06 What it means -->
+<section class="lp-section" id="impact" aria-labelledby="lp-impact-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.impact.eyebrow }}</p>
+            <h2 id="lp-impact-title" class="lp-h2">{{ copy.impact.title }}</h2>
+            <p class="lp-lead">{{ copy.impact.lead }}</p>
+        </header>
+        <div class="lp-points">
+            {% for point in copy.impact.points %}
+            <div class="lp-point">
+                <h3 class="lp-h3">{{ point.title }}</h3>
+                <p>{{ point.text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- 07 What comes next -->
+<section class="lp-section lp-section--char" id="next" aria-labelledby="lp-next-title">
+    <div class="lp-container lp-split">
+        <div>
+            <p class="lp-eyebrow lp-eyebrow--dark">{{ copy.next.eyebrow }}</p>
+            <h2 id="lp-next-title" class="lp-h2 lp-h2--light">{{ copy.next.title }}</h2>
+            <p class="lp-body lp-body--light">{{ copy.next.intro }}</p>
+        </div>
+        <ul class="lp-roadmap">
+            {% for item in copy.next.items %}
+            <li>
+                <span class="lp-pill lp-pill--status">{{ copy.next.status_label }}</span>
+                <h3 class="lp-h3 lp-h3--light">{{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<!-- 08 Who builds it -->
+<section class="lp-section" id="community" aria-labelledby="lp-community-title">
+    <div class="lp-container">
+        <header class="lp-head">
+            <p class="lp-eyebrow">{{ copy.community.eyebrow }}</p>
+            <h2 id="lp-community-title" class="lp-h2">{{ copy.community.title }}</h2>
+            <p class="lp-intro">{{ copy.community.intro }}</p>
+        </header>
+        <div class="lp-split lp-split--even">
+            <div>
+                <ul class="lp-tools">
+                    {% for tool in copy.community.tools %}
+                    <li><span class="lp-tools__name">{{ tool.name }}</span><span class="lp-tools__role">{{ tool.role }}</span></li>
+                    {% endfor %}
+                </ul>
+                <p class="lp-small">{{ copy.community.prior_art }}</p>
+            </div>
+            <div>
+                <ul class="lp-team">
+                    {% for member in copy.community.team %}
+                    <li><span class="lp-team__group">{{ member.group }}</span><span class="lp-team__lead">{{ member.lead }}</span></li>
+                    {% endfor %}
+                </ul>
+                <p class="lp-funding"><i class="bi bi-award" aria-hidden="true"></i> {{ copy.community.funding }}{% if copy.community.award %} {{ copy.community.award }}.{% endif %}</p>
+                {% if citation %}
+                <div class="lp-cite" id="cite">
+                    <p class="lp-cite__title">{{ copy.community.cite_title }}</p>
+                    <p class="lp-small">{{ copy.community.cite_intro }}</p>
+                    <p class="lp-cite__text">{{ citation.authors }} <em>{{ citation.title }}</em>.{% if citation.url %} <a href="{{ citation.url }}">{{ citation.url }}</a>{% endif %}</p>
+                    {% if citation.repository %}<p class="lp-small mb-0">{{ copy.community.code_label }} <a href="{{ citation.repository }}" target="_blank" rel="noopener">{{ citation.repository }}</a>{% if citation.license %} ({{ citation.license }} license){% endif %}</p>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Closing -->
+<section class="lp-closing" aria-labelledby="lp-closing-title">
+    <div class="lp-container">
+        <div class="lp-closing__grid">
+            <nav aria-label="{{ copy.closing.links_label }}">
+                <ul class="lp-squares">
+                    {% for link in copy.closing.links %}
+                    <li><a href="{{ link.href }}">{{ link.label }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            <div>
+                <h2 id="lp-closing-title" class="lp-h2 lp-h2--light">{{ copy.closing.title }}</h2>
+                <div class="lp-actions">
+                    {% for action in copy.closing.actions %}
+                    <a class="lp-btn lp-btn--{{ action.style }}" href="{{ action.href }}">{{ action.label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <p class="lp-wordmark" aria-hidden="true">Pr.omethe.us</p>
+    </div>
+</section>
+
+{% endwith %}
+{% endblock %}

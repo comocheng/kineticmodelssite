@@ -32,25 +32,25 @@ def render_thermo_table(thermo, condensed=False):
                 <th scope="row">1</th>
                 <td>{thermo.temp_min_1}</td>
                 <td>{thermo.temp_max_1}</td>
-                <td>{thermo.coeffs_poly1[0]:.2f}</td>
-                <td>{thermo.coeffs_poly1[1]:.2f}</td>
-                <td>{thermo.coeffs_poly1[2]:.2f}</td>
-                <td>{thermo.coeffs_poly1[3]:.2f}</td>
-                <td>{thermo.coeffs_poly1[4]:.2f}</td>
-                <td>{thermo.coeffs_poly1[5]:.2f}</td>
-                <td>{thermo.coeffs_poly1[6]:.2f}</td>
+                <td>{thermo.coeffs_poly1[0]}</td>
+                <td>{thermo.coeffs_poly1[1]}</td>
+                <td>{thermo.coeffs_poly1[2]}</td>
+                <td>{thermo.coeffs_poly1[3]}</td>
+                <td>{thermo.coeffs_poly1[4]}</td>
+                <td>{thermo.coeffs_poly1[5]}</td>
+                <td>{thermo.coeffs_poly1[6]}</td>
             </tr>
             <tr>
                 <th scope="row">2</th>
                 <td>{thermo.temp_min_2}</td>
                 <td>{thermo.temp_max_2}</td>
-                <td>{thermo.coeffs_poly2[0]:.2f}</td>
-                <td>{thermo.coeffs_poly2[1]:.2f}</td>
-                <td>{thermo.coeffs_poly2[2]:.2f}</td>
-                <td>{thermo.coeffs_poly2[3]:.2f}</td>
-                <td>{thermo.coeffs_poly2[4]:.2f}</td>
-                <td>{thermo.coeffs_poly2[5]:.2f}</td>
-                <td>{thermo.coeffs_poly2[6]:.2f}</td>
+                <td>{thermo.coeffs_poly2[0]}</td>
+                <td>{thermo.coeffs_poly2[1]}</td>
+                <td>{thermo.coeffs_poly2[2]}</td>
+                <td>{thermo.coeffs_poly2[3]}</td>
+                <td>{thermo.coeffs_poly2[4]}</td>
+                <td>{thermo.coeffs_poly2[5]}</td>
+                <td>{thermo.coeffs_poly2[6]}</td>
             </tr>
         </tbody>
     </table>
@@ -247,7 +247,7 @@ def render_kinetics_list_card(kinetics, is_comment=False):
     bodies = []
     for row_header, cells in table[2]:
         row_header_render = f"<th scope='row'>{row_header}</th>" if row_header else ""
-        cell_render = "\n".join(f"<td>{cell}<td>" for cell in cells)
+        cell_render = "\n".join(f"<td>{cell}</td>" for cell in cells)
         bodies.append(
             f"""
             <tbody>
@@ -278,6 +278,47 @@ def render_kinetics_list_card(kinetics, is_comment=False):
                     {bodies_render}
                 </table>
             </a>
+        </div>
+        """.strip()
+    )
+
+
+@register.filter
+def render_kinetics_table(kinetics):
+    """Render only the kinetics data table for inline display."""
+    if kinetics is None or getattr(kinetics, "data", None) is None:
+        return mark_safe("<span class='text-muted'>No kinetics data.</span>")
+
+    table = kinetics.data.table_data()[-1]
+    heads = "\n".join(f"<th scope='col'>{head}</th>" for head in table[1])
+    head = f"""
+    <thead>
+        {heads}
+    </thead>
+    """.strip()
+    bodies = []
+    for row_header, cells in table[2]:
+        row_header_render = f"<th scope='row'>{row_header}</th>" if row_header else ""
+        cell_render = "\n".join(f"<td>{cell}</td>" for cell in cells)
+        bodies.append(
+            f"""
+            <tbody>
+                <tr>
+                    {row_header_render}
+                    {cell_render}
+                </tr>
+            </tbody>
+            """.strip()
+        )
+    bodies_render = "\n".join(bodies)
+
+    return mark_safe(
+        f"""
+        <div style="overflow-x: auto;">
+        <table class="table table-sm table-bordered mb-0" style="table-layout: auto; font-size: 0.8rem;">
+            {head}
+            {bodies_render}
+        </table>
         </div>
         """.strip()
     )

@@ -1,0 +1,20 @@
+{# The research tools of the Figma "Tools navigation" row (node 193:2338); base.html shows them in that row and again in the menu, where in_menu gives the toggle its id. #}
+{% if site_access_allowed %}
+<li><a class="app-tool{% if 'importer' in request.resolver_match.namespace %} is-active{% endif %}" href="{% url 'importer_dashboard:index' %}">Importer</a></li>
+<li><a class="app-tool{% if 'livequery' in request.resolver_match.namespace %} is-active{% endif %}" href="{% url 'livequery:query_console' %}">SQL Console</a></li>
+<li class="dropdown">
+    <a class="app-tool app-tool--accent dropdown-toggle" href="#"{% if in_menu %} id="dataDropdown"{% endif %} role="button" data-bs-toggle="dropdown" aria-expanded="false">Add Data</a>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li class="dropdown-header">Create New</li>
+        <li><a class="dropdown-item" href="{% url 'source-create' %}"><i class="bi bi-journal-plus me-2"></i>Source</a></li>
+        <li><a class="dropdown-item" href="{% url 'kinetic-model-create' %}"><i class="bi bi-diagram-3 me-2"></i>Kinetic Model</a></li>
+        <li><a class="dropdown-item" href="{% url 'author-create' %}"><i class="bi bi-person-plus me-2"></i>Author</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Manage</li>
+        <li><a class="dropdown-item" href="{% url 'author-list' %}"><i class="bi bi-people me-2"></i>Authors</a></li>
+    </ul>
+</li>
+{% endif %}
+<li>
+    <a class="app-tool" href="https://github.com/comocheng/kineticmodelssite/issues/new" target="_blank" rel="noopener noreferrer">Report an issue <span aria-hidden="true">↗</span><span class="visually-hidden">on GitHub (opens in a new tab)</span></a>
+</li>

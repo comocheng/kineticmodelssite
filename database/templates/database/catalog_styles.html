@@ -1,0 +1,437 @@
+{% load static %}
+{% comment %}
+The shared look of the pages without a Figma frame of their own: the RMG library and family pages,
+the provenance identifier pages and the SQL console. It repeats the list and detail pattern of the
+restyled database pages (breadcrumb, title row, white panels, dense tables, page links). Include it
+in extra_css; every rule is scoped under .cat-page, the wrapper each of these pages uses.
+{% endcomment %}
+<style>
+.cat-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    min-width: 0;
+}
+
+.cat-page > * {
+    min-width: 0;
+}
+
+.cat-page h1,
+.cat-page h2,
+.cat-page h3 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Breadcrumb */
+.cat-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.cat-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.cat-crumbs li + li::before {
+    content: "";
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    background: url("{% static 'database/images/icons/chevron-right-78879a-12.svg' %}") center / 12px no-repeat;
+}
+
+.cat-crumbs a {
+    color: var(--color-primary);
+}
+
+.cat-crumbs [aria-current] {
+    overflow-wrap: anywhere;
+}
+
+/* Title row */
+.cat-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.cat-heading__intro {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    max-width: 960px;
+}
+
+.cat-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.cat-heading h1 {
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.cat-eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+}
+
+.cat-lede {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.cat-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.cat-page .app-btn {
+    height: 38px;
+    padding: 0 14px;
+}
+
+/* White secondary button; .app-btn is the orange one */
+.cat-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.cat-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.cat-page .app-link {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* External links and other related pages under the title */
+.cat-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Chips: kinds, counts and prefixes */
+.cat-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 30px;
+    background: var(--color-primary-bg);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--color-primary);
+}
+
+.cat-pill--count {
+    padding: 4px 9px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.cat-pill--muted {
+    background: var(--color-gray-100);
+    color: var(--color-gray-600);
+}
+
+/* Panels */
+.cat-page .app-panel {
+    min-width: 0;
+}
+
+.cat-page .app-panel__head {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 18px 20px;
+}
+
+.cat-page .app-panel__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    font-size: 16px;
+}
+
+.cat-panel__body {
+    display: grid;
+    gap: 14px;
+    padding: 0 20px 20px;
+    min-width: 0;
+}
+
+.cat-subtitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Tables scroll inside their panel on narrow screens */
+.cat-table-wrap {
+    position: relative;
+    overflow-x: auto;
+}
+
+.cat-page .app-table {
+    font-size: 12px;
+}
+
+.cat-page .app-table th {
+    padding: 11px 10px;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.cat-page .app-table td {
+    padding: 12px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    vertical-align: top;
+}
+
+.cat-page .app-table th:first-child,
+.cat-page .app-table td:first-child {
+    padding-left: 20px;
+}
+
+.cat-page .app-table th:last-child,
+.cat-page .app-table td:last-child {
+    padding-right: 20px;
+}
+
+.cat-page .app-table .is-number {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.cat-page .app-table th.is-number {
+    font-family: var(--font-sans);
+    font-size: 10px;
+}
+
+.cat-page .app-table tbody tr:hover {
+    background: var(--color-gray-50);
+}
+
+/* Tables wider than a phone scroll sideways instead of squeezing their columns */
+.cat-page .cat-table--wide {
+    min-width: 760px;
+}
+
+/* Symbols and units keep their case in the upper-case table heads */
+.cat-page .app-table .cat-unit {
+    text-transform: none;
+}
+
+/* A second, smaller line under a cell value */
+.cat-sub {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.cat-page .is-mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.cat-page .is-muted {
+    color: var(--color-gray-500);
+}
+
+.cat-page .is-wrap {
+    overflow-wrap: anywhere;
+}
+
+/* Identifiers: CURIEs and IRIs */
+.cat-code {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-gray-100);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+.cat-iri {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+/* Linked-data download links */
+.cat-formats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.cat-empty {
+    margin: 0;
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+.cat-panel-note {
+    margin: 0;
+    padding: 14px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.cat-page .app-notice code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-gray-900);
+}
+
+/* Page links (catalog_pager.html) */
+.cat-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.cat-pager__pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.cat-pager__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 4px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+a.cat-pager__page:hover {
+    background: var(--color-gray-50);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.cat-pager__page.is-current {
+    background: var(--color-primary-bg);
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.cat-pager__step {
+    padding: 0 4px;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+}
+
+.cat-pager__step.is-disabled {
+    color: var(--color-gray-400);
+}
+
+@media (max-width: 575.98px) {
+    .cat-heading h1 {
+        font-size: 26px;
+    }
+
+    .cat-page .app-table th:first-child,
+    .cat-page .app-table td:first-child {
+        padding-left: 14px;
+    }
+
+    .cat-page .app-table th:last-child,
+    .cat-page .app-table td:last-child {
+        padding-right: 14px;
+    }
+
+    .cat-page .app-panel__head {
+        padding: 16px 14px;
+    }
+
+    .cat-panel__body {
+        padding: 0 14px 16px;
+    }
+
+    .cat-pager {
+        padding: 14px;
+    }
+}
+</style>

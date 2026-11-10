@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% load static %}
+{# Review the species mapping before a run starts. No Figma frame; it follows the run pages (Figma 73:3529). The script below relies on the row, cell and field names. #}
+
+{% block title %}Review species mapping · Run #{{ run.id }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="an-runs an-map">
+
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:run-list' %}">Runs</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:run-detail' run.id %}">Run #{{ run.id }}</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Mapping review</span></li>
+        </ol>
+    </nav>
+
+    <header class="an-heading">
+        <div class="an-heading__intro">
+            <div class="an-heading__title">
+                <h1>Review species mapping</h1>
+                <span class="an-pill">Run #{{ run.id }}</span>
+            </div>
+            <p class="an-lede"><strong>{{ run.kinetic_model.model_name }}</strong> × <strong>{% if run.dataset %}{{ run.dataset.short_name }}{% else %}a removed dataset{% endif %}</strong></p>
+        </div>
+        <a class="app-link" href="{% url 'analysis:run-detail' run.id %}">← Back to run</a>
+    </header>
+
+    <p class="app-notice an-map__notice">
+        <img class="app-icon" src="{% static 'database/images/icons/info.svg' %}" alt="" width="18" height="18">
+        <span>
+            <strong>How this works:</strong> The table below shows the auto-generated mapping
+            between species names in the experiment dataset and the kinetic model.
+            Review each row. If a mapping is wrong (marked with a low confidence or
+            <span class="badge bg-danger-subtle text-danger">✗</span>), edit the
+            <em>Model Species</em> column.
+            Once you're satisfied, select <strong>Confirm &amp; Run Simulation</strong>.
+        </span>
+    </p>
+
+    <form method="post" id="mapping-review-form" class="an-map__form">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <input type="hidden" name="next_runs" value="{{ next_runs }}">
+
+        <section class="app-panel" aria-labelledby="an-map-title">
+            <div class="app-panel__head">
+                <div class="an-detail-title">
+                    <h2 class="app-panel__title" id="an-map-title">Species mapping</h2>
+                    <span class="an-pill an-pill--count">{{ formset.forms|length }} species</span>
+                </div>
+                <div class="an-search an-map__search">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-607185-18.svg' %}" alt="" width="18" height="18">
+                    <label class="visually-hidden" for="mech-species-search">Search mechanism species</label>
+                    <input type="text" id="mech-species-search" placeholder="Search mechanism species..." autocomplete="off">
+                </div>
+            </div>
+            {% if formset.non_form_errors %}
+            <div class="an-error-text an-map__errors">{{ formset.non_form_errors }}</div>
+            {% endif %}
+            {# From 1000 px the table fits, so the wrapper drops its overflow and cannot clip the autocomplete list #}
+            <div class="an-table-wrap an-map__wrap">
+                <table class="an-table an-map__table" id="mapping-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="an-map__index">#</th>
+                            <th scope="col">Dataset Species</th>
+                            <th scope="col">Model Species</th>
+                            <th scope="col" class="an-map__center">Status</th>
+                            <th scope="col" class="an-map__center">Confidence</th>
+                            <th scope="col">Method</th>
+                            <th scope="col">Override Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr class="mapping-row" data-index="{{ forloop.counter0 }}">
+                            <td class="an-map__index is-muted is-mono">{{ forloop.counter }}</td>
+
+                            {# Hidden fields #}
+                            {{ form.dataset_species_name }}
+                            {{ form.original_model_species_name }}
+                            {{ form.confidence }}
+                            {{ form.mapping_method }}
+                            {{ form.is_override }}
+
+                            {# Dataset species (read-only display) #}
+                            <td><code class="an-map__species">{{ form.dataset_species_name.value }}</code></td>
+
+                            {# Model species (editable) #}
+                            <td class="an-map__model">
+                                <label class="visually-hidden" for="{{ form.model_species_name.id_for_label }}">Model species for {{ form.dataset_species_name.value }}</label>
+                                {{ form.model_species_name }}
+                                {% if form.model_species_name.errors %}
+                                <div class="an-error-text">{{ form.model_species_name.errors }}</div>
+                                {% endif %}
+                            </td>
+
+                            {# In-mechanism indicator #}
+                            <td class="an-map__center status-cell">
+                                {% with conf=form.confidence.value %}
+                                {% if conf >= 0.6 %}
+                                    <span class="badge bg-success-subtle text-success" title="Found in mechanism">✓</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger" title="Not verified in mechanism">✗</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+
+                            {# Confidence; the stored value is a fraction, shown as it always was #}
+                            <td class="an-map__center confidence-cell">
+                                {% with conf=form.confidence.value|floatformat:0 %}
+                                {% if form.confidence.value >= 0.9 %}
+                                    <span class="an-chip is-good">{{ conf }}%</span>
+                                {% elif form.confidence.value >= 0.6 %}
+                                    <span class="an-chip is-fair">{{ conf }}%</span>
+                                {% else %}
+                                    <span class="an-chip is-poor">{{ conf }}%</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+
+                            {# Method #}
+                            <td class="is-muted">{{ form.mapping_method.value|default:"—" }}</td>
+
+                            {# Override reason (only shown when row is edited) #}
+                            <td class="reason-cell">
+                                <label class="visually-hidden" for="{{ form.override_reason.id_for_label }}">Override reason for {{ form.dataset_species_name.value }}</label>
+                                {{ form.override_reason }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="an-map__actions">
+            <p>
+                <span id="override-count">0</span> override(s)
+                {% if next_runs %}
+                    · <span class="an-map__next">{{ next_runs|length }} more run(s) to review after this</span>
+                {% endif %}
+            </p>
+            <div class="an-actions">
+                <a href="{% url 'analysis:run-detail' run.id %}" class="an-btn"><i class="bi bi-x-lg" aria-hidden="true"></i>Skip (Don't Run)</a>
+                <button type="submit" class="app-btn"><i class="bi bi-check2-circle" aria-hidden="true"></i>Confirm &amp; Run Simulation</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Mechanism species palette (hidden, used by JS autocomplete) -->
+    <div id="mech-species-data" data-species='{{ mech_species_json }}' style="display:none;"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_runs_styles.html" %}
+<style>
+.an-map {
+    gap: 20px;
+}
+
+.an-map__notice {
+    margin: 0;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--color-gray-700);
+}
+
+.an-map__notice .app-icon {
+    margin-top: 1px;
+}
+
+.an-map__form {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+.an-detail-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+.an-map__search {
+    flex: 0 1 280px;
+}
+
+.an-map__errors {
+    padding: 0 20px 16px;
+}
+
+.an-map__table {
+    min-width: 900px;
+}
+
+.an-map__index {
+    width: 48px;
+}
+
+.an-map__center {
+    text-align: center;
+}
+
+.an-map__species {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.an-map__model {
+    min-width: 200px;
+}
+
+.an-map .form-control-sm {
+    min-height: 34px;
+    font-size: 12px;
+}
+
+/* The script toggles Bootstrap's table-warning on edited rows */
+.an-map .mapping-row.table-warning td {
+    background: var(--color-warning-bg);
+}
+
+.an-map .status-cell .badge {
+    min-width: 26px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.an-map .status-cell .bg-success-subtle,
+.an-map__notice .bg-success-subtle {
+    background-color: var(--color-success-bg) !important;
+    color: var(--color-success) !important;
+}
+
+.an-map .status-cell .bg-danger-subtle,
+.an-map__notice .bg-danger-subtle {
+    background-color: var(--color-error-bg) !important;
+    color: var(--color-error) !important;
+}
+
+.an-map .autocomplete-dropdown {
+    border-color: var(--color-gray-200) !important;
+    border-radius: 6px !important;
+    font-family: var(--font-mono);
+}
+
+.an-map__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+}
+
+.an-map__actions p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.an-map__next {
+    color: var(--color-primary);
+}
+
+@media (min-width: 1000px) {
+    .an-map__wrap {
+        overflow: visible;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-map__search {
+        flex-basis: 100%;
+    }
+
+    .an-map__errors {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse mechanism species list for autocomplete / validation
+    const mechData = document.getElementById('mech-species-data');
+    const mechSpecies = new Set(JSON.parse(mechData.dataset.species || '[]'));
+
+    // Track overrides
+    function updateOverrideCount() {
+        let count = 0;
+        document.querySelectorAll('.mapping-row').forEach(row => {
+            const idx = row.dataset.index;
+            const original = document.querySelector(`[name="form-${idx}-original_model_species_name"]`);
+            const current = document.querySelector(`[name="form-${idx}-model_species_name"]`);
+            const overrideField = document.querySelector(`[name="form-${idx}-is_override"]`);
+            if (original && current) {
+                const isOverride = current.value !== original.value;
+                if (overrideField) overrideField.value = isOverride ? 'True' : '';
+                if (isOverride) count++;
+                row.classList.toggle('table-warning', isOverride);
+            }
+        });
+        document.getElementById('override-count').textContent = count;
+    }
+
+    // Validate against mechanism species on input
+    document.querySelectorAll('[name$="-model_species_name"]').forEach(input => {
+        if (input.type === 'hidden') return;
+
+        input.addEventListener('input', function() {
+            const inMech = mechSpecies.has(this.value.trim());
+            this.classList.toggle('is-valid', inMech);
+            this.classList.toggle('is-invalid', !inMech && this.value.trim() !== '');
+
+            // Update status cell
+            const row = this.closest('.mapping-row');
+            if (row) {
+                const statusCell = row.querySelector('.status-cell');
+                if (statusCell) {
+                    statusCell.innerHTML = inMech
+                        ? '<span class="badge bg-success-subtle text-success" title="Found in mechanism">✓</span>'
+                        : '<span class="badge bg-danger-subtle text-danger" title="Not in mechanism">✗</span>';
+                }
+            }
+            updateOverrideCount();
+        });
+
+        // Autocomplete dropdown on focus
+        input.addEventListener('focus', function() {
+            showAutoComplete(this);
+        });
+    });
+
+    // Simple autocomplete
+    let activeDropdown = null;
+
+    function showAutoComplete(input) {
+        closeAutoComplete();
+        const wrapper = document.createElement('div');
+        wrapper.className = 'autocomplete-dropdown';
+        wrapper.style.cssText = 'position:absolute;z-index:1050;background:white;border:1px solid #dee2e6;' +
+            'border-radius:4px;max-height:200px;overflow-y:auto;width:100%;box-shadow:0 4px 8px rgba(0,0,0,0.1);';
+
+        const parent = input.parentElement;
+        parent.style.position = 'relative';
+
+        function renderList(filter) {
+            wrapper.innerHTML = '';
+            const filterLower = (filter || '').toLowerCase();
+            let count = 0;
+            mechSpecies.forEach(sp => {
+                if (filterLower && !sp.toLowerCase().includes(filterLower)) return;
+                if (count++ > 50) return;  // Limit display
+                const item = document.createElement('div');
+                item.className = 'px-2 py-1 small';
+                item.style.cursor = 'pointer';
+                item.textContent = sp;
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    input.value = sp;
+                    input.dispatchEvent(new Event('input'));
+                    closeAutoComplete();
+                });
+                item.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#e9ecef';
+                });
+                item.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '';
+                });
+                wrapper.appendChild(item);
+            });
+            if (count === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'px-2 py-1 small text-muted';
+                empty.textContent = 'No matching species';
+                wrapper.appendChild(empty);
+            }
+        }
+
+        renderList(input.value);
+        parent.appendChild(wrapper);
+        activeDropdown = wrapper;
+
+        input.addEventListener('input', function handler() {
+            renderList(input.value);
+        });
+        input._acHandler = function handler() { renderList(input.value); };
+    }
+
+    function closeAutoComplete() {
+        if (activeDropdown) {
+            activeDropdown.remove();
+            activeDropdown = null;
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.matches('[name$="-model_species_name"]')) {
+            closeAutoComplete();
+        }
+    });
+
+    // Global search filter for mechanism species palette
+    const searchInput = document.getElementById('mech-species-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            // This just highlights rows that DON'T match the current search in the mechanism
+            // Could be extended to a palette UI
+        });
+    }
+
+    // Initial count
+    updateOverrideCount();
+});
+</script>
+{% endblock %}

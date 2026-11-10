@@ -1,0 +1,1622 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{# Upload ChemKED YAML or ReSpecTh XML files, from the Figma "ChemKED · Upload data" (node 139:2641) #}
+
+{% block title %}Upload data | ChemKED | Prometheus{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+    .ck-upload__columns {
+        grid-template-columns: minmax(0, 1fr) 340px;
+    }
+
+    /* Upload progress (Figma 139:2686) */
+    .ck-steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 22px;
+        margin: 0;
+        padding: 20px 24px;
+        list-style: none;
+    }
+
+    .ck-steps__step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-gray-500);
+    }
+
+    .ck-steps__marker {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--color-gray-300);
+        border-radius: 50%;
+        background: var(--color-white);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .ck-steps__step.is-current {
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+
+    .ck-steps__step.is-current .ck-steps__marker {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-white);
+    }
+
+    .ck-steps__step.is-done .ck-steps__marker {
+        border-color: var(--color-success);
+        background: var(--color-success-bg);
+        color: var(--color-success);
+    }
+
+    /* File drop zone: the real file input covers it, so a click or a drop reaches the input */
+    .ck-drop {
+        position: relative;
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        padding: 28px 20px;
+        border: 1px dashed var(--color-gray-300);
+        border-radius: 10px;
+        background: var(--color-gray-50);
+        text-align: center;
+        transition: border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .ck-drop:hover,
+    .ck-drop:focus-within {
+        border-color: var(--color-primary);
+        background: var(--color-primary-bg);
+    }
+
+    .ck-drop:focus-within {
+        box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+    }
+
+    .ck-drop__symbol {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--color-white);
+        border: 1px solid var(--color-gray-200);
+    }
+
+    .ck-drop p {
+        margin: 0;
+    }
+
+    .ck-drop__title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+
+    .ck-drop__text {
+        font-size: 13px;
+        color: var(--color-gray-500);
+    }
+
+    .ck-drop__button {
+        margin-top: 6px;
+    }
+
+    .ck-page .ck-drop input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .ck-page .ck-drop input[type="file"]:disabled {
+        cursor: not-allowed;
+    }
+
+    .ck-upload__count {
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-gray-700);
+    }
+
+    .ck-upload__count[style*="block"] {
+        display: flex !important;
+    }
+
+    .ck-upload__setting {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--color-gray-100);
+    }
+
+    .ck-upload__setting > div:first-child {
+        display: grid;
+        gap: 4px;
+    }
+
+    .ck-upload__select {
+        flex: 0 1 245px;
+        min-width: 0;
+    }
+
+    .ck-upload__check {
+        display: grid;
+        gap: 4px;
+        padding: 14px 16px;
+        border: 1px solid var(--color-gray-200);
+        border-radius: 8px;
+    }
+
+    .ck-upload__check .form-check {
+        margin: 0;
+    }
+
+    .ck-upload__check .ck-help {
+        padding-left: 1.5em;
+    }
+
+    .ck-upload__grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+    }
+
+    .ck-upload__pr {
+        display: grid;
+        gap: 6px;
+        padding-top: 4px;
+    }
+
+    .ck-upload__pr-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+
+    .ck-upload__next {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 20px;
+    }
+
+    .ck-upload .form-text {
+        margin: 0;
+        font-size: 12px;
+    }
+
+    /* Upload progress bar */
+    .upload-progress-container {
+        display: none;
+    }
+    .upload-progress-container.active {
+        display: block;
+    }
+    .upload-progress {
+        height: 24px;
+        border-radius: 6px;
+        background-color: var(--color-gray-100);
+        overflow: hidden;
+    }
+    .upload-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+        transition: width 0.15s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .upload-progress-bar.processing {
+        background: linear-gradient(90deg, #198754 0%, #20c997 100%);
+        animation: pulse 1.5s infinite;
+    }
+    .upload-progress-bar.error {
+        background: linear-gradient(90deg, #dc3545 0%, #fd7e14 100%);
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    .upload-status {
+        margin-top: 0.5rem;
+        font-size: 0.8125rem;
+        overflow-wrap: anywhere;
+    }
+    .upload-status .file-info {
+        color: var(--color-gray-500);
+    }
+    .upload-status .speed-info {
+        color: var(--color-primary);
+        font-weight: 500;
+    }
+
+    /* Help column (Figma 139:2770) */
+    .ck-resource {
+        display: grid;
+        gap: 6px;
+    }
+
+    .ck-resource__title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+
+    a.ck-resource__title:hover {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+
+    .ck-resource p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--color-gray-500);
+    }
+
+    .ck-checks {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ck-checks li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--color-gray-700);
+    }
+
+    .ck-checks .bi {
+        color: var(--color-success);
+    }
+
+    .ck-example summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .ck-example summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .ck-example[open] summary .app-icon {
+        transform: rotate(180deg);
+    }
+
+    .ck-example pre {
+        margin: 10px 0 0;
+        padding: 12px;
+        border-radius: 6px;
+        background: var(--color-gray-50);
+        border: 1px solid var(--color-gray-200);
+        font-size: 11px;
+        overflow-x: auto;
+    }
+
+    .ck-upload__subtitle {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--color-gray-500);
+    }
+
+    /* Preview */
+    .ck-preview__facts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .ck-preview__fact {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: var(--color-gray-50);
+        border: 1px solid var(--color-gray-200);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .ck-preview__fact--wide {
+        grid-column: 1 / -1;
+    }
+
+    .ck-preview__fact .ck-label {
+        font-weight: 500;
+        color: var(--color-gray-500);
+    }
+
+    .ck-page .ck-preview .form-control-lg {
+        min-height: 46px;
+        font-size: 15px;
+    }
+
+    .ck-diff {
+        overflow: hidden;
+        border: 1px solid var(--color-gray-200);
+        border-radius: 8px;
+    }
+
+    .ck-diff__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 12px;
+        background: var(--color-gray-50);
+        border-bottom: 1px solid var(--color-gray-200);
+        font-size: 12px;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .ck-naming pre {
+        margin: 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: var(--color-gray-50);
+        font-size: 11px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .ck-naming ul {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding-left: 18px;
+        font-size: 12px;
+        color: var(--color-gray-500);
+    }
+
+    /* The batch preview the script fills in */
+    #batch-preview .card {
+        border-color: var(--color-gray-200);
+        border-radius: 8px;
+    }
+
+    #batch-preview .card-header {
+        background: var(--color-gray-50);
+        border-color: var(--color-gray-200);
+    }
+
+    @media (max-width: 1199.98px) {
+        .ck-upload__columns {
+            grid-template-columns: minmax(0, 1fr) 300px;
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .ck-upload__columns {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .ck-steps,
+        .ck-upload__grid,
+        .ck-preview__facts {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .ck-upload__select {
+            flex-basis: 100%;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .ck-steps {
+            padding: 16px;
+        }
+
+        .ck-upload__next .ck-actions {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-upload">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li aria-current="page">Upload data</li>
+        </ol>
+    </nav>
+
+    <!-- Page heading (Figma 139:2679) -->
+    <header class="ck-heading">
+        <div class="ck-heading__intro">
+            <h1>Upload data file</h1>
+            <p class="ck-lede">Submit ChemKED YAML or ReSpecTh XML files for review; they are added to the database when the pull request is merged</p>
+        </div>
+        <a class="ck-btn" href="{% url 'chemked_database:dataset-create' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-65758a-16.svg' %}" alt="" width="16" height="16">Create manually instead</a>
+    </header>
+
+    <!-- Upload progress (Figma 139:2686); the script moves it on for a batch -->
+    <ol class="app-panel ck-steps" id="ck-upload-steps" aria-label="Upload steps">
+        <li class="ck-steps__step {% if preview_mode %}is-done{% else %}is-current{% endif %}" data-step="1"{% if not preview_mode %} aria-current="step"{% endif %}><span class="ck-steps__marker">1</span><span>Choose files and contributor</span></li>
+        <li class="ck-steps__step{% if preview_mode %} is-current{% endif %}" data-step="2"{% if preview_mode %} aria-current="step"{% endif %}><span class="ck-steps__marker">2</span><span>Preview and duplicate check</span></li>
+        <li class="ck-steps__step" data-step="3"><span class="ck-steps__marker">3</span><span>Submit for review</span></li>
+    </ol>
+
+{% if preview_mode %}
+    <!-- Preview mode: the parsed data and an editable name -->
+    <div class="ck-columns ck-upload__columns">
+        <section class="app-panel ck-preview" aria-labelledby="ck-preview-title">
+            <div class="ck-panel__head">
+                <h2 id="ck-preview-title" class="ck-panel__title"><i class="bi bi-eye" aria-hidden="true"></i>Preview Import</h2>
+            </div>
+            <div class="ck-panel__body">
+                <p class="ck-callout"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Review the parsed data below and customize the dataset name before importing.</span></p>
+                {% if preview_data.validation_error %}
+                <div class="ck-callout ck-callout--warning" role="alert">
+                    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                    <div>
+                        <strong>Unsupported experiment type</strong>
+                        <div class="small">{{ preview_data.validation_error }}</div>
+                        <div class="small mt-2"><span class="text-muted">Supported types:</span> {{ preview_data.supported_experiment_types|join:", " }}</div>
+                        <div class="small mt-2"><a href="mailto:chemked-support@example.com">Request support</a></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" class="ck-stack">
+                    {% csrf_token %}
+                    {{ preview_form.original_filename }}
+                    {{ preview_form.temp_file_path }}
+                    {{ preview_form.file_type }}
+                    {{ preview_form.file_author }}
+                    {{ preview_form.file_author_orcid }}
+
+                    <div class="ck-field">
+                        <label for="id_dataset_name">Dataset Name</label>
+                        {{ preview_form.dataset_name }}
+                        <p class="ck-help"><i class="bi bi-lightbulb" aria-hidden="true"></i> Auto-generated from reaction/species, author, year, and method. You can edit this to your preference.</p>
+                    </div>
+
+                    <div class="ck-preview__facts">
+                        <div class="ck-preview__fact">
+                            <span class="ck-label">Original File</span>
+                            <span><i class="bi bi-file-earmark-code" aria-hidden="true"></i> <code>{{ preview_data.original_filename }}</code></span>
+                        </div>
+                        <div class="ck-preview__fact">
+                            <span class="ck-label">File Type</span>
+                            <span><span class="ck-tag">{{ preview_data.file_type }}</span> <span class="ck-faint">{{ preview_data.datapoints_count }} datapoints</span></span>
+                        </div>
+                        {% if preview_data.reaction %}
+                        <div class="ck-preview__fact ck-preview__fact--wide">
+                            <span class="ck-label">Reaction</span>
+                            <code>{{ preview_data.reaction }}</code>
+                        </div>
+                        {% endif %}
+                        {% if preview_data.reference_authors %}
+                        <div class="ck-preview__fact ck-preview__fact--wide">
+                            <span class="ck-label">Authors</span>
+                            <span>{{ preview_data.reference_authors }}</span>
+                        </div>
+                        {% endif %}
+                        {% if preview_data.reference_year %}
+                        <div class="ck-preview__fact">
+                            <span class="ck-label">Year</span>
+                            <span>{{ preview_data.reference_year }}</span>
+                        </div>
+                        {% endif %}
+                        {% if preview_data.reference_journal %}
+                        <div class="ck-preview__fact">
+                            <span class="ck-label">Journal</span>
+                            <span>{{ preview_data.reference_journal }}</span>
+                        </div>
+                        {% endif %}
+                        {% if preview_data.reference_doi %}
+                        <div class="ck-preview__fact ck-preview__fact--wide">
+                            <span class="ck-label">DOI</span>
+                            <a href="https://doi.org/{{ preview_data.reference_doi }}" target="_blank">{{ preview_data.reference_doi }} <i class="bi bi-box-arrow-up-right small"></i></a>
+                        </div>
+                        {% endif %}
+                        {% if preview_data.repo_folder %}
+                        <div class="ck-preview__fact ck-preview__fact--wide">
+                            <span class="ck-label">Repository folder (if contributed to GitHub)</span>
+                            <span><code>{{ preview_data.repo_folder.dir|default:"(repository root)" }}/</code></span>
+                            {% if preview_data.repo_folder.reason %}<span class="ck-help">{{ preview_data.repo_folder.reason }}</span>{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if preview_data.duplicate_match %}
+                    <div class="ck-stack">
+                        <div class="ck-callout {% if preview_data.duplicate_match.match_type == 'exact' or not preview_data.duplicate_match.has_diff %}ck-callout--warning{% endif %}" role="alert">
+                            <i class="bi {% if preview_data.duplicate_match.match_type == 'exact' or not preview_data.duplicate_match.has_diff %}bi-exclamation-triangle{% else %}bi-files{% endif %}" aria-hidden="true"></i>
+                            <div>
+                                {% if preview_data.duplicate_match.match_type == 'exact' %}
+                                <strong>Identical file already in repository</strong>
+                                <div class="small">
+                                    Your file is byte-identical to
+                                    <code>{{ preview_data.duplicate_match.path }}</code>.
+                                    Submitting will create a PR with no changes.
+                                </div>
+                                {% elif not preview_data.duplicate_match.has_diff %}
+                                <strong>Same data already in repository</strong>
+                                <div class="small">
+                                    Your file has the same content as
+                                    <code>{{ preview_data.duplicate_match.path }}</code>; only the
+                                    formatting or the key order is different. Submitting replaces that
+                                    file with your version.
+                                </div>
+                                {% elif preview_data.duplicate_match.match_type == 'filename' %}
+                                <strong>Existing file with same name</strong>
+                                <div class="small">
+                                    A file named <code>{{ preview_data.duplicate_match.path }}</code>
+                                    already exists in the repository. Your submission will update it — review the diff below.
+                                </div>
+                                {% else %}
+                                <strong>Same data already in repository</strong>
+                                <div class="small">
+                                    Your datapoints match <code>{{ preview_data.duplicate_match.path }}</code>
+                                    (same experiment and values; other file name, folder, formatting or metadata).
+                                    Your submission will update it — review the diff below.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if preview_data.duplicate_match.has_diff %}
+                        <div class="ck-diff">
+                            <div class="ck-diff__head">
+                                <span><i class="bi bi-file-diff" aria-hidden="true"></i> Diff against <code>{{ preview_data.duplicate_match.path }}</code></span>
+                                <button type="button" class="ck-btn ck-btn--sm" data-bs-toggle="collapse" data-bs-target="#diff-panel" aria-expanded="true" aria-controls="diff-panel" aria-label="Show or hide the diff">
+                                    <i class="bi bi-chevron-contract" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div id="diff-panel" class="collapse show">
+                                <pre class="mb-0 p-3" style="font-size: 0.78rem; max-height: 400px; overflow: auto; background: #f8f9fa;">{% for d in preview_data.duplicate_match.diff_lines %}{% if d.kind == 'add' %}<span style="background:#d4edda;display:block">{{ d.text }}</span>{% elif d.kind == 'del' %}<span style="background:#f8d7da;display:block">{{ d.text }}</span>{% elif d.kind == 'hunk' %}<span style="background:#cce5ff;color:#004085;display:block">{{ d.text }}</span>{% elif d.kind == 'header' %}<span style="color:#6c757d;display:block;font-weight:bold">{{ d.text }}</span>{% else %}<span style="display:block">{{ d.text }}</span>{% endif %}{% endfor %}</pre>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="ck-actions">
+                        <button type="submit" name="confirm_import" class="app-btn" {% if preview_data.validation_error %}disabled{% endif %}>
+                            <i class="bi bi-check-circle" aria-hidden="true"></i>Submit for Review
+                        </button>
+                        <a href="{% url 'chemked_database:dataset-upload' %}?cancel=1" class="ck-btn">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <aside class="app-panel ck-naming" aria-labelledby="ck-naming-title">
+            <div class="ck-panel__head">
+                <h2 id="ck-naming-title" class="ck-panel__title"><i class="bi bi-info-circle" aria-hidden="true"></i>Naming Convention</h2>
+            </div>
+            <div class="ck-panel__body">
+                <p class="ck-help">The suggested name follows the ChemKED database naming convention:</p>
+                <pre>{Species}_{Author}_{Year}_{Method}_{ID}</pre>
+                <p class="ck-help">Examples:</p>
+                <ul>
+                    <li><code>H+O2_Masten_1990_ST_0001</code></li>
+                    <li><code>n-pentane_Fuller_2021_RCM_1004</code></li>
+                    <li><code>CH4_Wang_2018_calc_0123</code></li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+{% else %}
+    <!-- Upload form and guidance (Figma 139:2701) -->
+    <div class="ck-columns ck-upload__columns">
+        <div class="ck-stack" id="ck-upload-main">
+            <form method="post" enctype="multipart/form-data" id="upload-form" class="ck-stack">
+                {% csrf_token %}
+
+                <!-- Data files (Figma 139:2703) -->
+                <section class="app-panel" aria-labelledby="ck-files-title">
+                    <div class="ck-panel__head">
+                        <h2 id="ck-files-title" class="ck-panel__title"><img class="app-icon" src="{% static 'database/images/icons/cloud-upload-111827-24.svg' %}" alt="" width="19" height="19">Data files</h2>
+                        <span class="ck-status ck-status--info">Required</span>
+                    </div>
+                    <div class="ck-panel__body">
+                        <div class="ck-drop">
+                            <span class="ck-drop__symbol"><img class="app-icon" src="{% static 'database/images/icons/cloud-upload-111827-24.svg' %}" alt="" width="26" height="26"></span>
+                            <p class="ck-drop__title">Drop ChemKED YAML or ReSpecTh XML files here</p>
+                            <p class="ck-drop__text"><strong>You can select multiple files</strong> (hold Ctrl/Cmd while clicking).</p>
+                            <span class="ck-btn ck-drop__button" aria-hidden="true">Choose files</span>
+                            <label class="visually-hidden" for="id_data_file">Data File(s)</label>
+                            {{ form.data_file }}
+                        </div>
+                        <p class="ck-help">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            Upload ChemKED YAML or ReSpecTh XML files. Files from the <a href="https://github.com/pr-omethe-us/ChemKED-database" target="_blank" rel="noopener">ChemKED-database</a> are fully compatible.
+                        </p>
+                        <div id="file-count" class="ck-upload__count" style="display: none;">
+                            <i class="bi bi-files" aria-hidden="true"></i><span id="file-count-text">0 files selected</span>
+                        </div>
+
+                        <!-- Upload Progress Bar -->
+                        <div id="upload-progress-container" class="upload-progress-container">
+                            <div class="upload-progress">
+                                <div id="upload-progress-bar" class="upload-progress-bar" style="width: 0%;">
+                                    <span id="upload-progress-text">0%</span>
+                                </div>
+                            </div>
+                            <div class="upload-status">
+                                <span id="upload-status-text" class="file-info">Preparing upload...</span>
+                                <span id="upload-speed" class="speed-info float-end"></span>
+                            </div>
+                        </div>
+
+                        <!-- Format setting (Figma 139:2719) -->
+                        <div class="ck-upload__setting">
+                            <div>
+                                <label for="id_file_format" class="ck-label">File Format</label>
+                                <p class="ck-help">Auto-detects based on file extension.</p>
+                            </div>
+                            <div class="ck-upload__select">{{ form.file_format }}</div>
+                        </div>
+
+                        <!-- Validation setting (Figma 139:2727) -->
+                        <div class="ck-upload__check">
+                            <div class="form-check">
+                                {{ form.run_pyteck }}
+                                <label class="form-check-label" for="id_run_pyteck">Run PyTeCK simulation validation</label>
+                            </div>
+                            <p class="ck-help">Trigger a PyTeCK simulation in CI to validate the contributed data against a kinetic model.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Contributor information (Figma 139:2733) -->
+                <section class="app-panel" id="contributor-info" aria-labelledby="ck-contributor-title">
+                    <div class="ck-panel__head">
+                        <h2 id="ck-contributor-title" class="ck-panel__title"><i class="bi bi-person-badge" aria-hidden="true"></i>Contributor Information</h2>
+                        <span class="ck-status ck-status--info">Required</span>
+                    </div>
+                    <div class="ck-panel__body">
+                        <p class="ck-help">
+                            Every upload is validated with PyKED and submitted as a pull request on the
+                            ChemKED-database repository, where CI checks it and a maintainer reviews it.
+                            The dataset is added to this database when the pull request is merged.
+                            Your name, ORCID and GitHub username (if given) are used for attribution.
+                        </p>
+                        <div class="ck-upload__grid">
+                            <div class="ck-field">
+                                <label for="id_file_author">Name</label>
+                                {{ form.file_author }}
+                                <p class="ck-help">Your name (used for file authorship and attribution)</p>
+                            </div>
+                            <div class="ck-field">
+                                <label for="id_file_author_orcid">ORCID</label>
+                                <div class="input-group">
+                                    {{ form.file_author_orcid }}
+                                    <button type="button" class="btn btn-outline-secondary" id="verify-orcid-btn" title="Verify ORCID" aria-label="Verify ORCID">
+                                        <i class="bi bi-patch-check" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div id="orcid-status" class="form-text" aria-live="polite"></div>
+                            </div>
+                        </div>
+                        <div class="ck-upload__grid">
+                            <div class="ck-field">
+                                <label for="id_github_username">GitHub Username <span class="ck-optional">(optional)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">@</span>
+                                    {{ form.github_username }}
+                                </div>
+                                <div id="github-username-status" class="form-text" aria-live="polite"></div>
+                            </div>
+                            <div class="ck-upload__pr">
+                                <p class="ck-upload__pr-title"><i class="bi bi-github" aria-hidden="true"></i>Contribute to ChemKED Database</p>
+                                <p class="ck-help"><strong>Required:</strong> your name and ORCID iD. CI runs PyKED schema validation, the ORCID check and the duplicate and folder check on the pull request.</p>
+                            </div>
+                        </div>
+                        <div class="ck-field">
+                            <label for="id_contribution_description">Description <span class="ck-optional">(optional)</span></label>
+                            {{ form.contribution_description }}
+                            <p class="ck-help">Brief description of the data being contributed.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Next action (Figma 139:2759) -->
+                <div class="ck-upload__next">
+                    <p class="ck-note"><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="16" height="16"><span>All uploads show a preview step with duplicate detection before importing.</span></p>
+                    <div class="ck-actions">
+                        <a href="{% url 'chemked_database:dataset-list' %}" id="cancel-link" class="ck-btn">Cancel</a>
+                        <button type="button" id="upload-cancel-btn" class="ck-btn ck-btn--danger" style="display: none;">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>Cancel Upload
+                        </button>
+                        <button type="submit" id="upload-submit-btn" class="app-btn">Upload &amp; Preview <i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Format and documentation help (Figma 139:2770) -->
+        <aside class="ck-stack" id="ck-upload-aside">
+            <section class="app-panel" aria-labelledby="ck-formats-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-formats-title" class="ck-panel__title"><i class="bi bi-info-circle" aria-hidden="true"></i>Supported Formats</h2>
+                </div>
+                <div class="ck-panel__body">
+                    <div class="ck-resource">
+                        <a class="ck-resource__title" href="https://pr-omethe-us.github.io/PyKED/schema-docs.html" target="_blank" rel="noopener">ChemKED YAML<img class="app-icon" src="{% static 'database/images/icons/external-link-111827.svg' %}" alt="" width="16" height="16"></a>
+                        <p><strong>ChemKED</strong> (Chemical Kinetics Experimental Data) is a standardized YAML format for storing experimental combustion data, particularly ignition delay measurements.</p>
+                    </div>
+                    <div class="ck-resource">
+                        <p class="ck-resource__title">ReSpecTh XML</p>
+                        <p><strong>ReSpecTh</strong> (Repository of Spectral and Thermochemical Data) XML files are automatically converted to ChemKED format using PyKED's built-in converter.</p>
+                    </div>
+                    <div class="ck-resource">
+                        <p class="ck-upload__subtitle">Supported Features</p>
+                        <ul class="ck-checks">
+                            <li><i class="bi bi-check2" aria-hidden="true"></i>Ignition delay experiments</li>
+                            <li><i class="bi bi-check2" aria-hidden="true"></i>Shock tube and RCM data</li>
+                            <li><i class="bi bi-check2" aria-hidden="true"></i>Species composition with InChI/SMILES</li>
+                            <li><i class="bi bi-check2" aria-hidden="true"></i>Uncertainty specifications</li>
+                            <li><i class="bi bi-check2" aria-hidden="true"></i>Time history data (volume, pressure)</li>
+                        </ul>
+                    </div>
+                    <details class="ck-example">
+                        <summary>Example Structure<img class="app-icon" src="{% static 'database/images/icons/chevron-down.svg' %}" alt="" width="16" height="16"></summary>
+                        <pre><code>file-version: 0
+chemked-version: 0.4.1
+file-authors:
+  - name: John Doe
+reference:
+  doi: 10.1016/...
+  journal: Combustion and Flame
+  year: 2020
+experiment-type: ignition delay
+apparatus:
+  kind: shock tube
+datapoints:
+  - temperature: [1200, kelvin]
+    pressure: [2, bar]
+    ignition-delay: [500, us]
+    composition:
+      kind: mole fraction
+      species:
+        - species-name: H2
+          amount: [0.05]</code></pre>
+                    </details>
+                    <div class="ck-resource">
+                        <a class="ck-resource__title" href="https://github.com/pr-omethe-us/PyKED" target="_blank" rel="noopener">PyKED Documentation<img class="app-icon" src="{% static 'database/images/icons/external-link-111827.svg' %}" alt="" width="16" height="16"></a>
+                        <p>The library that validates uploads and converts ReSpecTh XML.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Curated data resource (Figma 139:2817) -->
+            <section class="app-panel" aria-labelledby="ck-repo-title">
+                <div class="ck-panel__head ck-panel__head--plain">
+                    <h2 id="ck-repo-title" class="ck-panel__title"><i class="bi bi-folder" aria-hidden="true"></i>ChemKED Database</h2>
+                </div>
+                <div class="ck-panel__body">
+                    <p class="ck-help">The ChemKED-database repository contains curated experimental data files that can be directly uploaded here. Available fuels include n-heptane, n-butanol, toluene, and more.</p>
+                    <div class="ck-resource">
+                        <a class="ck-resource__title" href="https://github.com/pr-omethe-us/ChemKED-database" target="_blank" rel="noopener">ChemKED-database on GitHub<img class="app-icon" src="{% static 'database/images/icons/external-link-111827.svg' %}" alt="" width="16" height="16"></a>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- Batch Preview (populated by JavaScript) -->
+    <section id="batch-preview" class="app-panel" style="display: none;" aria-labelledby="ck-batch-title">
+        <div class="ck-panel__head">
+            <h2 id="ck-batch-title" class="ck-panel__title"><i class="bi bi-eye" aria-hidden="true"></i>Batch Preview</h2>
+        </div>
+        <div class="ck-panel__body">
+            <p class="ck-callout"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Review the files below before importing. Duplicate detection results are shown for each file.</span></p>
+            <div id="batch-preview-files"></div>
+            <div class="ck-actions">
+                <button type="button" id="batch-confirm-btn" class="app-btn">
+                    <i class="bi bi-check-circle" aria-hidden="true"></i>Confirm &amp; Process All
+                </button>
+                <button type="button" id="batch-cancel-btn" class="ck-btn">
+                    <i class="bi bi-x-circle" aria-hidden="true"></i>Cancel
+                </button>
+            </div>
+        </div>
+    </section>
+
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileFormatSelect = document.getElementById('id_file_format');
+    const dataFileInput = document.getElementById('id_data_file');
+    const fileCountDiv = document.getElementById('file-count');
+    const fileCountText = document.getElementById('file-count-text');
+    
+
+    // ORCID verification elements
+    const orcidInput = document.getElementById('id_file_author_orcid');
+    const verifyOrcidBtn = document.getElementById('verify-orcid-btn');
+    const orcidStatus = document.getElementById('orcid-status');
+
+    // GitHub username verification elements
+    const githubUsernameInput = document.getElementById('id_github_username');
+    const githubUsernameStatus = document.getElementById('github-username-status');
+    
+    // Progress bar elements
+    const uploadForm = document.getElementById('upload-form');
+    const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+    const uploadCancelBtn = document.getElementById('upload-cancel-btn');
+    const cancelLink = document.getElementById('cancel-link');
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressText = document.getElementById('upload-progress-text');
+    const statusText = document.getElementById('upload-status-text');
+    const speedInfo = document.getElementById('upload-speed');
+    
+    let xhr = null;
+    let uploadStartTime = null;
+
+    // Mark a step of the upload progress row as current and the earlier ones as done
+    function setUploadStep(step) {
+        document.querySelectorAll('#ck-upload-steps [data-step]').forEach(function(el) {
+            const n = parseInt(el.dataset.step, 10);
+            el.classList.toggle('is-done', n < step);
+            el.classList.toggle('is-current', n === step);
+            if (n === step) { el.setAttribute('aria-current', 'step'); } else { el.removeAttribute('aria-current'); }
+        });
+    }
+    
+    // Only run if the required elements exist
+    if (!fileFormatSelect || !dataFileInput) {
+        return;
+    }
+    
+    // ---- ORCID live verification ----
+    let orcidVerifyTimeout = null;
+
+    function verifyOrcid() {
+        if (!orcidInput || !orcidStatus) return;
+        const orcid = orcidInput.value.trim();
+        if (!orcid) {
+            orcidStatus.innerHTML = '';
+            return;
+        }
+        // Quick client-side format check
+        if (!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcid)) {
+            orcidStatus.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Invalid format. Expected 0000-0000-0000-000X</span>';
+            return;
+        }
+        orcidStatus.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Verifying...</span>';
+        fetch('{% url "chemked_database:verify-orcid" %}?orcid=' + encodeURIComponent(orcid))
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                if (data.verified) {
+                    orcidStatus.innerHTML = '<span class="text-success"><i class="bi bi-patch-check-fill me-1"></i>Verified: ' + data.name + '</span>';
+                } else {
+                    orcidStatus.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>' + (data.error || 'Not found') + '</span>';
+                }
+            })
+            .catch(function() {
+                orcidStatus.innerHTML = '<span class="text-muted"><i class="bi bi-wifi-off me-1"></i>Could not reach ORCID API</span>';
+            });
+    }
+
+    // ---- GitHub username live verification ----
+    let githubVerifyTimeout = null;
+
+    function verifyGithubUsername() {
+        if (!githubUsernameInput || !githubUsernameStatus) return;
+        const username = githubUsernameInput.value.trim().replace(/^@/, '');
+        if (!username) {
+            githubUsernameStatus.innerHTML = '';
+            return;
+        }
+        // Quick client-side format check
+        if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(username)) {
+            githubUsernameStatus.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Invalid GitHub username format</span>';
+            return;
+        }
+        githubUsernameStatus.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Checking...</span>';
+        fetch('{% url "chemked_database:verify-github" %}?username=' + encodeURIComponent(username))
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                if (data.valid) {
+                    let html = '<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>' + data.name;
+                    if (data.avatar_url) {
+                        html += ' <img src="' + data.avatar_url + '" alt="" width="16" height="16" class="rounded-circle ms-1" style="vertical-align: text-bottom;">';
+                    }
+                    html += '</span>';
+                    githubUsernameStatus.innerHTML = html;
+                } else {
+                    githubUsernameStatus.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>' + (data.error || 'Not found') + '</span>';
+                }
+            })
+            .catch(function() {
+                githubUsernameStatus.innerHTML = '<span class="text-muted"><i class="bi bi-wifi-off me-1"></i>Could not reach GitHub API</span>';
+            });
+    }
+
+    function updateFileCount() {
+        const files = dataFileInput.files;
+        if (files.length > 1) {
+            fileCountDiv.style.display = 'block';
+            fileCountText.textContent = files.length + ' files selected';
+        } else if (files.length === 1) {
+            fileCountDiv.style.display = 'block';
+            fileCountText.textContent = '1 file selected: ' + files[0].name;
+        } else {
+            fileCountDiv.style.display = 'none';
+        }
+    }
+    
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    function formatSpeed(bytesPerSecond) {
+        return formatBytes(bytesPerSecond) + '/s';
+    }
+    
+    function getTotalFileSize() {
+        let total = 0;
+        const files = dataFileInput.files;
+        for (let i = 0; i < files.length; i++) {
+            total += files[i].size;
+        }
+        return total;
+    }
+    
+    function setProgress(percent, status, isProcessing) {
+        progressBar.style.width = percent + '%';
+        progressText.textContent = Math.round(percent) + '%';
+        
+        if (status) {
+            statusText.textContent = status;
+        }
+        
+        if (isProcessing) {
+            progressBar.classList.add('processing');
+        } else {
+            progressBar.classList.remove('processing');
+        }
+    }
+    
+    function showError(message) {
+        progressBar.classList.add('error');
+        progressBar.classList.remove('processing');
+        statusText.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' + message;
+        speedInfo.textContent = '';
+    }
+    
+    function resetUI() {
+        progressContainer.classList.remove('active');
+        progressBar.style.width = '0%';
+        progressBar.classList.remove('processing', 'error');
+        progressText.textContent = '0%';
+        statusText.textContent = 'Preparing upload...';
+        speedInfo.textContent = '';
+        uploadSubmitBtn.disabled = false;
+        uploadSubmitBtn.innerHTML = 'Upload &amp; Preview <i class="bi bi-arrow-right" aria-hidden="true"></i>';
+        uploadCancelBtn.style.display = 'none';
+        cancelLink.style.display = '';
+        dataFileInput.disabled = false;
+    }
+    
+    function cancelUpload() {
+        if (xhr) {
+            xhr.abort();
+            xhr = null;
+        }
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        resetUI();
+        statusText.textContent = 'Upload cancelled';
+    }
+
+    // --- Batch preview rendering ------------------------------------------
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function renderDiffBlock(diffLines, collapseId, path, truncated, totalLines) {
+        let diffContent = '';
+        diffLines.forEach(function(line) {
+            const escaped = escapeHtml(line.text);
+            if (line.kind === 'add') {
+                diffContent += `<span style="background:#d4edda;display:block">${escaped}</span>`;
+            } else if (line.kind === 'del') {
+                diffContent += `<span style="background:#f8d7da;display:block">${escaped}</span>`;
+            } else if (line.kind === 'hunk') {
+                diffContent += `<span style="background:#cce5ff;color:#004085;display:block">${escaped}</span>`;
+            } else if (line.kind === 'header') {
+                diffContent += `<span style="color:#6c757d;display:block;font-weight:bold">${escaped}</span>`;
+            } else {
+                diffContent += `<span style="display:block">${escaped}</span>`;
+            }
+        });
+        let truncNote = '';
+        if (truncated) {
+            truncNote = `<div class="text-center small text-muted py-1 border-top">`
+                + `Showing ${diffLines.length} of ${totalLines} lines. Full diff available in the PR.</div>`;
+        }
+        return `<div class="card border-secondary mb-1">
+            <div class="card-header bg-secondary text-white py-1 d-flex justify-content-between align-items-center small">
+                <span><i class="bi bi-file-diff me-1"></i>Diff against <code class="text-white">${escapeHtml(path)}</code></span>
+                <button type="button" class="btn btn-sm btn-outline-light py-0" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                    <i class="bi bi-chevron-contract"></i>
+                </button>
+            </div>
+            <div id="${collapseId}" class="collapse">
+                <div class="card-body p-0">
+                    <pre class="mb-0 p-2" style="font-size:0.75rem;max-height:300px;overflow:auto;background:#f8f9fa;">${diffContent}</pre>
+                    ${truncNote}
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderFileCard(file, idx) {
+        const d = file.duplicate;
+        let badge, dupHtml = '';
+
+        if (!d) {
+            badge = '<span class="badge bg-success ms-2">New</span>';
+        } else if (d.match_type === 'exact' || !d.has_diff) {
+            badge = '<span class="badge bg-warning text-dark ms-2">Identical</span>';
+        } else if (d.match_type === 'filename') {
+            badge = '<span class="badge bg-info text-dark ms-2">Name match</span>';
+        } else {
+            badge = '<span class="badge bg-info text-dark ms-2">Same data</span>';
+        }
+
+        if (d) {
+            let msg = '';
+            if (d.match_type === 'exact') {
+                msg = `Byte-identical to <code>${escapeHtml(d.path)}</code>. A PR will show no changes.`;
+            } else if (!d.has_diff) {
+                msg = `Same data as <code>${escapeHtml(d.path)}</code>; only formatting differs. A PR will show no changes.`;
+            } else if (d.match_type === 'filename') {
+                msg = `Matches existing <code>${escapeHtml(d.path)}</code>. Your submission will update it &mdash; see diff below.`;
+            } else {
+                msg = `Similar to <code>${escapeHtml(d.path)}</code> (${d.similarity}% match) &mdash; see diff below.`;
+            }
+            dupHtml = `<div class="alert alert-warning py-2 mb-2 small"><i class="bi bi-files me-1"></i>${msg}</div>`;
+
+            if (d.has_diff && d.diff_lines && d.diff_lines.length > 0) {
+                dupHtml += renderDiffBlock(d.diff_lines, `batch-diff-${idx}`, d.path, d.diff_truncated, d.diff_total_lines);
+            }
+        }
+
+        const typeIcon = file.type === 'xml' ? 'bi-filetype-xml' : 'bi-filetype-yml';
+        const card = document.createElement('div');
+        card.className = 'card mb-2';
+        card.innerHTML = `
+            <div class="card-header py-2 d-flex align-items-center">
+                <i class="bi ${typeIcon} me-2"></i>
+                <strong class="small">${escapeHtml(file.filename)}</strong>
+                ${badge}
+                <span class="badge bg-secondary ms-auto">${file.type.toUpperCase()}</span>
+            </div>
+            ${dupHtml ? '<div class="card-body py-2">' + dupHtml + '</div>' : ''}
+        `;
+        return card;
+    }
+
+    function renderBatchPreview(previewFiles, sseUrl, totalFiles, detectionSkipped) {
+        // Hide upload form and progress UI
+        const formSection = document.getElementById('ck-upload-main');
+        const sidebarSection = document.getElementById('ck-upload-aside');
+        if (formSection) formSection.style.display = 'none';
+        if (sidebarSection) sidebarSection.style.display = 'none';
+        setUploadStep(2);
+        progressContainer.classList.remove('active');
+
+        const container = document.getElementById('batch-preview-files');
+        container.innerHTML = '';
+
+        // Partition files: duplicates with diffs (need review), identical, and new
+        const dupFiles = previewFiles.filter(f => f.duplicate);
+        const identicalFiles = dupFiles.filter(f => f.duplicate.match_type === 'exact' || !f.duplicate.has_diff);
+        const changedFiles = dupFiles.filter(f => f.duplicate.match_type !== 'exact' && f.duplicate.has_diff);
+        const newFiles = previewFiles.filter(f => !f.duplicate);
+
+        // ---- Summary bar ----
+        const summary = document.createElement('div');
+        summary.className = 'mb-3';
+        let summaryParts = [`<strong>${previewFiles.length}</strong> file(s) uploaded`];
+        if (newFiles.length) summaryParts.push(`<span class="badge bg-success">${newFiles.length} new</span>`);
+        if (changedFiles.length) summaryParts.push(`<span class="badge bg-info text-dark">${changedFiles.length} changed</span>`);
+        if (identicalFiles.length) summaryParts.push(`<span class="badge bg-warning text-dark">${identicalFiles.length} identical</span>`);
+        summary.innerHTML = `<div class="d-flex align-items-center gap-2 flex-wrap small">${summaryParts.join(' ')}</div>`;
+        container.appendChild(summary);
+
+        if (detectionSkipped) {
+            const notice = document.createElement('div');
+            notice.className = 'alert alert-info py-2 small';
+            notice.innerHTML = '<i class="bi bi-info-circle me-1"></i>Duplicate detection was skipped for this batch because it exceeds 50 files. '
+                + 'Duplicates will still be detected during GitHub PR creation.';
+            container.appendChild(notice);
+        }
+
+        // ---- Section: Files with diffs (always show, these need review) ----
+        if (changedFiles.length > 0) {
+            const heading = document.createElement('h6');
+            heading.className = 'text-info mt-3 mb-2 small fw-bold';
+            heading.innerHTML = `<i class="bi bi-file-diff me-1"></i>Files with changes (${changedFiles.length})`;
+            container.appendChild(heading);
+            changedFiles.forEach(function(file) {
+                const idx = previewFiles.indexOf(file);
+                container.appendChild(renderFileCard(file, idx));
+            });
+        }
+
+        // ---- Section: Identical files (collapsed table) ----
+        if (identicalFiles.length > 0) {
+            const heading = document.createElement('h6');
+            heading.className = 'text-warning mt-3 mb-2 small fw-bold';
+            heading.innerHTML = `<i class="bi bi-files me-1"></i>Identical to repository (${identicalFiles.length})`;
+            container.appendChild(heading);
+
+            if (identicalFiles.length <= 10) {
+                identicalFiles.forEach(function(file) {
+                    const idx = previewFiles.indexOf(file);
+                    container.appendChild(renderFileCard(file, idx));
+                });
+            } else {
+                // Compact table for many identical files
+                const table = document.createElement('div');
+                table.className = 'card mb-2';
+                let rows = identicalFiles.slice(0, 20).map(f =>
+                    `<tr><td class="small py-1"><code>${escapeHtml(f.filename)}</code></td>`
+                    + `<td class="small py-1 text-muted">&rarr; ${escapeHtml(f.duplicate.path)}</td></tr>`
+                ).join('');
+                let moreRow = '';
+                if (identicalFiles.length > 20) {
+                    moreRow = `<tr><td colspan="2" class="small py-1 text-muted text-center">... and ${identicalFiles.length - 20} more</td></tr>`;
+                }
+                table.innerHTML = `<div class="card-body p-0"><table class="table table-sm mb-0"><tbody>${rows}${moreRow}</tbody></table></div>`;
+                container.appendChild(table);
+            }
+        }
+
+        // ---- Section: New files (paginated) ----
+        if (newFiles.length > 0) {
+            const heading = document.createElement('h6');
+            heading.className = 'text-success mt-3 mb-2 small fw-bold';
+            heading.innerHTML = `<i class="bi bi-file-earmark-plus me-1"></i>New files (${newFiles.length})`;
+            container.appendChild(heading);
+
+            const PAGE_SIZE = 25;
+            const listContainer = document.createElement('div');
+            let shown = 0;
+
+            function showMoreNew() {
+                const batch = newFiles.slice(shown, shown + PAGE_SIZE);
+                batch.forEach(function(file) {
+                    const item = document.createElement('div');
+                    item.className = 'd-flex align-items-center py-1 border-bottom small';
+                    const typeIcon = file.type === 'xml' ? 'bi-filetype-xml' : 'bi-filetype-yml';
+                    const folder = file.repo_folder
+                        ? `<span class="text-muted ms-2" title="${escapeHtml(file.repo_folder.reason)}">&rarr; <code>${escapeHtml(file.repo_folder.dir)}/</code></span>`
+                        : '';
+                    item.innerHTML = `<i class="bi ${typeIcon} me-2 text-muted"></i><span>${escapeHtml(file.filename)}</span>${folder}`
+                        + `<span class="badge bg-secondary ms-auto">${file.type.toUpperCase()}</span>`;
+                    listContainer.appendChild(item);
+                });
+                shown += batch.length;
+
+                // Remove old "show more" button if present
+                const oldBtn = listContainer.querySelector('.batch-show-more');
+                if (oldBtn) oldBtn.remove();
+
+                if (shown < newFiles.length) {
+                    const moreBtn = document.createElement('button');
+                    moreBtn.type = 'button';
+                    moreBtn.className = 'btn btn-sm btn-outline-primary mt-2 batch-show-more';
+                    moreBtn.innerHTML = `<i class="bi bi-chevron-down me-1"></i>Show more (${newFiles.length - shown} remaining)`;
+                    moreBtn.onclick = showMoreNew;
+                    listContainer.appendChild(moreBtn);
+                }
+            }
+            showMoreNew();
+            container.appendChild(listContainer);
+        }
+
+        // Show the batch preview section
+        const batchPreview = document.getElementById('batch-preview');
+        batchPreview.style.display = '';
+
+        // Wire up confirm & cancel buttons
+        const confirmBtn = document.getElementById('batch-confirm-btn');
+        const cancelBtn = document.getElementById('batch-cancel-btn');
+
+        confirmBtn.onclick = function() {
+            batchPreview.style.display = 'none';
+            setUploadStep(3);
+            if (formSection) formSection.style.display = '';
+            if (sidebarSection) sidebarSection.style.display = '';
+            progressContainer.classList.add('active');
+            setProgress(50, `Processing ${totalFiles} file(s)...`, true);
+            connectSSE(sseUrl, totalFiles);
+        };
+
+        cancelBtn.onclick = function() {
+            batchPreview.style.display = 'none';
+            setUploadStep(1);
+            if (formSection) formSection.style.display = '';
+            if (sidebarSection) sidebarSection.style.display = '';
+            resetUI();
+            statusText.textContent = 'Upload cancelled. Files were not processed.';
+        };
+    }
+    // --- End batch preview ------------------------------------------------
+    
+    // SSE event source for processing progress
+    let eventSource = null;
+    
+    function connectSSE(sseUrl, totalFiles) {
+        eventSource = new EventSource(sseUrl);
+        
+        let processedFiles = 0;
+        let successfulFiles = [];
+        let skippedFiles = [];
+        let failedFiles = [];
+        let prResult = null;
+        
+        eventSource.addEventListener('start', function(e) {
+            const data = JSON.parse(e.data);
+            setProgress(50, data.message, true);
+        });
+        
+        eventSource.addEventListener('progress', function(e) {
+            const data = JSON.parse(e.data);
+            // Processing progress: 50% + (file progress * 50%)
+            const processingPercent = 50 + (data.percent / 2);
+            setProgress(processingPercent, data.message, true);
+            speedInfo.textContent = `${data.current} of ${data.total} files`;
+        });
+        
+        eventSource.addEventListener('file_complete', function(e) {
+            const data = JSON.parse(e.data);
+            processedFiles++;
+            
+            if (data.status === 'success') {
+                successfulFiles.push(data);
+            } else if (data.status === 'skipped') {
+                skippedFiles.push(data);
+            } else {
+                failedFiles.push(data);
+            }
+        });
+        
+        eventSource.addEventListener('pr_created', function(e) {
+            const data = JSON.parse(e.data);
+            prResult = data;
+            setProgress(98, 'Pull request created!', true);
+        });
+        
+        eventSource.addEventListener('pr_error', function(e) {
+            const data = JSON.parse(e.data);
+            prResult = {error: data.error};
+        });
+        
+        eventSource.addEventListener('complete', function(e) {
+            const data = JSON.parse(e.data);
+            eventSource.close();
+            eventSource = null;
+            
+            // Show 100% complete
+            setProgress(100, 'Processing complete!', false);
+            progressBar.classList.remove('processing');
+            speedInfo.textContent = '';
+            
+            // Build result messages
+            let messagesHtml = '';
+            
+            if (data.successful > 0) {
+                messagesHtml += `<div class="alert alert-success py-2 mb-2">
+                    <i class="bi bi-check-circle me-2"></i>Successfully imported ${data.successful} dataset(s) with ${data.total_datapoints} total datapoints.
+                </div>`;
+            }
+            
+            // Show PR result
+            if (data.pr_url || (prResult && prResult.pr_url)) {
+                const prUrl = data.pr_url || prResult.pr_url;
+                const prNum = data.pr_number || prResult.pr_number;
+                messagesHtml += `<div class="alert alert-info py-2 mb-2">
+                    <i class="bi bi-github me-2"></i>Pull Request <a href="${prUrl}" target="_blank">#${prNum}</a> created on the ChemKED-database repository.
+                    CI will run PyKED validation and ORCID checks automatically.
+                </div>`;
+            } else if (prResult && prResult.error) {
+                messagesHtml += `<div class="alert alert-warning py-2 mb-2">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Files imported locally but GitHub PR creation failed: ${prResult.error}
+                </div>`;
+            }
+            
+            if (failedFiles.length > 0) {
+                const items = failedFiles
+                    .map(f => `<li><code>${f.filename}</code>: ${f.error}</li>`)
+                    .join('');
+                messagesHtml += `<div class="alert alert-danger py-2 mb-2">
+                    <strong><i class="bi bi-x-circle me-2"></i>Failed to import ${failedFiles.length} file(s):</strong>
+                    <ul class="mb-0 mt-1 small">${items}</ul>
+                </div>`;
+            }
+            
+            if (skippedFiles.length > 0) {
+                const items = skippedFiles
+                    .map(f => `<li><code>${f.filename}</code>: ${f.error}</li>`)
+                    .join('');
+                messagesHtml += `<div class="alert alert-warning py-2 mb-2">
+                    <strong><i class="bi bi-exclamation-triangle me-2"></i>Skipped ${skippedFiles.length} file(s):</strong>
+                    <ul class="mb-0 mt-1 small">${items}</ul>
+                </div>`;
+            }
+            
+            // Update UI based on result
+            if (data.successful > 0) {
+                progressBar.style.background = 'linear-gradient(90deg, #198754 0%, #20c997 100%)';
+                statusText.innerHTML = messagesHtml;
+                
+                if (data.redirect_url) {
+                    statusText.innerHTML += '<div class="small text-muted mt-2"><i class="bi bi-arrow-right me-1"></i>Redirecting to submission status...</div>';
+                    setTimeout(function() {
+                        window.location.href = data.redirect_url;
+                    }, 2500);
+                }
+            } else {
+                progressBar.style.background = 'linear-gradient(90deg, #dc3545 0%, #fd7e14 100%)';
+                statusText.innerHTML = messagesHtml || '<div class="alert alert-danger py-2"><i class="bi bi-x-circle me-2"></i>No files were imported</div>';
+                statusText.innerHTML += '<div class="mt-3"><button class="btn btn-outline-primary btn-sm" onclick="location.reload()"><i class="bi bi-arrow-clockwise me-1"></i>Try Again</button></div>';
+            }
+            
+            uploadCancelBtn.style.display = 'none';
+            cancelLink.style.display = '';
+        });
+        
+        eventSource.addEventListener('error', function(e) {
+            console.error('SSE error:', e);
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            showError('Connection to server lost. Processing may still be in progress.');
+            setTimeout(function() {
+                statusText.innerHTML += '<div class="mt-3"><button class="btn btn-outline-primary btn-sm" onclick="location.reload()"><i class="bi bi-arrow-clockwise me-1"></i>Refresh Page</button></div>';
+            }, 500);
+        });
+    }
+    
+    // Handle form submission with progress tracking
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            const files = dataFileInput.files;
+            if (files.length === 0) {
+                return; // Let the normal form validation handle this
+            }
+            
+            // Single file: submit normally (no AJAX) so the server can
+            // redirect to the preview page for ReSpecTh XML files.
+            if (files.length === 1) {
+                return; // Let the browser handle normal form submission
+            }
+            
+            e.preventDefault();
+            
+            // Create FormData BEFORE disabling inputs (disabled inputs are excluded from FormData)
+            const formData = new FormData(uploadForm);
+            
+            // Show progress UI
+            progressContainer.classList.add('active');
+            uploadSubmitBtn.disabled = true;
+            uploadSubmitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Uploading...';
+            uploadCancelBtn.style.display = '';
+            cancelLink.style.display = 'none';
+            dataFileInput.disabled = true;
+            
+            // Reset progress
+            setProgress(0, 'Preparing upload...', false);
+            uploadStartTime = Date.now();
+            
+            // Create XHR request
+            xhr = new XMLHttpRequest();
+            
+            // Track upload progress (0-50% of total progress)
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    // Upload progress is 0-50% of total
+                    const uploadPercent = (e.loaded / e.total) * 50;
+                    const elapsedSeconds = (Date.now() - uploadStartTime) / 1000;
+                    const speed = e.loaded / elapsedSeconds;
+                    
+                    const totalSize = formatBytes(e.total);
+                    const uploadedSize = formatBytes(e.loaded);
+                    
+                    setProgress(uploadPercent, 
+                        `Uploading ${files.length} file${files.length > 1 ? 's' : ''}: ${uploadedSize} / ${totalSize}`,
+                        false
+                    );
+                    speedInfo.textContent = formatSpeed(speed);
+                }
+            });
+            
+            // Upload complete - prepare for SSE processing
+            xhr.upload.addEventListener('load', function() {
+                setProgress(50, 'Files uploaded. Connecting to server for processing...', true);
+                speedInfo.textContent = '';
+            });
+            
+            // Handle response - should contain batch_id and SSE URL
+            xhr.addEventListener('load', function() {
+                let response;
+                try {
+                    response = JSON.parse(xhr.responseText);
+                } catch (e) {
+                    // Not JSON - it's a regular HTML response (redirect followed)
+                    // This happens for single-file preview flow
+                    if (xhr.status >= 200 && xhr.status < 400) {
+                        if (xhr.responseURL) {
+                            window.location.href = xhr.responseURL;
+                        } else {
+                            window.location.reload();
+                        }
+                        return;
+                    }
+                    showError('Server error: ' + xhr.status);
+                    setTimeout(function() {
+                        resetUI();
+                    }, 3000);
+                    return;
+                }
+
+                // Check if we got a batch_id for SSE processing
+                if (response.batch_id && response.sse_url) {
+                    // Show batch preview before processing
+                    if (response.preview_files && response.preview_files.length > 0) {
+                        renderBatchPreview(response.preview_files, response.sse_url, response.total_files, response.detection_skipped || false);
+                    } else {
+                        // No preview data — start processing immediately
+                        setProgress(50, `Processing ${response.total_files} file(s)...`, true);
+                        connectSSE(response.sse_url, response.total_files);
+                    }
+                } else if (response.success === false && response.messages) {
+                    // Error during upload preparation
+                    progressBar.classList.remove('processing');
+                    progressBar.style.background = 'linear-gradient(90deg, #dc3545 0%, #fd7e14 100%)';
+                    
+                    let messagesHtml = '';
+                    response.messages.forEach(function(msg) {
+                        messagesHtml += `<div class="alert alert-danger py-2 mb-2">
+                            <i class="bi bi-x-circle me-2"></i>${msg.text}
+                        </div>`;
+                    });
+                    statusText.innerHTML = messagesHtml;
+                    statusText.innerHTML += '<div class="mt-3"><button class="btn btn-outline-primary btn-sm" onclick="location.reload()"><i class="bi bi-arrow-clockwise me-1"></i>Try Again</button></div>';
+                    
+                    uploadCancelBtn.style.display = 'none';
+                    cancelLink.style.display = '';
+                } else {
+                    // Unexpected response format
+                    showError('Unexpected server response');
+                    console.error('Unexpected response:', response);
+                    setTimeout(resetUI, 3000);
+                }
+            });
+            
+            // Handle errors
+            xhr.addEventListener('error', function() {
+                showError('Network error - please check your connection');
+                setTimeout(resetUI, 3000);
+            });
+            
+            xhr.addEventListener('abort', function() {
+                // Already handled by cancelUpload
+            });
+            
+            // Send the request
+            xhr.open('POST', uploadForm.action || window.location.href);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send(formData);
+        });
+        
+        // Cancel button handler
+        if (uploadCancelBtn) {
+            uploadCancelBtn.addEventListener('click', cancelUpload);
+        }
+    }
+    
+    // Initial state
+    updateFileCount();
+    
+    // Listen for changes
+    dataFileInput.addEventListener('change', function() {
+        updateFileCount();
+    });
+    // ORCID verification: on button click and after typing stops
+    if (verifyOrcidBtn) {
+        verifyOrcidBtn.addEventListener('click', verifyOrcid);
+    }
+    if (orcidInput) {
+        orcidInput.addEventListener('blur', verifyOrcid);
+        orcidInput.addEventListener('input', function() {
+            clearTimeout(orcidVerifyTimeout);
+            orcidVerifyTimeout = setTimeout(verifyOrcid, 800);
+        });
+    }
+    // GitHub username verification: after typing stops
+    if (githubUsernameInput) {
+        githubUsernameInput.addEventListener('blur', verifyGithubUsername);
+        githubUsernameInput.addEventListener('input', function() {
+            clearTimeout(githubVerifyTimeout);
+            githubVerifyTimeout = setTimeout(verifyGithubUsername, 800);
+        });
+    }
+});
+</script>
+{% endblock %}

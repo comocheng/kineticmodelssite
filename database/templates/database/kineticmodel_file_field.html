@@ -1,0 +1,28 @@
+{% load static %}
+{% comment %}
+One CHEMKIN file upload row of the kinetic model form (Figma 170:7166). Pass field (a bound
+ClearableFileInput field), title and purpose. The names and ids come from the widget's own
+context, so a saved file keeps its "clear" checkbox exactly as Django would render it.
+{% endcomment %}
+{% with w=field.subwidgets.0.data %}
+<div class="km-upload">
+    <span class="km-upload__symbol"><img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19"></span>
+    <div class="km-upload__purpose">
+        <label for="{{ w.attrs.id }}">{{ title }}</label>
+        <span>{{ purpose }}</span>
+        {% if w.is_initial %}
+        <span class="km-upload__current">Current: <a href="{{ w.value.url }}">{{ w.value.name|default:"Uploaded" }}</a></span>
+        {% if not w.required %}
+        <span class="form-check km-upload__clear">
+            <input class="form-check-input" type="checkbox" name="{{ w.checkbox_name }}" id="{{ w.checkbox_id }}"{% if w.attrs.checked %} checked{% endif %}>
+            <label class="form-check-label" for="{{ w.checkbox_id }}">Remove this file</label>
+        </span>
+        {% endif %}
+        {% endif %}
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors }}</div>{% endif %}
+    </div>
+    <span class="km-upload__chosen" data-file-name aria-live="polite">No file chosen</span>
+    <input class="km-upload__input" type="{{ w.type }}" name="{{ w.name }}" id="{{ w.attrs.id }}">
+    <label class="km-btn km-upload__button" for="{{ w.attrs.id }}"><img class="app-icon" src="{% static 'database/images/icons/cloud-upload-111827-24.svg' %}" alt="" width="16" height="16">Choose file</label>
+</div>
+{% endwith %}

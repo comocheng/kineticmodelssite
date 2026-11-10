@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load static %}
+{# One ChemKED species and the datapoints that use it; no frame of its own, so it follows "Prometheus · ChemKED species database" (node 125:2259) #}
+
+{% block title %}{{ species_name }} | ChemKED species | Prometheus{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-sp">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li><a href="{% url 'chemked_database:species-search' %}">Species</a></li>
+            <li aria-current="page">{{ species_name }}</li>
+        </ol>
+    </nav>
+
+    <header class="ck-heading">
+        <div class="ck-heading__intro">
+            <div class="ck-heading__title">
+                <h1>{{ species_name }}</h1>
+                <span class="ck-pill">{{ page_obj.paginator.count|default:0 }} datapoints</span>
+                {% if species_stats.dataset_count %}<span class="ck-pill">{{ species_stats.dataset_count }} datasets</span>{% endif %}
+            </div>
+            <p class="ck-lede">Species in ChemKED · identifiers, thermodynamic data and the datapoints that use it</p>
+        </div>
+        <a class="ck-btn" href="{% url 'chemked_database:species-search' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>All species</a>
+    </header>
+
+    <div class="ck-columns">
+        <div class="ck-stack">
+            {% if species_info %}
+            <!-- Species identifiers -->
+            <section class="app-panel" aria-labelledby="ck-identifiers-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-identifiers-title" class="ck-panel__title"><i class="bi bi-fingerprint" aria-hidden="true"></i>Species identifiers</h2>
+                </div>
+                <dl class="ck-facts ck-facts--stacked ck-sp__ids">
+                    <div><dt>Name</dt><dd>{{ species_name }}</dd></div>
+                    {% if species_info.inchi %}<div><dt>InChI</dt><dd><code>{{ species_info.inchi }}</code></dd></div>{% endif %}
+                    {% if species_info.smiles %}<div><dt>SMILES</dt><dd><code>{{ species_info.smiles }}</code></dd></div>{% endif %}
+                    {% if species_info.atomic_composition %}
+                    <div>
+                        <dt>Atomic composition</dt>
+                        <dd class="ck-sp__atoms">{% for atom in species_info.atomic_composition %}<span class="ck-tag">{{ atom.element }}<sub>{{ atom.amount }}</sub></span>{% endfor %}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </section>
+            {% endif %}
+
+            {% if thermo_data %}
+            <!-- Thermo data -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#thermoSection" aria-expanded="true" aria-controls="thermoSection">
+                    <i class="bi bi-thermometer" aria-hidden="true"></i>
+                    <span>Thermodynamic data (NASA polynomials)</span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse show" id="thermoSection">
+                    <dl class="ck-facts ck-facts--stacked ck-sp__thermo">
+                        <div><dt>Temperature ranges</dt><dd class="is-mono">{{ thermo_data.t_range_1 }} – {{ thermo_data.t_range_2 }} – {{ thermo_data.t_range_3 }}</dd></div>
+                        <div>
+                            <dt>Low-T coefficients</dt>
+                            <dd class="is-mono">{% if thermo_data.coeff_1 %}{{ thermo_data.coeff_1|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_2 %}{{ thermo_data.coeff_2|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_3 %}{{ thermo_data.coeff_3|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_4 %}{{ thermo_data.coeff_4|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_5 %}{{ thermo_data.coeff_5|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_6 %}{{ thermo_data.coeff_6|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_7 %}{{ thermo_data.coeff_7|floatformat:6 }}{% endif %}</dd>
+                        </div>
+                        <div>
+                            <dt>High-T coefficients</dt>
+                            <dd class="is-mono">{% if thermo_data.coeff_8 %}{{ thermo_data.coeff_8|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_9 %}{{ thermo_data.coeff_9|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_10 %}{{ thermo_data.coeff_10|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_11 %}{{ thermo_data.coeff_11|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_12 %}{{ thermo_data.coeff_12|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_13 %}{{ thermo_data.coeff_13|floatformat:6 }}, {% endif %}{% if thermo_data.coeff_14 %}{{ thermo_data.coeff_14|floatformat:6 }}{% endif %}</dd>
+                        </div>
+                        {% if thermo_data.note %}<div><dt>Note</dt><dd>{{ thermo_data.note }}</dd></div>{% endif %}
+                    </dl>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Datapoints -->
+            <section class="app-panel" id="ck-sp-datapoints" aria-labelledby="ck-sp-points-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-sp-points-title" class="ck-panel__title"><i class="bi bi-table" aria-hidden="true"></i>Experimental datapoints <span class="ck-count">{{ page_obj.paginator.count|default:0 }}</span></h2>
+                    <span class="ck-panel__meta">Sorted by temperature</span>
+                </div>
+                {% if datapoints %}
+                <div class="ck-table-wrap">
+                    <table class="ck-table ck-sp__table">
+                        <thead>
+                            <tr>
+                                <th scope="col">T (K)</th>
+                                <th scope="col">P (Pa)</th>
+                                <th scope="col">τ (s)</th>
+                                <th scope="col">φ</th>
+                                <th scope="col">Dataset</th>
+                                <th scope="col" class="is-end">Year</th>
+                                <th scope="col"><span class="visually-hidden">Details</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dp in datapoints %}
+                            <tr>
+                                <td class="is-mono">{{ dp.temperature|floatformat:1 }}</td>
+                                <td class="is-mono">{{ dp.pressure|floatformat:0 }}</td>
+                                <td class="is-mono">{% if dp.ignition_delay and dp.ignition_delay.ignition_delay %}{{ dp.ignition_delay.ignition_delay|floatformat:6 }}{% else %}—{% endif %}</td>
+                                <td class="is-mono">{{ dp.equivalence_ratio|floatformat:2|default:"—" }}</td>
+                                <td><a class="ck-sp__dataset" href="{% url 'chemked_database:dataset-detail' dp.dataset.pk %}" title="{{ dp.dataset.chemked_file_path }}">{{ dp.dataset.chemked_file_path|truncatechars:48 }}</a></td>
+                                <td class="is-number">{{ dp.dataset.reference_year|default:"—" }}</td>
+                                <td class="is-end"><a class="ck-open" href="{% url 'chemked_database:datapoint-detail' dp.pk %}" aria-label="Details of datapoint {{ dp.pk }}">Details<img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% include "chemked_database/partials/ck_pager.html" with page=page_obj noun="datapoints" label="Datapoint pages" anchor="#ck-sp-datapoints" %}
+                {% else %}
+                <p class="ck-empty"><i class="bi bi-inbox" aria-hidden="true"></i>No datapoints found for {{ species_name }}.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <aside class="ck-stack">
+            <!-- Condition ranges -->
+            <section class="app-panel" aria-labelledby="ck-sp-ranges-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-sp-ranges-title" class="ck-panel__title"><i class="bi bi-sliders" aria-hidden="true"></i>Condition ranges</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Temperature</dt><dd class="is-mono">{% if temp_range.min_temp %}{{ temp_range.min_temp|floatformat:0 }} – {{ temp_range.max_temp|floatformat:0 }} K{% else %}—{% endif %}</dd></div>
+                    <div><dt>Pressure</dt><dd class="is-mono">{% if pressure_range.min_pressure %}{{ pressure_range.min_pressure|floatformat:0 }} – {{ pressure_range.max_pressure|floatformat:0 }} Pa{% else %}—{% endif %}</dd></div>
+                </dl>
+            </section>
+
+            <!-- Statistics -->
+            <section class="app-panel" aria-labelledby="ck-sp-stats-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-sp-stats-title" class="ck-panel__title"><i class="bi bi-bar-chart" aria-hidden="true"></i>Statistics</h2>
+                </div>
+                <dl class="ck-facts">
+                    <div><dt>Total occurrences</dt><dd class="is-mono">{{ species_stats.occurrence_count|default:0 }}</dd></div>
+                    <div><dt>Datasets</dt><dd class="is-mono">{{ species_stats.dataset_count|default:0 }}</dd></div>
+                    <div><dt>Amount range</dt><dd class="is-mono">{% if species_stats.min_amount %}{{ species_stats.min_amount|floatformat:4 }} – {{ species_stats.max_amount|floatformat:4 }}{% else %}—{% endif %}</dd></div>
+                    <div><dt>Average amount</dt><dd class="is-mono">{{ species_stats.avg_amount|floatformat:4|default:"—" }}</dd></div>
+                </dl>
+            </section>
+
+            {% if experiment_types %}
+            <!-- Experiment types -->
+            <section class="app-panel" aria-labelledby="ck-sp-types-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-sp-types-title" class="ck-panel__title"><img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">Experiment types</h2>
+                    <span class="ck-panel__meta">Datapoints</span>
+                </div>
+                <ul class="ck-plain-list">
+                    {% for exp in experiment_types %}
+                    <li><span>{{ exp.dataset__experiment_type|capfirst }}</span><span class="ck-count">{{ exp.count }}</span></li>
+                    {% endfor %}
+                </ul>
+            </section>
+            {% endif %}
+
+            {% if database_species %}
+            <!-- Database link -->
+            <section class="app-panel" aria-labelledby="ck-sp-link-title">
+                <div class="ck-panel__head">
+                    <h2 id="ck-sp-link-title" class="ck-panel__title"><img class="app-icon" src="{% static 'database/images/icons/link.svg' %}" alt="" width="18" height="18">Database link</h2>
+                </div>
+                <div class="ck-panel__body">
+                    <p class="ck-help">This species is linked to the kinetics database{% if database_species.formula %} as <strong>{{ database_species.formula }}</strong>{% endif %}.</p>
+                    <a class="app-btn" href="{% url 'species-detail' database_species.pk %}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>View in Kinetics DB</a>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if all_identifiers %}
+            <!-- Alternative identifiers -->
+            <section class="app-panel">
+                <button class="ck-panel__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#altIdentifiers" aria-expanded="false" aria-controls="altIdentifiers">
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    <span>Alternative identifiers <span class="ck-count">{{ alternative_identifiers|length }}</span></span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </button>
+                <div class="collapse" id="altIdentifiers">
+                    {% if alternative_identifiers %}
+                    <ul class="ck-plain-list ck-sp__alt">
+                        {% for ident in alternative_identifiers %}
+                        <li>
+                            {% if ident.inchi %}<span><span class="ck-faint">InChI</span> <code>{{ ident.inchi }}</code></span>{% endif %}
+                            {% if ident.smiles %}<span><span class="ck-faint">SMILES</span> <code>{{ ident.smiles }}</code></span>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="ck-help ck-sp__alt-empty">No alternative identifiers found for this species.</p>
+                    {% endif %}
+                </div>
+            </section>
+            {% endif %}
+
+            <p class="ck-sp__nav">
+                <a href="{% url 'chemked_database:species-search' %}"><i class="bi bi-search" aria-hidden="true"></i>Search species</a>
+                <a href="{% url 'chemked_database:home' %}"><i class="bi bi-house" aria-hidden="true"></i>ChemKED home</a>
+            </p>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-sp__ids code,
+.ck-sp__alt code {
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.ck-sp__atoms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.ck-sp__thermo dd {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.ck-sp .collapse > .ck-facts,
+.ck-sp .collapse > .ck-plain-list,
+.ck-sp .collapse > .ck-help {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.ck-sp__table {
+    min-width: 640px;
+}
+
+.ck-sp__dataset {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.ck-sp__alt > li {
+    display: grid;
+    justify-content: stretch;
+    gap: 4px;
+}
+
+.ck-sp__alt-empty {
+    padding: 14px 22px;
+}
+
+.ck-sp__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: 0;
+    padding: 0 4px;
+    font-size: 13px;
+}
+
+.ck-sp__nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+</style>
+{% endblock %}

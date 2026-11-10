@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+{# A Prometheus identifier namespace and its members; no Figma frame, so it takes the list look of the database pages (database/catalog_styles.html) #}
+
+{% block title %}{{ kind_label }} namespace — Prometheus{% endblock %}
+
+{% block content %}
+<div class="cat-page prov-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">{{ kind_label }} namespace</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <p class="cat-eyebrow">Namespace</p>
+            <div class="cat-heading__title">
+                <h1>{{ kind_label }}</h1>
+                <span class="cat-pill cat-pill--count">{{ count }}<span class="visually-hidden"> members</span></span>
+            </div>
+            <p class="cat-iri"><a href="{{ base_iri }}">{{ base_iri }}</a></p>
+        </div>
+    </header>
+
+    <p class="cat-formats">
+        <span>RDF:</span>
+        <a class="app-chip" href="?format=ttl">Turtle</a>
+        <a class="app-chip" href="?format=jsonld">JSON-LD</a>
+        <a class="app-chip" href="?format=xml">RDF/XML</a>
+        <a class="app-chip" href="?format=nt">N-Triples</a>
+    </p>
+
+    {# Above the list, so its "Each member below" stays true #}
+    <p class="app-notice"><span>This is a Prometheus FAIR namespace base. Each member below is itself a dereferenceable identifier; machines that request RDF (<code>Accept: text/turtle</code>) receive this collection as a <code>skos:Collection</code> with <code>skos:member</code> links.</span></p>
+
+    <section class="app-panel" aria-labelledby="prov-members-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-members-title">Members</h2>
+            {% if members %}<span class="app-panel__meta">{% if truncated %}First {{ shown }} of {{ count }}{% else %}{{ count }} in all{% endif %}</span>{% endif %}
+        </div>
+        {% if members %}
+        <ul class="prov-members">
+            {% for m in members %}
+            <li><a href="{{ m.url }}">{{ m.slug }}</a></li>
+            {% endfor %}
+        </ul>
+        {% if truncated %}
+        <p class="cat-panel-note">Showing the first {{ shown }} of {{ count }} members. Request RDF (<code class="cat-code">?format=ttl</code>) for the complete list.</p>
+        {% endif %}
+        {% else %}
+        <p class="cat-empty">No minted members in this namespace yet.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+<style>
+/* Members in as many columns as fit */
+.prov-members {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 6px 24px;
+    margin: 0;
+    padding: 4px 20px 20px;
+    list-style: none;
+    font-size: 13px;
+}
+
+.prov-members li {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 575.98px) {
+    .prov-members {
+        padding: 4px 14px 16px;
+    }
+}
+</style>
+{% endblock %}

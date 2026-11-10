@@ -1,0 +1,66 @@
+<experiment>
+    <fileAuthor>Chemical Kinetics Laboratory, Institute of Chemistry, ELTE, Budapest, Hungary</fileAuthor>
+    <fileDOI>10.24388/x60200029</fileDOI>
+    <fileVersion>
+        <major>1</major>
+        <minor>0</minor>
+    </fileVersion>
+    <ReSpecThVersion>
+        <major>2</major>
+        <minor>3</minor>
+    </ReSpecThVersion>
+    <firstPublicationDate>2019-06-21</firstPublicationDate>
+    <lastModificationDate>2020-11-13</lastModificationDate>
+    <bibliographyLink>
+        <description>D.J.Seery, M.F.Zabielski, Proc. Combust. Inst. 18 (1981) 397-404</description>
+        <referenceDOI>10.1016/S0082-0784(81)80044-6</referenceDOI>
+        <location>Main paper</location>
+        <table>Table 1.</table>
+        <figure>Fig. 4., circle; Fig. 2.</figure>
+        <details>
+            <author>D.J. Seery and M.F. Zabielski</author>
+            <journal>Symposium (International) on Combustion</journal>
+            <number>1</number>
+            <pages>397--404</pages>
+            <publisher>Elsevier {BV</publisher>
+            <title>Molecular beam sampling-mass spectrometer study of H2-O2-{NO} flames</title>
+            <volume>18</volume>
+            <year>1981</year>
+        </details>
+    </bibliographyLink>
+    <experimentType>burner stabilized flame speciation measurement</experimentType>
+    <apparatus>
+        <kind>flame</kind>
+        <mode>burner-stabilized</mode>
+    </apparatus>
+    <commonProperties>
+        <property name="temperature"                   label="T"  sourcetype="estimated"   units="K"             ><value>300</value></property>
+        <property name="pressure"                      label="p"  sourcetype="reported"    units="torr"          ><value>76</value></property>
+        <property name="flow rate"                     label="F"  sourcetype="calculated"  units="kg m-2 s-1"    ><value>0.04932</value></property>
+        <property name="initial composition"           sourcetype="reported"   >
+            <component><speciesLink preferredKey="H2"  CAS="1333-74-0"   InChI="1S/H2/h1H"   SMILES="[HH]"   chemName="hydrogen"     /><amount units="mole fraction" >0.408</amount></component>
+            <component><speciesLink preferredKey="O2"  CAS="7782-44-7"   InChI="1S/O2/c1-2"  SMILES="O=O"    chemName="oxygen"       /><amount units="mole fraction" >0.148</amount></component>
+            <component><speciesLink preferredKey="Ar"  CAS="7440-37-1"   InChI="1S/Ar"       SMILES="[Ar]"   chemName="argon"        /><amount units="mole fraction" >0.440</amount></component>
+            <component><speciesLink preferredKey="NO"  CAS="10102-43-9"  InChI="1S/NO/c1-2"  SMILES="[N]=O"  chemName="nitric oxide" /><amount units="mole fraction" >0.0041</amount></component>
+        </property>
+        <property name="evaluated standard deviation"  sourcetype="estimated"   units="ppm"            reference="composition"  kind="absolute"  method="statistical scatter" >
+            <speciesLink preferredKey="NO"  CAS="10102-43-9"  InChI="1S/NO/c1-2"  SMILES="[N]=O"  chemName="nitric oxide" />
+            <value>384.0</value>
+        </property>
+    </commonProperties>
+    <dataGroup id="dg1" label="dg1">
+        <property name="distance"     id="x1"   label="l"     sourcetype="digitized"  units="mm"            />
+        <property name="composition"  id="x2"   label="[NO]"  sourcetype="digitized"  units="mole fraction" >
+            <speciesLink preferredKey="NO"  CAS="10102-43-9"  InChI="1S/NO/c1-2"  SMILES="[N]=O"  chemName="nitric oxide" />
+        </property>
+        <property name="temperature"  id="x3"   label="T"     sourcetype="estimated"  units="K"             />
+
+        <dataPoint> <x1>0.00</x1><x2>0.003840</x2> <x3>300</x3></dataPoint>
+        <dataPoint> <x1>1.46</x1><x2>0.003691</x2> <x3>636</x3></dataPoint>
+        <dataPoint> <x1>1.68</x1><x2>0.003090</x2> <x3>762</x3></dataPoint>
+        <dataPoint> <x1>3.38</x1><x2>0.002835</x2><x3>1519</x3></dataPoint>
+    </dataGroup>
+    <comment>The inlet gas temperature is assumed to be room temperature (300 K) based on the reported temperature profiles, experimental setup and other work of the authors but any clear reference cannot be find for that</comment>
+    <comment>The temperature profile is estimated based on Fig. 2. squere with interpolation and extrapolation.</comment>
+    <comment>The flow rate (F) was calculated as the product of the gas velocity and density. (F = v * rho = v * p * M_ave / R / T)</comment>
+</experiment>

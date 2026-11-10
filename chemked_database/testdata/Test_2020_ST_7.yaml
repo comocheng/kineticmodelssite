@@ -1,0 +1,56 @@
+---
+file-authors:
+  - name: Test Author
+file-version: 0
+chemked-version: 0.4.1
+reference:
+  authors:
+    - name: A. Tester
+    - name: B. Checker
+  journal: Test Journal
+  year: 2020
+  volume: 1
+  pages: 1-2
+  detail: contribution API test fixture
+experiment-type: ignition delay
+apparatus:
+  kind: shock tube
+  institution: Test Institute
+  facility: test shock tube
+common-properties:
+  composition: &comp
+    kind: mole fraction
+    species:
+      - species-name: H2
+        InChI: 1S/H2/h1H
+        amount:
+          - 0.02
+      - species-name: O2
+        InChI: 1S/O2/c1-2
+        amount:
+          - 0.01
+      - species-name: Ar
+        InChI: 1S/Ar
+        amount:
+          - 0.97
+  ignition-type: &ign
+    target: OH*
+    type: d/dt max
+datapoints:
+  - temperature:
+      - 1100 kelvin
+    ignition-delay:
+      - 250 us
+    pressure:
+      - 1.5 atm
+    composition: *comp
+    ignition-type: *ign
+  - temperature:
+      - 1200 kelvin
+    ignition-delay:
+      - 120 us
+    pressure:
+      - 1.5 atm
+    composition: *comp
+    ignition-type: *ign
+...

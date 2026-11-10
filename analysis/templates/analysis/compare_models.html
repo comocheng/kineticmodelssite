@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+{% load static %}
+{# Compare models on one dataset, from the Figma "Prometheus · Compare models" (node 180:2733) #}
+
+{% block title %}Compare models | Analysis | Prometheus{% endblock %}
+
+{% block content %}
+<div class="an-maps an-compare">
+
+    <!-- Breadcrumb (Figma 180:2757) -->
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Compare models</span></li>
+        </ol>
+    </nav>
+
+    <!-- Page heading (Figma 180:2765) -->
+    <header class="an-heading">
+        <div class="an-heading__intro">
+            <h1>Compare models</h1>
+            <p class="an-lede">Side-by-side comparison of kinetic model performance</p>
+        </div>
+        <span class="an-pill an-pill--tag"><i class="bi bi-bar-chart-line" aria-hidden="true"></i>Analysis</span>
+    </header>
+
+    <!-- Comparison setup (Figma 180:2772) -->
+    <form method="get" class="app-panel an-compare__setup" id="an-compare-form" aria-labelledby="an-compare-setup-title">
+        <div class="app-panel__head">
+            <div class="an-panel__heading">
+                <img class="app-icon" src="{% static 'database/images/icons/database-111827.svg' %}" alt="" width="20" height="20">
+                <h2 class="app-panel__title" id="an-compare-setup-title">Select models and dataset</h2>
+            </div>
+        </div>
+
+        <div class="an-compare__controls">
+            <div class="an-compare__models" role="group" aria-labelledby="an-compare-models-label">
+                <div class="an-compare__models-head">
+                    <span class="an-label" id="an-compare-models-label">Models</span>
+                    <span class="an-panel__meta" id="an-compare-count" aria-live="polite">{{ selected_model_ids|length }} selected</span>
+                </div>
+                {# The filter box has no name, so it never reaches the query string #}
+                <label class="an-field an-compare__filter">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Filter models</span>
+                    <input type="search" id="an-compare-filter" placeholder="Filter models by name" autocomplete="off">
+                </label>
+                <div class="an-compare__list">
+                    {% for model in all_models %}
+                    <label class="an-compare__option" data-name="{{ model.model_name|lower }}">
+                        <input class="form-check-input" type="checkbox" name="models" value="{{ model.id }}" {% if model.id|stringformat:"s" in selected_model_ids %}checked{% endif %}>
+                        <span class="an-compare__option-name">{{ model.model_name }}</span>
+                        <span class="an-compare__option-status" aria-hidden="true">Selected</span>
+                    </label>
+                    {% empty %}
+                    <p class="an-empty">No kinetic models in the database yet.</p>
+                    {% endfor %}
+                    <p class="an-empty an-compare__no-match" id="an-compare-no-match" hidden>No models match this filter.</p>
+                </div>
+                <p class="an-compare__hint">Only models with a completed run on the chosen dataset appear in the results.</p>
+            </div>
+
+            <div class="an-compare__dataset">
+                <label class="an-label" for="an-compare-dataset">Dataset</label>
+                <div class="an-field an-compare__select">
+                    <img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="18" height="18">
+                    <select name="dataset" id="an-compare-dataset">
+                        <option value="">Select a dataset...</option>
+                        {% for dataset in all_datasets %}
+                        <option value="{{ dataset.id }}" {% if selected_dataset_id == dataset.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dataset.short_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <p class="an-compare__hint">Ignition delay datasets.</p>
+
+                <!-- Comparison prerequisites (Figma 180:2814) -->
+                <div class="an-guide an-compare__prereqs">
+                    <h3>Before you compare</h3>
+                    <ul>
+                        <li data-prereq="models" class="{% if selected_model_ids|length >= 2 %}is-met{% endif %}">
+                            <span class="an-compare__marker" aria-hidden="true"></span>
+                            <span><strong>Choose at least two models</strong><span id="an-compare-models-state">{{ selected_model_ids|length }} selected</span></span>
+                        </li>
+                        <li data-prereq="dataset" class="{% if selected_dataset_id %}is-met{% endif %}">
+                            <span class="an-compare__marker" aria-hidden="true"></span>
+                            <span><strong>Choose one dataset</strong><span id="an-compare-dataset-state">{% if selected_dataset %}{{ selected_dataset.short_name }}{% elif selected_dataset_id %}Dataset selected{% else %}No dataset selected{% endif %}</span></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Setup actions (Figma 180:2826) -->
+        <div class="an-panel__foot an-compare__actions">
+            <div class="an-actions">
+                <button type="submit" class="app-btn"><i class="bi bi-search" aria-hidden="true"></i>Compare</button>
+                <a href="{% url 'analysis:compare-models' %}" class="an-btn">Clear</a>
+            </div>
+            <span class="an-compare__guidance" id="an-compare-guidance">Choose at least two models and one dataset above.</span>
+        </div>
+    </form>
+
+    {% if comparison_data %}
+    <!-- Comparison results -->
+    <section class="app-panel" aria-labelledby="an-compare-summary-title">
+        <div class="app-panel__head">
+            <div>
+                <div class="an-panel__heading">
+                    <i class="bi bi-table" aria-hidden="true"></i>
+                    <h2 class="app-panel__title" id="an-compare-summary-title">Comparison summary</h2>
+                </div>
+                <p class="an-panel__desc">{{ selected_dataset.short_name }}</p>
+            </div>
+            <span class="an-panel__meta">{{ comparison_data|length }} of {{ selected_models.count }} selected model{{ selected_models.count|pluralize }} with a completed run</span>
+        </div>
+        <div class="an-table-wrap">
+            <table class="an-table an-compare__table">
+                <thead>
+                    <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col" class="is-end">Avg error</th>
+                        <th scope="col" class="is-end">Deviation</th>
+                        <th scope="col" class="is-end">Datapoints</th>
+                        <th scope="col" class="is-end">Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in comparison_data %}
+                    <tr>
+                        <td><a class="an-table__name" href="{% url 'kinetic-model-detail' item.model.id %}">{{ item.model.model_name }}</a></td>
+                        <td class="is-number">
+                            <span class="an-err {% if item.result.average_error_function < 1 %}an-err--good{% elif item.result.average_error_function < 2 %}an-err--fair{% else %}an-err--poor{% endif %}">
+                                {{ item.result.average_error_function|floatformat:3 }}
+                            </span>
+                        </td>
+                        <td class="is-number">{{ item.result.average_deviation_function|floatformat:3|default:"—" }}</td>
+                        <td class="is-number">{{ item.datapoints|length }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'analysis:run-detail' item.run.pk %}">Run #{{ item.run.pk }}</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if chart_data %}
+    <section class="app-panel" aria-labelledby="an-compare-chart-title">
+        <div class="app-panel__head">
+            <div class="an-panel__heading">
+                <i class="bi bi-graph-up" aria-hidden="true"></i>
+                <h2 class="app-panel__title" id="an-compare-chart-title">Parity comparison</h2>
+            </div>
+            <span class="an-panel__meta">Experimental against simulated ignition delay</span>
+        </div>
+        <div class="an-compare__chart-wrap">
+            <div id="comparison-chart" class="an-compare__chart"></div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% else %}
+    <!-- Comparison empty state (Figma 180:2832) -->
+    <section class="app-panel an-compare__empty" aria-labelledby="an-compare-empty-title">
+        <div class="an-compare__symbol" aria-hidden="true"><i class="bi bi-bar-chart-line"></i></div>
+        <div class="an-compare__empty-copy">
+            {% if selected_dataset %}
+            <h2 class="an-compare__empty-title" id="an-compare-empty-title">No completed runs to compare</h2>
+            <p>None of the selected models has a completed simulation run on {{ selected_dataset.short_name }}. <a href="{% url 'analysis:run-create' %}">Start a new simulation</a></p>
+            {% else %}
+            <h2 class="an-compare__empty-title" id="an-compare-empty-title">Select models and a dataset to compare</h2>
+            <p>Choose at least two models and one dataset above.</p>
+            {% endif %}
+        </div>
+        <dl class="an-compare__selection">
+            <dt>Current selection</dt>
+            <dd id="an-compare-summary-models">{{ selected_model_ids|length }} model{{ selected_model_ids|length|pluralize }}</dd>
+            <dd id="an-compare-summary-dataset">{% if selected_dataset %}{{ selected_dataset.short_name }}{% elif selected_dataset_id %}Dataset selected{% else %}No dataset selected{% endif %}</dd>
+        </dl>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_maps_styles.html" %}
+<style>
+/* Setup: the model list beside a 420 px dataset column */
+.an-compare__controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    gap: 24px 32px;
+    padding: 4px 24px 24px;
+}
+
+.an-compare__models {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.an-compare__models-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.an-compare__list {
+    max-height: 246px;
+    overflow-y: auto;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+}
+
+.an-compare__option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 41px;
+    margin: 0;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+    cursor: pointer;
+}
+
+.an-compare__option:last-of-type {
+    border-bottom: 0;
+}
+
+.an-compare__option:hover {
+    background: var(--color-gray-50);
+}
+
+.an-compare__option:has(input:checked) {
+    background: var(--color-primary-bg);
+}
+
+.an-compare__option .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+    border-color: var(--color-gray-400);
+}
+
+.an-compare__option-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.an-compare__option-status {
+    display: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.an-compare__option input:checked ~ .an-compare__option-status {
+    display: inline;
+}
+
+.an-compare__option[hidden] {
+    display: none;
+}
+
+.an-compare__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-compare__dataset {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.an-compare__select {
+    height: 46px;
+}
+
+.an-compare__select select {
+    text-overflow: ellipsis;
+}
+
+.an-compare__prereqs {
+    margin-top: 4px;
+    padding: 18px;
+}
+
+.an-compare__prereqs ul {
+    display: grid;
+    gap: 14px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.an-compare__prereqs li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.an-compare__prereqs li > span:last-child {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.an-compare__prereqs strong {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* An empty ring, or an orange disc with a tick once the requirement holds */
+.an-compare__marker {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-top: 2px;
+    border: 1.5px solid var(--color-gray-400);
+    border-radius: 50%;
+}
+
+.an-compare__prereqs li.is-met .an-compare__marker {
+    border-color: var(--color-primary);
+    background: var(--color-primary) url("{% static 'database/images/icons/check-white-16.svg' %}") center / 11px no-repeat;
+}
+
+.an-compare__actions {
+    justify-content: flex-start;
+    padding: 16px 24px;
+}
+
+.an-compare__guidance {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.an-compare__guidance[hidden] {
+    display: none;
+}
+
+/* Results */
+.an-compare__table {
+    min-width: 560px;
+}
+
+.an-compare__chart-wrap {
+    position: relative;
+    overflow-x: auto;
+    padding: 0 12px 12px;
+}
+
+.an-compare__chart {
+    min-width: 480px;
+    height: 400px;
+}
+
+/* Empty state: symbol, guidance, current selection */
+.an-compare__empty {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) minmax(0, 250px);
+    align-items: center;
+    gap: 20px 24px;
+    padding: 28px;
+}
+
+.an-compare__symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    background: var(--an-tint);
+    font-size: 30px;
+    color: var(--color-primary);
+}
+
+.an-maps .an-compare__empty-title {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.an-compare__empty-copy p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.an-compare__selection {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 24px;
+    border-left: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.an-compare__selection dt {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-gray-500);
+}
+
+.an-compare__selection dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 991.98px) {
+    .an-compare__controls {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-compare__empty {
+        grid-template-columns: 56px minmax(0, 1fr);
+    }
+
+    .an-compare__symbol {
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
+    }
+
+    .an-compare__selection {
+        grid-column: 1 / -1;
+        padding: 14px 0 0;
+        border-top: 1px solid var(--color-gray-200);
+        border-left: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-compare__controls {
+        padding: 4px 14px 18px;
+    }
+
+    .an-compare__actions {
+        padding: 14px;
+    }
+
+    .an-compare__empty {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 20px 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Live state of the setup form: model filter, selected count and the prerequisite checklist
+    var form = document.getElementById('an-compare-form');
+    if (!form) return;
+    var boxes = Array.prototype.slice.call(form.querySelectorAll('input[name="models"]'));
+    var filter = document.getElementById('an-compare-filter');
+    var noMatch = document.getElementById('an-compare-no-match');
+    var dataset = document.getElementById('an-compare-dataset');
+    var guidance = document.getElementById('an-compare-guidance');
+
+    function setText(id, text) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
+    function update() {
+        var n = boxes.filter(function(b) { return b.checked; }).length;
+        var hasDataset = dataset && dataset.value !== '';
+        var datasetLabel = hasDataset ? dataset.options[dataset.selectedIndex].text.trim() : 'No dataset selected';
+        setText('an-compare-count', n + ' selected');
+        setText('an-compare-models-state', n + ' selected');
+        setText('an-compare-dataset-state', datasetLabel);
+        setText('an-compare-summary-models', n + (n === 1 ? ' model' : ' models'));
+        setText('an-compare-summary-dataset', datasetLabel);
+        form.querySelector('[data-prereq="models"]').classList.toggle('is-met', n >= 2);
+        form.querySelector('[data-prereq="dataset"]').classList.toggle('is-met', hasDataset);
+        if (guidance) guidance.hidden = (n >= 2 && hasDataset);
+    }
+
+    boxes.forEach(function(b) { b.addEventListener('change', update); });
+    if (dataset) dataset.addEventListener('change', update);
+
+    if (filter) {
+        filter.addEventListener('input', function() {
+            var q = filter.value.trim().toLowerCase();
+            var shown = 0;
+            form.querySelectorAll('.an-compare__option').forEach(function(opt) {
+                var match = !q || opt.dataset.name.indexOf(q) !== -1;
+                opt.hidden = !match;
+                if (match) shown++;
+            });
+            if (noMatch) noMatch.hidden = shown > 0 || boxes.length === 0;
+        });
+        // Enter in the filter box should not submit the form
+        filter.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    update();
+});
+</script>
+{# The chart only exists when some model has results; chart_data alone is set for any selection #}
+{% if chart_data and comparison_data %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const plotData = {{ chart_data|safe }};
+    const traces = plotData.models.map(model => ({
+        x: model.experimental,
+        y: model.simulated,
+        mode: 'markers',
+        type: 'scatter',
+        name: model.name,
+        text: model.temperatures.map(t => `T=${t} K`)
+    }));
+    Plotly.newPlot('comparison-chart', traces, {
+        xaxis: { title: 'Experimental', gridcolor: '#dfe6ef', zerolinecolor: '#dfe6ef' },
+        yaxis: { title: 'Simulated', gridcolor: '#dfe6ef', zerolinecolor: '#dfe6ef' },
+        legend: { orientation: 'h' },
+        margin: { t: 20 },
+        font: { family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', size: 12, color: '#3c4c61' },
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff'
+    }, {responsive: true});
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,240 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+        <link rel="stylesheet" href="{% static 'importer_dashboard/css/dashboard.css' %}" />
+
+        <!-- Bootstrap CSS -->
+        <link
+            rel="stylesheet"
+            href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+            crossorigin="anonymous"
+        />
+        
+        <!-- Custom styles for lookup dropdown -->
+        <style>
+            /* Prevent dropdown from closing when clicking inside */
+            .dropdown-menu-lg {
+                padding: 0;
+            }
+            
+            .dropdown-menu form {
+                margin-bottom: 0;
+            }
+            
+            /* Make dropdown scrollable on small screens */
+            @media (max-height: 768px) {
+                .dropdown-menu {
+                    max-height: 400px;
+                    overflow-y: auto;
+                }
+            }
+            
+            /* Better mobile responsiveness */
+            @media (max-width: 576px) {
+                .dropdown-menu-lg {
+                    min-width: 280px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%);
+                }
+            }
+            
+            /* Improve form spacing in dropdown */
+            .dropdown-menu .input-group-sm {
+                margin-bottom: 0.5rem;
+            }
+            
+            .dropdown-menu .dropdown-header {
+                font-size: 0.9rem;
+                color: #495057;
+                font-weight: 600;
+            }
+        </style>
+        
+        <!-- Allow templates to add extra CSS -->
+        {% block extra_css %}{% endblock %}
+
+        <!--MathJax-->
+        <script>
+            window.MathJax = {
+                tex: {
+                    inlineMath: [
+                        ["$", "$"],
+                        ["\\(", "\\)"],
+                    ],
+                },
+                svg: {
+                    fontCache: "global",
+                },
+                displayAlign: "left",
+            };
+        </script>
+        <script
+            type="text/javascript"
+            id="MathJax-script"
+            async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        ></script>
+        <script
+            src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"
+        ></script>
+        <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
+        {% load static %}
+        <script type="text/javascript">
+            // Only load formset if it exists
+            var formsetScript = document.createElement('script');
+            formsetScript.src = '{% static "database/jquery.formset.js" %}';
+            formsetScript.onerror = function() {
+                console.log('jquery.formset.js not found (optional dependency)');
+            };
+            document.head.appendChild(formsetScript);
+        </script>
+        {% if title %}
+        <title>Kinetic Models Site - {{ title }}</title>
+        {% else %}
+        <title>Kinetic Models Site</title>
+        {% endif %}
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-md navbar-dark bg-primary">
+            <a class="navbar-brand" href="#">Kinetic Models Site</a>
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-toggle="collapse"
+                data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent"
+                aria-expanded="false"
+                aria-label="Toggle navigation"
+            >
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="{% url 'home' %}">Home <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'species-search' %}">Species Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'reaction-search' %}">Reaction Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'source-search' %}">Source Search</a>
+                    </li>
+                    
+                    <!-- Lookups Dropdown Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="lookupsDropdown" role="button" 
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Lookups
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-lg p-3" aria-labelledby="lookupsDropdown" 
+                             style="min-width: 320px;" onclick="event.stopPropagation();">
+                            <h6 class="dropdown-header">Species, Reaction & Source Lookups</h6>
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Species Lookup -->
+                            <form action="" method="get" class="px-2 py-2">
+                                <label class="font-weight-bold small mb-1">Species Lookup</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        name="species_pk"
+                                        placeholder="Enter Species ID"
+                                        class="form-control form-control-sm"
+                                    />
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                    </div>
+                                </div>
+                                {% if species_invalid %}<small class="text-danger">{{species_invalid}}</small>{% endif %}
+                            </form>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Reaction Lookup -->
+                            <form action="" method="get" class="px-2 py-2">
+                                <label class="font-weight-bold small mb-1">Reaction Lookup</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        name="reaction_pk"
+                                        placeholder="Enter Reaction ID"
+                                        class="form-control form-control-sm"
+                                    />
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                    </div>
+                                </div>
+                                {% if reaction_invalid %}<small class="text-danger">{{reaction_invalid}}</small>{% endif %}
+                            </form>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <!-- Source Lookup -->
+                            <form action="" method="get" class="px-2 py-2">
+                                <label class="font-weight-bold small mb-1">Source Lookup</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        name="source_pk"
+                                        id="source_pk"
+                                        placeholder="Enter Source ID"
+                                        class="form-control form-control-sm"
+                                    />
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-sm btn-primary">Go</button>
+                                    </div>
+                                </div>
+                                {% if source_invalid %}<small class="text-danger">{{source_invalid}}</small>{% endif %}
+                            </form>
+                        </div>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
+                </ul>
+                <form class="form-inline my-2 my-lg-0">
+                    <input
+                        class="form-control mr-sm-2"
+                        type="search"
+                        placeholder="Search"
+                        aria-label="Search"
+                    />
+                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
+                        Search
+                    </button>
+                </form>
+            </div>
+        </nav>
+        <main role="main">
+            {% block content %}{% endblock %}
+        </main>
+        <!-- Bootstrap JS-->
+        <script
+            src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"
+            crossorigin="anonymous"
+        ></script>
+        <!-- Static JavaScript-->
+        <script src="{% static 'database/main.js' %}"></script>
+        {% block extra_js %}{% endblock %}
+    </body>
+</html>

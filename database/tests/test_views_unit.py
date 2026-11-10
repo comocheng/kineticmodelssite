@@ -1,10 +1,14 @@
+import io
 import random
 import string
+import zipfile
+from unittest import mock
 
 from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.urls import reverse
 from database import models, views
+from database.services import exports
 
 
 def create_kinetic_model_with_detail_view_dependencies():
@@ -105,27 +109,98 @@ class TestKineticModelDetail(TestCase):
             "test_transport.txt", ContentFile("test_transport")
         )
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
-        download_content = "".join(
-            """
-            <h2>Downloads</h2>
-                <ul class='list-group'>
-                    <li class='list-group-item'><a href='{}' download>Chemkin Reactions File</a></li>
-                    <li class='list-group-item'><a href='{}' download>Chemkin Thermo File</a></li>
-                    <li class='list-group-item'><a href='{}' download>Chemkin Transport File</a></li>
-                </ul>
-            """.format(
-                kinetic_model.chemkin_reactions_file.url,
-                kinetic_model.chemkin_thermo_file.url,
-                kinetic_model.chemkin_transport_file.url,
-            ).split()
-        )
+        response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
 
-        response_content = "".join(response.content.decode("utf-8").split()).replace('"', "'")
-        self.assertTrue(download_content in response_content)
+        self.assertContains(
+            response,
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "chemkin"]),
+        )
+        self.assertContains(
+            response,
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "cantera"]),
+        )
+        self.assertContains(response, kinetic_model.chemkin_reactions_file.url)
+        self.assertContains(response, kinetic_model.chemkin_thermo_file.url)
+        self.assertContains(response, kinetic_model.chemkin_transport_file.url)
 
     def test_download_links_missing(self):
         kinetic_model = create_kinetic_model_with_detail_view_dependencies()
         response = self.client.get(reverse("kinetic-model-detail", args=[kinetic_model.pk]))
-        download_content = "<h2>Downloads</h2>"
-        response_content = "".join(response.content.decode("utf-8").split()).replace('"', "'")
-        self.assertFalse(download_content in response_content)
+        self.assertNotContains(
+            response,
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "chemkin"]),
+        )
+
+
+class TestKineticModelDownloads(TestCase):
+    def test_download_chemkin_bundle(self):
+        kinetic_model = create_kinetic_model_with_detail_view_dependencies()
+        kinetic_model.chemkin_reactions_file.save(
+            "test_reactions.txt", ContentFile("test_reactions")
+        )
+        kinetic_model.chemkin_thermo_file.save("test_thermo.txt", ContentFile("test_thermo"))
+        kinetic_model.chemkin_transport_file.save(
+            "test_transport.txt", ContentFile("test_transport")
+        )
+
+        response = self.client.get(
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "chemkin"])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+
+        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+            filenames = set(archive.namelist())
+
+        self.assertEqual(
+            filenames,
+            {"chemkin_reactions.txt", "chemkin_thermo.txt", "chemkin_transport.txt"},
+        )
+
+    @mock.patch("database.views.exports.build_cantera_yaml")
+    def test_download_cantera_yaml(self, build_cantera_yaml):
+        kinetic_model = create_kinetic_model_with_detail_view_dependencies()
+        build_cantera_yaml.return_value = exports.ExportResult(
+            content=b"yaml-content",
+            filename="test.yaml",
+            content_type="application/x-yaml",
+        )
+
+        response = self.client.get(
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "cantera"])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"yaml-content")
+        self.assertEqual(response["Content-Type"], "application/x-yaml")
+
+    @mock.patch("database.services.exports._generate_chemkin_files")
+    def test_download_chemkin_bundle_generated(self, generate_chemkin_files):
+        kinetic_model = create_kinetic_model_with_detail_view_dependencies()
+        generate_chemkin_files.return_value = {"chemkin_reactions.txt": b"chem"}
+
+        response = self.client.get(
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "chemkin"])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+            self.assertEqual(set(archive.namelist()), {"chemkin_reactions.txt"})
+
+    @mock.patch("database.views.exports.build_chemkin_bundle")
+    def test_download_chemkin_bundle_strict_toggle(self, build_chemkin_bundle):
+        kinetic_model = create_kinetic_model_with_detail_view_dependencies()
+        build_chemkin_bundle.return_value = exports.ExportResult(
+            content=b"chem",
+            filename="test.zip",
+            content_type="application/zip",
+        )
+
+        response = self.client.get(
+            reverse("kinetic-model-download", args=[kinetic_model.pk, "chemkin"]),
+            {"strict": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        build_chemkin_bundle.assert_called_once_with(kinetic_model, strict=True)

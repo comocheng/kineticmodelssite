@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% load static %}
+{# The ChemKED home, from the Figma "ChemKED · Experimental database" (node 107:2471) #}
+
+{% block title %}ChemKED experimental database | Prometheus{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-home">
+
+    <!-- Search workspace (Figma 107:2498) -->
+    <section class="app-workspace" aria-labelledby="ck-home-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="ck-home__top">
+            <div class="app-workspace__intro">
+                <p class="app-eyebrow">Experimental data</p>
+                <h1 id="ck-home-title" class="app-title"><span class="app-title__accent">ChemKED</span> Experimental Database</h1>
+                <p class="app-lede">Curated experimental combustion data for model validation</p>
+            </div>
+            <div class="ck-home__actions">
+                <a class="ck-home__ghost" href="{% url 'chemked_database:dataset-upload' %}"><i class="bi bi-upload" aria-hidden="true"></i>Upload dataset</a>
+                <a class="app-pill" href="{% url 'chemked_database:dataset-create' %}"><span class="app-pill__plus"><img class="app-icon" src="{% static 'database/images/icons/plus.svg' %}" alt="" width="12" height="12"></span>Create dataset</a>
+            </div>
+        </div>
+
+        <!-- Each scope sends the query to the search that exists for it -->
+        <form class="app-search" id="ck-search" action="{% url 'chemked_database:species-search' %}" method="get" role="search">
+            <div class="app-search__head">
+                <h2 class="app-search__title">Search experimental data</h2>
+                <a class="app-link" href="{% url 'chemked_database:dataset-list' %}">Filter datasets <img class="app-icon" src="{% static 'database/images/icons/sliders-horizontal.svg' %}" alt="" width="15" height="15"></a>
+            </div>
+            <div class="app-search__field">
+                <label class="visually-hidden" for="ck-scope">Search in</label>
+                <select class="app-search__scope" id="ck-scope">
+                    <option value="species" data-action="{% url 'chemked_database:species-search' %}" data-name="q" data-placeholder="Search species by name, InChI or SMILES…">Species</option>
+                    <option value="datasets" data-action="{% url 'chemked_database:dataset-list' %}" data-name="species" data-placeholder="Find the datasets whose mixtures contain a species…">Datasets</option>
+                </select>
+                <div class="app-search__query">
+                    <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="ck-query">Search text</label>
+                    <input class="app-search__input" id="ck-query" type="search" name="q" placeholder="Search species by name, InChI or SMILES…">
+                </div>
+                <button class="app-btn" type="submit">Search <img class="app-icon" src="{% static 'database/images/icons/arrow-right-white.svg' %}" alt="" width="16" height="16"></button>
+            </div>
+            {% if top_fuels %}
+            <div class="app-search__examples">
+                <span>Most studied</span>
+                {% for fuel in top_fuels|slice:":3" %}
+                <a class="app-chip" href="{% url 'chemked_database:species-datapoints' fuel.species_name %}">{{ fuel.species_name }}</a>
+                {% endfor %}
+                <span>or choose a collection below</span>
+            </div>
+            {% endif %}
+        </form>
+    </section>
+
+    <!-- Database statistics (Figma 107:2539) -->
+    <section class="ck-metrics" aria-label="Database statistics">
+        <div class="app-panel ck-metric">
+            <div class="ck-metric__head"><span>Datasets</span><i class="bi bi-file-earmark-text" aria-hidden="true"></i></div>
+            <p class="ck-metric__value">{{ dataset_count }}</p>
+            <div class="ck-metric__detail"><span>Experiment files</span><a href="{% url 'chemked_database:dataset-list' %}">Browse →</a></div>
+        </div>
+        <div class="app-panel ck-metric">
+            <div class="ck-metric__head"><span>Datapoints</span><i class="bi bi-clipboard-data" aria-hidden="true"></i></div>
+            <p class="ck-metric__value">{{ datapoint_count }}</p>
+            <div class="ck-metric__detail"><span>Individual measurements</span></div>
+        </div>
+        <div class="app-panel ck-metric">
+            <div class="ck-metric__head"><span>Unique species</span><i class="bi bi-droplet-half" aria-hidden="true"></i></div>
+            <p class="ck-metric__value">{{ species_count }}</p>
+            <div class="ck-metric__detail"><span>Distinct species names</span><a href="{% url 'chemked_database:species-search' %}">Browse →</a></div>
+        </div>
+        <div class="app-panel ck-metric">
+            <div class="ck-metric__head"><span>Condition ranges</span><i class="bi bi-thermometer-half" aria-hidden="true"></i></div>
+            <div class="ck-range">
+                <span>Temperature</span>
+                {% if temp_stats.min_temp %}<strong>{{ temp_stats.min_temp|floatformat:0 }} – {{ temp_stats.max_temp|floatformat:0 }} K</strong>{% else %}<strong>—</strong>{% endif %}
+            </div>
+            <div class="ck-range">
+                <span>Pressure</span>
+                {% if pressure_stats.min_pressure %}<strong>{{ pressure_stats.min_pressure|floatformat:0 }} – {{ pressure_stats.max_pressure|floatformat:0 }} Pa</strong>{% else %}<strong>—</strong>{% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Browse experimental data (Figma 107:2574) -->
+    <section class="ck-home__browse" aria-labelledby="ck-browse-title">
+        <div class="ck-section-head">
+            <div>
+                <h2 id="ck-browse-title" class="app-section-title">Browse experimental data</h2>
+                <p>Open a collection, or start from an experiment type or an apparatus.</p>
+            </div>
+        </div>
+
+        <div class="ck-home__links">
+            <a class="app-panel ck-home__link" href="{% url 'chemked_database:dataset-list' %}">
+                <span class="ck-home__symbol"><img class="app-icon" src="{% static 'database/images/icons/book-open.svg' %}" alt="" width="22" height="22"></span>
+                <span class="ck-home__link-copy"><strong>Datasets</strong><span>Browse experiment files</span></span>
+                <img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="18" height="18">
+            </a>
+            <a class="app-panel ck-home__link" href="{% url 'chemked_database:species-search' %}">
+                <span class="ck-home__symbol"><img class="app-icon" src="{% static 'database/images/icons/flask-conical.svg' %}" alt="" width="22" height="22"></span>
+                <span class="ck-home__link-copy"><strong>Species</strong><span>Search by fuel or species</span></span>
+                <img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="18" height="18">
+            </a>
+            <a class="app-panel ck-home__link" href="{% url 'chemked_database:apparatus-list' %}">
+                <span class="ck-home__symbol"><img class="app-icon" src="{% static 'database/images/icons/box.svg' %}" alt="" width="22" height="22"></span>
+                <span class="ck-home__link-copy"><strong>Apparatus</strong><span>Facilities and the datasets measured in them</span></span>
+                <img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="18" height="18">
+            </a>
+        </div>
+
+        <div class="ck-home__categories">
+            <section class="app-panel" aria-labelledby="ck-types-title">
+                <div class="ck-panel__head">
+                    <h3 id="ck-types-title" class="ck-panel__title"><img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">Experiment types</h3>
+                    <span class="ck-home__column">Datasets</span>
+                </div>
+                <ul class="ck-home__category-list">
+                    {% for exp in experiment_types %}
+                    <li>
+                        <a href="{% url 'chemked_database:dataset-list' %}?experiment_type={{ exp.experiment_type|urlencode }}">
+                            <span class="ck-home__category-name">{{ exp.experiment_type|default:"Not given"|capfirst }}</span>
+                            <span class="ck-count">{{ exp.count }}</span>
+                            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li class="ck-home__category-empty">No experiments yet</li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section class="app-panel" aria-labelledby="ck-apparatus-title">
+                <div class="ck-panel__head">
+                    <h3 id="ck-apparatus-title" class="ck-panel__title"><i class="bi bi-gear" aria-hidden="true"></i>Apparatus types</h3>
+                    <span class="ck-home__column">Datasets</span>
+                </div>
+                <ul class="ck-home__category-list">
+                    {% for app in apparatus_types|slice:":5" %}
+                    <li>
+                        <a href="{% url 'chemked_database:dataset-list' %}?apparatus_kind={{ app.apparatus__kind|urlencode }}">
+                            <span class="ck-home__category-name">{{ app.apparatus__kind|default:"Not given"|capfirst }}</span>
+                            <span class="ck-count">{{ app.count }}</span>
+                            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li class="ck-home__category-empty">No apparatus data</li>
+                    {% endfor %}
+                </ul>
+                {% if apparatus_types|length > 5 %}
+                <p class="ck-panel__foot"><span>The five most used of {{ apparatus_types|length }} kinds</span><a href="{% url 'chemked_database:apparatus-list' %}">All apparatus →</a></p>
+                {% elif apparatus_types %}
+                <p class="ck-panel__foot"><span>Select a kind to see its datasets</span></p>
+                {% endif %}
+            </section>
+        </div>
+    </section>
+
+    <!-- Recent datasets and most studied fuels (Figma 107:2660) -->
+    <div class="ck-home__lists{% if not top_fuels %} is-single{% endif %}">
+        <div class="ck-stack">
+            {% if recent_datasets %}
+            <section class="ck-stack" aria-labelledby="ck-recent-title">
+                <div class="ck-section-head">
+                    <div>
+                        <h2 id="ck-recent-title" class="app-section-title">Recently added datasets</h2>
+                        <p>The datasets added to the database last.</p>
+                    </div>
+                    <a class="ck-btn" href="{% url 'chemked_database:dataset-list' %}">View all datasets</a>
+                </div>
+                <div class="app-panel">
+                    <div class="ck-table-wrap">
+                        <table class="ck-table ck-home__recent">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Dataset file</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col" class="is-end">Year</th>
+                                    <th scope="col" class="is-end">Datapoints</th>
+                                    <th scope="col"><span class="visually-hidden">Open</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dataset in recent_datasets %}
+                                <tr>
+                                    <td>
+                                        <a class="ck-home__file" href="{% url 'chemked_database:dataset-detail' dataset.pk %}"><img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="18" height="18"><span>{{ dataset.chemked_file_path|truncatechars:60 }}</span></a>
+                                    </td>
+                                    <td>{% include "chemked_database/partials/ck_type.html" with type=dataset.experiment_type %}</td>
+                                    <td class="is-number">{{ dataset.reference_year|default:"—" }}</td>
+                                    <td class="is-number">{{ dataset.datapoints.count }}</td>
+                                    <td class="is-end"><a href="{% url 'chemked_database:dataset-detail' dataset.pk %}" aria-label="Open dataset {{ dataset.pk }}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16"></a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="ck-panel__foot"><span>Showing the {{ recent_datasets|length }} most recent</span><a href="{% url 'chemked_database:dataset-list' %}">Browse the full collection →</a></p>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- About ChemKED (Figma 107:2730) -->
+            <details class="app-panel ck-home__about">
+                <summary class="ck-panel__toggle">
+                    <img class="app-icon" src="{% static 'database/images/icons/info.svg' %}" alt="" width="20" height="20">
+                    <span>About ChemKED</span>
+                    <img class="app-icon ck-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+                </summary>
+                <div class="ck-panel__body ck-home__about-body">
+                    <p><strong>ChemKED</strong> (Chemical Kinetics Experimental Database) is a standardized format for storing and sharing experimental combustion data. Each dataset in this database is one ChemKED file.</p>
+                    <p class="ck-home__about-links">
+                        <i class="bi bi-github" aria-hidden="true"></i>
+                        <a href="https://pr-omethe-us.github.io/PyKED/schema-docs.html" target="_blank" rel="noopener">ChemKED</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="https://github.com/pr-omethe-us/PyKED" target="_blank" rel="noopener">PyKED</a>
+                        <span aria-hidden="true">·</span>
+                        <a href="https://github.com/pr-omethe-us/ChemKED-database" target="_blank" rel="noopener">ChemKED-database</a>
+                    </p>
+                </div>
+            </details>
+        </div>
+
+        {% if top_fuels %}
+        <!-- Most studied fuels (Figma 107:2734) -->
+        <aside class="app-panel ck-home__fuels" aria-labelledby="ck-fuels-title">
+            <div class="ck-panel__head ck-panel__head--plain">
+                <h2 id="ck-fuels-title" class="ck-panel__title">Most studied fuels</h2>
+                <a class="ck-home__more" href="{% url 'chemked_database:species-search' %}">Browse species →</a>
+            </div>
+            <table class="ck-table ck-home__fuel-table">
+                <thead>
+                    <tr><th scope="col">Fuel</th><th scope="col" class="is-end">Mixtures</th></tr>
+                </thead>
+                <tbody>
+                    {% for fuel in top_fuels %}
+                    <tr>
+                        <td><a href="{% url 'chemked_database:species-datapoints' fuel.species_name %}">{{ fuel.species_name }}</a></td>
+                        <td class="is-number">{{ fuel.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </aside>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-home {
+    gap: 32px;
+}
+
+.ck-home__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.ck-home__actions {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+}
+
+/* A white outline pill on the dark workspace, beside the orange one */
+.ck-home__ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-white);
+}
+
+.ck-home__ghost:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--color-white);
+    text-decoration: none;
+}
+
+.ck-home__browse {
+    display: grid;
+    gap: 20px;
+}
+
+.ck-home__links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.ck-home__link {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    color: var(--color-gray-900);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ck-home__link:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 6px 16px rgba(23, 43, 67, 0.08);
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.ck-home__symbol {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background: var(--color-primary-bg);
+}
+
+.ck-home__link-copy {
+    display: grid;
+    flex: 1;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ck-home__link-copy strong {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.ck-home__link-copy span {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.ck-home__categories {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.ck-home__column {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.ck-home__category-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ck-home__category-list li + li {
+    border-top: 1px solid var(--color-gray-100);
+}
+
+.ck-home__category-list a {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-900);
+}
+
+.ck-home__category-list a:hover {
+    background: var(--color-gray-50);
+    text-decoration: none;
+}
+
+.ck-home__category-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ck-home__category-empty {
+    padding: 14px 22px;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.ck-home__categories .ck-panel__foot {
+    margin: 0;
+}
+
+.ck-home__lists {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 442px;
+    gap: 20px;
+    align-items: start;
+}
+
+.ck-home__lists.is-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.ck-home__recent {
+    min-width: 620px;
+}
+
+.ck-home__file {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    overflow-wrap: anywhere;
+}
+
+.ck-home__file .app-icon {
+    flex-shrink: 0;
+}
+
+.ck-home .ck-panel__foot {
+    margin: 0;
+}
+
+.ck-home__about-body {
+    padding-top: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.ck-home__about-body p {
+    margin: 0;
+}
+
+.ck-home__about-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+}
+
+.ck-home__fuels {
+    padding-bottom: 8px;
+}
+
+.ck-home__more {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ck-home__fuel-table th {
+    background: transparent;
+}
+
+@media (max-width: 1199.98px) {
+    .ck-home__lists {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 991.98px) {
+    .ck-home__links,
+    .ck-home__categories {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ck-home__top {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .ck-home__actions {
+        margin-bottom: 24px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Point the search form at the search that exists for the chosen scope
+    (() => {
+        const form = document.getElementById("ck-search");
+        const scope = document.getElementById("ck-scope");
+        const input = document.getElementById("ck-query");
+        if (!form || !scope || !input) return;
+        scope.addEventListener("change", () => {
+            const option = scope.selectedOptions[0];
+            form.action = option.dataset.action;
+            input.name = option.dataset.name;
+            input.placeholder = option.dataset.placeholder;
+        });
+    })();
+</script>
+{% endblock %}

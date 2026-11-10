@@ -15,16 +15,47 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import path, include, re_path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+
+from kms import views
 
 urlpatterns = [
     path("", include("database.urls")),
+    # Dereferenceable FAIR identifiers (slug IRIs fall through after the
+    # integer detail routes in database.urls).
+    path("", include("provenance.resolver_urls")),
+    # Canonical URLs of the records, made from their keys (provenance.record_keys).
+    path("id/", include("provenance.id_urls")),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # ReDoc inside the site header and footer
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema", template_name="api/redoc.html"),
+        name="redoc",
+    ),
+    path("docs/", views.docs, name="docs"),
+    re_path(r"^docs/(?P<path>.+)$", views.docs),
     path("api/", include("api.urls")),
+    # path("api/import-voting/", include("import_voting.urls")),  # REMOVED: Unused prototype
+    path(
+        "importer/",
+        include(("importer_dashboard.urls", "importer_dashboard"), namespace="importer_dashboard"),
+    ),
+    path("chemked/", include("chemked_database.urls")),
+    path("analysis/", include(("analysis.urls", "analysis"), namespace="analysis")),
+    path("livequery/", include(("livequery.urls", "livequery"), namespace="livequery")),
     path("admin/", admin.site.urls),
     path("login/", LoginView.as_view(template_name="database/login.html"), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 ]
 
 if settings.DEBUG:

@@ -1,11 +1,12 @@
-from typing import List, Optional
+import hashlib
+from typing import List, Optional, Literal, ClassVar, Union
 
 import rmgpy.kinetics as kinetics
 from titlecase import titlecase
 from django.core.exceptions import ValidationError as DJValidationError
 from django.db import models
-from django.contrib.postgres.fields import JSONField
-from pydantic.typing import Literal
+# from django.contrib.postgres.fields import JSONField
+# from pydantic.typing import Literal
 from pydantic import BaseModel, ValidationError, validator
 from rmgpy.quantity import ScalarQuantity, ArrayQuantity, RATECOEFFICIENT_COMMON_UNITS, Energy
 
@@ -21,16 +22,19 @@ register = SimpleRegister()
 
 
 def validate_rate_constant_units(units):
-    if units not in RATECOEFFICIENT_COMMON_UNITS:
-        raise ValueError(f"a_units must be one of {', '.join(RATECOEFFICIENT_COMMON_UNITS)}.")
+    extra_units = {"cm^6/(mol^2*s)", "m^6/(mol^2*s)"}
+    allowed_units = set(RATECOEFFICIENT_COMMON_UNITS) | extra_units
+    if units not in allowed_units:
+        raise ValueError(f"a_units must be one of {', '.join(sorted(allowed_units))}.")
 
     return units
 
 
 def validate_energy_units(units):
-    common_units = Energy.common_units
-    if units not in common_units:
-        raise ValueError(f"e_units must be one of {', '.join(common_units)}.")
+    # RMG reads J/mol as well; CHEMKIN files in JOULES/MOLE (Chernov, CombFlame2017/45-Olm) give it.
+    allowed_units = set(Energy.common_units) | {"J/mol"}
+    if units not in allowed_units:
+        raise ValueError(f"e_units must be one of {', '.join(sorted(allowed_units))}.")
 
     return units
 
@@ -47,12 +51,12 @@ class Arrhenius(BaseModel):
     type: Literal["arrhenius"]
     a: float
     a_si: float
-    a_delta: Optional[float]
+    a_delta: Optional[float] = None
     a_units: str
     n: float
     e: float
     e_si: float
-    e_delta: Optional[float]
+    e_delta: Optional[float] = None
     e_units: str
 
     @validator("a_units")
@@ -63,7 +67,14 @@ class Arrhenius(BaseModel):
     def e_units_common(cls, v):
         return validate_energy_units(v)
 
-    def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
+    def to_rmg(
+        self,
+        min_temp=None,
+        max_temp=None,
+        min_pressure=None,
+        max_pressure=None,
+        *args,
+    ):
         """
         Return an rmgpy.kinetics.Arrhenius object for this rate expression.
         """
@@ -76,15 +87,21 @@ class Arrhenius(BaseModel):
         else:
             Ea = ScalarQuantity(self.e, self.e_units)
 
-        return kinetics.Arrhenius(
-            A=A,
-            n=self.n,
-            Ea=Ea,
-            Tmin=ScalarQuantity(min_temp, "K"),
-            Tmax=ScalarQuantity(max_temp, "K"),
-            Pmin=ScalarQuantity(min_pressure, "Pa"),
-            Pmax=ScalarQuantity(max_pressure, "Pa"),
-        )
+        kwargs = {
+            "A": A,
+            "n": self.n,
+            "Ea": Ea,
+        }
+        if min_temp is not None:
+            kwargs["Tmin"] = ScalarQuantity(min_temp, "K")
+        if max_temp is not None:
+            kwargs["Tmax"] = ScalarQuantity(max_temp, "K")
+        if min_pressure is not None:
+            kwargs["Pmin"] = ScalarQuantity(min_pressure, "Pa")
+        if max_pressure is not None:
+            kwargs["Pmax"] = ScalarQuantity(max_pressure, "Pa")
+
+        return kinetics.Arrhenius(**kwargs)
 
     def table_data(self):
         return [
@@ -112,8 +129,9 @@ class ArrheniusEP(BaseModel):
     type: Literal["arrhenius_ep"]
     a: float
     a_si: float
-    a_units: float
+    a_units: str
     n: float
+    alpha: float
     e0: float
     e0_si: float
     e0_units: str
@@ -126,7 +144,7 @@ class ArrheniusEP(BaseModel):
     def e0_units_common(cls, v):
         return validate_energy_units(v)
 
-    def to_rmg(self):
+    def to_rmg(self, *args):
         return kinetics.ArrheniusEP(
             A=ScalarQuantity(self.a, self.a_units),
             n=self.n,
@@ -145,47 +163,13 @@ class ArrheniusEP(BaseModel):
 
 
 @register
-class Pressure(BaseModel):
-    arrhenius: Arrhenius
-    pressure: float
-
-
-@register
-class PDepArrhenius(BaseModel):
-    type: Literal["pdep_arrhenius"]
-    pressure_set: List[Pressure]
-
-    def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
-        return kinetics.PDepArrhenius(
-            pressures=ArrayQuantity([p.pressure for p in self.pressure_set], "Pa"),
-            arrhenius=[p.arrhenius.to_rmg() for p in self.pressure_set],
-            Tmin=ScalarQuantity(min_temp, "K"),
-            Tmax=ScalarQuantity(max_temp, "K"),
-            Pmin=ScalarQuantity(min_pressure, "Pa"),
-            Pmax=ScalarQuantity(max_pressure, "Pa"),
-        )
-
-    def table_data(self):
-        table_heads = [
-            r"$P$ $(\textit{Pa})$",
-            *self.pressure_set[0].arrhenius.table_data()[0][1],
-        ]
-        table_bodies = []
-        for p in self.pressure_set.all():
-            _, _, bodies = p.arrhenius.table_data()[0]
-            table_bodies.append((p.pressure, bodies[0][1]))
-
-        return [("", table_heads, table_bodies)]
-
-
-@register
 class MultiArrhenius(BaseModel):
     type: Literal["multi_arrhenius"]
     arrhenius_set: List[Arrhenius]
 
     def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
         return kinetics.MultiArrhenius(
-            arrhenius=[a.arrhenius.to_rmg() for a in self.arrhenius_set],
+            arrhenius=[a.to_rmg(min_temp, max_temp, min_pressure, max_pressure) for a in self.arrhenius_set],
             Tmin=ScalarQuantity(min_temp, "K"),
             Tmax=ScalarQuantity(max_temp, "K"),
             Pmin=ScalarQuantity(min_pressure, "Pa"),
@@ -203,14 +187,53 @@ class MultiArrhenius(BaseModel):
 
 
 @register
+class Pressure(BaseModel):
+    # Duplicate PLOG lines at one pressure arrive from RMG as MultiArrhenius.
+    arrhenius: Union[Arrhenius, MultiArrhenius]
+    pressure: float
+
+
+@register
+class PDepArrhenius(BaseModel):
+    type: Literal["pdep_arrhenius"]
+    pressure_set: List[Pressure]
+
+    def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
+        return kinetics.PDepArrhenius(
+            pressures=ArrayQuantity([p.pressure for p in self.pressure_set], "Pa"),
+            arrhenius=[
+                p.arrhenius.to_rmg(min_temp, max_temp, min_pressure, max_pressure)
+                for p in self.pressure_set
+            ],
+            Tmin=ScalarQuantity(min_temp, "K"),
+            Tmax=ScalarQuantity(max_temp, "K"),
+            Pmin=ScalarQuantity(min_pressure, "Pa"),
+            Pmax=ScalarQuantity(max_pressure, "Pa"),
+        )
+
+    def table_data(self):
+        table_heads = [
+            r"$P$ $(\textit{Pa})$",
+            *self.pressure_set[0].arrhenius.table_data()[0][1],
+        ]
+        table_bodies = []
+        for p in self.pressure_set:
+            _, _, bodies = p.arrhenius.table_data()[0]
+            table_bodies.extend((p.pressure, values) for _, values in bodies)
+
+        return [("", table_heads, table_bodies)]
+
+
+@register
 class MultiPDepArrhenius(BaseModel):
     type: Literal["multi_pdep_arrhenius"]
     pdep_arrhenius_set: List[PDepArrhenius]
 
     def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
-        return kinetics.MultiPdepArrhenius(
+        return kinetics.MultiPDepArrhenius(
             arrhenius=[
-                p.arrhenius.to_rmg() for pda in self.pdep_arrhenius_set for p in pda.pressure_set
+                pda.to_rmg(min_temp, max_temp, min_pressure, max_pressure)
+                for pda in self.pdep_arrhenius_set
             ],
             Tmin=ScalarQuantity(min_temp, "K"),
             Tmax=ScalarQuantity(max_temp, "K"),
@@ -244,23 +267,56 @@ class Chebyshev(BaseModel):
             Pmax=ScalarQuantity(max_pressure, "Pa"),
         )
 
+    def table_data(self):
+        columns = len(self.coefficient_matrix[0]) if self.coefficient_matrix else 0
+        return [(
+            f"Coefficients ({self.units})",
+            # A corner head for the row labels, so headings line up with their columns.
+            [r"$i \backslash j$", *[f"$j={j}$" for j in range(columns)]],
+            [(f"$i={i}$", row) for i, row in enumerate(self.coefficient_matrix)],
+        )]
+
 
 @register
 class ThirdBody(BaseModel):
     type: Literal["third_body"]
     low_arrhenius: Arrhenius
 
-    def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, *args):
+    def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, efficiencies, *args):
         return kinetics.ThirdBody(
-            arrheniusLow=self.low_arrhenius.to_rmg(),
+            arrheniusLow=self.low_arrhenius.to_rmg(
+                min_temp, max_temp, min_pressure, max_pressure
+            ),
             Tmin=ScalarQuantity(min_temp, "K"),
             Tmax=ScalarQuantity(max_temp, "K"),
             Pmin=ScalarQuantity(min_pressure, "Pa"),
             Pmax=ScalarQuantity(max_pressure, "Pa"),
+            efficiencies=_efficiencies_to_rmg(efficiencies),
         )
 
     def table_data(self):
         return self.low_arrhenius.table_data()
+
+
+def _efficiencies_to_rmg(efficiencies):
+    from rmgpy.molecule import Molecule
+
+    rmg_efficiencies = {}
+    for efficiency in efficiencies:
+        structures = list(efficiency.species.structures)
+        if not structures:
+            smiles = None
+        else:
+            structure = structures[0]
+            molecule = structure.to_rmg()
+            if isinstance(molecule, Molecule):
+                rmg_efficiencies[molecule] = efficiency.efficiency
+                continue
+            smiles = structure.smiles
+
+        if smiles:
+            rmg_efficiencies[smiles] = efficiency.efficiency
+    return rmg_efficiencies
 
 
 @register
@@ -270,11 +326,15 @@ class Lindemann(BaseModel):
     high_arrhenius: Arrhenius
 
     def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, efficiencies, *args):
-        rmg_efficiencies = {e.species.to_rmg(): e.efficiency for e in self.efficiency_set.all()}
+        rmg_efficiencies = _efficiencies_to_rmg(efficiencies)
 
         return kinetics.Lindemann(
-            arrheniusHigh=self.high_arrhenius.to_rmg(),
-            arrheniusLow=self.low_arrhenius.to_rmg(),
+            arrheniusHigh=self.high_arrhenius.to_rmg(
+                min_temp, max_temp, min_pressure, max_pressure
+            ),
+            arrheniusLow=self.low_arrhenius.to_rmg(
+                min_temp, max_temp, min_pressure, max_pressure
+            ),
             Tmin=ScalarQuantity(min_temp, "K"),
             Tmax=ScalarQuantity(max_temp, "K"),
             Pmin=ScalarQuantity(min_pressure, "Pa"),
@@ -298,24 +358,36 @@ class Troe(BaseModel):
     t2: float = 0.0
     t3: float
 
+    # Use ClassVar to indicate this is not a field
+    kinetics_type: ClassVar[str] = "Troe Kinetics"
     def to_rmg(self, min_temp, max_temp, min_pressure, max_pressure, efficiencies, *args):
-        rmg_efficiencies = {e.species.to_rmg(): e.efficiency for e in efficiencies}
+        rmg_efficiencies = _efficiencies_to_rmg(efficiencies)
+        t1 = ScalarQuantity(self.t1, "K")
+        t3 = ScalarQuantity(self.t3, "K")
+        t2 = ScalarQuantity(self.t2, "K") if self.t2 else None
 
-        return kinetics.Lindemann(
-            arrheniusHigh=self.high_arrhenius.to_rmg(),
-            arrheniusLow=self.low_arrhenius.to_rmg(),
-            alpha=self.alpha,
-            T1=self.t1,
-            T2=self.t2,
-            T3=self.t3,
-            Tmin=ScalarQuantity(min_temp, "K"),
-            Tmax=ScalarQuantity(max_temp, "K"),
-            Pmin=ScalarQuantity(min_pressure, "Pa"),
-            Pmax=ScalarQuantity(max_pressure, "Pa"),
-            efficiencies=rmg_efficiencies,
-        )
+        kwargs = {
+            "arrheniusHigh": self.high_arrhenius.to_rmg(
+                min_temp, max_temp, min_pressure, max_pressure
+            ),
+            "arrheniusLow": self.low_arrhenius.to_rmg(
+                min_temp, max_temp, min_pressure, max_pressure
+            ),
+            "alpha": self.alpha,
+            "T1": t1,
+            "T3": t3,
+            "Tmin": ScalarQuantity(min_temp, "K"),
+            "Tmax": ScalarQuantity(max_temp, "K"),
+            "Pmin": ScalarQuantity(min_pressure, "Pa"),
+            "Pmax": ScalarQuantity(max_pressure, "Pa"),
+            "efficiencies": rmg_efficiencies,
+        }
+        if t2 is not None:
+            kwargs["T2"] = t2
 
-    kinetics_type = "Troe Kinetics"
+        return kinetics.Troe(**kwargs)
+
+    kinetics_type:ClassVar[str] = "Troe Kinetics"
 
     def table_data(self):
         _, low_heads, low_bodies = self.low_arrhenius.table_data()[0]
@@ -368,6 +440,44 @@ def validate_kinetics_data(data, returns=False):
         raise DJValidationError(error_msgs or f"Invalid type: {data.get('type')}")
 
 
+def efficiencies_hash(efficiencies):
+    """The fingerprint of a set of collider efficiencies, given as (species id, efficiency)
+    pairs in any order; "" for none. Efficiencies are compared to 6 significant digits."""
+    pairs = sorted(f"{species_id}:{efficiency:.6g}" for species_id, efficiency in efficiencies)
+    return hashlib.md5(bytes(";".join(pairs), "UTF-8")).hexdigest() if pairs else ""
+
+
+RANGE_FIELDS = ("min_temp", "max_temp", "min_pressure", "max_pressure")
+CHEBYSHEV = models.Q(raw_data__type="chebyshev")
+
+
+def range_identity(raw_data, min_temp=None, max_temp=None, min_pressure=None, max_pressure=None):
+    """The T and P range fields that are part of a rate record's identity, for this raw_data.
+
+    A Chebyshev rate's T and P range make its reduced T and P, so the same coefficients with
+    another range are another k (PCI2017/111-Jin writes TCHEB 270 3000 with the coefficients that
+    CombFlame2013/1939-Cai writes with 290 3000): the range is part of the identity. Another
+    rate's range only says where it holds and is not."""
+    if (raw_data or {}).get("type") != "chebyshev":
+        return {}
+    return dict(zip(RANGE_FIELDS, (min_temp, max_temp, min_pressure, max_pressure)))
+
+
+def kinetics_identity(kinetics, **changes):
+    """The fields that find the record of the same rate as this one (the unique constraints of
+    Kinetics): reaction, raw_data, specific collider, efficiencies_hash and, for a Chebyshev rate,
+    the T and P range. `changes` replace fields first (reaction_id=..., efficiencies_hash=...)."""
+    fields = {"reaction_id": kinetics.reaction_id, "raw_data": kinetics.raw_data,
+              "specific_collider_id": kinetics.specific_collider_id,
+              "efficiencies_hash": kinetics.efficiencies_hash,
+              **{name: getattr(kinetics, name) for name in RANGE_FIELDS}}
+    fields.update(changes)
+    identity = {name: fields[name] for name in
+                ("reaction_id", "raw_data", "specific_collider_id", "efficiencies_hash")}
+    identity.update(range_identity(fields["raw_data"], *(fields[name] for name in RANGE_FIELDS)))
+    return identity
+
+
 class Kinetics(models.Model):
     prime_id = models.CharField(blank=True, max_length=10)
     reaction = models.ForeignKey("Reaction", on_delete=models.CASCADE)
@@ -376,8 +486,19 @@ class Kinetics(models.Model):
     reverse = models.BooleanField(
         default=False, help_text="Is this the rate for the reverse reaction?"
     )
-    raw_data = JSONField(validators=[validate_kinetics_data])
+    raw_data = models.JSONField(validators=[validate_kinetics_data])
     species = models.ManyToManyField("Species", through="Efficiency", blank=True)
+    # The one collider of a falloff rate written H + O2 (+AR) <=> HO2 (+AR); blank for (+M).
+    # Protected: without it the rate would read as (+M), with every collider at efficiency 1.
+    specific_collider = models.ForeignKey(
+        "Species", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="collider_kinetics",
+        help_text="The only collider of this rate, as in (+AR); blank for (+M).")
+    # The collider efficiencies belong to the rate: two models with the same parameters but
+    # other efficiencies have two records. Kept current by refresh_efficiencies_hash.
+    efficiencies_hash = models.CharField(
+        max_length=32, blank=True, default="", editable=False,
+        help_text="Fingerprint of the collider efficiencies; blank for none.")
     min_temp = models.FloatField("Lower Temp Bound", help_text="units: K", null=True, blank=True)
     max_temp = models.FloatField("Upper Temp Bound", help_text="units: K", null=True, blank=True)
     min_pressure = models.FloatField(
@@ -386,10 +507,36 @@ class Kinetics(models.Model):
     max_pressure = models.FloatField(
         "Upper Pressure Bound", help_text="units: Pa", null=True, blank=True
     )
+    # log10 k (SI) at 500, 1000 and 1500 K and 1 bar, as written; the importer's copied-rate test.
+    rate_fingerprint = models.JSONField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "Kinetics"
-        unique_together = ("reaction", "raw_data")
+        # The same rate for (+M) and for (+AR), or with other collider efficiencies, are two
+        # records, and so is a Chebyshev rate with another T or P range (range_identity).
+        # PostgreSQL 14 has no NULLS NOT DISTINCT, so the (+M) rates get their own constraints,
+        # and a Chebyshev record must have its range (a NULL would let a twin in).
+        constraints = [
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "efficiencies_hash"),
+                condition=models.Q(specific_collider__isnull=True) & ~CHEBYSHEV,
+                name="unique_kinetics_rate"),
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "specific_collider", "efficiencies_hash"),
+                condition=models.Q(specific_collider__isnull=False) & ~CHEBYSHEV,
+                name="unique_kinetics_rate_collider"),
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "efficiencies_hash", *RANGE_FIELDS),
+                condition=models.Q(specific_collider__isnull=True) & CHEBYSHEV,
+                name="unique_chebyshev_rate"),
+            models.UniqueConstraint(
+                fields=("reaction", "raw_data", "specific_collider", "efficiencies_hash", *RANGE_FIELDS),
+                condition=models.Q(specific_collider__isnull=False) & CHEBYSHEV,
+                name="unique_chebyshev_rate_collider"),
+            models.CheckConstraint(
+                check=~CHEBYSHEV | models.Q(**{f"{name}__isnull": False for name in RANGE_FIELDS}),
+                name="chebyshev_has_range"),
+        ]
 
     def to_rmg(self):
         """
@@ -397,11 +544,28 @@ class Kinetics(models.Model):
         """
 
         rmg_reaction = self.reaction.to_rmg()
+        if self.specific_collider_id:
+            rmg_reaction.specific_collider = self.specific_collider.to_rmg()
+        efficiencies = list(self.efficiency_set.select_related("species"))
         rmg_reaction.kinetics = self.data.to_rmg(
-            self.min_temp, self.max_temp, self.min_pressure, self.max_pressure, self.efficiencies
+            self.min_temp,
+            self.max_temp,
+            self.min_pressure,
+            self.max_pressure,
+            efficiencies,
         )
 
         return rmg_reaction
+
+    def refresh_efficiencies_hash(self):
+        """Store the fingerprint of the efficiency rows as they are now (after an edit)."""
+        self.efficiencies_hash = efficiencies_hash(self.efficiency_set.values_list("species_id", "efficiency"))
+        Kinetics.objects.filter(pk=self.pk).update(efficiencies_hash=self.efficiencies_hash)
+
+    def rmg_kinetics(self):
+        """The RMG kinetics object alone, with collider efficiencies; no reaction needed."""
+        efficiencies = list(self.efficiency_set.select_related("species"))
+        return self.data.to_rmg(self.min_temp, self.max_temp, self.min_pressure, self.max_pressure, efficiencies)
 
     def to_chemkin(self):
         """

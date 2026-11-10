@@ -1,0 +1,191 @@
+{% load static %}
+{% comment %}
+The speciation part of a datapoint: reactor conditions, independent variables, species profiles
+and auxiliary profiles, as the ChemKED file gives them. Styled by partials/ck_styles.html.
+{% endcomment %}
+<section class="app-panel" aria-labelledby="ck-speciation-title">
+    <div class="ck-panel__head">
+        <h2 id="ck-speciation-title" class="ck-panel__title"><i class="bi bi-diagram-3" aria-hidden="true"></i>Speciation measurement</h2>
+    </div>
+    <dl class="ck-facts">
+        <div>
+            <dt>Independent variables</dt>
+            <dd class="ck-spec__variables">
+                {% for variable in independent_variables %}
+                <span class="ck-tag{% if variable.primary %} ck-tag--primary{% endif %}">{{ variable.column }}: {{ variable.name }} ({{ variable.units }}){% if variable.species_name %} of {{ variable.species_name }}{% endif %}</span>
+                {% endfor %}
+            </dd>
+        </div>
+        {% for condition in speciation_conditions %}
+        <div>
+            <dt>{{ condition.label }}</dt>
+            <dd class="is-mono">
+                {{ condition.quantity.value|default_if_none:condition.quantity.value_text }} {{ condition.quantity.units }}
+                {% if condition.quantity.uncertainty is not None %}<span class="ck-sub">± {{ condition.quantity.uncertainty }} ({{ condition.quantity.uncertainty_type }})</span>{% endif %}
+            </dd>
+        </div>
+        {% endfor %}
+        {% if speciation_measurement.timeshift_target %}
+        <div>
+            <dt>Time shift</dt>
+            <dd class="is-mono">
+                {{ speciation_measurement.timeshift_type }} of {{ speciation_measurement.timeshift_target }}
+                {% if speciation_measurement.timeshift_amount_quantity %}({{ speciation_measurement.timeshift_amount_quantity.value }} {{ speciation_measurement.timeshift_amount_quantity.units }}){% endif %}
+            </dd>
+        </div>
+        {% endif %}
+    </dl>
+</section>
+
+<section class="app-panel" aria-labelledby="ck-profiles-title">
+    <div class="ck-panel__head">
+        <h2 id="ck-profiles-title" class="ck-panel__title"><i class="bi bi-graph-up" aria-hidden="true"></i>Profiles</h2>
+    </div>
+    <div class="ck-panel__body">
+        {% include "chemked_database/partials/speciation_chart.html" %}
+    </div>
+</section>
+
+<section class="app-panel" aria-labelledby="ck-concentration-title">
+    <div class="ck-panel__head">
+        <h2 id="ck-concentration-title" class="ck-panel__title"><i class="bi bi-list-ul" aria-hidden="true"></i>Concentration Profiles ({{ concentration_profiles|length }})</h2>
+    </div>
+    <div class="ck-table-wrap">
+        <table class="ck-table ck-spec__table">
+            <thead>
+                <tr>
+                    <th scope="col">Species</th>
+                    <th scope="col">InChI</th>
+                    <th scope="col">Units</th>
+                    <th scope="col" class="is-end">Rows</th>
+                    <th scope="col">Uncertainty</th>
+                    <th scope="col"><span class="visually-hidden">Values</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in concentration_profiles %}
+                <tr>
+                    <td><a href="{% url 'chemked_database:species-datapoints' profile.species.species_name %}">{{ profile.species.species_name }}</a></td>
+                    <td><span class="ck-spec__inchi">{{ profile.species.inchi|default:"—" }}</span></td>
+                    <td>{{ profile.quantity_units }}</td>
+                    <td class="is-number">{{ profile.values|length }}</td>
+                    <td class="ck-spec__uncertainty">
+                        {% if profile.uncertainty_type %}
+                        {{ profile.uncertainty_type }} {{ profile.uncertainty|default_if_none:"" }}{% if profile.upper_uncertainty is not None %} +{{ profile.upper_uncertainty }} −{{ profile.lower_uncertainty }}{% endif %}
+                        {% if profile.uncertainty_sourcetype %}({{ profile.uncertainty_sourcetype }}){% endif %}
+                        {% endif %}
+                        {% if profile.evaluated_standard_deviation is not None %}
+                        σ {{ profile.evaluated_standard_deviation }} {{ profile.evaluated_standard_deviation_type }}
+                        {% if profile.evaluated_standard_deviation_method %}({{ profile.evaluated_standard_deviation_method }}){% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="is-end">
+                        <button class="ck-btn ck-btn--sm" type="button" data-bs-toggle="collapse" data-bs-target="#profile-values-{{ profile.pk }}" aria-expanded="false" aria-controls="profile-values-{{ profile.pk }}">Values</button>
+                    </td>
+                </tr>
+                <tr class="collapse ck-spec__values-row" id="profile-values-{{ profile.pk }}">
+                    <td colspan="6">
+                        <div class="ck-table-wrap">
+                            <table class="ck-spec__values">
+                                <thead>
+                                    <tr>
+                                        {% for variable in independent_variables %}
+                                        <th scope="col">{{ variable.name }} ({{ variable.units }})</th>
+                                        {% endfor %}
+                                        <th scope="col">amount ({{ profile.quantity_units }})</th>
+                                        <th scope="col">uncertainty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in profile.values %}
+                                    <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% if auxiliary_profiles %}
+<section class="app-panel" aria-labelledby="ck-auxiliary-title">
+    <div class="ck-panel__head">
+        <h2 id="ck-auxiliary-title" class="ck-panel__title"><i class="bi bi-thermometer" aria-hidden="true"></i>Auxiliary Profiles ({{ auxiliary_profiles|length }})</h2>
+    </div>
+    <div class="ck-table-wrap">
+        <table class="ck-table">
+            <thead>
+                <tr><th scope="col">Property</th><th scope="col">Against</th><th scope="col">Units</th><th scope="col" class="is-end">Rows</th></tr>
+            </thead>
+            <tbody>
+                {% for profile in auxiliary_profiles %}
+                <tr>
+                    <td>{{ profile.profile_type }}</td>
+                    <td>{{ profile.independent_name }} ({{ profile.independent_units }})</td>
+                    <td>{{ profile.quantity_units }}</td>
+                    <td class="is-number">{{ profile.values|length }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<style>
+.ck-spec__variables {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.ck-spec__table {
+    min-width: 720px;
+}
+
+.ck-spec__inchi {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-600);
+    word-break: break-all;
+}
+
+.ck-spec__uncertainty {
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.ck-page .ck-table tbody tr.ck-spec__values-row:hover {
+    background: transparent;
+}
+
+.ck-spec__values-row > td {
+    background: var(--color-gray-50);
+}
+
+.ck-spec__values {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-white);
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.ck-spec__values th,
+.ck-spec__values td {
+    padding: 5px 10px;
+    border: 1px solid var(--color-gray-200);
+    white-space: nowrap;
+}
+
+.ck-spec__values th {
+    background: var(--color-gray-50);
+    font-weight: 600;
+    color: var(--color-gray-600);
+}
+</style>

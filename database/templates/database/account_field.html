@@ -1,0 +1,30 @@
+{% comment %}One field of the sign-in and register forms. Pass field; optionally placeholder, marks (show
+the required star or "optional"), toggle (the show-password button) and rules (show the help text
+as the password requirements box). The input keeps the form's own name, type, length, autocomplete
+and autofocus attributes.{% endcomment %}
+{% with attrs=field.field.widget.attrs input_type=field.field.widget.input_type %}
+<div class="acct-field{% if field.errors %} has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if marks %}{% if field.field.required %} <span class="acct-required" aria-hidden="true">*</span>{% else %} <span class="acct-field__optional">(optional)</span>{% endif %}{% endif %}</label>
+    <div class="acct-input{% if toggle %} has-toggle{% endif %}">
+        <input type="{{ input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"{% if input_type != "password" and field.value %} value="{{ field.value }}"{% endif %}{% if attrs.maxlength %} maxlength="{{ attrs.maxlength }}"{% endif %}{% if attrs.autocapitalize %} autocapitalize="{{ attrs.autocapitalize }}"{% endif %}{% if attrs.autocomplete %} autocomplete="{{ attrs.autocomplete }}"{% endif %}{% if attrs.autofocus %} autofocus{% endif %}{% if field.field.required %} required{% endif %}{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if field.errors %} aria-invalid="true"{% endif %}{% if field.errors or field.help_text %} aria-describedby="{% if field.errors %}{{ field.auto_id }}_error{% endif %}{% if field.errors and field.help_text %} {% endif %}{% if field.help_text %}{{ field.auto_id }}_helptext{% endif %}"{% endif %}>
+        {% if toggle %}
+        <button class="acct-toggle" type="button" data-password-toggle="{{ field.id_for_label }}" aria-label="Show password" aria-pressed="false" hidden><i class="bi bi-eye" aria-hidden="true"></i></button>
+        {% endif %}
+    </div>
+    {% if field.errors %}
+    <div id="{{ field.auto_id }}_error">
+        {% for error in field.errors %}<p class="acct-error">{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+    {% if field.help_text %}
+    {% if rules %}
+    <div class="acct-rules" id="{{ field.auto_id }}_helptext">
+        <p class="acct-rules__title">Password requirements</p>
+        {{ field.help_text|safe }}
+    </div>
+    {% else %}
+    <p class="acct-help" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</p>
+    {% endif %}
+    {% endif %}
+</div>
+{% endwith %}

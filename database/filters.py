@@ -1,11 +1,27 @@
 import django_filters
 from dal import autocomplete
+from django import forms
 from django.db.models import Count
 
 from database import models
 
 
 class SpeciesFilter(django_filters.FilterSet):
+    q = django_filters.CharFilter(
+        method="search", label="Search species", max_length=500,
+        widget=forms.TextInput(attrs={
+            "class": "form-control", "type": "search",
+            "placeholder": "Name, formula, CAS, PrIMe ID, SMILES, or InChI",
+            "aria-describedby": "species-search-help", "autocapitalize": "none",
+            "spellcheck": "false",
+        }),
+    )
+
+    def search(self, queryset, name, value):
+        from database.services.species_search import search_species
+
+        return search_species(queryset, value)
+
     speciesname__name = django_filters.CharFilter(
         field_name="speciesname",
         lookup_expr="name",
@@ -37,6 +53,15 @@ class SpeciesFilter(django_filters.FilterSet):
 
 
 class ReactionFilter(django_filters.FilterSet):
+    species = django_filters.CharFilter(
+        method="search_species", label="Species", max_length=500,
+    )
+
+    def search_species(self, queryset, name, value):
+        from database.services.reaction_search import filter_reactions
+
+        return filter_reactions(queryset, value)
+
     reactant1 = django_filters.ModelChoiceFilter(
         queryset=models.Species.objects.annotate(reaction_count=Count("reaction")).filter(
             reaction_count__gt=0
@@ -101,6 +126,9 @@ class ReactionFilter(django_filters.FilterSet):
 
 
 class SourceFilter(django_filters.FilterSet):
+    # A title search finds any part of the title, so a few words are enough
+    source_title = django_filters.CharFilter(lookup_expr="icontains", label="Source title")
+
     class Meta:
         model = models.Source
         fields = ["prime_id", "publication_year", "source_title", "journal_name", "doi"]

@@ -1,0 +1,380 @@
+{% load static %}
+{% comment %}The sign-in and register pages, from the Figma "Prometheus · Sign in" frames (180:2451 for
+sign-in, 198:3779 for the registration form): a full-width workspace with the welcome image on the
+left and the form card on the right. Include it in extra_css; every rule is scoped under .acct-page,
+and the page sets the acct-auth body class so the workspace can span the window.{% endcomment %}
+<style>
+/* The workspace runs edge to edge under the header, as in the 1600 px frame */
+.acct-auth main[role="main"] {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+}
+
+.acct-page {
+    display: grid;
+    grid-template-columns: minmax(0, 766fr) minmax(0, 832fr);
+    min-height: calc(100vh - var(--navbar-height) - var(--tools-height));
+}
+
+.acct-page h1,
+.acct-page h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Research welcome (Figma 229:2306): the hero image of the workspace panels and the logo */
+.acct-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    background: #05060b url("{% static 'database/images/landing/figma/hero-bg.webp' %}") 72% center / cover no-repeat;
+}
+
+.acct-welcome img {
+    width: min(100%, 360px);
+    height: auto;
+}
+
+/* Sign in panel (Figma 180:2475): the form card, centred */
+.acct-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 48px 24px;
+}
+
+.acct-card {
+    display: grid;
+    gap: 30px;
+    width: 100%;
+    max-width: 586px;
+    padding: 62px 56px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background: var(--color-white);
+    box-shadow: 0 6px 16px rgba(23, 43, 67, 0.06);
+}
+
+.acct-card--register {
+    gap: 21px;
+    max-width: 545px;
+    padding: 40px;
+}
+
+/* Welcome text */
+.acct-welcome-text {
+    display: grid;
+    gap: 8px;
+}
+
+.acct-eyebrow {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+}
+
+.acct-title {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.acct-card--register .acct-title {
+    font-size: 28px;
+}
+
+.acct-lede {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.acct-note {
+    margin: 0;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+.acct-required {
+    color: var(--color-primary);
+}
+
+/* Alerts above the form: wrong credentials, a page that needs signing in, form errors */
+.acct-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.acct-alert .bi {
+    flex-shrink: 0;
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+.acct-alert ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.acct-alert--error {
+    border-color: rgba(220, 38, 38, 0.35);
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+.acct-alert--warning {
+    border-color: rgba(217, 119, 6, 0.35);
+    background: var(--color-warning-bg);
+    color: #92400e;
+}
+
+.acct-alert--info {
+    border-color: rgba(206, 72, 1, 0.2);
+    background: var(--color-primary-bg);
+    color: var(--color-gray-900);
+}
+
+.acct-alerts {
+    display: grid;
+    gap: 10px;
+}
+
+/* Form fields (Figma 180:2516 and 198:3845) */
+.acct-form {
+    display: grid;
+    gap: 30px;
+}
+
+.acct-card--register .acct-form {
+    gap: 21px;
+}
+
+.acct-fields {
+    display: grid;
+    gap: 22px;
+}
+
+.acct-card--register .acct-fields {
+    gap: 18px;
+}
+
+.acct-field {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.acct-field label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--color-gray-900);
+}
+
+.acct-field__optional {
+    font-weight: 400;
+    color: var(--color-gray-500);
+}
+
+.acct-input {
+    position: relative;
+}
+
+.acct-input input {
+    display: block;
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-900);
+}
+
+.acct-input input::placeholder {
+    color: var(--color-gray-400);
+}
+
+.acct-input input:focus {
+    border-color: var(--color-primary-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.acct-input.has-toggle input {
+    padding-right: 46px;
+}
+
+.acct-field.has-error .acct-input input {
+    border-color: var(--color-error);
+}
+
+/* The eye button of the password inputs; the script shows it */
+.acct-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 18px;
+    color: var(--color-gray-500);
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.acct-toggle:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-900);
+}
+
+.acct-help {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.acct-error {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-error);
+}
+
+/* Password requirements (Figma 198:3862): the rules of the site's password validators */
+.acct-rules {
+    margin-top: 3px;
+    padding: 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-gray-50);
+}
+
+.acct-rules__title {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.acct-rules ul {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.acct-rules li {
+    position: relative;
+    padding-left: 13px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--color-gray-500);
+}
+
+.acct-rules li::before {
+    content: "";
+    position: absolute;
+    top: 0.5em;
+    left: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+/* Primary action */
+.acct-submit {
+    width: 100%;
+    height: 44px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Register invitation (Figma 180:2529) and existing account (198:3889) */
+.acct-switch {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    margin: 0;
+    padding-top: 25px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    color: var(--color-gray-500);
+    text-align: center;
+}
+
+.acct-switch a {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.acct-switch--inline {
+    display: block;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.acct-switch--inline a {
+    margin-left: 5px;
+    font-size: 13px;
+}
+
+@media (max-width: 991.98px) {
+    .acct-page {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 0;
+    }
+
+    .acct-welcome {
+        display: none;
+    }
+
+    .acct-panel {
+        padding: 40px 24px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .acct-panel {
+        padding: 24px 16px;
+    }
+
+    .acct-card,
+    .acct-card--register {
+        padding: 32px 20px;
+    }
+
+    .acct-title {
+        font-size: 26px;
+    }
+}
+</style>

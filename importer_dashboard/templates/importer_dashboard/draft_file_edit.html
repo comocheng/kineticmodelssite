@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Edit one text file of a job's draft: preview the change, then commit it. Panels, alerts and the
+mono pane follow the job page of the Figma "Prometheus · Importer failed job" (182:4578); the
+fields and actions are those of the kinetic model form (170:7072).
+{% endcomment %}
+
+{% block title %}{{ name }} | {{ job.name }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-job">
+
+    {% include "importer_dashboard/im_job_header.html" with current="files" %}
+
+    {% for e in errors %}
+    <div class="im-alert im-alert--danger" role="alert">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body"><p class="im-alert__title">Not committed</p><p class="im-alert__text">{{ e }}</p></div>
+    </div>
+    {% endfor %}
+    {% if warnings %}
+    <div class="im-alert im-alert--warning">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body">
+            <p class="im-alert__title">Check {{ warnings|length }} line{{ warnings|length|pluralize }}</p>
+            <ul class="im-edit__warnings">{% for w in warnings|slice:":12" %}<li>{{ w }}</li>{% endfor %}{% if warnings|length > 12 %}<li>and {{ warnings|length|add:"-12" }} more</li>{% endif %}</ul>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if preview is not None %}
+    <!-- The change against the draft -->
+    <section class="app-panel im-edit" aria-labelledby="im-diff-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-diff-title">{% include "importer_dashboard/im_icon.html" with icon="git-branch" size=18 %}Your change</h2>
+            <span class="app-panel__meta">{% if preview %}Against the file on the draft's branch{% else %}No change{% endif %}</span>
+        </div>
+        {% if preview %}
+        <div class="im-log im-edit__diff" tabindex="0" role="region" aria-label="The change">{% for line in preview %}<div class="{% if line|slice:':3' == '+++' or line|slice:':3' == '---' %}is-file{% elif line|slice:':1' == '+' %}is-added{% elif line|slice:':1' == '-' %}is-removed{% elif line|slice:':2' == '@@' %}is-hunk{% endif %}">{{ line|default:" " }}</div>{% endfor %}</div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- The file -->
+    <section class="app-panel im-edit km-form" aria-labelledby="im-edit-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-edit-title">{% include "importer_dashboard/im_icon.html" with icon="pencil" size=18 %}{{ name }}{% if is_new %}<span class="im-edit__badge">New file</span>{% endif %}</h2>
+            <span class="app-panel__meta"><code>{{ draft.branch }}</code> · {{ encoding }}, {{ newline }} line ends, kept on save</span>
+        </div>
+        <form method="post" class="im-edit__body">
+            {% csrf_token %}
+            {% if name == 'SMILES.txt' %}{% include "importer_dashboard/im_smiles_help.html" %}{% endif %}
+            <label for="im-edit-content" class="visually-hidden">Contents of {{ name }}</label>
+            <textarea class="form-control im-edit__text" id="im-edit-content" name="content" spellcheck="false" wrap="off" rows="24"{% if editing_blocked %} readonly{% endif %}>
+{{ text }}</textarea>
+            {% if editing_blocked %}
+            <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" size=16 %}<span>The job is {{ job.get_status_display|lower }}, so the file is read-only. Kill the job to change it.</span></p>
+            {% else %}
+            <div class="km-form__field">
+                <label for="im-edit-message">What you changed <span class="km-form__star">*</span></label>
+                <input class="form-control" type="text" name="message" id="im-edit-message" value="{{ message }}" required placeholder="e.g. CH2(S) is singlet methylene, as the authors' thermo comment says">
+                <div class="km-form__hint"><span>The commit message, on the draft's branch with your name.</span></div>
+            </div>
+            <div class="km-form__actions">
+                <p>{% if preview is not None and preview and not errors %}Commit the change shown above, or edit it and preview again.{% else %}Preview the change before you commit it.{% endif %}</p>
+                <div class="km-actions">
+                    <a class="km-btn" href="{% url 'importer_dashboard:draft_files' job.id %}">Cancel</a>
+                    <button type="submit" name="action" value="preview" class="km-btn">Preview the change</button>
+                    {% if preview is not None and preview and not errors %}
+                    <button type="submit" name="action" value="save" class="app-btn">{% include "importer_dashboard/im_icon.html" with icon="save" %}Commit</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+{% include "database/kineticmodel_styles.html" %}
+{% include "database/kineticmodel_form_styles.html" %}
+<style>
+/* The Figma blue tint of the kinetic model pages (kineticmodel_styles.html scopes it to .km-page) */
+.im-page { --km-tint: #edf3ff; }
+.im-edit { overflow: hidden; }
+.im-edit .app-panel__head { border-bottom: 1px solid var(--color-gray-200); }
+.im-edit .app-panel__meta code { font-size: 12px; }
+.im-edit__badge { margin-left: 4px; padding: 2px 8px; border-radius: 999px; background: var(--km-tint); font-size: 11px; font-weight: 500; color: var(--color-gray-800); }
+.im-edit__body { display: grid; gap: 18px; padding: 20px; margin: 0; }
+.km-form textarea.form-control.im-edit__text { min-height: 26rem; padding: 14px 16px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; white-space: pre; tab-size: 10; resize: vertical; background: var(--color-gray-50); }
+.km-form textarea.form-control.im-edit__text:focus { background: var(--color-white); }
+.im-page .im-edit__diff { max-height: 26rem; border-top: 0; border-radius: 0; white-space: pre; overflow-wrap: normal; }
+.im-edit__diff > div { min-height: 1.6em; }
+.im-edit__diff .is-added { margin: 0 -20px; padding: 0 20px; background: #e9f6ee; color: #067647; }
+.im-edit__diff .is-removed { margin: 0 -20px; padding: 0 20px; background: #fdecec; color: #b42318; }
+.im-edit__diff .is-hunk { color: var(--color-gray-500); }
+.im-edit__diff .is-file { color: var(--color-gray-600); font-weight: 600; }
+.im-edit__warnings { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+@media (max-width: 575.98px) {
+    .im-edit__body { padding: 16px 14px; }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,812 @@
+{% extends "base.html" %}
+{% load static %}
+{# Model performance across datasets, from the Figma "Prometheus · Model–Dataset Coverage Matrix" (node 191:5034) #}
+
+{% block title %}Model–Dataset Coverage Matrix | Analysis | Prometheus{% endblock %}
+
+{% block content %}
+<div class="an-maps an-cov">
+
+    <!-- Breadcrumb (Figma 191:5069) -->
+    <nav aria-label="Breadcrumb">
+        <ol class="an-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'analysis:dashboard' %}">Analysis</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Coverage Matrix</span></li>
+        </ol>
+    </nav>
+
+    <!-- Title and actions (Figma 191:5070) -->
+    <header class="an-heading">
+        <div class="an-heading__intro">
+            <h1>Model–Dataset Coverage Matrix</h1>
+            <p class="an-lede">Model performance across experimental datasets, grouped by fuel</p>
+        </div>
+        <div class="an-actions">
+            <a href="{% url 'analysis:run-create' %}" class="app-btn">
+                <img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="16" height="16">New simulation
+            </a>
+        </div>
+    </header>
+
+    <!-- Summary metrics (Figma 191:5082) -->
+    <section class="app-panel" aria-label="Coverage summary">
+        <dl class="an-metrics an-metrics--4">
+            <div>
+                <dt>Models</dt>
+                <dd class="an-metrics__value">{{ total_models }}</dd>
+                <dd class="an-metrics__note">Kinetic models in the database</dd>
+            </div>
+            <div>
+                <dt>Datasets</dt>
+                <dd class="an-metrics__value">{{ total_datasets }}</dd>
+                <dd class="an-metrics__note">Ignition delay datasets</dd>
+            </div>
+            <div>
+                <dt>Evaluated pairs</dt>
+                <dd class="an-metrics__value">{{ evaluated_pairs }}</dd>
+                <dd class="an-metrics__note">Model–dataset pairs with a successful run</dd>
+            </div>
+            <div>
+                <dt>Coverage</dt>
+                <dd class="an-metrics__value">{{ coverage_percent|floatformat:1 }}%</dd>
+                <dd class="an-metrics__note">Of all model–dataset pairs</dd>
+            </div>
+        </dl>
+    </section>
+
+    {% if evaluated_pairs > 0 %}
+
+    <!-- Coverage overview and ranking (Figma 191:5099) -->
+    <div class="an-cov__overview">
+        <!-- Model x fuel heatmap (Figma 191:5100) -->
+        <section class="app-panel an-cov__heatmap" aria-labelledby="an-cov-heatmap-title">
+            <div class="app-panel__head">
+                <div>
+                    <h2 class="app-panel__title" id="an-cov-heatmap-title">Model × fuel overview</h2>
+                    <p class="an-panel__desc">Each cell shows the <strong>average error function</strong> across all datasets for that fuel.</p>
+                </div>
+                <i class="bi bi-grid-3x3-gap an-cov__head-icon" aria-hidden="true"></i>
+            </div>
+            <div class="an-cov__plot-wrap">
+                <div id="overview-heatmap" class="an-cov__heatmap-plot"></div>
+            </div>
+            <div class="an-cov__heatmap-foot">
+                <p class="an-cov__caption">Click a cell to jump to the per-dataset detail below. Grey = not yet tested.</p>
+                <!-- Error scale (Figma 191:5196): the heatmap's colour bands -->
+                <ul class="an-legend" aria-label="Error scale">
+                    <li><span class="an-legend__key" style="background:#198754;"></span>Excellent (&lt; 1)</li>
+                    <li><span class="an-legend__key" style="background:#ffc107;"></span>Good (1-10)</li>
+                    <li><span class="an-legend__key" style="background:#fd7e14;"></span>Fair (10-100)</li>
+                    <li><span class="an-legend__key" style="background:#dc3545;"></span>Poor (100-1k)</li>
+                    <li><span class="an-legend__key" style="background:#721c24;"></span>Very poor (&gt; 1k)</li>
+                    <li><span class="an-legend__key an-legend__key--untested"></span>Not tested</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Model rankings (Figma 191:5215) -->
+        <section class="app-panel an-cov__ranking" aria-labelledby="an-cov-ranking-title">
+            <div class="app-panel__head">
+                <h2 class="app-panel__title" id="an-cov-ranking-title">Model rankings</h2>
+                <span class="an-panel__meta">Lowest average error first</span>
+            </div>
+            <div class="an-table-wrap">
+                <table class="an-table an-cov__ranking-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Model</th>
+                            <th scope="col" class="is-end">Avg error</th>
+                            <th scope="col" class="is-end">Best</th>
+                            <th scope="col" class="is-end">Datasets</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ms in model_summaries %}
+                        <tr>
+                            <td class="is-mono is-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <span class="an-cov__model">
+                                    <span class="an-cov__marker" style="background:{{ ms.colour }};" aria-hidden="true"></span>
+                                    <span class="an-cov__model-copy">
+                                        <span class="an-table__name">{{ ms.name }}</span>
+                                        {% if ms.fuels %}
+                                        <span class="an-cov__fuels" aria-label="Average error by fuel">
+                                            {% for fb in ms.fuels %}
+                                            <span class="an-pill {% if fb.avg < 10 %}an-pill--success{% elif fb.avg < 100 %}an-pill--warning{% elif fb.avg < 1000 %}an-pill--danger{% else %}an-pill--danger-strong{% endif %}"
+                                                  title="{{ fb.fuel }}: avg={{ fb.avg|floatformat:1 }}, best={{ fb.best|floatformat:2 }}, {{ fb.count }}/{{ fb.total }} datasets ({{ fb.pct }}%)">
+                                                {{ fb.fuel }} {{ fb.avg|floatformat:0 }}
+                                            </span>
+                                            {% endfor %}
+                                        </span>
+                                        {% endif %}
+                                    </span>
+                                </span>
+                            </td>
+                            <td class="is-number">
+                                {% if ms.avg_error != None %}
+                                <span class="an-err {% if ms.avg_error < 10 %}an-err--good{% elif ms.avg_error < 100 %}an-err--fair{% else %}an-err--poor{% endif %}">
+                                    {{ ms.avg_error|floatformat:1 }}
+                                </span>
+                                {% else %}
+                                <span class="is-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="is-number">
+                                {% if ms.best_error != None %}
+                                <span class="an-err an-err--good">{{ ms.best_error|floatformat:2 }}</span>
+                                {% else %}<span class="is-muted">-</span>{% endif %}
+                            </td>
+                            <td class="is-number">{{ ms.total_datasets }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Per-dataset detail (Figma 191:5288) -->
+    <section class="app-panel an-cov__detail" id="fuel-detail-section" aria-labelledby="an-cov-detail-title">
+        <div class="app-panel__head">
+            <div>
+                <h2 class="app-panel__title" id="an-cov-detail-title">Per-dataset detail</h2>
+                <p class="an-panel__desc">Select a fuel, then browse or search its datasets. Each bar is one model; hover for details.</p>
+            </div>
+            <!-- Fuel selector (Figma 191:5293), scales to any number of fuels -->
+            <div class="an-cov__fuel-picker">
+                <label for="fuelSelect" class="an-label">Fuel</label>
+                <div class="an-field">
+                    <i class="bi bi-fuel-pump" aria-hidden="true"></i>
+                    <select id="fuelSelect">
+                        {% for ft in fuel_tabs %}
+                        <option value="{{ ft.key }}" {% if forloop.first %}selected{% endif %}>
+                            {{ ft.label }} ({{ ft.count }} datasets)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="an-cov__detail-body">
+            <!-- Dataset selection (Figma 191:5300) -->
+            <div class="an-cov__datasets">
+                <div class="an-field">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <label class="visually-hidden" for="datasetSearchInput">Search datasets</label>
+                    <input type="text" id="datasetSearchInput"
+                           placeholder="Search datasets by name, author, conditions…">
+                </div>
+                <div class="an-cov__match-row">
+                    <span id="datasetMatchCount" aria-live="polite"></span>
+                    <span class="an-muted">Lowest error of any model</span>
+                </div>
+                <div id="datasetListContainer" class="an-cov__dataset-list">
+                    <!-- Populated dynamically by JS -->
+                </div>
+                <div class="an-cov__pager" id="datasetPaginationRow">
+                    <button type="button" class="an-btn an-cov__step" id="datasetPrevBtn" disabled>
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i>Previous
+                    </button>
+                    <small id="datasetPageInfo"></small>
+                    <button type="button" class="an-btn an-cov__step" id="datasetNextBtn" disabled>
+                        Next<i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dataset error chart (Figma 191:5312) -->
+            <div class="an-cov__chart">
+                <div class="an-cov__chart-head">
+                    <span class="an-label">Error function</span>
+                    <span class="an-muted">Logarithmic scale</span>
+                </div>
+                <div class="an-cov__plot-wrap">
+                    <div id="fuelDrillChart" class="an-cov__drill-plot"></div>
+                </div>
+            </div>
+
+            <!-- Error function explanation (Figma 191:5328) -->
+            <div class="an-guide an-cov__about">
+                <h3><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="16" height="16">About error function</h3>
+                <p>The error function quantifies the agreement between simulated and experimental ignition delays. Lower values indicate better model performance. Charts use a <strong>logarithmic scale</strong> to visualize the wide range of error values.</p>
+            </div>
+        </div>
+    </section>
+
+    {% else %}
+    <!-- No data state -->
+    <section class="app-panel an-cov__empty" aria-labelledby="an-cov-empty-title">
+        <div class="an-cov__symbol" aria-hidden="true"><i class="bi bi-inbox"></i></div>
+        <h2 id="an-cov-empty-title">No coverage data available yet.</h2>
+        <p>Run simulations to populate the coverage matrix.</p>
+        <a href="{% url 'analysis:run-create' %}" class="app-btn">
+            <i class="bi bi-play-circle" aria-hidden="true"></i>Run your first simulation
+        </a>
+        <div class="an-guide an-cov__about">
+            <h3><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="16" height="16">About error function</h3>
+            <p>The error function quantifies the agreement between simulated and experimental ignition delays. Lower values indicate better model performance. Charts use a <strong>logarithmic scale</strong> to visualize the wide range of error values.</p>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Recent evaluations (Figma 191:5334) -->
+    {% if coverage_data %}
+    <section class="app-panel" aria-labelledby="an-cov-recent-title">
+        <div class="app-panel__head">
+            <div class="an-panel__heading">
+                <h2 class="app-panel__title" id="an-cov-recent-title">Recent evaluations</h2>
+                <span class="an-pill an-pill--count">Latest 50</span>
+            </div>
+            {% with total=coverage_data.count %}
+            <span class="an-panel__meta">{% if total > 50 %}50{% else %}{{ total }}{% endif %} of {{ total }} successful evaluation{{ total|pluralize }}</span>
+            {% endwith %}
+        </div>
+        <div class="an-table-wrap">
+            <table class="an-table an-cov__recent">
+                <thead>
+                    <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col">Dataset</th>
+                        <th scope="col" class="is-end">Error</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Last run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cov in coverage_data|slice:":50" %}
+                    <tr>
+                        <td>
+                            <a class="an-table__name" href="{% url 'kinetic-model-detail' cov.kinetic_model.id %}">
+                                {{ cov.kinetic_model.model_name }}
+                            </a>
+                        </td>
+                        <td class="is-muted an-cov__dataset-name">{{ cov.dataset.short_name }}</td>
+                        <td class="is-number">
+                            {% if cov.latest_error_function %}
+                            <span class="an-err {% if cov.latest_error_function < 1 %}an-err--good{% elif cov.latest_error_function < 100 %}an-err--fair{% elif cov.latest_error_function < 1000 %}an-err--poor{% else %}an-err--worst{% endif %}">
+                                {{ cov.latest_error_function|floatformat:1 }}
+                            </span>
+                            {% else %}<span class="is-muted">-</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if cov.is_outdated %}
+                            <span class="an-pill an-pill--warning">Outdated</span>
+                            {% else %}
+                            <span class="an-pill an-pill--success">Current</span>
+                            {% endif %}
+                        </td>
+                        <td class="is-muted">{{ cov.last_evaluated_at|date:"M d, Y"|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "analysis/an_maps_styles.html" %}
+<style>
+/* Overview: the heatmap (932) beside the rankings (568) */
+.an-cov__overview {
+    display: grid;
+    grid-template-columns: minmax(0, 932fr) minmax(0, 568fr);
+    align-items: start;
+    gap: 20px;
+}
+
+.an-cov__head-icon {
+    font-size: 19px;
+    color: var(--color-gray-600);
+}
+
+/* Plots keep their own width; they scroll inside the panel on narrow screens */
+.an-cov__plot-wrap {
+    position: relative;
+    overflow-x: auto;
+    min-width: 0;
+}
+
+.an-cov__heatmap .an-cov__plot-wrap {
+    padding: 0 12px;
+}
+
+.an-cov__heatmap-plot {
+    min-width: 560px;
+    min-height: 200px;
+}
+
+.an-cov__heatmap-foot {
+    display: grid;
+    gap: 10px;
+    padding: 12px 20px 20px;
+}
+
+.an-cov__caption {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.an-legend__key--untested {
+    border: 1px solid #dee2e6;
+    background: #e9ecef;
+}
+
+.an-cov__ranking-table {
+    min-width: 480px;
+}
+
+.an-cov__model {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.an-cov__marker {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    margin-top: 5px;
+    border-radius: 2px;
+}
+
+.an-cov__model-copy {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.an-cov__fuels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.an-cov__fuels .an-pill {
+    padding: 1px 6px;
+    font-size: 10px;
+}
+
+/* Per-dataset detail: dataset list (380), chart, explanation (255) */
+.an-cov__fuel-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.an-cov__fuel-picker .an-field {
+    width: 260px;
+    max-width: 100%;
+    height: 36px;
+}
+
+.an-cov__detail-body {
+    display: grid;
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr) minmax(0, 255px);
+    align-items: start;
+    gap: 24px;
+    padding: 0 20px 20px;
+}
+
+.an-cov__datasets {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.an-cov__match-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.an-cov__dataset-list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+}
+
+.an-cov__ds {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-900);
+}
+
+.an-cov__ds:last-child {
+    border-bottom: 0;
+}
+
+.an-cov__ds-index {
+    flex: 0 0 auto;
+    min-width: 28px;
+    font-family: var(--font-mono);
+    color: var(--color-gray-500);
+}
+
+.an-cov__ds-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.an-cov__ds .an-pill {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+}
+
+.an-cov__ds--empty {
+    justify-content: center;
+    padding: 16px 12px;
+    color: var(--color-gray-500);
+}
+
+.an-cov__pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--color-gray-600);
+}
+
+.an-cov__pager small {
+    flex: 1 1 140px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.an-maps .an-cov__step {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.an-cov__step:disabled {
+    border-color: var(--color-gray-200);
+    color: var(--color-gray-400);
+    cursor: default;
+}
+
+.an-cov__chart {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.an-cov__chart-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    font-size: 12px;
+}
+
+.an-cov__drill-plot {
+    min-height: 380px;
+}
+
+.an-cov__about {
+    min-width: 0;
+}
+
+.an-cov__recent {
+    min-width: 720px;
+}
+
+.an-cov__dataset-name {
+    overflow-wrap: anywhere;
+}
+
+#fuel-detail-section {
+    scroll-margin-top: calc(var(--navbar-height) + 16px);  /* clear the sticky header */
+}
+
+/* No data state */
+.an-cov__empty {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.an-cov__empty h2 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.an-cov__empty > p {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: var(--color-gray-600);
+}
+
+.an-cov__empty .an-cov__about {
+    max-width: 560px;
+    margin-top: 14px;
+    text-align: left;
+}
+
+.an-cov__symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: var(--an-tint);
+    font-size: 28px;
+    color: var(--color-primary);
+}
+
+@media (max-width: 1199.98px) {
+    .an-cov__overview {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-cov__detail-body {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .an-cov__chart {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .an-cov__detail-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .an-cov__fuel-picker,
+    .an-cov__fuel-picker .an-field {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .an-cov__detail-body {
+        padding: 0 14px 16px;
+    }
+
+    .an-cov__heatmap-foot {
+        padding: 12px 14px 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if evaluated_pairs > 0 %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var plotCfg = {responsive: true, displayModeBar: false};
+    var DATASETS_PER_PAGE = 50;  // Show 50 datasets at a time in the chart
+    var plotFont = {family: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', size: 11, color: '#3c4c61'};
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function(c) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+    }
+
+    // ── 1. Overview Heatmap ──
+    {% if heatmap_json %}
+    var hmSpec = {{ heatmap_json|safe }};
+    hmSpec.layout.font = plotFont;
+    Plotly.newPlot('overview-heatmap', hmSpec.data, hmSpec.layout, plotCfg);
+
+    // Click a heatmap cell → select matching fuel in dropdown & scroll
+    document.getElementById('overview-heatmap').on('plotly_click', function(evtData) {
+        if (!evtData.points || !evtData.points.length) return;
+        var fuelLabel = evtData.points[0].x;
+        var sel = document.getElementById('fuelSelect');
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].text.trim().indexOf(fuelLabel) === 0) {
+                sel.value = sel.options[i].value;
+                sel.dispatchEvent(new Event('change'));
+                setTimeout(function() {
+                    document.getElementById('fuel-detail-section').scrollIntoView({behavior: 'smooth', block: 'start'});
+                }, 100);
+                break;
+            }
+        }
+    });
+    {% endif %}
+
+    // ── 2. Per-Fuel Drill-Down with Search + Pagination ──
+    {% if drill_down_json %}
+    var drillData = {{ drill_down_json|safe }};
+
+    // State
+    var currentFuel = null;
+    var currentPage = 0;
+    var filteredIndices = [];   // indices into the full dataset label list
+
+    var fuelSelect = document.getElementById('fuelSelect');
+    var searchInput = document.getElementById('datasetSearchInput');
+    var matchCount = document.getElementById('datasetMatchCount');
+    var listContainer = document.getElementById('datasetListContainer');
+    var prevBtn = document.getElementById('datasetPrevBtn');
+    var nextBtn = document.getElementById('datasetNextBtn');
+    var pageInfo = document.getElementById('datasetPageInfo');
+    var chartEl = document.getElementById('fuelDrillChart');
+
+    // ── helpers ──
+    function getAllLabels(fuel) {
+        var spec = drillData[fuel];
+        if (!spec || !spec.data || !spec.data.length) return [];
+        return spec.data[0].x || [];
+    }
+
+    function applyFilter(fuel, query) {
+        var labels = getAllLabels(fuel);
+        query = (query || '').trim().toLowerCase();
+        var indices = [];
+        for (var i = 0; i < labels.length; i++) {
+            if (!query || labels[i].toLowerCase().indexOf(query) !== -1) {
+                indices.push(i);
+            }
+        }
+        return indices;
+    }
+
+    function renderDatasetList(fuel, indices, page) {
+        var labels = getAllLabels(fuel);
+        var start = page * DATASETS_PER_PAGE;
+        var end = Math.min(start + DATASETS_PER_PAGE, indices.length);
+        var totalPages = Math.ceil(indices.length / DATASETS_PER_PAGE) || 1;
+
+        // Build compact list
+        var html = '';
+        if (indices.length === 0) {
+            html += '<div class="an-cov__ds an-cov__ds--empty">No datasets match your search.</div>';
+        } else {
+            for (var i = start; i < end; i++) {
+                var idx = indices[i];
+                // Find best error across models for this dataset
+                var spec = drillData[fuel];
+                var bestErr = null;
+                for (var t = 0; t < spec.data.length; t++) {
+                    var v = spec.data[t].y[idx];
+                    if (v !== null && v !== undefined && (bestErr === null || v < bestErr)) {
+                        bestErr = v;
+                    }
+                }
+                var errBadge = '';
+                if (bestErr !== null) {
+                    var cls = bestErr < 1 ? 'an-pill--success'
+                            : bestErr < 10 ? 'an-pill--warning'
+                            : bestErr < 100 ? 'an-pill--warning'
+                            : 'an-pill--danger';
+                    errBadge = '<span class="an-pill ' + cls + '">' + bestErr.toFixed(1) + '</span>';
+                }
+                html += '<div class="an-cov__ds">'
+                      + '<span class="an-cov__ds-index">' + (i + 1) + '.</span>'
+                      + '<span class="an-cov__ds-name" title="' + escapeHtml(labels[idx]) + '">' + escapeHtml(labels[idx]) + '</span>'
+                      + errBadge
+                      + '</div>';
+            }
+        }
+        listContainer.innerHTML = html;
+
+        // Pagination controls
+        prevBtn.disabled = (page <= 0);
+        nextBtn.disabled = (end >= indices.length);
+        pageInfo.textContent = indices.length > 0
+            ? 'Showing ' + (start + 1) + '–' + end + ' of ' + indices.length + ' datasets (page ' + (page + 1) + '/' + totalPages + ')'
+            : '';
+        matchCount.textContent = indices.length + ' dataset' + (indices.length !== 1 ? 's' : '');
+
+        // Hide pagination row if only one page
+        document.getElementById('datasetPaginationRow').style.display =
+            (indices.length <= DATASETS_PER_PAGE) ? 'none' : '';
+    }
+
+    function renderChart(fuel, indices, page) {
+        var spec = drillData[fuel];
+        if (!spec) { Plotly.purge(chartEl); return; }
+
+        var start = page * DATASETS_PER_PAGE;
+        var end = Math.min(start + DATASETS_PER_PAGE, indices.length);
+        var pageIndices = indices.slice(start, end);
+
+        var labels = getAllLabels(fuel);
+        var pageLabels = pageIndices.map(function(i) { return labels[i]; });
+
+        // Slice each model trace to only the current page indices
+        var traces = [];
+        for (var t = 0; t < spec.data.length; t++) {
+            var orig = spec.data[t];
+            var ySlice = pageIndices.map(function(i) { return orig.y[i]; });
+            var hSlice = pageIndices.map(function(i) { return orig.text[i]; });
+            traces.push({
+                type: 'bar',
+                name: orig.name,
+                x: pageLabels,
+                y: ySlice,
+                text: hSlice,
+                hoverinfo: 'text',
+                marker: orig.marker,
+            });
+        }
+
+        var nDs = pageLabels.length;
+        var nM = spec.data.length;
+        var chartW = Math.max(400, nDs * nM * 18 + 120);
+
+        var layout = {
+            barmode: 'group',
+            yaxis: {title: 'Error Function', type: 'log', gridcolor: '#eee'},
+            xaxis: {tickangle: -40, tickfont: {size: 9}, type: 'category'},
+            margin: {l: 60, r: 20, t: 10, b: 120},
+            height: 380,
+            width: chartW,
+            legend: {orientation: 'h', y: 1.08, x: 0.5, xanchor: 'center'},
+            plot_bgcolor: '#fff',
+            paper_bgcolor: '#fff',
+            font: plotFont,
+        };
+
+        Plotly.newPlot(chartEl, traces, layout, plotCfg);
+    }
+
+    function refresh() {
+        renderDatasetList(currentFuel, filteredIndices, currentPage);
+        renderChart(currentFuel, filteredIndices, currentPage);
+    }
+
+    // ── Events ──
+    fuelSelect.addEventListener('change', function() {
+        currentFuel = this.value;
+        currentPage = 0;
+        searchInput.value = '';
+        filteredIndices = applyFilter(currentFuel, '');
+        refresh();
+    });
+
+    searchInput.addEventListener('input', function() {
+        currentPage = 0;
+        filteredIndices = applyFilter(currentFuel, this.value);
+        refresh();
+    });
+
+    prevBtn.addEventListener('click', function() {
+        if (currentPage > 0) { currentPage--; refresh(); }
+    });
+    nextBtn.addEventListener('click', function() {
+        var totalPages = Math.ceil(filteredIndices.length / DATASETS_PER_PAGE);
+        if (currentPage < totalPages - 1) { currentPage++; refresh(); }
+    });
+
+    // ── Initial render (first fuel) ──
+    currentFuel = fuelSelect.value;
+    filteredIndices = applyFilter(currentFuel, '');
+    refresh();
+    {% endif %}
+});
+</script>
+{% endif %}
+{% endblock %}

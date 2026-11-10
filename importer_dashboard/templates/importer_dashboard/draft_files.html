@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+The files of a job's draft, a branch of RMG-models (importer_dashboard/editor.py). It follows the
+job page of the Figma "Prometheus · Importer failed job" (182:4578): panels with a head, tables
+edge to edge, logs in the light mono pane. The upload row is the one of the kinetic model form
+(Figma 170:7166).
+{% endcomment %}
+
+{% block title %}{{ job.name }} | Files | Prometheus{% endblock %}
+
+{% block content %}
+<div class="im-page im-job">
+
+    {% include "importer_dashboard/im_job_header.html" with current="files" %}
+
+    {% if not drafts_enabled %}
+    <div class="im-alert im-alert--info">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="info" size=26 %}</span>
+        <div class="im-alert__body">
+            <p class="im-alert__title">Drafts are off on this server</p>
+            <p class="im-alert__text">Model files are edited in a draft, a branch of RMG-models. Turn drafts on with <code>IMPORTER_WORKSPACES</code>.</p>
+        </div>
+    </div>
+    {% elif not draft %}
+    <section class="app-panel im-files" aria-labelledby="im-files-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-files-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}Files of {{ job.name }}</h2>
+        </div>
+        <div class="im-files__body">
+            <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" size=16 %}<span>The files are edited in a draft: a branch of RMG-models {{ base_branch }} on this server, where each save is a commit. Nothing reaches GitHub until you open a pull request from the job page.</span></p>
+            <form method="post" action="{% url 'importer_dashboard:draft_open' job.id %}">
+                {% csrf_token %}
+                <button type="submit" class="app-btn">Open a draft to edit the files</button>
+            </form>
+        </div>
+    </section>
+    {% else %}
+
+    {% if editing_blocked %}
+    <div class="im-alert im-alert--warning">
+        <span class="im-alert__icon">{% include "importer_dashboard/im_icon.html" with icon="alert" size=26 %}</span>
+        <div class="im-alert__body">
+            <p class="im-alert__title">The job is {{ job.get_status_display|lower }}</p>
+            <p class="im-alert__text">The importer may be writing these files. You can read them; kill the job to change them.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- The draft's files -->
+    <section class="app-panel im-files" aria-labelledby="im-files-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-files-title">{% include "importer_dashboard/im_icon.html" with icon="file" size=18 %}Files of {{ draft.model_folder }}</h2>
+            <span class="app-panel__meta">Branch <code>{{ draft.branch }}</code></span>
+        </div>
+        <div class="im-table-wrap" tabindex="0" role="region" aria-labelledby="im-files-title">
+            <table class="im-table">
+                <thead>
+                    <tr>
+                        <th scope="col">File</th>
+                        <th scope="col" class="im-files__role-col">Role</th>
+                        <th scope="col" class="is-number">Size</th>
+                        <th scope="col" class="is-end"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for f in files %}
+                <tr>
+                    <td><code class="im-files__name">{{ f.name }}</code></td>
+                    <td class="im-files__role-col">{% for role in f.roles %}<span class="im-files__role">{{ role }}</span>{% empty %}<span class="im-faint">-</span>{% endfor %}</td>
+                    <td class="is-number">{{ f.size|filesizeformat }}</td>
+                    <td class="is-end">
+                        {% if f.editable %}
+                        <a class="im-textbtn" href="{% url 'importer_dashboard:draft_file_edit' job.id f.name %}">{% if editing_blocked %}View{% else %}Edit{% endif %}</a>
+                        {% elif f.read_only %}
+                        <span class="im-faint" title="Written by Prometheus or by RMG-models; not changed here">Read-only</span>
+                        {% else %}
+                        <span class="im-faint" title="Larger than {{ max_edit_mb }} MB or not text: replace it by upload">Upload to replace</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="im-faint">No files.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if not editing_blocked %}
+    <!-- Replace or add a file -->
+    <section class="app-panel im-files km-form" aria-labelledby="im-upload-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-upload-title">{% include "importer_dashboard/im_icon.html" with icon="upload" size=18 %}Replace or add a file</h2>
+            <span class="app-panel__meta">Kept byte for byte</span>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="im-files__body">
+            {% csrf_token %}
+            <div class="km-upload im-files__upload">
+                <span class="km-upload__symbol"><img class="app-icon" src="{% static 'database/images/icons/document-111827-24.svg' %}" alt="" width="19" height="19"></span>
+                <div class="km-upload__purpose">
+                    <label for="im-upload-file">File</label>
+                    <span>A new version of a file above, or a new file such as the transport file.</span>
+                </div>
+                <span class="km-upload__chosen" data-file-name aria-live="polite">No file chosen</span>
+                <input class="km-upload__input" type="file" name="file" id="im-upload-file" required>
+                <label class="km-btn km-upload__button" for="im-upload-file"><img class="app-icon" src="{% static 'database/images/icons/cloud-upload-111827-24.svg' %}" alt="" width="16" height="16">Choose file</label>
+            </div>
+            <div class="km-form__row">
+                <div class="km-form__field km-form__field--grow">
+                    <label for="im-upload-name">Name in the folder</label>
+                    <input class="form-control" type="text" name="name" id="im-upload-name" list="im-file-names" placeholder="The uploaded file's name" spellcheck="false">
+                    <datalist id="im-file-names">{% for f in files %}<option value="{{ f.name }}">{% endfor %}</datalist>
+                    <div class="km-form__hint"><span>Choose a file above to replace it.</span></div>
+                </div>
+                <div class="km-form__field km-form__field--grow">
+                    <label for="im-upload-message">What you changed <span class="km-form__star">*</span></label>
+                    <input class="form-control" type="text" name="message" id="im-upload-message" required placeholder="e.g. Use the authors' corrected thermo file of 2 March 2021">
+                    <div class="km-form__hint"><span>The commit message.</span></div>
+                </div>
+            </div>
+            <div class="im-files__actions">
+                <button type="submit" class="app-btn">Commit the file</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    <!-- Check files: importChemkin.py --minimal -->
+    <section class="app-panel im-files" aria-labelledby="im-check-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="im-check-title">{% include "importer_dashboard/im_icon.html" with icon="check-circle" size=18 %}Check files</h2>
+            {% if check %}<span class="im-status im-status--{% if check.state == 'passed' %}completed{% elif check.state == 'running' %}running{% else %}failed{% endif %}">{% if check.state == 'passed' %}Passed{% elif check.state == 'running' %}Checking{% else %}Failed{% endif %}</span>{% endif %}
+        </div>
+        <div class="im-files__body im-files__check">
+            <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" size=16 %}<span>Reads the species, thermo, SMILES.txt and reactions as an import would (<code>importChemkin.py --minimal</code>), then stops: every SMILES.txt formula must be the thermo formula, and every species must have thermo.</span></p>
+            {% if not editing_blocked %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="check">
+                <button type="submit" class="im-btn"{% if check.state == 'running' %} disabled{% endif %}>{% include "importer_dashboard/im_icon.html" with icon="play" %}{% if check %}Check again{% else %}Check files{% endif %}</button>
+            </form>
+            {% endif %}
+        </div>
+        {% if check.log %}<div class="log-viewer im-log" tabindex="0" role="region" aria-label="Check files output">{{ check.log }}</div>{% endif %}
+        {% if check.state == 'running' %}<script>setTimeout(function () { location.reload(); }, 5000);</script>{% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "importer_dashboard/im_styles.html" %}
+{% include "database/kineticmodel_styles.html" %}
+{% include "database/kineticmodel_form_styles.html" %}
+<style>
+/* The Figma blue tint of the kinetic model pages (kineticmodel_styles.html scopes it to .km-page) */
+.im-page { --km-tint: #edf3ff; }
+.im-files { overflow: hidden; }
+.im-files .app-panel__head { border-bottom: 1px solid var(--color-gray-200); }
+.im-files .app-panel__meta code { font-size: 12px; }
+.im-files__body { display: grid; gap: 16px; padding: 20px; }
+.im-files__body form { margin: 0; }
+.im-files__name { font-size: 13px; color: var(--color-gray-900); background: none; padding: 0; white-space: nowrap; }
+.im-files__role { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; border-radius: 999px; background: var(--km-tint); font-size: 11px; font-weight: 500; color: var(--color-gray-800); }
+.im-files__upload { padding-top: 0; border-top: 0; }
+.im-files__actions { display: flex; justify-content: flex-end; }
+.im-files__check { align-items: start; }
+.im-files__check .im-btn { justify-self: start; }
+.im-files .im-table tbody tr:hover td { background: var(--color-gray-50); }
+.im-files .im-table .is-end { white-space: nowrap; }
+@media (max-width: 575.98px) {
+    .im-files__body { padding: 16px 14px; }
+    .im-files .im-files__role-col { display: none; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% include "database/kineticmodel_file_field_js.html" %}
+{% endblock %}

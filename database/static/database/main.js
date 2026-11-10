@@ -17,4 +17,6 @@ function copy() {
 }
 
 var button = document.querySelector("#copy")
-button.addEventListener("click", copy)
+if (button) {
+    button.addEventListener("click", copy)
+}

@@ -1,12 +1,89 @@
-{% extends "database/base.html" %}
-
+{% extends "base.html" %}
+{% load static %}
 {% load utils %}
+{# One transport record; no Figma frame of its own, so it takes the layout of the thermo record (node 161:5914) #}
+
+{% block title %}{{ transport.species.formula }} transport {{ transport.pk }} | Prometheus{% endblock %}
 
 {% block content %}
-<h1><a href="{% url "source-detail" transport.source.pk %}">{{ transport.source.source_title }}</a> | {{ species_name }} Transport Data</h1>
-<ul>
-    {% for name, val in transport|fields %}
-    <li><b>{{ name }} =</b> {{ val }}</li>
-    {% endfor %}
-</ul>
+{% with species=transport.species %}
+<div class="th">
+
+    <header class="th-heading">
+        <nav class="th-crumbs" aria-label="Breadcrumb">
+            <a href="{% url 'database-home' %}">Kinetic Models Database</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <a href="{% url 'species-search' %}">Species</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <a href="{% url 'species-detail' species.pk %}">{{ species.formula }}</a>
+            <img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="16" height="16">
+            <span aria-current="page">Transport {{ transport.pk }}</span>
+        </nav>
+        <div class="th-title-row">
+            <div class="th-identity">
+                <span class="th-symbol" aria-hidden="true">{{ species.formula }}</span>
+                <div>
+                    <h1 class="th-title">{{ species_name }} transport data</h1>
+                    <p class="th-sub">Transport {{ transport.pk }}{% if transport.source %} · <a href="{% url 'source-detail' transport.source.pk %}">{{ transport.source.source_title|truncatechars:90 }}</a>{% endif %}</p>
+                </div>
+            </div>
+            <div class="th-actions">
+                <a class="th-action" href="{% url 'species-detail' species.pk %}"><img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">View species</a>
+                {% if transport.source %}
+                <a class="th-action" href="{% url 'source-detail' transport.source.pk %}"><img class="app-icon" src="{% static 'database/images/icons/book-open-sm.svg' %}" alt="" width="18" height="18">View source</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <dl class="th-props">
+        <div class="app-panel th-prop">
+            <dt>Potential well depth</dt>
+            <dd><span class="th-value">{{ transport.potential_well_depth }}</span><span class="th-unit">K</span></dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Collision diameter</dt>
+            <dd><span class="th-value">{{ transport.collision_diameter }}</span><span class="th-unit">Å</span></dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Dipole moment</dt>
+            <dd><span class="th-value">{{ transport.dipole_moment }}</span><span class="th-unit">debye</span></dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Polarizability</dt>
+            <dd><span class="th-value">{{ transport.polarizability }}</span><span class="th-unit">Å³</span></dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Rotational relaxation</dt>
+            <dd><span class="th-value">{{ transport.rotational_relaxation }}</span></dd>
+        </div>
+        <div class="app-panel th-prop">
+            <dt>Geometry</dt>
+            <dd><span class="th-value">{{ transport.geometry }}</span></dd>
+        </div>
+    </dl>
+
+    <section class="app-panel th-panel" aria-labelledby="tp-fields-title">
+        <div class="th-panel__head">
+            <h2 id="tp-fields-title" class="app-panel__title">All fields</h2>
+        </div>
+        <div class="th-scroll" tabindex="0" role="region" aria-label="Transport fields">
+            <table class="app-table th-table">
+                <thead>
+                    <tr><th scope="col">Field</th><th scope="col">Value</th></tr>
+                </thead>
+                <tbody>
+                    {% for name, val in transport|fields %}
+                    <tr><th scope="row">{{ name|capfirst }}</th><td class="th-mono">{{ val }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/thermo_record_styles.html" %}
 {% endblock %}

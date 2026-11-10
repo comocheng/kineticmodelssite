@@ -1,0 +1,531 @@
+"""Two names of one model for one structure: one species record, the names at the model level.
+
+CombFlame2013/2291-Somers lists furop1 and furop2 (conformers, both C=C=CC=O in SMILES.txt) with
+different thermo and the isomerisation furop1 <=> furop2; MB-Dooley lists C4H71-3 and C4H72-1
+(resonance forms, one InChIKey) with C4H72-1 <=> C4H71-3. RMG molecules cannot tell either pair
+apart. Both names are names of one species record: each has its own thermo link, and a kinetics
+link that writes the later name names it, so the downloads give back the model as written.
+"""
+import hashlib
+import os
+import re
+import shutil
+import tempfile
+from unittest import mock
+
+from django.db import connection
+from django.test import SimpleTestCase, TestCase
+from rmgpy.molecule import Molecule
+
+from chemked_database.species_links import _by_standard_inchi, standard_inchi
+from database import models as db
+from database.scripts import explicit_reverse
+from database.scripts import import_rmg_models as importer
+from database.scripts.import_rmg_models import (
+    get_or_create_species, get_reaction_hash, get_species_hash, import_kinetics, import_thermo)
+from database.scripts.rmg_libraries import TolerantKineticsLibrary, TolerantThermoLibrary
+from database.services import cleanup, exports, thermo_sources
+from database.services.chemical_identity import inchikey_species_map
+from database.tests.test_import_rmg_species_unit import MODELS, THERMO_CONTEXT
+
+FUROP = ("1 C u0 p0 c0 {2,D} {6,S} {7,S}\n2 C u0 p0 c0 {1,D} {3,D}\n3 C u0 p0 c0 {2,D} {4,S} {8,S}\n"
+         "4 C u0 p0 c0 {3,S} {5,D} {9,S}\n5 O u0 p2 c0 {4,D}\n6 H u0 p0 c0 {1,S}\n7 H u0 p0 c0 {1,S}\n"
+         "8 H u0 p0 c0 {3,S}\n9 H u0 p0 c0 {4,S}")
+ADJ = {
+    "furop1": FUROP,
+    "furop2": FUROP,
+    "furop3": FUROP,
+    "C4H71-3": ("multiplicity 2\n1 C u0 p0 c0 {2,D} {5,S} {6,S}\n2 C u0 p0 c0 {1,D} {3,S} {7,S}\n"
+                "3 C u1 p0 c0 {2,S} {4,S} {8,S}\n4 C u0 p0 c0 {3,S} {9,S} {10,S} {11,S}\n"
+                "5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {1,S}\n7 H u0 p0 c0 {2,S}\n8 H u0 p0 c0 {3,S}\n"
+                "9 H u0 p0 c0 {4,S}\n10 H u0 p0 c0 {4,S}\n11 H u0 p0 c0 {4,S}"),
+    "C4H72-1": ("multiplicity 2\n1 C u1 p0 c0 {2,S} {5,S} {6,S}\n2 C u0 p0 c0 {1,S} {3,D} {7,S}\n"
+                "3 C u0 p0 c0 {2,D} {4,S} {8,S}\n4 C u0 p0 c0 {3,S} {9,S} {10,S} {11,S}\n"
+                "5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {1,S}\n7 H u0 p0 c0 {2,S}\n8 H u0 p0 c0 {3,S}\n"
+                "9 H u0 p0 c0 {4,S}\n10 H u0 p0 c0 {4,S}\n11 H u0 p0 c0 {4,S}"),
+    "H": "multiplicity 2\n1 H u1 p0 c0",
+    "CH2CO": ("1 C u0 p0 c0 {2,D} {4,S} {5,S}\n2 C u0 p0 c0 {1,D} {3,D}\n3 O u0 p2 c0 {2,D}\n"
+              "4 H u0 p0 c0 {1,S}\n5 H u0 p0 c0 {1,S}"),
+    "C2H3": ("multiplicity 2\n1 C u1 p0 c0 {2,D} {3,S}\n2 C u0 p0 c0 {1,D} {4,S} {5,S}\n"
+             "3 H u0 p0 c0 {1,S}\n4 H u0 p0 c0 {2,S}\n5 H u0 p0 c0 {2,S}"),
+    "C2H4": ("1 C u0 p0 c0 {2,D} {3,S} {4,S}\n2 C u0 p0 c0 {1,D} {5,S} {6,S}\n3 H u0 p0 c0 {1,S}\n"
+             "4 H u0 p0 c0 {1,S}\n5 H u0 p0 c0 {2,S}\n6 H u0 p0 c0 {2,S}"),
+}
+# The a6 (H/R) coefficient of each label's thermo: furop2 lies below furop1, as in the model.
+A6 = {"furop1": 10000.0, "furop2": 8500.0}
+LABELS = ("furop1", "furop2", "H", "CH2CO", "C2H3", "C2H4")
+REACTIONS = (
+    ("furop1 <=> furop2", "Arrhenius(A=(1e+12,'s^-1'), n=0, Ea=(30000,'cal/mol'), T0=(1,'K'))"),
+    ("furop1 + H <=> CH2CO + C2H3",
+     "Arrhenius(A=(1e+13,'cm^3/(mol*s)'), n=0, Ea=(2000,'cal/mol'), T0=(1,'K'))"),
+    ("furop2 + H <=> CH2CO + C2H3",
+     "Arrhenius(A=(2e+13,'cm^3/(mol*s)'), n=0, Ea=(2000,'cal/mol'), T0=(1,'K'))"),
+    ("C2H3 + H <=> C2H4",
+     "ThirdBody(arrheniusLow=Arrhenius(A=(1e+20,'cm^6/(mol^2*s)'), n=-1, Ea=(0,'cal/mol'), T0=(1,'K')), "
+     "efficiencies={'C=C=CC=O': 3.0})"),
+)
+
+
+def thermo_text(labels):
+    entries = []
+    for index, label in enumerate(labels):
+        coeffs = f"[3.0,0,0,0,0,{A6.get(label, 1000.0)},5.0]"
+        entries.append(f'''entry(
+    index = {index},
+    label = "{label}",
+    molecule =
+"""
+{ADJ[label]}
+""",
+    thermo = NASA(
+        polynomials = [
+            NASAPolynomial(coeffs={coeffs}, Tmin=(300,'K'), Tmax=(1000,'K')),
+            NASAPolynomial(coeffs={coeffs}, Tmin=(1000,'K'), Tmax=(5000,'K')),
+        ],
+        Tmin = (300,'K'),
+        Tmax = (5000,'K'),
+    ),
+    shortDesc = """test {label}""",
+    longDesc = """""",
+)
+''')
+    return 'name = "test"\nshortDesc = ""\nlongDesc = """"""\n' + "\n".join(entries)
+
+
+def kinetics_files(directory, labels=LABELS, reactions=REACTIONS):
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, "dictionary.txt"), "w") as handle:
+        for label in labels:
+            handle.write(f"{label}\n{ADJ[label]}\n\n")
+    with open(os.path.join(directory, "reactions.py"), "w") as handle:
+        handle.write('name = "test"\nshortDesc = ""\nlongDesc = """"""\nautoGenerated=False\n')
+        for index, (label, kinetics) in enumerate(reactions):
+            handle.write(f'''entry(
+    index = {index},
+    label = "{label}",
+    degeneracy = 1.0,
+    kinetics = {kinetics},
+    shortDesc = """The chemkin file reaction is {label}""",
+)
+
+''')
+    return os.path.join(directory, "reactions.py")
+
+
+def model_folder(root, name, labels=LABELS, reactions=REACTIONS):
+    """<root>/<name>/ laid out like an RMG-models folder, with a thermo and a kinetics library."""
+    folder = os.path.join(root, name)
+    os.makedirs(os.path.join(folder, "RMG-Py-thermo-library"))
+    thermo_path = os.path.join(folder, "RMG-Py-thermo-library", "ThermoLibrary.py")
+    with open(thermo_path, "w") as handle:
+        handle.write(thermo_text(labels))
+    return thermo_path, kinetics_files(os.path.join(folder, "RMG-Py-kinetics-library"), labels, reactions)
+
+
+def furop():
+    return Molecule().from_adjacency_list(FUROP)
+
+
+def import_without_repeats(thermo_path, kinetics_path, model):
+    """Import as the importer did before Nov 2026: a later label of a structure is a name of the
+    first label's record without a thermo link of its own, and its reactions are merged with the
+    first label's. Returns the kinetics counts."""
+    real = importer.load_thermo_library
+
+    def without_repeats(*args, **kwargs):
+        library = real(*args, **kwargs)
+        library.repeats = {}
+        return library
+
+    with mock.patch.object(importer, "load_thermo_library", side_effect=without_repeats):
+        import_thermo(thermo_path, model, MODELS)
+    return import_kinetics(kinetics_path, model, MODELS, repeats={})
+
+
+def link_names(link):
+    return sorted(link.names.values_list("reactant", "species_name__name"))
+
+
+class RepeatLoaderTests(SimpleTestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory)
+
+    def thermo(self, labels):
+        path = os.path.join(self.directory, "ThermoLibrary.py")
+        with open(path, "w") as handle:
+            handle.write(thermo_text(labels))
+        library = TolerantThermoLibrary(label="test")
+        library.load(path, local_context=dict(THERMO_CONTEXT))
+        return library
+
+    def test_conformers_are_all_kept(self):
+        library = self.thermo(["furop1", "furop2", "H", "furop3"])
+        self.assertEqual(list(library.entries), ["furop1", "furop2", "H", "furop3"])
+        self.assertEqual(library.repeats, {"furop2": "furop1", "furop3": "furop1"})
+        self.assertEqual(library.skipped, [])
+
+    def test_resonance_forms_with_one_key_are_two_species(self):
+        library = self.thermo(["C4H71-3", "C4H72-1"])
+        self.assertEqual(list(library.entries), ["C4H71-3", "C4H72-1"])
+        self.assertEqual(library.repeats, {"C4H72-1": "C4H71-3"})
+
+    def kinetics(self, declared_variants):
+        library = TolerantKineticsLibrary(label="test")
+        library.declared_variants = declared_variants
+        library.load(kinetics_files(self.directory), local_context=importer.kinetics_local_context())
+        return {entry.label: type(entry.data).__name__ for entry in library.entries.values()}
+
+    def test_reactions_of_two_conformers_stay_apart(self):
+        rates = self.kinetics({"furop2": "furop2"})
+        self.assertEqual(rates["furop1 + H <=> CH2CO + C2H3"], "Arrhenius")
+        self.assertEqual(rates["furop2 + H <=> CH2CO + C2H3"], "Arrhenius")
+        self.assertEqual(len(rates), 4)
+
+    def test_without_the_later_names_they_are_merged_as_rmg_does(self):
+        rates = self.kinetics(None)
+        self.assertEqual(rates["furop1 + H <=> CH2CO + C2H3"], "MultiArrhenius")
+        self.assertNotIn("furop2 + H <=> CH2CO + C2H3", rates)
+
+
+class ModelNamesImportTests(TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory)
+        self.model = db.KineticModel.objects.create(model_name="m")
+        self.thermo_path, self.kinetics_path = model_folder(self.directory, "m")
+
+    def record(self, name, model=None):
+        return db.Species.objects.get(speciesname__kinetic_model=model or self.model,
+                                      speciesname__name=name)
+
+    def names(self, species, model=None):
+        return sorted(species.speciesname_set.filter(kinetic_model=model or self.model)
+                      .values_list("name", flat=True))
+
+    def import_model(self, model=None, thermo_path=None, kinetics_path=None):
+        thermo = import_thermo(thermo_path or self.thermo_path, model or self.model, MODELS)
+        kinetics = import_kinetics(kinetics_path or self.kinetics_path, model or self.model, MODELS)
+        self.assertEqual((thermo["failed"], kinetics["failed"], kinetics["rejected"]), (0, 0, 0))
+        return thermo, kinetics
+
+    def link(self, equation, model=None):
+        """The model's kinetics link of the library entry with this CHEMKIN equation."""
+        return db.KineticsComment.objects.get(
+            kinetic_model=model or self.model, comment=f"The chemkin file reaction is {equation}")
+
+    def test_later_label_is_a_second_name_with_its_own_thermo(self):
+        counts = import_thermo(self.thermo_path, self.model, MODELS)
+        self.assertEqual((counts["failed"], counts["skipped_duplicates"]), (0, []))
+        self.assertEqual(counts["repeats"], {"furop2": "furop1"})
+        species = self.record("furop1")
+        self.assertEqual(self.record("furop2").pk, species.pk)
+        self.assertEqual(self.names(species), ["furop1", "furop2"])
+        self.assertEqual(species.hash, get_species_hash(species.isomers.all(), ""))
+        links = {link.species_name.name: link.thermo.coeffs_poly1[5]
+                 for link in db.ThermoComment.objects.filter(kinetic_model=self.model, thermo__species=species)}
+        self.assertEqual(links, {"furop1": 10000.0, "furop2": 8500.0})
+        # A name the model lists once has no name on its link.
+        self.assertIsNone(db.ThermoComment.objects.get(kinetic_model=self.model,
+                                                       thermo__species=self.record("H")).species_name)
+
+    def test_the_rates_name_the_later_label(self):
+        _, counts = self.import_model()
+        self.assertEqual(counts["imported"], 4)
+        species = self.record("furop1")
+        isomerisation = self.link("furop1 <=> furop2")
+        self.assertEqual(set(isomerisation.kinetics.reaction.stoichiometry_set.values_list("species_id", "coeff")),
+                         {(species.pk, -1.0), (species.pk, 1.0)})
+        self.assertEqual(link_names(isomerisation), [(False, "furop2")])
+        # Comparison across models stays by structure, so both sides have one key.
+        left, right = isomerisation.kinetics.reaction.canonical_key.split(" = ")
+        self.assertEqual(left, right)
+        # furop1 + H and furop2 + H: one reaction record, two rates, the second names furop2.
+        one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
+        self.assertEqual(one.kinetics.reaction_id, two.kinetics.reaction_id)
+        self.assertEqual((one.kinetics.raw_data["a"], two.kinetics.raw_data["a"]), (1e13, 2e13))
+        self.assertEqual((link_names(one), link_names(two)), ([], [(True, "furop2")]))
+        # A collider efficiency is written as a SMILES: the record, with the first name.
+        self.assertEqual(db.Efficiency.objects.get(kinetics__kineticscomment__kinetic_model=self.model)
+                         .species_id, species.pk)
+        self.assertEqual(db.Species.objects.filter(isomers__formula__formula="C4H4O").distinct().count(), 1)
+
+    def test_one_rate_for_two_names_is_two_links(self):
+        rate = REACTIONS[1][1]
+        reactions = (("furop1 + H <=> CH2CO + C2H3", rate), ("furop2 + H <=> CH2CO + C2H3", rate))
+        _, kinetics_path = model_folder(self.directory, "same", reactions=reactions)
+        import_thermo(self.thermo_path, self.model, MODELS)
+        import_kinetics(kinetics_path, self.model, MODELS)
+        one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
+        self.assertEqual(one.kinetics_id, two.kinetics_id)
+        self.assertEqual((link_names(one), link_names(two)), ([], [(True, "furop2")]))
+        self.assertEqual(cleanup.integrity_report()["kinetics_links_duplicate"], 0)
+
+    def test_kinetics_first_gives_the_same_record(self):
+        import_kinetics(self.kinetics_path, self.model, MODELS)
+        species = self.record("furop2")
+        import_thermo(self.thermo_path, self.model, MODELS)
+        self.assertEqual(self.record("furop1").pk, species.pk)
+        self.assertEqual(db.Species.objects.filter(isomers__formula__formula="C4H4O").distinct().count(), 1)
+        self.assertEqual(db.ThermoComment.objects.filter(kinetic_model=self.model, thermo__species=species,
+                                                         species_name__isnull=False).count(), 2)
+
+    def test_each_model_names_the_one_record(self):
+        other = db.KineticModel.objects.create(model_name="n")
+        thermo_path, kinetics_path = model_folder(self.directory, "n")
+        self.import_model()
+        self.import_model(other, thermo_path, kinetics_path)
+        species = self.record("furop1")
+        self.assertEqual({self.record("furop2").pk, self.record("furop1", other).pk,
+                          self.record("furop2", other).pk}, {species.pk})
+        self.assertEqual(self.names(species, other), ["furop1", "furop2"])
+        self.assertEqual(link_names(self.link("furop2 + H <=> CH2CO + C2H3", other)), [(True, "furop2")])
+
+    def test_importing_again_adds_nothing(self):
+        def counts():
+            return [table.objects.count() for table in (
+                db.Species, db.Reaction, db.Kinetics, db.SpeciesName, db.ThermoComment, db.KineticsComment,
+                db.KineticsCommentName)]
+        self.import_model()
+        before = counts()
+        self.import_model()
+        self.assertEqual(counts(), before)
+
+    def test_structure_lookups_give_the_record(self):
+        self.import_model()
+        species = self.record("furop1")
+        self.assertEqual(inchikey_species_map()[furop().to_inchi_key()], species.pk)
+        inchi = standard_inchi(species.isomers.get().inchi)
+        self.assertEqual(set(_by_standard_inchi(inchi)), {species.pk})
+        self.assertEqual(get_or_create_species(None, "", [furop()], MODELS).pk, species.pk)
+        structure = db.Structure.objects.get(isomer__species=species)
+        record = thermo_sources.save_record(
+            None, provider="rmg_thermo_library", structure=structure, external_id="lib:furop",
+            source_version="test", label="furop")
+        self.assertEqual(record.species_id, species.pk)
+
+    def test_integrity(self):
+        self.import_model()
+        report = cleanup.integrity_report()
+        checks = ("split_species", "species_with_stale_hash", "model_names_on_2plus_records",
+                  "variant_species_records", "thermo_links_duplicate", "kinetics_links_duplicate",
+                  "thermo_links_without_name_on_records_with_2plus", "names_with_2plus_thermo_links",
+                  "kinetics_names_of_another_model", "kinetics_names_not_on_their_reaction",
+                  "kinetics_links_not_their_equation")
+        self.assertEqual({key: report[key] for key in checks}, dict.fromkeys(checks, 0))
+        # A name row of a species that is not on that side of the reaction is found.
+        row = db.KineticsCommentName.objects.get(kinetics_comment__comment__contains="furop2 + H")
+        row.species_name = db.SpeciesName.objects.get(kinetic_model=self.model, name="CH2CO")
+        row.save()
+        self.assertEqual(cleanup.integrity_report()["kinetics_names_not_on_their_reaction"], 1)
+
+    def test_rebuild_names_what_an_older_import_merged(self):
+        # What the old importer left: furop2 a name of the record without a thermo link of its
+        # own, furop1 <=> furop2 without names, and furop2 + H merged into the rate of furop1 + H.
+        import_without_repeats(self.thermo_path, self.kinetics_path, self.model)
+        species = self.record("furop1")
+        self.assertEqual(self.names(species), ["furop1", "furop2"])
+        self.assertEqual(db.KineticsComment.objects.filter(kinetic_model=self.model).count(), 3)
+        self.assertEqual(db.KineticsCommentName.objects.count(), 0)
+
+        result = cleanup.rebuild_model_links(self.model, self.thermo_path, self.kinetics_path)
+        self.assertEqual(self.record("furop2").pk, species.pk)
+        self.assertEqual(result["kinetics_links"]["after"], 4)
+        self.assertEqual(link_names(self.link("furop1 <=> furop2")), [(False, "furop2")])
+        self.assertEqual(link_names(self.link("furop2 + H <=> CH2CO + C2H3")), [(True, "furop2")])
+        report = cleanup.integrity_report()
+        self.assertEqual((report["model_names_on_2plus_records"], report["kinetics_names_not_on_their_reaction"]),
+                         (0, 0))
+
+    def test_a_second_rebuild_changes_nothing(self):
+        self.import_model()
+        result = cleanup.rebuild_model_links(self.model, self.thermo_path, self.kinetics_path)
+        for links in ("names", "thermo_links", "kinetics_links"):
+            self.assertEqual((result[links]["removed"], result[links]["added"]), (0, 0), links)
+
+
+class ModelNamesExportTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        directory = tempfile.mkdtemp()
+        try:
+            cls.model = db.KineticModel.objects.create(model_name="m")
+            thermo_path, kinetics_path = model_folder(directory, "m")
+            import_thermo(thermo_path, cls.model, MODELS)
+            import_kinetics(kinetics_path, cls.model, MODELS)
+        finally:
+            shutil.rmtree(directory)
+
+    def test_each_name_is_a_species_with_its_own_thermo(self):
+        import cantera as ct
+        solution = ct.Solution(yaml=exports.build_cantera_yaml(self.model).content.decode())
+        names = {name.split("(")[0]: name for name in solution.species_names}
+        self.assertTrue({"furop1", "furop2"} <= set(names))
+        h298 = {label: solution.species(names[label]).thermo.h(298.15) for label in ("furop1", "furop2")}
+        self.assertGreater(h298["furop1"], h298["furop2"])
+        sides = lambda equation: tuple(sorted(tuple(sorted(s.split(" + "))) for s in equation.split(" <=> ")))
+        equations = {sides(r.equation) for r in solution.reactions()}
+        for equation in (f"{names['furop1']} <=> {names['furop2']}",
+                         f"{names['furop1']} + {names['H']} <=> {names['CH2CO']} + {names['C2H3']}",
+                         f"{names['furop2']} + {names['H']} <=> {names['CH2CO']} + {names['C2H3']}"):
+            self.assertIn(sides(equation), equations)
+
+
+# The model's CHEMKIN file: each line of a name has its own REV, also where the forward rates are one.
+REV_CHEMKIN = """ELEMENTS C H O END
+SPECIES furop1 furop2 H CH2CO C2H3 C2H4 END
+REACTIONS
+furop1<=>furop2            1.000E+12   0.000  30000.0
+    REV / 3.0E+11 0.0 28000.0 /
+furop1+H<=>CH2CO+C2H3      1.000E+13   0.000   2000.0
+    REV / 1.0E+11 0.0 1000.0 /
+furop2+H<=>CH2CO+C2H3      1.000E+13   0.000   2000.0
+    REV / 5.0E+11 0.0 1500.0 /
+END
+"""
+
+
+class ModelNamesReverseRateTests(TestCase):
+    """The model's REV of a line goes to the link of that line's names: furop1 + H and furop2 + H
+    are one reaction record with one rate row, and each link keeps its own REV."""
+
+    @classmethod
+    def setUpTestData(cls):
+        directory = tempfile.mkdtemp()
+        try:
+            cls.model = db.KineticModel.objects.create(model_name="m")
+            rate = REACTIONS[1][1]
+            reactions = (REACTIONS[0], ("furop1 + H <=> CH2CO + C2H3", rate), ("furop2 + H <=> CH2CO + C2H3", rate))
+            thermo_path, kinetics_path = model_folder(directory, "m", reactions=reactions)
+            folder = os.path.join(directory, "m")
+            with open(os.path.join(folder, "import.sh"), "w") as handle:
+                handle.write("python import.py \\\n\t--species chem.inp \\\n\t--reactions chem.inp \\\n")
+            with open(os.path.join(folder, "chem.inp"), "w") as handle:
+                handle.write(REV_CHEMKIN)
+            import_thermo(thermo_path, cls.model, MODELS)
+            cls.counts = import_kinetics(kinetics_path, cls.model, MODELS)
+            cls.report = explicit_reverse.attach(cls.model, folder, MODELS, apply=False)
+        finally:
+            shutil.rmtree(directory)
+
+    def link(self, equation):
+        return db.KineticsComment.objects.get(
+            kinetic_model=self.model, comment=f"The chemkin file reaction is {equation}")
+
+    def rev(self, equation):
+        (term,) = self.link(equation).reverse_rate["terms"]
+        return term["line"], term["arrhenius"]["a"], term["arrhenius"]["e"]
+
+    def test_each_name_keeps_its_own_rev(self):
+        self.assertEqual(self.counts["reverse_rates"], 3)
+        one, two = self.link("furop1 + H <=> CH2CO + C2H3"), self.link("furop2 + H <=> CH2CO + C2H3")
+        self.assertEqual(one.kinetics_id, two.kinetics_id)
+        # The line of the reaction each REV is written under.
+        self.assertEqual(self.rev("furop1 + H <=> CH2CO + C2H3"), (6, 1e11, 1000.0))
+        self.assertEqual(self.rev("furop2 + H <=> CH2CO + C2H3"), (8, 5e11, 1500.0))
+        self.assertEqual(self.rev("furop1 <=> furop2"), (4, 3e11, 28000.0))
+        # Reading the file again gives the same REVs to the same links.
+        self.assertEqual((self.report["set"], self.report["cleared"], self.report["unchanged"]), (0, 0, 3))
+        self.assertEqual(self.report["status"], {"matched": 3})
+
+    def test_the_chemkin_export_writes_each_rev_after_its_names(self):
+        files = exports._generate_chemkin_files(self.model)
+        (text,) = [v.decode() for k, v in files.items() if k.endswith("_chem.inp")]
+        lines = text.split("REACTIONS", 1)[1].splitlines()
+        key = lambda equation: tuple(tuple(sorted(side.split("+"))) for side in equation.split("<=>"))
+        after = {}
+        for number, line in enumerate(lines):
+            if "=" in line.split("!", 1)[0] and not line.lstrip().upper().startswith("REV"):
+                rev = next((x for x in lines[number + 1:number + 4] if x.strip().upper().startswith("REV")), None)
+                after[key(re.sub(r"\(\d+\)", "", line.split()[0]))] = rev.split("/")[1].split()[0] if rev else None
+        self.assertEqual(after[key("furop1+H<=>CH2CO+C2H3")], "1e+11")
+        self.assertEqual(after[key("furop2+H<=>CH2CO+C2H3")], "5e+11")
+        self.assertEqual(after[key("furop1<=>furop2")], "3e+11")
+
+
+class FoldVariantsTests(TestCase):
+    """The variant records of migration 0019 ("<model>: <label>") folded into one record give what
+    the importer makes now: the same links and the same download."""
+
+    def setUp(self):
+        with connection.cursor() as cursor:
+            cursor.execute("ALTER TABLE database_species ADD COLUMN variant varchar(300) NOT NULL DEFAULT ''")
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory)
+        self.model = db.KineticModel.objects.create(model_name="m")
+        thermo_path, kinetics_path = model_folder(directory, "m")
+        import_thermo(thermo_path, self.model, MODELS)
+        import_kinetics(kinetics_path, self.model, MODELS)
+
+    def snapshot(self):
+        names, thermo, kinetics = cleanup.model_links(self.model)
+        return (sorted((n["name"], n["species_id"]) for n in names),
+                sorted((t["name"], t["thermo_id"]) for t in thermo),
+                sorted((k["kinetics_id"], k["names"], k["comment"], k["reversible"]) for k in kinetics),
+                len({n["species_id"] for n in names}))
+
+    def unfold(self):
+        """The state 0019 left: furop2 on a record of its own with its thermo row, and its rates on
+        reactions of that record."""
+        shared = db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name="furop2")
+        variant = db.Species.objects.create(hash=hashlib.md5(
+            ("".join(sorted(str(i.id) for i in shared.isomers.all())) + "#m: furop2").encode()).hexdigest())
+        # Without the signal that sets the hash from the isomers: 0019 added the variant to it.
+        db.Species.isomers.through.objects.bulk_create([
+            db.Species.isomers.through(species_id=variant.pk, isomer_id=isomer.pk) for isomer in shared.isomers.all()])
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE database_species SET variant = 'm: furop2' WHERE id = %s", [variant.pk])
+        name = db.SpeciesName.objects.get(kinetic_model=self.model, name="furop2")
+        db.Thermo.objects.filter(thermocomment__species_name=name).update(species=variant)
+        db.ThermoComment.objects.filter(kinetic_model=self.model).update(species_name=None)
+        db.SpeciesName.objects.filter(pk=name.pk).update(species=variant)
+        for link in db.KineticsComment.objects.filter(kinetic_model=self.model, names__isnull=False).distinct():
+            later = list(link.names.values_list("reactant", flat=True))
+            rows = []
+            for row in link.kinetics.reaction.stoichiometry_set.order_by("pk"):
+                coeff, species = row.coeff, row.species_id
+                if species == shared.pk and (coeff < 0) in later:
+                    later.remove(coeff < 0)
+                    species = variant.pk
+                rows.append((coeff, species))
+            reaction = db.Reaction.objects.create(
+                hash=get_reaction_hash([(c, db.Species(id=s)) for c, s in rows]), reversible=True)
+            for coeff, species in rows:
+                db.Stoichiometry.objects.create(reaction=reaction, species_id=species, coeff=coeff)
+            db.Kinetics.objects.filter(pk=link.kinetics_id).update(reaction=reaction)
+            link.names.all().delete()
+        return variant
+
+    def test_fold_gives_back_the_import(self):
+        made = self.snapshot()
+        download = exports.build_cantera_yaml(self.model).content
+        variant = self.unfold()
+        self.assertEqual(db.Species.objects.filter(isomers__formula__formula="C4H4O").distinct().count(), 2)
+        dry = cleanup.fold_species_variants()
+        self.assertEqual((dry["variant_records"], dry["records_merged_away"]), (1, 1))
+        self.assertTrue(db.Species.objects.filter(pk=variant.pk).exists())
+
+        report = cleanup.fold_species_variants(apply=True)
+        self.assertEqual((report["variant_records"], report["kinetics_links_named"],
+                          report["kinetics_names_written"]), (1, 2, 2))
+        self.assertFalse(db.Species.objects.filter(pk=variant.pk).exists())
+        self.assertEqual(cleanup.variant_records(), [])
+        self.assertEqual(self.snapshot(), made)
+        self.assertEqual(exports.build_cantera_yaml(self.model).content, download)
+        integrity = cleanup.integrity_report()
+        self.assertEqual((integrity["split_species"], integrity["species_with_stale_hash"],
+                          integrity["reactions_sharing_stoichiometry"],
+                          integrity["kinetics_names_not_on_their_reaction"]), (0, 0, 0, 0))
+
+    def test_a_variant_without_a_shared_record_becomes_one(self):
+        self.unfold()
+        shared = db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name="furop1")
+        variant = db.Species.objects.get(speciesname__kinetic_model=self.model, speciesname__name="furop2")
+        # The shared record is gone: its rows are on the variant record.
+        cleanup.merge_groups([[variant.pk, shared.pk]])
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE database_species SET variant = 'm: furop2' WHERE id = %s", [variant.pk])
+        report = cleanup.fold_species_variants(apply=True)
+        self.assertEqual((report["variants_without_shared_record"], report["variant_records_kept_as_shared"]), (1, 1))
+        species = db.Species.objects.get(pk=variant.pk)
+        self.assertEqual(species.hash, get_species_hash(species.isomers.all(), ""))

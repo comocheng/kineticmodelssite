@@ -1,0 +1,65 @@
+{% load static %}
+{# The dataset results (Figma 182:4446): count, active filters, guidance and the table; the list page includes it, and its AJAX filter requests get it alone #}
+<div class="ck-dsr__summary">
+    <h2 class="ck-dsr__count" id="ck-results-count">{{ page_obj.paginator.count|default:0 }} dataset{{ page_obj.paginator.count|default:0|pluralize }}</h2>
+    {% if filter.form.has_changed %}
+    <div class="ck-dsr__active">
+        {% for field in filter.form %}{% if field.value %}<span class="ck-chip">{{ field.label }}: {{ field.value }}</span>{% endif %}{% endfor %}
+        <a href="{% url 'chemked_database:dataset-list' %}">Clear filters</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Guidance (Figma 182:4460) -->
+<div class="app-panel ck-dsr__guide">
+    <p class="ck-dsr__guide-title"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="16" height="16">About these records</p>
+    <p class="ck-dsr__guide-text">Each row is one ChemKED file. The filters match its experiment type, reference and apparatus; the species search matches part of a species name in its common or per-datapoint mixture.</p>
+    <a class="ck-dsr__guide-link" href="https://pr-omethe-us.github.io/PyKED/schema-docs.html" target="_blank" rel="noopener">ChemKED format <img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a>
+</div>
+
+<!-- Records (Figma 182:4467) -->
+<div class="app-panel ck-dsr__records">
+    <div class="ck-dsr__records-head">
+        <i class="bi bi-table" aria-hidden="true"></i>
+        <span>Datasets</span>
+    </div>
+    {% if datasets %}
+    <div class="ck-table-wrap">
+        <table class="ck-table ck-dsr__table">
+            <thead>
+                <tr>
+                    <th scope="col">Dataset file</th>
+                    <th scope="col">Experiment type</th>
+                    <th scope="col" class="is-end">Year</th>
+                    <th scope="col" class="is-end">Points</th>
+                    <th scope="col"><span class="visually-hidden">Open</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dataset in datasets %}
+                <tr>
+                    <td>
+                        <a class="ck-dsr__file" href="{% url 'chemked_database:dataset-detail' dataset.pk %}">{{ dataset.chemked_file_path }}</a>
+                        {% if dataset.apparatus or dataset.reference_doi %}
+                        <span class="ck-sub">{% if dataset.apparatus %}{{ dataset.apparatus.kind|capfirst }}{% if dataset.apparatus.institution %} · {{ dataset.apparatus.institution|truncatechars:48 }}{% endif %}{% endif %}{% if dataset.apparatus and dataset.reference_doi %} · {% endif %}{% if dataset.reference_doi %}DOI {{ dataset.reference_doi }}{% endif %}</span>
+                        {% endif %}
+                    </td>
+                    <td>{% include "chemked_database/partials/ck_type.html" with type=dataset.experiment_type %}</td>
+                    <td class="is-number">{{ dataset.reference_year|default:"—" }}</td>
+                    <td class="is-number">{{ dataset.datapoint_count }}</td>
+                    <td class="is-end"><a href="{% url 'chemked_database:dataset-detail' dataset.pk %}" aria-label="Open dataset {{ dataset.pk }}"><img class="app-icon" src="{% static 'database/images/icons/chevron-right-8390a0-16.svg' %}" alt="" width="18" height="18"></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "chemked_database/partials/ck_pager.html" with page=page_obj noun="datasets" label="Dataset pages" ajax=True %}
+    {% else %}
+    <p class="ck-empty">
+        <i class="bi bi-inbox" aria-hidden="true"></i>
+        No datasets found matching your criteria.
+        <a href="{% url 'chemked_database:dataset-list' %}">Clear filters</a>
+    </p>
+    {% endif %}
+</div>
+

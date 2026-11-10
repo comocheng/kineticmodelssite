@@ -1,0 +1,96 @@
+site_name: Pr.omethe.us
+site_description: Kinetic Models Database — FAIR combustion-kinetics platform usage guide and API reference
+site_url: https://pr.omethe.us/docs/
+repo_url: https://github.com/comocheng/kineticmodelssite
+# The NSF acknowledgment and disclaimer of the site footer, in the footer of each guide page
+copyright: >-
+  This material is based upon work supported by the National Science Foundation under Grant Nos.
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=1403171">1403171</a>,
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2531937">2531937</a>, and
+  <a href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2531938">2531938</a>.
+  Any opinions, findings, and conclusions or recommendations expressed in this material are those of the
+  author(s) and do not necessarily reflect the views of the National Science Foundation.
+docs_dir: docs
+site_dir: docs_site
+use_directory_urls: false
+
+theme:
+  name: material
+  logo: assets/prometheus-logo.png
+  favicon: assets/favicon.ico
+  font:
+    text: Inter
+    code: IBM Plex Mono
+  palette:
+    # Colors are set in stylesheets/extra.css to match the main site (#ce4801).
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - toc.follow
+
+extra:
+  # The logo goes back to the site, which serves this guide at /docs/
+  homepage: /
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Species search: species-search.md
+  - Thermochemistry sources: thermochemistry.md
+  - Comparing chemistry: chemistry-comparison.md
+  - Authentication: authentication.md
+  - API guide:
+      - Overview: api/overview.md
+      - Filtering & search: api/filtering.md
+      - Relationships & complex queries: api/relationships.md
+      - Experimental data: api/experimental-data.md
+      - Kinetic models & species: api/kinetic-models.md
+      - Analysis & agreement: api/analysis.md
+      - Provenance & FAIR metadata: api/provenance.md
+      - Canonical URLs: api/canonical-urls.md
+  - Examples:
+      - cURL: examples/curl.md
+      - Python: examples/python.md
+      - R: examples/r.md
+      - MATLAB: examples/matlab.md
+      - JavaScript: examples/javascript.md
+      - Java: examples/java.md
+  - Client SDKs: clients.md
+  - API reference: reference.md
+  - Contributing data: contributing-data.md

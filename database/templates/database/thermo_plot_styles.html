@@ -1,0 +1,107 @@
+{# Styles of thermo_plot.html, included in the extra_css block of every page that includes the panel #}
+<style>
+.tp-panel {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    padding: 24px;
+}
+
+.tp-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.tp-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tp-icon {
+    font-size: 18px;
+    line-height: 24px;
+    color: var(--color-primary);
+}
+
+.tp-lede {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.tp-segment {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    background: var(--color-gray-50);
+}
+
+.tp-option {
+    min-width: 44px;
+    height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.tp-option:hover {
+    color: var(--color-primary);
+}
+
+.tp-option.active {
+    background: var(--color-white);
+    box-shadow: 0 1px 2px rgba(23, 43, 67, 0.12);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.tp-plot {
+    height: 470px;
+    min-width: 0;
+}
+
+.tp-foot {
+    display: grid;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.tp-foot p {
+    margin: 0;
+}
+
+.tp-values summary {
+    width: max-content;
+    font-weight: 500;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.tp-values .table-responsive {
+    margin-top: 8px;
+}
+
+@media (max-width: 575.98px) {
+    .tp-panel {
+        padding: 18px 14px;
+    }
+
+    .tp-plot {
+        height: 380px;
+    }
+}
+</style>

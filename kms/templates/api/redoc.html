@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{# ReDoc inside the site header and footer. The context comes from drf-spectacular's SpectacularRedocView. #}
+
+{% block meta_description %}The API reference of Prometheus: every endpoint, parameter and response, with request samples in cURL, Python, R, MATLAB, JavaScript and Java.{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ReDoc scrolls to a deep link with one jump; a smooth scroll of the long page does not arrive.
+       Bootstrap sets the smooth scroll on :root, so this rule uses the same selector. */
+    :root { scroll-behavior: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="redoc-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ redoc_standalone }}"></script>
+<script>
+    Redoc.init("{{ schema_url }}", {{ settings|safe }}, document.getElementById("redoc-container"));
+</script>
+{% endblock %}

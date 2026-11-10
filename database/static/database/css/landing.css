@@ -1,0 +1,1663 @@
+/*
+ * Home page (database/templates/database/home.html).
+ *
+ * Tokens come from the Figma file "dev.omethe.us": the landing frame (235:2355) and the research
+ * database home (77:2495). Brand-primary #ce4801 is the file's one colour variable; the others are
+ * the fills and text colours of those frames. Display type is Instrument Sans, interface type Inter,
+ * and counts and identifiers IBM Plex Mono, as in the database overview of the research home.
+ * The scene states follow the Prosper Storyboard kit: orange for lost, green for kept,
+ * blue for the experiment actor. Every rule is scoped to body.landing.
+ */
+
+.landing {
+    --lp-ink: #05060b;
+    --lp-char: #181818;
+    --lp-char-2: #222326;
+    --lp-orange: #ce4801;
+    --lp-orange-dark: #b23e00;
+    --lp-orange-on-dark: #ff7a33;   /* 6.8:1 on charcoal, for small text */
+    --lp-grey: #d9d9d9;
+    --lp-mist: #f4f6f9;
+    --lp-line: #dfe6ef;
+    --lp-text: #212121;
+    --lp-text-2: #515151;
+    --lp-text-3: #616161;
+    --lp-footer-label: #b8c8db;
+    --lp-footer-line: rgba(255, 255, 255, 0.13);
+    --lp-font-display: "Instrument Sans", var(--font-sans);
+    --lp-font-mono: "IBM Plex Mono", var(--font-mono);
+    --lp-on-dark: rgba(255, 255, 255, 0.78);
+    --lp-on-dark-2: rgba(255, 255, 255, 0.6);
+    --lp-lost: #c2410c;
+    --lp-lost-bg: #fff4ec;
+    --lp-kept: #1f7a4d;
+    --lp-kept-bg: #eef8f2;
+    --lp-actor: #2f6f8f;
+    --lp-radius: 10px;
+    --lp-gutter: 24px;
+    --lp-section-y: 96px;
+    background: #fff;
+}
+
+/* ---------- Page frame: full-bleed sections instead of the boxed main ---------- */
+.landing main[role="main"] {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--lp-font-display);
+}
+
+/* scientific.css sets the sans face on h1-h6 directly, so headings do not inherit from main */
+.landing main h1,
+.landing main h2,
+.landing main h3 {
+    font-family: var(--lp-font-display);
+}
+
+.landing .site-footer {
+    margin-top: 0;
+    background: var(--lp-char);
+}
+
+/* The Figma frames are 1600 px wide with 64 px side margins: 1472 px of content */
+.lp-container {
+    max-width: calc(1472px + 2 * var(--lp-gutter));
+    margin: 0 auto;
+    padding: 0 var(--lp-gutter);
+}
+
+/* ---------- The application header on the dark hero ---------- */
+/* One row, clear over the hero: the hero runs up under it (see .lp-hero), so the header shows
+   the hero's own background. It turns solid when the page scrolls or the phone menu is open. */
+.landing .app-header {
+    top: 0;
+    background: transparent;
+    backdrop-filter: none;
+    transition: background-color 0.25s ease;
+}
+
+.landing .app-header.is-scrolled,
+.landing .app-header:has(.navbar-collapse.show),
+.landing .app-header:has(.navbar-collapse.collapsing) {
+    background: rgba(5, 6, 11, 0.9);
+    backdrop-filter: saturate(1.4) blur(10px);
+}
+
+.landing .app-nav {
+    border-bottom-color: transparent;
+    transition: border-color 0.25s ease;
+}
+
+.landing .app-header.is-scrolled .app-nav {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* The tools row of the application pages: its links join the single row instead */
+.landing .app-tools {
+    display: none;
+}
+
+@media (min-width: 1400px) {
+    .landing .app-tools__links--menu {
+        display: flex;
+        flex-direction: row;
+    }
+}
+
+/* Between 992 and 1400 px the landing menu is collapsed; lay it out as on a phone */
+@media (min-width: 992px) and (max-width: 1399.98px) {
+    .landing .app-nav .navbar-collapse {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 8px 0 16px;
+    }
+
+    .landing .app-nav .navbar-collapse.show,
+    .landing .app-nav .navbar-collapse.collapsing {
+        display: flex;
+    }
+
+    .landing .app-nav__primary,
+    .landing .app-tools__links--menu {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+}
+
+.landing .app-brand,
+.landing .app-brand:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.landing .app-nav__link,
+.landing .app-tool,
+.landing .app-tools__label {
+    color: var(--lp-on-dark-2);
+}
+
+.landing .app-nav__link:hover,
+.landing .app-nav__link.is-active,
+.landing .app-nav__strong,
+.landing .app-tool:hover {
+    color: #fff;
+}
+
+.landing .app-tool--accent,
+.landing .app-tool--accent:hover,
+.landing .app-nav__strong:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.landing .app-btn-secondary {
+    border-color: var(--lp-orange);
+    background: transparent;
+    color: #fff;
+}
+
+.landing .app-btn-secondary:hover {
+    background: var(--lp-orange);
+    color: #fff;
+}
+
+.landing .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.landing .navbar-toggler-icon {
+    filter: invert(1);
+}
+
+/* ---------- Type ---------- */
+.lp-eyebrow {
+    margin: 0 0 12px;
+    font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+    font-weight: 400;
+    line-height: 1.333;
+    color: var(--lp-orange);
+}
+
+.lp-eyebrow--dark {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-h2 {
+    margin: 0 0 16px;
+    padding-bottom: 0;
+    border-bottom: 0;
+    font-size: clamp(1.75rem, 2.8vw, 2.375rem);
+    font-weight: 600;
+    line-height: 1.263;
+    letter-spacing: -0.01em;
+    color: var(--lp-text);
+    text-wrap: balance;
+}
+
+.lp-h2--light {
+    color: #fff;
+}
+
+.lp-h3 {
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: inherit;
+}
+
+.lp-h3--light {
+    color: #fff;
+}
+
+.lp-intro,
+.lp-body {
+    margin: 0 0 16px;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    color: var(--lp-text-2);
+}
+
+.lp-intro {
+    font-size: clamp(1.125rem, 1.5vw, 1.25rem);
+}
+
+.lp-body--light {
+    color: var(--lp-on-dark);
+}
+
+.lp-lead {
+    margin: 8px 0 0;
+    padding-left: 20px;
+    border-left: 4px solid var(--lp-orange);
+    font-size: clamp(1.15rem, 2vw, 1.4rem);
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--lp-text);
+}
+
+.lp-small {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--lp-text-2);
+}
+
+.lp-mono {
+    font-family: var(--lp-font-mono);
+    font-size: 0.875em;
+}
+
+.lp-accent {
+    color: var(--lp-orange);
+}
+
+.lp-cite a {
+    color: var(--lp-orange-dark);
+}
+
+/* ---------- Buttons ---------- */
+.lp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 32px 0 0;
+}
+
+.lp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 24px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 1.0625rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.lp-btn--primary {
+    background: var(--lp-orange);
+    color: #fff;
+}
+
+.lp-btn--primary:hover {
+    background: var(--lp-orange-dark);
+    color: #fff;
+    text-decoration: none;
+}
+
+.lp-btn--ghost {
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+.lp-btn--ghost:hover {
+    border-color: #fff;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* ---------- Hero ---------- */
+.lp-hero {
+    position: relative;
+    overflow: hidden;
+    /* Pull the hero up under the clear header */
+    margin-top: calc(-1 * var(--navbar-height));
+    padding: calc(88px + var(--navbar-height)) 0 0;
+    color: #fff;
+    /* The Figma hero ("Landing page v1" fill, WebP at quality 88), anchored right so its shard sits behind the flame */
+    background: var(--lp-ink) url("../images/landing/figma/hero-bg.webp") right center / cover no-repeat;
+}
+
+/* The soft light of the Figma hero (Ellipse 124), at its place in the 1600 px frame */
+.lp-hero::before {
+    content: "";
+    position: absolute;
+    top: 56px;
+    left: 0.3%;
+    width: 54.7%;
+    aspect-ratio: 1;
+    background: url("../images/landing/figma/glow.svg") center / contain no-repeat;
+    pointer-events: none;
+}
+
+/* The line grid of the Figma hero, measured from its 1600 x 1024 frame: 1 px white lines at 11 %
+   every 60.2 px across and 76.6 px down (rounded to whole pixels so no line blurs), brightest
+   27 % across and 44 % down, half as bright 195 px from there and gone by 440 px */
+.lp-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.11) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+    background-position: 37px 56px;
+    background-size: 60px 77px;
+    -webkit-mask-image: radial-gradient(circle 440px at 27% 44%, #000 0%, rgba(0, 0, 0, 0.85) 20%,
+        rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.28) 60%, rgba(0, 0, 0, 0.1) 80%, transparent 100%);
+    mask-image: radial-gradient(circle 440px at 27% 44%, #000 0%, rgba(0, 0, 0, 0.85) 20%,
+        rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.28) 60%, rgba(0, 0, 0, 0.1) 80%, transparent 100%);
+    pointer-events: none;
+}
+
+/* Above the grid, which comes later in the hero */
+.lp-hero > .lp-container {
+    position: relative;
+    z-index: 1;
+}
+
+.lp-hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 48px;
+    align-items: center;
+}
+
+.lp-hero__title {
+    margin: 0 0 24px;
+    font-size: clamp(2.5rem, 5.6vw, 4.875rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: #fff;
+    text-wrap: balance;
+}
+
+.lp-hero__lede {
+    max-width: 49rem;
+    margin: 0;
+    font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+    line-height: 1.333;
+    color: var(--lp-on-dark);
+}
+
+.lp-hero__note {
+    margin: 20px 0 0;
+    font-size: 0.875rem;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-hero__art {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Only true of the 3D flame, so it shows once landing-flame.js has drawn it */
+.lp-hero__flame-note {
+    max-width: 300px;
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--lp-on-dark-2);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.6s ease, visibility 0.6s;
+}
+
+.lp-flame.is-3d + .lp-hero__flame-note {
+    visibility: visible;
+    opacity: 1;
+}
+
+.lp-flame {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    aspect-ratio: 420 / 690;
+}
+
+/* The glow behind the flame breathes on the 3.6 s beat of the SVG sway */
+.lp-flame::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 4%;
+    width: 90%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 122, 51, 0.5), rgba(206, 72, 1, 0.2) 45%, transparent 70%);
+    transform: translateX(-50%);
+    animation: lp-glow 3.6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.lp-flame picture,
+.lp-flame img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.6s ease;
+}
+
+/* landing-flame.js adds the canvas and .is-3d once the first 3D frame is drawn */
+.lp-flame__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.lp-flame.is-3d .lp-flame__canvas {
+    opacity: 1;
+}
+
+.lp-flame.is-3d picture {
+    opacity: 0;
+}
+
+@keyframes lp-glow {
+    0%, 100% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.06);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-flame::before {
+        animation: none;
+    }
+}
+
+/* ---------- Holdings strip ---------- */
+.lp-holdings {
+    margin-top: 72px;
+    padding: 32px 0 40px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lp-holdings__title {
+    margin: 0 0 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-holdings__grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.lp-holding {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.lp-holding:hover {
+    text-decoration: none;
+}
+
+.lp-holding__value {
+    font-family: var(--lp-font-mono);
+    font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+    transition: color var(--transition-fast);
+}
+
+.lp-holding:hover .lp-holding__value {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-holding__label {
+    font-size: 0.875rem;
+    color: var(--lp-on-dark);
+}
+
+.lp-holdings__note {
+    margin: 20px 0 0;
+    font-size: 0.8125rem;
+    color: var(--lp-on-dark-2);
+}
+
+/* ---------- Contribute (the bottom of the hero) ---------- */
+/* The same rule and title as the holdings above; the routes are the square list of the Figma
+   hero frame, with the chosen route in orange */
+.lp-contribute {
+    padding: 32px 0 80px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lp-contribute__head {
+    display: grid;
+    gap: 10px;
+    max-width: 46rem;
+    margin-bottom: 32px;
+}
+
+.landing main .lp-contribute__title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__intro {
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.5;
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__body {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+}
+
+.lp-contribute__routes {
+    display: grid;
+    gap: 18px;
+}
+
+.lp-contribute__route {
+    display: grid;
+    grid-template-columns: 9px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: #fff;
+    cursor: pointer;
+}
+
+.lp-contribute__route::before {
+    content: "";
+    grid-row: 1;
+    align-self: center;
+    width: 9px;
+    height: 9px;
+    background: var(--lp-orange);
+}
+
+.lp-contribute__route-label {
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.16;
+}
+
+.lp-contribute__route-method {
+    grid-column: 2;
+    font-size: 0.875rem;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__route:hover .lp-contribute__route-label,
+.lp-contribute__route[aria-selected="true"] .lp-contribute__route-label {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__route[aria-selected="true"] .lp-contribute__route-method {
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__route:focus-visible,
+.lp-contribute__step-head:focus-visible,
+.lp-terminal__action:focus-visible,
+.lp-terminal__screen:focus-visible {
+    outline: 2px solid var(--lp-orange-on-dark);
+    outline-offset: 4px;
+}
+
+/* The script shows one route at a time; without it every route stays in the page */
+.lp-contribute__panels {
+    display: grid;
+    gap: 48px;
+    min-width: 0;
+}
+
+.lp-contribute__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+    gap: 32px;
+    align-items: start;
+}
+
+.lp-contribute__steps {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-contribute__step {
+    padding: 12px 0 14px 18px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.lp-contribute__step.is-current {
+    border-left-color: var(--lp-orange);
+}
+
+.lp-contribute__step-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: left;
+    color: #fff;
+}
+
+button.lp-contribute__step-head {
+    cursor: pointer;
+}
+
+button.lp-contribute__step-head:hover {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__num {
+    font-family: var(--lp-font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-contribute__step.is-current .lp-contribute__num {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__step-text {
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--lp-on-dark);
+}
+
+.lp-contribute__link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__link:hover {
+    color: #fff;
+}
+
+.lp-contribute__pr {
+    margin-top: 16px;
+}
+
+.lp-contribute__note {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--lp-on-dark-2);
+}
+
+/* The terminal: a plain dark panel with the Figma card radius, in the monospace face */
+.lp-terminal {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--lp-radius);
+    background: #090b11;
+}
+
+.lp-terminal__bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lp-terminal__title {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--lp-font-mono);
+    font-size: 0.75rem;
+    color: var(--lp-on-dark-2);
+}
+
+.lp-terminal__action {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.lp-terminal__action:hover {
+    border-color: #fff;
+}
+
+/* position: relative makes the screen the offset parent, so a step's offsetTop is its place in it */
+.lp-terminal__screen {
+    position: relative;
+    height: 25rem;
+    margin: 0;
+    padding: 18px 20px;
+    overflow: auto;
+    border: 0;
+    background: transparent;
+    font-family: var(--lp-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    color: #e8ecf3;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.lp-terminal__screen code {
+    font: inherit;
+    color: inherit;
+}
+
+.lp-terminal__prompt {
+    color: var(--lp-orange-on-dark);
+    user-select: none;
+}
+
+.lp-terminal__comment {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.lp-terminal__out {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+/* Text for the contributor to replace, such as <fuel> */
+.lp-terminal__fill {
+    color: #ffb27f;
+}
+
+.lp-terminal__caret {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.15em;
+    vertical-align: -0.2em;
+    background: var(--lp-orange-on-dark);
+    animation: lp-caret 1s steps(1) infinite;
+}
+
+@keyframes lp-caret {
+    50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-terminal__caret {
+        animation: none;
+    }
+}
+
+/* The pages of the web route */
+.lp-contribute__links {
+    display: grid;
+    gap: 12px;
+}
+
+.lp-contribute__card {
+    display: grid;
+    gap: 4px;
+    padding: 20px 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--lp-radius);
+    background: rgba(255, 255, 255, 0.03);
+    text-decoration: none;
+    transition: border-color var(--transition-fast);
+}
+
+.lp-contribute__card:hover {
+    border-color: var(--lp-orange);
+    text-decoration: none;
+}
+
+.lp-contribute__card-label {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.lp-contribute__card:hover .lp-contribute__card-label {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-contribute__card-text {
+    font-size: 0.875rem;
+    color: var(--lp-on-dark);
+}
+
+@media (max-width: 991.98px) {
+    .lp-contribute__body {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 32px;
+    }
+
+    .lp-contribute__routes {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lp-contribute__panel {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* The terminal first, so it is in view while it types; the steps follow it */
+    .lp-contribute__side {
+        order: -1;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .lp-contribute__routes {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .lp-terminal__screen {
+        height: 21rem;
+        padding: 14px;
+        font-size: 0.75rem;
+    }
+}
+
+/* ---------- Sections ---------- */
+.lp-section {
+    padding: var(--lp-section-y) 0;
+    background: #fff;
+    color: var(--lp-text);
+}
+
+.lp-section--mist {
+    background: var(--lp-mist);
+}
+
+.lp-section--char {
+    background: var(--lp-char);
+    color: #fff;
+}
+
+.lp-head {
+    max-width: 48rem;
+    margin-bottom: 48px;
+}
+
+.lp-split {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 64px;
+    align-items: start;
+}
+
+.lp-split--even {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* The wave lines of the Figma statement frame (229:2337). The box is the 1600 x 366 px band
+   at the bottom of that frame; landing_waves.html places each line in it in percent. */
+.lp-section--waves {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: calc(var(--lp-section-y) + 12vw);
+}
+
+.lp-section--waves > .lp-container {
+    position: relative;
+    z-index: 1;
+}
+
+.lp-waves {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    aspect-ratio: 1600 / 366;
+    pointer-events: none;
+}
+
+.lp-wave {
+    position: absolute;
+}
+
+.lp-wave__box {
+    position: absolute;
+}
+
+.lp-wave img {
+    display: block;
+    max-width: none;
+    width: 100%;
+    height: 100%;
+}
+
+/* ---------- 01 Why: note cards ---------- */
+.lp-cards-aside {
+    display: grid;
+    gap: 16px;
+}
+
+.lp-note-card {
+    position: relative;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--lp-radius);
+    background: var(--lp-char-2);
+}
+
+.lp-note-card__label {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-note-card__title {
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.lp-note-card__text {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--lp-on-dark);
+}
+
+.lp-note-card__gift {
+    display: block;
+    width: 100%;
+    max-width: 240px;
+    height: auto;
+    margin: -8px 0 12px -8px;
+}
+
+/* ---------- 02 and 03: the species scene ---------- */
+.lp-scene {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px minmax(0, 1fr);
+    gap: 24px;
+    align-items: stretch;
+    margin: 0;
+}
+
+.lp-molecule {
+    padding: 24px;
+    border: 1px solid var(--lp-line);
+    border-radius: var(--lp-radius);
+    background: #fff;
+}
+
+.lp-molecule--resolved {
+    border-color: #bfe0cc;
+}
+
+.lp-molecule__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin-bottom: 16px;
+}
+
+.lp-molecule__name {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.lp-molecule__head .lp-mono {
+    color: var(--lp-text-2);
+}
+
+.lp-molecule__foot {
+    margin: 16px 0 0;
+    font-size: 0.875rem;
+    color: var(--lp-text-2);
+}
+
+.lp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid #cfd3da;
+    border-radius: 6px;
+    background: var(--lp-mist);
+    font-family: var(--lp-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    color: var(--lp-text);
+}
+
+.lp-tag__count {
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--lp-line);
+    font-family: var(--lp-font-display);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--lp-text-2);
+}
+
+.lp-tag--lost {
+    border: 2px dashed var(--lp-lost);
+    background: var(--lp-lost-bg);
+    color: var(--lp-lost);
+}
+
+.lp-tag--kept {
+    border: 2px solid var(--lp-kept);
+    background: var(--lp-kept-bg);
+    color: var(--lp-kept);
+}
+
+.lp-tag--exp {
+    margin: 0 6px 6px 0;
+    border-color: var(--lp-actor);
+    background: #fff;
+    color: var(--lp-actor);
+}
+
+.lp-scene__middle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.lp-scene__middle .lp-tag {
+    font-size: 1rem;
+    padding: 8px 14px;
+}
+
+.lp-scene__middle p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--lp-text-2);
+}
+
+.lp-scene__targets {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--lp-kept);
+}
+
+.lp-scene__caption {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    color: var(--lp-text-2);
+}
+
+.lp-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.lp-pill--lost {
+    background: var(--lp-lost);
+    color: #fff;
+}
+
+.lp-pill--kept {
+    background: var(--lp-kept);
+    color: #fff;
+}
+
+.lp-pill--status {
+    background: rgba(255, 122, 51, 0.14);
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-record {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed #bfe0cc;
+}
+
+.lp-record__label {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--lp-kept);
+}
+
+.lp-record dl {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 6px 12px;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.lp-record dt {
+    font-weight: 500;
+    color: var(--lp-text-2);
+}
+
+.lp-record dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Numbered actions under each scene */
+.lp-steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin: 40px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: lp-step;
+}
+
+.lp-steps li {
+    position: relative;
+    padding-top: 44px;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--lp-text-2);
+    counter-increment: lp-step;
+}
+
+.lp-steps li::before {
+    content: counter(lp-step);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--lp-char);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* ---------- 04 How it works ---------- */
+.lp-pipeline {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-pipeline__step {
+    padding-top: 20px;
+    border-top: 2px solid var(--lp-orange);
+}
+
+.lp-pipeline__num {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--lp-orange);
+}
+
+.lp-pipeline__step p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--lp-text-2);
+}
+
+/* ---------- 05 Use it today ---------- */
+.lp-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.lp-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+    padding: 28px;
+    border: 1px solid var(--lp-line);
+    border-radius: var(--lp-radius);
+    background: #fff;
+    color: var(--lp-text);
+    text-decoration: none;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.lp-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    color: var(--lp-text);
+    text-decoration: none;
+}
+
+.lp-card .lp-h3 {
+    font-size: clamp(1.375rem, 1.9vw, 1.75rem);
+    line-height: 1.3;
+    letter-spacing: -0.6px;
+}
+
+.lp-card p {
+    margin: 0 0 20px;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    color: var(--lp-text-2);
+}
+
+.lp-card__link {
+    margin-top: auto;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--lp-orange);
+}
+
+/* The first row repeats the grey, orange and dark tiles of the Figma design */
+.lp-card--1 {
+    border-color: var(--lp-grey);
+    background: var(--lp-grey);
+}
+
+.lp-card--1 .lp-h3 {
+    color: #151f00;
+}
+
+.lp-card--1 p {
+    color: #2b2b2b;
+}
+
+.lp-card--1 .lp-card__link {
+    color: #9a3600;
+}
+
+.lp-card--2 {
+    border-color: var(--lp-orange);
+    background: var(--lp-orange);
+}
+
+.lp-card--2,
+.lp-card--2:hover,
+.lp-card--2 p,
+.lp-card--2 .lp-card__link {
+    color: #fff;
+}
+
+.lp-card--3 {
+    border-color: var(--lp-char);
+    background: var(--lp-char);
+}
+
+.lp-card--3,
+.lp-card--3:hover {
+    color: #fff;
+}
+
+.lp-card--3 p {
+    color: var(--lp-on-dark);
+}
+
+.lp-card--3 .lp-card__link {
+    color: var(--lp-orange-on-dark);
+}
+
+.lp-band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 20px;
+    padding: 32px;
+    border-radius: var(--lp-radius);
+    background: var(--lp-char);
+    color: #fff;
+}
+
+.lp-band p {
+    max-width: 44rem;
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--lp-on-dark);
+}
+
+.lp-band .lp-btn {
+    flex-shrink: 0;
+}
+
+/* ---------- 06 What it means ---------- */
+.lp-points {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px;
+}
+
+.lp-point {
+    padding-top: 20px;
+    border-top: 1px solid var(--lp-line);
+}
+
+.lp-point p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--lp-text-2);
+}
+
+/* ---------- 07 What comes next ---------- */
+.lp-roadmap {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-roadmap li {
+    padding: 20px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lp-roadmap li:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.lp-roadmap .lp-pill {
+    margin-bottom: 10px;
+}
+
+.lp-roadmap p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--lp-on-dark);
+}
+
+/* ---------- 08 Who builds it ---------- */
+.lp-tools,
+.lp-team {
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-tools li,
+.lp-team li {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--lp-line);
+    font-size: 0.9375rem;
+}
+
+.lp-tools__name,
+.lp-team__group {
+    font-weight: 600;
+}
+
+.lp-team li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+}
+
+.lp-tools__role,
+.lp-team__lead {
+    color: var(--lp-text-2);
+}
+
+.lp-funding {
+    margin: 0 0 20px;
+    font-size: 0.9375rem;
+    color: var(--lp-text-2);
+}
+
+.lp-cite {
+    padding: 20px;
+    border-radius: var(--lp-radius);
+    background: var(--lp-mist);
+    scroll-margin-top: calc(var(--navbar-height) + 16px);
+}
+
+.lp-cite__title {
+    margin: 0 0 4px;
+    font-weight: 600;
+}
+
+.lp-cite__text {
+    margin: 0 0 8px;
+    font-size: 0.9375rem;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Closing ---------- */
+.lp-closing {
+    overflow: hidden;
+    padding: var(--lp-section-y) 0 24px;
+    background: var(--lp-char);
+}
+
+.lp-closing .lp-h2 {
+    max-width: 63rem;
+    font-size: clamp(1.75rem, 3.2vw, 3rem);
+    font-weight: 500;
+    line-height: 1.083;
+}
+
+.lp-closing__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 48px;
+    align-items: start;
+}
+
+/* The link list of the Figma closing frame: orange squares, the active link in orange */
+.lp-squares {
+    display: grid;
+    gap: 9px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lp-squares a {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.16;
+    color: #fff;
+    text-decoration: none;
+}
+
+.lp-squares a::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    background: var(--lp-orange);
+}
+
+.lp-squares a:hover {
+    color: var(--lp-orange-on-dark);
+    text-decoration: none;
+}
+
+.lp-wordmark {
+    margin: 72px 0 0;
+    font-size: clamp(3.5rem, 15vw, 15rem);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    background: linear-gradient(266.33deg, var(--lp-orange) 2.35%, #682401 97.98%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 991.98px) {
+    .landing {
+        --lp-section-y: 72px;
+    }
+
+    .lp-hero__grid,
+    .lp-split,
+    .lp-split--even {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 40px;
+    }
+
+    /* The stacked hero is tall: keep the shard at the top, by the flame, and fade it out
+       before the headline so the text stays on plain ink */
+    .lp-hero {
+        background:
+            linear-gradient(to bottom, rgba(5, 6, 11, 0) 160px, var(--lp-ink) 420px),
+            url("../images/landing/figma/hero-bg.webp") 80% 0 / auto 420px no-repeat,
+            var(--lp-ink);
+    }
+
+    .lp-hero__art {
+        order: -1;
+        align-items: flex-start;
+    }
+
+    .lp-hero__flame-note {
+        text-align: left;
+    }
+
+    .lp-flame {
+        max-width: 140px;
+    }
+
+    .lp-holdings__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lp-scene {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lp-scene__middle {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0;
+        text-align: left;
+        justify-content: flex-start;
+    }
+
+    .lp-pipeline,
+    .lp-cards,
+    .lp-steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lp-points,
+    .lp-closing__grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+
+    .lp-closing__grid {
+        gap: 32px;
+    }
+
+    .lp-point {
+        padding: 20px 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .landing {
+        --lp-gutter: 16px;
+        --lp-section-y: 56px;
+    }
+
+    .lp-hero {
+        padding-top: calc(48px + var(--navbar-height));
+    }
+
+    .lp-holdings__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lp-pipeline,
+    .lp-cards,
+    .lp-steps {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lp-card {
+        min-height: 0;
+    }
+
+    .lp-steps li {
+        min-height: 32px;
+        padding: 5px 0 0 48px;
+    }
+
+    .lp-band {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 24px;
+    }
+
+    .lp-tools li,
+    .lp-team li {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2px;
+    }
+}

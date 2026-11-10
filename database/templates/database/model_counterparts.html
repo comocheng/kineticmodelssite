@@ -1,0 +1,40 @@
+{# RMG-database libraries that share this model's chemistry, the Figma "RMG counterparts" panel (170:7031) #}
+{% if library_overlaps %}
+<section class="app-panel km-counterparts" aria-labelledby="km-counterparts-title">
+    <div class="km-counterparts__head">
+        <div>
+            <h2 class="app-panel__title" id="km-counterparts-title">RMG-database counterparts</h2>
+            <p>Libraries with the most entries identical to this model</p>
+        </div>
+        <a class="app-link" href="{% url 'rmg-library-list' %}">All libraries ↗</a>
+    </div>
+    <div class="km-table-wrap">
+        <table class="km-table km-counterparts__table">
+            <thead>
+                <tr>
+                    <th scope="col">RMG library</th>
+                    <th scope="col" class="is-end">Same reaction or species</th>
+                    <th scope="col" class="is-end">Identical to this model</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for overlap in library_overlaps %}
+                <tr>
+                    <td>
+                        <a href="{% url 'rmg-library-detail' overlap.kind overlap.library %}">{{ overlap.library }}</a>
+                        <span class="km-counterparts__kind">{{ overlap.get_kind_display }}</span>
+                    </td>
+                    <td class="is-number is-muted">{{ overlap.shared }}</td>
+                    <td class="is-end">
+                        <span class="km-counterparts__match">
+                            <span class="km-pill{% if overlap.identical == overlap.model_total %} km-pill--success{% endif %}">{{ overlap.identical }} of {{ overlap.model_total }} ({% widthratio overlap.identical overlap.model_total 100 %}%)</span>
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="km-counterparts__note">Identical means the same structures and the same rate (log k within 0.01 at 500, 1000 and 1500 K) or the same thermo polynomial (within 0.1%), the rules RMG's importer uses to spot copied chemistry.</p>
+</section>
+{% endif %}

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load static %}
+{% load utils %}
+{# The author list, in the look of the Figma source search (node 150:2528) #}
+
+{% block title %}Authors | Prometheus{% endblock %}
+
+{% block content %}
+<div class="src-ui author-list">
+    <nav class="src-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li aria-current="page">Authors</li>
+        </ol>
+    </nav>
+
+    <header class="src-heading">
+        <div class="src-heading__copy">
+            <h1>Authors</h1>
+            <p>The people credited on the source publications, with the number of publications for each.</p>
+        </div>
+        <a class="app-btn" href="{% url 'author-create' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="16" height="16">Add Author</a>
+    </header>
+
+    <section class="author-list__results" aria-labelledby="author-list-count">
+        <div class="author-list__summary">
+            <h2 id="author-list-count" class="author-list__count">{{ total_authors|pluralize:"author" }}</h2>
+            {% if page_obj %}<span class="author-list__meta">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} · sorted by last name</span>{% endif %}
+        </div>
+
+        <div class="app-panel author-list__table">
+            <div class="author-list__scroll">
+                <table class="app-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="author-list__id">ID</th>
+                            <th scope="col">Last name</th>
+                            <th scope="col">First name</th>
+                            <th scope="col" class="is-end author-list__pubs">Publications</th>
+                            <th scope="col" class="is-end author-list__actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for author in author_list %}
+                        <tr>
+                            <td class="author-list__id">{{ author.author_id }}</td>
+                            <td class="author-list__last">{{ author.lastname }}</td>
+                            <td>{{ author.firstname }}</td>
+                            <td class="is-number author-list__pubs">{{ author.publication_count }}</td>
+                            <td class="is-end author-list__actions">
+                                <a class="author-list__action" href="{% url 'author-update' author.author_id %}"><img class="app-icon" src="{% static 'database/images/icons/pencil-192f4d-18.svg' %}" alt="" width="15" height="15">Edit</a>
+                                <a class="author-list__action author-list__action--danger" href="{% url 'author-delete' author.author_id %}">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="author-list__empty">No authors found. <a href="{% url 'author-create' %}">Add the first author</a>.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if is_paginated %}
+        <div class="author-list__pagination">
+            <span class="author-list__meta">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% include "database/sources_pager.html" with page=page_obj %}
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/sources_styles.html" %}
+<style>
+.author-list__results {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.author-list__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.author-list .author-list__count {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.author-list__meta {
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.author-list__table {
+    overflow: hidden;
+}
+
+.author-list__scroll {
+    overflow-x: auto;
+}
+
+.author-list .app-table {
+    min-width: 600px;
+}
+
+.author-list .app-table th {
+    border-top: 0;
+}
+
+.author-list .app-table td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.author-list .app-table tbody tr:hover {
+    background: var(--color-gray-50);
+}
+
+.author-list__id {
+    width: 90px;
+}
+
+td.author-list__id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-gray-400);
+}
+
+.author-list .author-list__last {
+    font-weight: 600;
+}
+
+.author-list__pubs {
+    width: 140px;
+}
+
+.author-list .app-table td.author-list__pubs {
+    font-size: 14px;
+}
+
+.author-list__actions {
+    width: 170px;
+    white-space: nowrap;
+}
+
+.author-list__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.author-list__action + .author-list__action {
+    margin-left: 16px;
+}
+
+.author-list__action--danger {
+    color: var(--color-error);
+}
+
+.author-list__action--danger:hover {
+    color: var(--color-error);
+}
+
+.author-list .app-table td.author-list__empty {
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+.author-list__pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+</style>
+{% endblock %}

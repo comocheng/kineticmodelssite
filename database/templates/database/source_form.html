@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% load static %}
+{% load utils %}
+{# Add and edit a source, from the Figma "Promethe.us · Add New Source" (node 150:2377) #}
+
+{% block title %}{{ form_title }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="src-ui src-form">
+    <nav class="src-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'source-search' %}">Sources</a></li>
+            {% if object %}
+            <li><a href="{% url 'source-detail' object.pk %}">{{ object.source_title|striptags|truncatechars:30|default:"Source" }}</a></li>
+            <li aria-current="page">Edit</li>
+            {% else %}
+            <li aria-current="page">{{ form_title }}</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <header class="src-heading">
+        <div class="src-heading__copy">
+            <h1>{{ form_title }}</h1>
+            {% if object %}
+            <p>Update the publication details, identifiers and authors of this source.</p>
+            {% else %}
+            <p>Connect a publication to the database. Start with the details below, then add its authors.</p>
+            {% endif %}
+        </div>
+    </header>
+
+    <form method="post" novalidate class="src-form__layout" id="source-form">
+        {% csrf_token %}
+        <div class="src-form__main">
+            {% if form.non_field_errors or authorship_formset.non_form_errors %}
+            <div class="src-errors" role="alert">{{ form.non_field_errors }}{{ authorship_formset.non_form_errors }}</div>
+            {% endif %}
+
+            <!-- Publication details (Figma 150:2414) -->
+            <section class="app-panel src-panel" aria-labelledby="src-form-publication">
+                <div class="src-panel__head">
+                    <h2 id="src-form-publication" class="app-panel__title">Publication details</h2>
+                </div>
+                <div class="src-form__title-field">
+                    {% include "database/sources_field.html" with field=form.source_title only %}
+                </div>
+                <div class="src-form__meta-fields">
+                    {% include "database/sources_field.html" with field=form.journal_name only %}
+                    {% include "database/sources_field.html" with field=form.publication_year only %}
+                    {% include "database/sources_field.html" with field=form.journal_volume_number only %}
+                    {% include "database/sources_field.html" with field=form.page_numbers only %}
+                </div>
+            </section>
+
+            <!-- Identifiers (Figma 150:2439) -->
+            <section class="app-panel src-panel" aria-labelledby="src-form-identifiers">
+                <div class="src-panel__head">
+                    <h2 id="src-form-identifiers" class="app-panel__title">Identifiers</h2>
+                    <span class="src-panel__meta">Optional</span>
+                </div>
+                <div class="src-form__pair">
+                    {% include "database/sources_field.html" with field=form.doi only %}
+                    {% include "database/sources_field.html" with field=form.prime_id only %}
+                </div>
+                <p class="src-form__hint"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="14" height="14">A DOI enables automatic citation linking. Enter the identifier without the doi.org prefix.</p>
+            </section>
+
+            <!-- Authors (Figma 150:2455): one entry per form of the authorship formset -->
+            <section class="app-panel src-panel" aria-labelledby="src-form-authors">
+                <div class="src-panel__head">
+                    <h2 id="src-form-authors" class="app-panel__title">Authors</h2>
+                    <span class="src-panel__meta">{% with saved=authorship_formset.initial_form_count %}{% if saved %}{{ saved|pluralize:"author" }} saved{% else %}No authors added yet{% endif %}{% endwith %}</span>
+                </div>
+                <p class="src-panel__lede">Keep authors in publication order. Select an existing author or create a new one below.</p>
+
+                {{ authorship_formset.management_form }}
+                <div class="src-authors" id="authorship-table">
+                    {% for authorship_form in authorship_formset %}
+                    <fieldset class="src-author authorship-row{% if not authorship_form.instance.pk %} is-new{% endif %}{% if authorship_form.errors %} has-errors{% endif %}">
+                        <legend class="src-author__head">
+                            {% if authorship_form.instance.pk %}
+                            {{ authorship_form.instance.author }}
+                            {% else %}
+                            <img class="app-icon" src="{% static 'database/images/icons/user-add-111827.svg' %}" alt="" width="17" height="17">Add an author
+                            {% endif %}
+                        </legend>
+                        {{ authorship_form.id }}
+                        {% for error in authorship_form.non_field_errors %}<p class="invalid-feedback d-block">{{ error }}</p>{% endfor %}
+                        <div class="src-author__existing">
+                            {% include "database/sources_field.html" with field=authorship_form.author label="Select existing author" only %}
+                            <div class="src-author__order">
+                                {% include "database/sources_field.html" with field=authorship_form.order label="Order" only %}
+                            </div>
+                        </div>
+                        <div class="src-author__new">
+                            <p class="src-author__or">Or create a new author</p>
+                            {% include "database/sources_field.html" with field=authorship_form.author_firstname label="First name" only %}
+                            {% include "database/sources_field.html" with field=authorship_form.author_lastname label="Last name" only %}
+                        </div>
+                        {% if authorship_form.instance.pk %}
+                        <div class="form-check src-author__delete">
+                            {{ authorship_form.DELETE }}
+                            <label class="form-check-label" for="{{ authorship_form.DELETE.id_for_label }}">Remove this author from the source</label>
+                        </div>
+                        {% endif %}
+                    </fieldset>
+                    {% endfor %}
+                </div>
+                <button class="app-btn-secondary src-authors__more" type="button" id="src-add-author" hidden><img class="app-icon" src="{% static 'database/images/icons/plus-65758a-16.svg' %}" alt="" width="16" height="16">Add another author</button>
+            </section>
+
+            <div class="src-actions">
+                <p class="src-actions__note">You can add more authors after saving.</p>
+                <div class="src-actions__buttons">
+                    {% if object %}
+                    <a class="app-btn-secondary src-btn--danger" href="{% url 'source-delete' object.pk %}">Delete</a>
+                    <a class="app-btn-secondary" href="{% url 'source-detail' object.pk %}">Cancel</a>
+                    {% else %}
+                    <a class="app-btn-secondary" href="{% url 'source-search' %}">Cancel</a>
+                    {% endif %}
+                    <button type="submit" class="app-btn"><img class="app-icon" src="{% static 'database/images/icons/check-white-16.svg' %}" alt="" width="16" height="16">{{ submit_text }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Source guidance (Figma 150:2499) -->
+        <aside class="src-form__aside">
+            <section class="app-panel src-preview" id="src-preview" aria-labelledby="src-preview-title">
+                <h2 id="src-preview-title" class="src-preview__label">Citation preview</h2>
+                <span class="src-preview__type">Publication</span>
+                <p class="src-preview__title is-empty" data-preview="title">Your publication title will appear here</p>
+                <p class="src-preview__text" data-preview="details">Add publication details and authors to build the source citation.</p>
+                <p class="src-preview__note">Preview only · Changes are applied when you save.</p>
+            </section>
+            <section class="src-tips" aria-labelledby="src-tips-title">
+                <h2 id="src-tips-title"><img class="app-icon" src="{% static 'database/images/icons/information-circle-111827-24.svg' %}" alt="" width="17" height="17">Good to know</h2>
+                <ul>
+                    <li>Use the full article title, including chemical formulas.</li>
+                    <li>Add a DOI to link directly to the publication.</li>
+                    <li>Author order should match the published article.</li>
+                </ul>
+            </section>
+        </aside>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/sources_styles.html" %}
+<style>
+.src-form__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
+    align-items: start;
+}
+
+.src-form__main {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.src-form .src-panel {
+    gap: 18px;
+}
+
+.src-form__title-field .form-control {
+    height: 42px !important;
+}
+
+.src-form__meta-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 100px 100px 124px;
+    gap: 14px;
+}
+
+.src-form__pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.src-form__hint {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 11px;
+    color: var(--color-gray-500);
+}
+
+/* Author entries */
+.src-authors {
+    display: grid;
+    gap: 12px;
+}
+
+.src-author {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    margin: 0;
+    padding: 16px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--color-gray-50);
+}
+
+.src-author.is-collapsed {
+    display: none;
+}
+
+.src-author__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.src-author__existing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px;
+    gap: 12px;
+    align-items: end;
+}
+
+.src-author__new {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: end;
+}
+
+.src-author__or {
+    align-self: center;
+    margin: 20px 0 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.src-author__delete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+}
+
+.src-author__delete input {
+    accent-color: var(--color-primary);
+}
+
+.src-author__delete label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-500);
+}
+
+.src-form .src-authors__more {
+    justify-self: start;
+}
+
+/* Citation preview and tips */
+.src-form__aside {
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.src-preview {
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+}
+
+.src-form .src-preview__label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.src-preview__type {
+    justify-self: start;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(206, 72, 1, 0.11);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.src-preview__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.src-preview__title.is-empty {
+    color: var(--color-gray-400);
+}
+
+.src-preview__text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+.src-preview__note {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--color-gray-400);
+}
+
+@media (max-width: 991.98px) {
+    .src-form__layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .src-form__meta-fields {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .src-form__meta-fields > :first-child {
+        grid-column: 1 / -1;
+    }
+
+    .src-author__new {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .src-author__or {
+        grid-column: 1 / -1;
+        margin: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .src-form__pair,
+    .src-form__meta-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .src-author {
+        padding: 14px 12px;
+    }
+
+    .src-author__new {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById("source-form");
+    if (!form) return;
+
+    // Show the saved authors and one blank entry; the other blank formset entries open one at a time
+    const more = document.getElementById("src-add-author");
+    const hasInput = entry => Array.from(entry.querySelectorAll("input:not([type=hidden]), select")).some(field => field.value);
+    const blanks = Array.from(form.querySelectorAll(".src-author.is-new")).filter(entry => !hasInput(entry) && !entry.classList.contains("has-errors"));
+    blanks.slice(1).forEach(entry => entry.classList.add("is-collapsed"));
+    const collapsed = () => form.querySelectorAll(".src-author.is-collapsed");
+    if (more && collapsed().length) {
+        more.hidden = false;
+        more.addEventListener("click", () => {
+            const next = collapsed()[0];
+            if (next) {
+                next.classList.remove("is-collapsed");
+                next.querySelector("select, input:not([type=hidden])").focus();
+            }
+            more.hidden = !collapsed().length;
+        });
+    }
+
+    // Citation preview from the current field values; titles keep only <sub> and <sup> markup
+    const preview = document.getElementById("src-preview");
+    if (!preview) return;
+    const titleNode = preview.querySelector("[data-preview=title]");
+    const detailsNode = preview.querySelector("[data-preview=details]");
+    const emptyTitle = titleNode.textContent;
+    const emptyDetails = detailsNode.textContent;
+    const value = id => (document.getElementById(id) || {}).value?.trim() || "";
+    const escape = text => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const rich = text => escape(text).replace(/&lt;(\/?)(sub|sup)&gt;/gi, "<$1$2>");
+
+    function authors() {
+        const rows = [];
+        form.querySelectorAll(".src-author").forEach(entry => {
+            const remove = entry.querySelector('input[name$="-DELETE"]');
+            if (remove && remove.checked) return;
+            const select = entry.querySelector('select[name$="-author"]');
+            const first = entry.querySelector('input[name$="-author_firstname"]')?.value.trim();
+            const last = entry.querySelector('input[name$="-author_lastname"]')?.value.trim();
+            const order = parseInt(entry.querySelector('input[name$="-order"]')?.value, 10);
+            let name = "";
+            if (select && select.value) name = select.selectedOptions[0].text;
+            else if (first && last) name = `${last}, ${first}`;
+            if (name) rows.push({ name, order: Number.isNaN(order) ? Infinity : order });
+        });
+        return rows.sort((a, b) => a.order - b.order).map(row => row.name);
+    }
+
+    function update() {
+        const title = value("id_source_title");
+        titleNode.innerHTML = title ? rich(title) : escape(emptyTitle);
+        titleNode.classList.toggle("is-empty", !title);
+        const journal = [value("id_journal_name"),
+                         value("id_journal_volume_number") && `vol. ${value("id_journal_volume_number")}`,
+                         value("id_page_numbers") && `pp. ${value("id_page_numbers")}`,
+                         value("id_publication_year")].filter(Boolean).join(", ");
+        const parts = [authors().join("; "), journal, value("id_doi") && `DOI: ${value("id_doi")}`].filter(Boolean);
+        detailsNode.textContent = parts.length ? parts.join(". ") + "." : emptyDetails;
+    }
+
+    form.addEventListener("input", update);
+    form.addEventListener("change", update);
+    update();
+})();
+</script>
+{% endblock %}

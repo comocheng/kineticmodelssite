@@ -1,0 +1,37 @@
+{% load static utils %}
+{% comment %}
+Result range and numbered page links for the ChemKED pages (Figma 182:4550). Pass page (a Page)
+and noun (e.g. "datasets"); optionally label (the nav name), anchor (a #fragment), legend (a note
+beside the range) and ajax=True, which gives the links the class the dataset list's AJAX script
+binds. The links keep every other GET parameter, so filters and searches survive.
+{% endcomment %}
+{% if page.paginator.count %}
+<div class="ck-pager">
+    <span class="ck-pager__info"><span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }} {{ noun }}</span>{% if legend %}<span>{{ legend }}</span>{% endif %}</span>
+    {% if page.has_other_pages %}
+    <nav class="ck-pager__pages" aria-label="{{ label|default:'Pages' }}">
+        {% if page.has_previous %}
+        <a class="ck-pager__step{% if ajax %} ajax-page{% endif %}" href="?{% param_replace page=page.previous_page_number %}{{ anchor }}"><img class="app-icon" src="{% static 'database/images/icons/angle-left-374957.svg' %}" alt="" width="7" height="14">Previous</a>
+        {% else %}
+        <span class="ck-pager__step is-disabled" aria-disabled="true"><img class="app-icon" src="{% static 'database/images/icons/angle-left-374957.svg' %}" alt="" width="7" height="14">Previous</span>
+        {% endif %}
+        {% for n in page.paginator.page_range %}
+            {% if n == page.number %}
+            <span class="ck-pager__page is-current" aria-current="page">{{ n }}</span>
+            {% elif n == 1 or n == page.paginator.num_pages %}
+            <a class="ck-pager__page{% if ajax %} ajax-page{% endif %}" href="?{% param_replace page=n %}{{ anchor }}">{{ n }}</a>
+            {% elif n >= page.number|add:"-2" and n <= page.number|add:"2" %}
+            <a class="ck-pager__page{% if ajax %} ajax-page{% endif %}" href="?{% param_replace page=n %}{{ anchor }}">{{ n }}</a>
+            {% elif n == page.number|add:"-3" or n == page.number|add:"3" %}
+            <span class="ck-pager__page" aria-hidden="true">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if page.has_next %}
+        <a class="ck-pager__step{% if ajax %} ajax-page{% endif %}" href="?{% param_replace page=page.next_page_number %}{{ anchor }}">Next<img class="app-icon" src="{% static 'database/images/icons/angle-right-374957.svg' %}" alt="" width="7" height="14"></a>
+        {% else %}
+        <span class="ck-pager__step is-disabled" aria-disabled="true">Next<img class="app-icon" src="{% static 'database/images/icons/angle-right-374957.svg' %}" alt="" width="7" height="14"></span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% load static %}
+{# The Kinetic Models Database home, from the Figma "Research database home" (node 77:2495) #}
+
+{% block title %}Kinetic Models Database | Prometheus{% endblock %}
+
+{% block content %}
+<div class="db-home">
+
+    <!-- Search workspace (Figma 71:1890) -->
+    <section class="app-workspace" aria-labelledby="db-title">
+        {% include "database/database_home_waves.html" %}
+        <div class="db-home__top">
+            <div class="app-workspace__intro">
+                <p class="app-eyebrow">Combustion kinetics</p>
+                <h1 id="db-title" class="app-title"><span class="app-title__accent">Kinetic Models</span> Database</h1>
+                <p class="app-lede">Explore the kinetic models, species, reactions and source publications in Prometheus.</p>
+            </div>
+            {% if site_access_allowed %}
+            <div class="dropdown">
+                <a class="app-pill dropdown-toggle-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="app-pill__plus"><img class="app-icon" src="{% static 'database/images/icons/plus.svg' %}" alt="" width="12" height="12"></span>Add Data
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'source-create' %}">Source</a></li>
+                    <li><a class="dropdown-item" href="{% url 'kinetic-model-create' %}">Kinetic model</a></li>
+                    <li><a class="dropdown-item" href="{% url 'author-create' %}">Author</a></li>
+                    <li><a class="dropdown-item" href="{% url 'chemked_database:dataset-upload' %}">ChemKED dataset</a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Each scope sends the query to the search that exists for it -->
+        {% with first=search_scopes.0 %}
+        <form class="app-search" id="db-search" action="{{ first.action }}" method="get" role="search">
+            <div class="app-search__head">
+                <h2 class="app-search__title">Search the database</h2>
+                <a class="app-link" href="{% url 'reaction-search' %}">Search reactions by species <img class="app-icon" src="{% static 'database/images/icons/sliders-horizontal.svg' %}" alt="" width="15" height="15"></a>
+            </div>
+            <div class="app-search__field">
+                <label class="visually-hidden" for="db-scope">Search in</label>
+                <select class="app-search__scope" id="db-scope">
+                    {% for scope in search_scopes %}
+                    <option value="{{ scope.key }}" data-action="{{ scope.action }}" data-name="{{ scope.param }}" data-placeholder="{{ scope.placeholder }}">{{ scope.label }}</option>
+                    {% endfor %}
+                </select>
+                <div class="app-search__query">
+                    <img class="app-icon" src="{% static 'database/images/icons/search.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="db-query">Search text</label>
+                    <input class="app-search__input" id="db-query" type="search" name="{{ first.param }}" placeholder="{{ first.placeholder }}">
+                </div>
+                <button class="app-btn" type="submit">Search database <img class="app-icon" src="{% static 'database/images/icons/arrow-right-white.svg' %}" alt="" width="16" height="16"></button>
+            </div>
+            {# One row of examples for each scope; the script shows the row of the chosen one #}
+            {% for scope in search_scopes %}
+            <div class="app-search__examples" data-scope="{{ scope.key }}"{% if not forloop.first %} hidden{% endif %}>
+                <span>Try a search</span>
+                {% for example in scope.examples %}<a class="app-chip" href="{{ example.href }}">{{ example.label }}</a>{% endfor %}
+                <span>or choose a collection below</span>
+            </div>
+            {% endfor %}
+        </form>
+        {% endwith %}
+    </section>
+
+    <!-- Browse by collection (Figma 77:2553) -->
+    <section class="db-home__block" aria-labelledby="db-collections">
+        <h2 id="db-collections" class="app-section-title">Browse by collection</h2>
+        <div class="app-collections">
+            <a class="app-collection" href="{% url 'species-search' %}">
+                <span class="app-collection__head"><img class="app-icon" src="{% static 'database/images/icons/flask-conical.svg' %}" alt="" width="22" height="22"><span>Species</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Formula, SMILES, structure</p>
+            </a>
+            <a class="app-collection" href="{% url 'reaction-search' %}">
+                <span class="app-collection__head"><img class="app-icon" src="{% static 'database/images/icons/arrow-left-right.svg' %}" alt="" width="22" height="22"><span>Reactions</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Reactants, products, kinetics</p>
+            </a>
+            <a class="app-collection" href="{% url 'source-search' %}">
+                <span class="app-collection__head"><img class="app-icon" src="{% static 'database/images/icons/book-open.svg' %}" alt="" width="22" height="22"><span>Sources</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Publications, references</p>
+            </a>
+            <a class="app-collection" href="{% url 'kinetic-model-list' %}">
+                <span class="app-collection__head"><img class="app-icon" src="{% static 'database/images/icons/box.svg' %}" alt="" width="22" height="22"><span>Kinetic Models</span><img class="app-icon" src="{% static 'database/images/icons/arrow-up-right.svg' %}" alt="" width="17" height="17"></span>
+                <p>Browse chemical kinetic models</p>
+            </a>
+        </div>
+    </section>
+
+    <!-- Overview and features (Figma 77:2580) -->
+    <section class="db-home__info">
+        <div class="app-panel">
+            <div class="app-panel__head">
+                <h2 class="app-panel__title">Database overview</h2>
+                <span class="app-panel__meta">All collections</span>
+            </div>
+            <table class="app-table">
+                <thead>
+                    <tr><th scope="col">Collection</th><th scope="col" class="is-end">Records</th><th scope="col" class="is-end">Explore</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="app-table__identity"><img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">Species</span></td>
+                        <td class="is-number">{{ numbers.species }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'species-search' %}">Browse <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="app-table__identity"><img class="app-icon" src="{% static 'database/images/icons/arrow-left-right-sm.svg' %}" alt="" width="18" height="18">Reactions</span></td>
+                        <td class="is-number">{{ numbers.reactions }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'reaction-search' %}">Browse <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="app-table__identity"><img class="app-icon" src="{% static 'database/images/icons/book-open-sm.svg' %}" alt="" width="18" height="18">Sources</span></td>
+                        <td class="is-number">{{ numbers.sources }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'source-search' %}">Browse <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                    </tr>
+                    <tr>
+                        <td><span class="app-table__identity"><img class="app-icon" src="{% static 'database/images/icons/box-sm.svg' %}" alt="" width="18" height="18">Kinetic Models</span></td>
+                        <td class="is-number">{{ numbers.models }}</td>
+                        <td class="is-end"><a class="app-link" href="{% url 'kinetic-model-list' %}">Browse <img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="15" height="15"></a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="app-panel db-home__features">
+            <h2 class="app-panel__title db-home__features-title"><img class="app-icon" src="{% static 'database/images/icons/shield-check.svg' %}" alt="" width="21" height="21">Built for research</h2>
+            <p class="db-home__features-lede">Connected data and practical tools for your kinetics workflow.</p>
+            <ul class="app-features">
+                <li><img class="app-icon" src="{% static 'database/images/icons/circle-check.svg' %}" alt="" width="17" height="17">Typed rate expressions, checked on import</li>
+                <li><img class="app-icon" src="{% static 'database/images/icons/download.svg' %}" alt="" width="17" height="17">CHEMKIN and Cantera YAML export</li>
+                <li><img class="app-icon" src="{% static 'database/images/icons/link.svg' %}" alt="" width="17" height="17">Linked species &amp; reactions</li>
+                <li><img class="app-icon" src="{% static 'database/images/icons/code.svg' %}" alt="" width="17" height="17"><a href="{% url 'swagger-ui' %}">RESTful API access</a></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Citation and support (Figma 77:2643) -->
+    <section class="db-home__support">
+        {% if citation %}
+        <details class="app-panel db-home__cite">
+            <summary>
+                <img class="app-icon" src="{% static 'database/images/icons/quote.svg' %}" alt="" width="20" height="20">
+                <strong>How to Cite</strong>
+                <span>Using this database in your research? View citation details.</span>
+                <img class="app-icon db-home__chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+            </summary>
+            <p class="db-home__cite-text">{{ citation.authors }} <em>{{ citation.title }}</em>.{% if citation.url %} <a href="{{ citation.url }}">{{ citation.url }}</a>{% endif %}</p>
+        </details>
+        {% endif %}
+        {% if community.funding %}
+        <p class="app-notice">
+            <img class="app-icon" src="{% static 'database/images/icons/info.svg' %}" alt="" width="18" height="18">
+            <span><strong>{{ community.funding }}</strong>{% if community.award %} {{ community.award }}.{% endif %} Data provided for scientific research use.</span>
+        </p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.db-home {
+    display: grid;
+    gap: 32px;
+}
+
+.db-home__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.db-home__info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    align-items: start;
+}
+
+.db-home__features {
+    display: grid;
+    gap: 20px;
+    align-self: stretch;
+    padding: 24px;
+}
+
+.db-home__features-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.db-home__features-lede {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-500);
+}
+
+.db-home__features a {
+    color: inherit;
+}
+
+.db-home__support {
+    display: grid;
+    gap: 16px;
+}
+
+.db-home__cite summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 19px 24px;
+    list-style: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-gray-500);
+}
+
+.db-home__cite summary::-webkit-details-marker {
+    display: none;
+}
+
+.db-home__cite summary strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.db-home__cite summary span {
+    flex: 1;
+}
+
+.db-home__cite[open] .db-home__chevron {
+    transform: rotate(180deg);
+}
+
+.db-home__cite-text {
+    margin: 0;
+    padding: 0 24px 20px 60px;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.db-home .dropdown-toggle-none::after {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .db-home__info {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .db-home__top {
+        flex-direction: column;
+    }
+
+    .db-home__cite summary span {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Point the search form, and its examples, at the search that exists for the chosen scope
+    (() => {
+        const form = document.getElementById("db-search");
+        const scope = document.getElementById("db-scope");
+        const input = document.getElementById("db-query");
+        if (!form || !scope || !input) return;
+        const apply = () => {
+            const option = scope.selectedOptions[0];
+            form.action = option.dataset.action;
+            input.name = option.dataset.name;
+            input.placeholder = option.dataset.placeholder;
+            form.querySelectorAll(".app-search__examples").forEach(row => {
+                row.hidden = row.dataset.scope !== option.value;
+            });
+        };
+        scope.addEventListener("change", apply);
+        // A page restored from history keeps the chosen scope, so match the form to it
+        apply();
+    })();
+</script>
+{% endblock %}

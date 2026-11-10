@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+{# A block of identical rates copied between models; no Figma frame, so it uses the kinetic model pages' look (170:6885) #}
+
+{% block title %}Copied block {{ chemistry_block.pk }} | Prometheus{% endblock %}
+
+{% block content %}
+<div class="km-page km-block">
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Copied block {{ chemistry_block.pk }}</span></li>
+        </ol>
+    </nav>
+
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <h1>{{ chemistry_block.size }} identical rates shared by {{ block_models|length }} models</h1>
+            <p class="km-lede">Exactly these models use these rates.
+                {% if chemistry_block.origin %}The earliest-published is <a href="{% url 'kinetic-model-detail' chemistry_block.origin_id %}">{{ chemistry_block.origin.model_name }}</a>, the likely source.{% endif %}
+                Layers: {% for layer, count in chemistry_block.layers.items %}<a href="{% url 'sub-mechanism-list' %}?layer={{ layer|urlencode }}">{{ layer }}</a> {{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        </div>
+    </header>
+
+    <div class="km-block__layout">
+        <section class="app-panel" aria-labelledby="km-block-models">
+            <div class="app-panel__head">
+                <h2 class="app-panel__title" id="km-block-models">Models</h2>
+                <span class="app-panel__meta">{{ block_models|length }}</span>
+            </div>
+            <ul class="km-panel-list">
+                {% for m in block_models %}<li><a href="{% url 'kinetic-model-detail' m.pk %}">{{ m.model_name }}</a> <span class="km-block__year">{{ m.source.publication_year|default:"year unknown" }}</span></li>{% endfor %}
+            </ul>
+        </section>
+
+        <section class="app-panel" aria-labelledby="km-block-reactions">
+            <div class="app-panel__head">
+                <h2 class="app-panel__title" id="km-block-reactions">Reactions</h2>
+                <span class="app-panel__meta">{{ page.paginator.count }}</span>
+            </div>
+            <div class="km-table-wrap">
+                <table class="km-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Reaction</th>
+                            <th scope="col">Layer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for reaction in rows %}
+                        <tr>
+                            <td class="is-mono"><a href="{% url 'reaction-detail' reaction.pk %}">{{ reaction.equation_text }}</a></td>
+                            <td><a href="{% url 'sub-mechanism-list' %}?layer={{ reaction.layer|urlencode }}">{{ reaction.layer }}</a></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "database/kineticmodel_pager.html" with page=page param="page" label="Reaction pages" %}
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
+<style>
+.km-block__layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.km-block__year {
+    color: var(--color-gray-500);
+}
+
+@media (max-width: 991.98px) {
+    .km-block__layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+</style>
+{% endblock %}

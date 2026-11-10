@@ -1,0 +1,688 @@
+{% comment %}
+The shared look of the importer pages, from the Figma frames "Promethe.us · Import jobs" (179:2995)
+and "Prometheus · Importer failed job" (182:4578). Include it in extra_css; every rule is scoped
+under .im-page, the wrapper each importer page uses. It replaces importer_dashboard/css/dashboard.css
+on these pages, because that sheet restyles body, links, tables and buttons site-wide.
+{% endcomment %}
+<style>
+.im-page {
+    --im-tint: #edf3ff;  /* the Figma blue tint of count chips, as on the kinetic model pages */
+    /* Darker shades of the scientific.css accents, so 12 px chip text keeps 4.5:1 on its tint */
+    --im-run: #0e7490;
+    --im-ok: #047857;
+    --im-wait: #b45309;
+    --im-bad: #b91c1c;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    min-width: 0;
+}
+
+.im-page > * {
+    min-width: 0;
+}
+
+/* The global h2 has a rule and a top margin; the importer headings sit in panels */
+.im-page h1,
+.im-page h2,
+.im-page h3,
+.im-page h4 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    letter-spacing: 0;
+}
+
+.im-page p {
+    margin: 0;
+}
+
+.im-page code,
+.im-mono {
+    font-family: var(--font-mono);
+}
+
+.im-page code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--color-gray-50);
+    font-size: 0.92em;
+    color: var(--color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+.im-faint {
+    color: var(--color-gray-500);
+}
+
+/* Breadcrumb */
+.im-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.im-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.im-crumbs a {
+    color: var(--color-primary);
+}
+
+/* Page heading: title, description and page actions */
+.im-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+}
+
+.im-heading__intro {
+    display: grid;
+    flex: 1 1 420px;
+    gap: 8px;
+    min-width: 0;
+}
+
+.im-heading__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+}
+
+.im-heading h1 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+/* A job title is the frame's larger 44 px line */
+.im-job .im-heading h1 {
+    font-size: 34px;
+}
+
+.im-lede {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.im-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.im-actions form,
+.im-row-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+/* Buttons: .app-btn is the orange one, .im-btn the white one */
+.im-page .app-btn {
+    height: 38px;
+    padding: 0 14px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.im-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.im-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.im-btn--danger {
+    color: var(--im-bad);
+}
+
+.im-btn--danger:hover {
+    border-color: var(--color-error);
+    background: var(--color-error-bg);
+    color: var(--im-bad);
+}
+
+.im-btn--sm {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+/* A form button that reads as a link, for the start and kill actions in table rows */
+.im-textbtn {
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.im-textbtn:hover {
+    background: var(--color-primary-bg);
+    color: var(--color-primary-dark);
+}
+
+.im-textbtn--danger {
+    color: var(--im-bad);
+}
+
+.im-textbtn--danger:hover {
+    background: var(--color-error-bg);
+    color: var(--im-bad);
+}
+
+.im-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+}
+
+.im-iconbtn:hover,
+.im-iconbtn[aria-expanded="true"] {
+    border-color: var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+
+/* Job status chip with its indicator dot */
+.im-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 25px;
+    padding: 3px 10px 3px 9px;
+    border-radius: 100px;
+    background: var(--color-gray-50);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.im-status::before {
+    content: "";
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.im-status--running {
+    background: var(--color-info-bg);
+    color: var(--im-run);
+}
+
+.im-status--running::before {
+    animation: im-pulse 2s ease-in-out infinite;
+}
+
+.im-status--completed {
+    background: var(--color-success-bg);
+    color: var(--im-ok);
+}
+
+.im-status--failed {
+    background: var(--color-error-bg);
+    color: var(--im-bad);
+}
+
+.im-status--pending {
+    background: var(--color-warning-bg);
+    color: var(--im-wait);
+}
+
+.im-status--awaiting_input {
+    background: var(--color-primary-bg);
+    color: var(--color-primary-dark);
+}
+
+@keyframes im-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+/* Small chips: counts, identification states and yes or no marks */
+.im-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: var(--color-gray-50);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.im-chip--count {
+    background: var(--im-tint);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.im-chip--confirmed,
+.im-chip--yes {
+    background: var(--color-success-bg);
+    color: var(--im-ok);
+}
+
+.im-chip--processed {
+    background: var(--color-info-bg);
+    color: var(--im-run);
+}
+
+.im-chip--tentative {
+    background: var(--color-warning-bg);
+    color: var(--im-wait);
+}
+
+.im-chip--unidentified,
+.im-chip--blocked {
+    background: var(--color-error-bg);
+    color: var(--im-bad);
+}
+
+/* Panels */
+.im-page .app-panel {
+    min-width: 0;
+}
+
+.im-page .app-panel__title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 16px;
+    line-height: 1.35;
+}
+
+.im-page .app-panel__head {
+    flex-wrap: wrap;
+    padding: 18px 20px;
+}
+
+.im-subhead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin-bottom: 10px;
+}
+
+.im-subhead h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+/* Collapse toggle in a panel head; Bootstrap sets aria-expanded */
+.im-collapse {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-600);
+    cursor: pointer;
+}
+
+.im-collapse:hover {
+    color: var(--color-primary);
+}
+
+.im-collapse .app-icon {
+    transition: transform var(--transition-fast);
+}
+
+.im-collapse[aria-expanded="false"] .app-icon {
+    transform: rotate(-90deg);
+}
+
+.im-collapse[aria-expanded="false"] .im-collapse__hide,
+.im-collapse[aria-expanded="true"] .im-collapse__show {
+    display: none;
+}
+
+/* Tables scroll inside their wrapper, never the page */
+.im-table-wrap {
+    position: relative;
+    overflow-x: auto;
+}
+
+.im-table-wrap:focus-visible {
+    outline-offset: -2px;
+}
+
+.im-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.im-table th {
+    padding: 12px 10px;
+    border-top: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-gray-600);
+}
+
+.im-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+}
+
+.im-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.im-table th:first-child,
+.im-table td:first-child {
+    padding-left: 20px;
+}
+
+.im-table th:last-child,
+.im-table td:last-child {
+    padding-right: 20px;
+}
+
+.im-table .is-number {
+    font-family: var(--font-mono);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.im-table .is-end {
+    text-align: right;
+}
+
+.im-table code {
+    font-size: 12px;
+}
+
+.im-table tr.confirmed td {
+    background: var(--color-success-bg);
+}
+
+.im-table tr.blocked td {
+    background: var(--color-error-bg);
+}
+
+.im-empty {
+    padding: 28px 20px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+/* Status notice: icon, title, message and an optional action */
+.im-alert {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 16px;
+    padding: 20px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background: var(--color-white);
+}
+
+.im-alert__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--color-gray-600);
+}
+
+.im-alert__body {
+    display: grid;
+    flex: 1 1 320px;
+    gap: 5px;
+    min-width: 0;
+}
+
+.im-alert__title {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-gray-900);
+}
+
+.im-alert__text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.im-alert--danger {
+    border-color: #f5c2c2;
+    background: var(--color-error-bg);
+}
+
+.im-alert--danger .im-alert__icon {
+    color: var(--color-error);
+}
+
+.im-alert--warning {
+    border-color: #f6dcae;
+    background: var(--color-warning-bg);
+}
+
+.im-alert--warning .im-alert__icon {
+    color: var(--color-warning);
+}
+
+.im-alert--success {
+    border-color: #bfe8d6;
+    background: var(--color-success-bg);
+}
+
+.im-alert--success .im-alert__icon {
+    color: var(--color-success);
+}
+
+.im-alert--info {
+    background: var(--im-tint);
+}
+
+.im-alert--info .im-alert__icon {
+    color: var(--color-primary);
+}
+
+/* Job tabs: Overview, Output log, Error log and Files are separate pages */
+.im-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 28px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.im-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+    text-decoration: none;
+}
+
+.im-tab:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.im-tab.is-active {
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* Log text: a light mono pane that scrolls inside itself */
+.im-page .im-log {
+    position: relative;
+    max-height: 70vh;
+    margin: 0;
+    padding: 16px 20px;
+    overflow: auto;
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--color-gray-800);
+    border-radius: 0 0 10px 10px;
+}
+
+.im-page .im-log:focus-visible {
+    outline-offset: -2px;
+}
+
+/* One log in full (im_log_panel.html): its file, size and time, and the download link */
+.im-logpanel .app-panel__head {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.im-logpanel__aside {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.im-logpanel__aside code {
+    font-size: 12px;
+    color: var(--color-gray-700);
+    background: none;
+    padding: 0;
+}
+
+.im-logpanel__note {
+    margin: 0;
+    padding: 10px 20px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.im-logpanel__empty {
+    margin: 0;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-gray-200);
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.im-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.im-note .app-icon {
+    margin-top: 2px;
+}
+
+@media (max-width: 575.98px) {
+    .im-heading h1,
+    .im-job .im-heading h1 {
+        font-size: 26px;
+    }
+
+    .im-table th:first-child,
+    .im-table td:first-child {
+        padding-left: 14px;
+    }
+
+    .im-table th:last-child,
+    .im-table td:last-child {
+        padding-right: 14px;
+    }
+
+    .im-page .app-panel__head {
+        padding: 16px 14px;
+    }
+
+    .im-alert {
+        padding: 16px 14px;
+    }
+
+    .im-page .im-log {
+        padding: 14px;
+    }
+}
+</style>

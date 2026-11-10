@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+{% load static %}
+{# The SQL console; no Figma frame, so it takes the look of the database pages (database/catalog_styles.html). The script below needs every id and the example-query-btn, schema-table-name and data-sql hooks. #}
+
+{% block title %}SQL Console | Prometheus{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+<style>
+.sql-page .cat-heading {
+    align-items: center;
+}
+
+.sql-limits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* White chips: the muted ones would vanish on the page background */
+.sql-limits .cat-pill {
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+}
+
+/* Editor first in the page order; the schema sits to its left on wide screens */
+.sql-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    grid-template-areas: "schema main";
+    gap: 20px;
+    align-items: start;
+}
+
+.sql-main {
+    grid-area: main;
+    display: grid;
+    gap: 20px;
+    min-width: 0;
+}
+
+.sql-schema {
+    grid-area: schema;
+    position: sticky;
+    top: 96px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 116px);
+    overflow: hidden;
+}
+
+.sql-schema .app-panel__head {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.sql-schema .app-panel__meta {
+    flex-basis: 100%;
+}
+
+.schema-sidebar {
+    overflow-y: auto;
+    padding: 12px 10px 14px;
+}
+
+.sql-schema__group + .sql-schema__group {
+    margin-top: 12px;
+}
+
+.sql-schema__app {
+    margin: 0 0 4px;
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-gray-400);
+}
+
+.schema-table-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    color: var(--color-primary);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.schema-table-name:hover {
+    background: var(--color-primary-bg);
+}
+
+.schema-table-name .bi {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--color-gray-500);
+    transition: transform var(--transition-fast);
+}
+
+.schema-table-name[aria-expanded="true"] .bi {
+    transform: rotate(90deg);
+}
+
+.schema-col-list {
+    padding: 2px 6px 6px 24px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+/* Query editor */
+.sql-editor__body {
+    display: grid;
+    gap: 14px;
+    padding: 0 20px 20px;
+}
+
+.sql-page #sql-textarea {
+    min-height: 190px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-900);
+    resize: vertical;
+}
+
+.sql-page #sql-textarea:focus,
+.sql-page #id_row_limit:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(206, 72, 1, 0.15);
+}
+
+.sql-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+}
+
+.sql-controls__limit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: auto;
+}
+
+.sql-controls__limit label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+}
+
+.sql-page #id_row_limit {
+    height: 38px;
+    border-color: var(--color-gray-300);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.sql-page .sql-controls .app-btn,
+.sql-page .sql-controls .cat-btn {
+    cursor: pointer;
+}
+
+.sql-form-errors {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    border-radius: 6px;
+    background: var(--color-error-bg);
+    font-size: 13px;
+    color: var(--color-error);
+}
+
+/* Example queries: the Bootstrap accordion, tabs and list in the panel look */
+.sql-examples .accordion-item {
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.sql-examples .accordion-button {
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--color-white);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    box-shadow: none;
+}
+
+.sql-examples .accordion-button:not(.collapsed) {
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+    color: var(--color-gray-900);
+}
+
+.sql-examples .accordion-button:focus-visible {
+    box-shadow: inset 0 0 0 3px rgba(206, 72, 1, 0.2);
+}
+
+.sql-examples__hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-500);
+}
+
+.sql-examples .accordion-body {
+    padding: 12px 20px 16px;
+}
+
+.sql-examples .nav-tabs {
+    gap: 4px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.sql-examples .nav-tabs .nav-link {
+    margin-bottom: -1px;
+    padding: 8px 12px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-gray-600);
+}
+
+.sql-examples .nav-tabs .nav-link:hover {
+    color: var(--color-primary);
+}
+
+.sql-examples .nav-tabs .nav-link.active {
+    border-bottom-color: var(--color-primary);
+    background: transparent;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.sql-examples .example-query-btn {
+    padding: 10px 8px;
+    border-color: var(--color-gray-200);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+}
+
+.sql-examples .example-query-btn:hover,
+.sql-examples .example-query-btn:focus {
+    background: var(--color-gray-50);
+}
+
+.sql-examples .example-query-btn .bi {
+    color: var(--color-primary);
+}
+
+.sql-examples__label {
+    font-weight: 600;
+}
+
+.sql-page .example-sql-preview {
+    max-height: 3rem;
+    margin: 2px 0 0;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    white-space: pre-wrap;
+    color: var(--color-gray-500);
+}
+
+/* Error */
+.sql-error {
+    border-color: rgba(220, 38, 38, 0.5);
+}
+
+.sql-error .app-panel__title {
+    color: var(--color-error);
+}
+
+.sql-error pre {
+    margin: 0;
+    padding: 0 20px 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--color-error);
+}
+
+/* Results: the table scrolls both ways inside its panel, under a sticky head */
+.results-table-wrapper {
+    position: relative;
+    max-height: 480px;
+    overflow: auto;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.sql-page .results-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-top: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+.sql-page .results-table td {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    vertical-align: top;
+}
+
+.sql-page .results-table td + td,
+.sql-page .results-table th + th {
+    border-left: 1px solid var(--color-gray-200);
+}
+
+.sql-null {
+    font-style: italic;
+    color: var(--color-gray-400);
+}
+
+.sql-success {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: var(--color-success-bg);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+@media (max-width: 991.98px) {
+    .sql-layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "main" "schema";
+    }
+
+    .sql-schema {
+        position: static;
+        max-height: 420px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sql-editor__body {
+        padding: 0 14px 16px;
+    }
+
+    .sql-examples .accordion-button {
+        flex-wrap: wrap;
+        padding: 14px;
+    }
+
+    .sql-examples .accordion-body {
+        padding: 12px 14px 14px;
+    }
+
+    .sql-error pre {
+        padding: 0 14px 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cat-page sql-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">SQL Console</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <h1>SQL Console</h1>
+            <p class="cat-lede">Run a read-only query against the data tables. Open a table in the schema list to see its columns, or load one of the example queries.</p>
+        </div>
+        <ul class="sql-limits" aria-label="Query limits">
+            <li class="cat-pill cat-pill--muted">Read-only</li>
+            <li class="cat-pill cat-pill--muted">EXPLAIN allowed</li>
+            <li class="cat-pill cat-pill--muted">Max 1 000 rows</li>
+            <li class="cat-pill cat-pill--muted">10 s timeout</li>
+        </ul>
+    </header>
+
+    {% if not available %}
+    <p class="app-notice" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i><span>The SQL console is not set up on this server, so it runs no queries.</span></p>
+    {% endif %}
+
+    <div class="sql-layout">
+        <div class="sql-main">
+            <!-- Query form -->
+            <section class="app-panel sql-editor" aria-labelledby="sql-editor-title">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="sql-editor-title"><i class="bi bi-terminal" aria-hidden="true"></i>Query</h2>
+                    <span class="app-panel__meta">Ctrl+Enter or ⌘+Enter runs the query</span>
+                </div>
+                <form method="post" id="query-form" class="sql-editor__body">
+                    {% csrf_token %}
+
+                    {% if form.sql.errors %}
+                    <div class="sql-form-errors" role="alert">
+                        {% for e in form.sql.errors %}<div>{{ e }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <label class="visually-hidden" for="sql-textarea">SQL query</label>
+                    <textarea id="sql-textarea" name="sql" class="form-control font-monospace" rows="8"
+                              placeholder="SELECT * FROM database_kineticmodel LIMIT 10;"
+                              spellcheck="false" autocomplete="off">{% if sql_executed %}{{ sql_executed }}{% elif form.sql.value %}{{ form.sql.value }}{% endif %}</textarea>
+
+                    <div class="sql-controls">
+                        <div class="sql-controls__limit">
+                            <label for="id_row_limit">Row limit</label>
+                            {{ form.row_limit }}
+                        </div>
+                        <button type="button" class="cat-btn" id="clear-btn">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>Clear
+                        </button>
+                        <button type="submit" class="app-btn">
+                            <i class="bi bi-play-fill" aria-hidden="true"></i>Run Query
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Query examples accordion -->
+            <div class="accordion sql-examples" id="examplesAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="examplesHeading">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#examplesBody"
+                                aria-expanded="false" aria-controls="examplesBody">
+                            <i class="bi bi-lightbulb" aria-hidden="true"></i>
+                            <span>Example Queries</span>
+                            <span class="sql-examples__hint">click any query to load it</span>
+                        </button>
+                    </h2>
+                    <div id="examplesBody" class="accordion-collapse collapse" aria-labelledby="examplesHeading">
+                        <div class="accordion-body">
+                            <!-- Category tabs -->
+                            <ul class="nav nav-tabs" id="exampleTabs" role="tablist">
+                                {% for category, examples in query_examples.items %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link{% if forloop.first %} active{% endif %}"
+                                            id="tab-{{ forloop.counter }}"
+                                            data-bs-toggle="tab"
+                                            data-bs-target="#tabpane-{{ forloop.counter }}"
+                                            type="button" role="tab" aria-controls="tabpane-{{ forloop.counter }}"
+                                            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                        {{ category }}
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="tab-content" id="exampleTabsContent">
+                                {% for category, examples in query_examples.items %}
+                                <div class="tab-pane fade{% if forloop.first %} show active{% endif %}"
+                                     id="tabpane-{{ forloop.counter }}" role="tabpanel" aria-labelledby="tab-{{ forloop.counter }}">
+                                    <div class="list-group list-group-flush">
+                                        {% for ex in examples %}
+                                        <button type="button"
+                                                class="list-group-item list-group-item-action example-query-btn d-flex align-items-start gap-2"
+                                                data-sql="{{ ex.sql }}"
+                                                title="Click to load into editor">
+                                            <i class="bi bi-play-circle mt-1 flex-shrink-0" aria-hidden="true"></i>
+                                            <span class="d-block">
+                                                <span class="d-block sql-examples__label">{{ ex.label }}</span>
+                                                <pre class="example-sql-preview">{{ ex.sql }}</pre>
+                                            </span>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error block -->
+            {% if error %}
+            <section class="app-panel sql-error" aria-labelledby="sql-error-title" role="alert">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="sql-error-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Query Error</h2>
+                </div>
+                <pre>{{ error }}</pre>
+            </section>
+            {% endif %}
+
+            <!-- Results block -->
+            {% if columns %}
+            <section class="app-panel" aria-labelledby="sql-results-title">
+                <div class="app-panel__head">
+                    <h2 class="app-panel__title" id="sql-results-title"><i class="bi bi-grid-3x3" aria-hidden="true"></i>Results <span class="sql-success">{{ row_count }} row{{ row_count|pluralize }}</span></h2>
+                    {% if execution_time_ms is not None %}
+                    <span class="app-panel__meta">{{ execution_time_ms }} ms</span>
+                    {% endif %}
+                </div>
+                <div class="results-table-wrapper">
+                    <table class="app-table results-table">
+                        <thead>
+                            <tr>
+                                {% for col in columns %}
+                                <th scope="col" class="text-nowrap">{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                {% for cell in row %}
+                                <td>{% if cell is None %}<span class="sql-null">NULL</span>{% else %}{{ cell }}{% endif %}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% elif request.method == "POST" and not error and sql_executed %}
+            <p class="app-notice"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Query executed successfully — no rows returned (e.g. EXPLAIN).</span></p>
+            {% endif %}
+        </div>
+
+        <!-- Schema sidebar -->
+        <aside class="app-panel sql-schema" aria-labelledby="sql-schema-title">
+            <div class="app-panel__head">
+                <h2 class="app-panel__title" id="sql-schema-title"><i class="bi bi-table" aria-hidden="true"></i>Schema</h2>
+                <span class="app-panel__meta">Click a table for its columns; double-click to insert its name</span>
+            </div>
+            <div class="schema-sidebar">
+                {% for app, tables in schema.items %}
+                <div class="sql-schema__group">
+                    <p class="sql-schema__app">{{ app }}</p>
+                    {% for table_name, cols in tables.items %}
+                    <div>
+                        <button type="button" class="schema-table-name"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#cols-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                aria-controls="cols-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                aria-expanded="false"><i class="bi bi-chevron-right" aria-hidden="true"></i>{{ table_name }}</button>
+                        <div class="collapse schema-col-list" id="cols-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                            {% for col in cols %}<div>{{ col }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% empty %}
+                <p class="cat-empty">Schema unavailable</p>
+                {% endfor %}
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById("clear-btn").addEventListener("click", function () {
+    document.getElementById("sql-textarea").value = "";
+    document.getElementById("sql-textarea").focus();
+  });
+
+  // Click an example query to load it into the editor
+  document.querySelectorAll(".example-query-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var sql = btn.getAttribute("data-sql");
+      document.getElementById("sql-textarea").value = sql;
+      // Collapse the examples panel after picking
+      var collapseEl = document.getElementById("examplesBody");
+      if (collapseEl && collapseEl.classList.contains("show")) {
+        bootstrap.Collapse.getInstance(collapseEl).hide();
+      }
+      document.getElementById("sql-textarea").focus();
+      // Scroll up so the textarea is visible
+      document.getElementById("sql-textarea").scrollIntoView({behavior: "smooth", block: "center"});
+    });
+  });
+
+  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter submits the form
+  document.getElementById("sql-textarea").addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      document.getElementById("query-form").submit();
+    }
+  });
+
+  // Clicking a table name inserts it into the textarea
+  document.querySelectorAll(".schema-table-name").forEach(function (el) {
+    el.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      var ta = document.getElementById("sql-textarea");
+      var tableName = el.textContent.trim();
+      if (!ta.value.trim()) {
+        ta.value = "SELECT * FROM " + tableName + " LIMIT 100;";
+      } else {
+        var start = ta.selectionStart;
+        ta.value = ta.value.slice(0, start) + tableName + ta.value.slice(ta.selectionEnd);
+        ta.selectionStart = ta.selectionEnd = start + tableName.length;
+      }
+      ta.focus();
+    });
+  });
+</script>
+{% endblock %}

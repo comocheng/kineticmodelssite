@@ -1,0 +1,46 @@
+{% comment %}
+Species profiles of one speciation datapoint against its primary independent variable: one
+chart per concentration unit, then the auxiliary profiles. Needs ``profile_chart`` from
+chemked_database.speciation.profile_chart_data.
+{% endcomment %}
+{% if profile_chart %}
+<div class="speciation-charts">
+    {% for group in profile_chart.groups %}
+    <div class="speciation-chart" id="speciation-chart-{{ forloop.counter }}" style="height: 360px;"></div>
+    {% endfor %}
+    {% for profile in profile_chart.auxiliary %}
+    <div class="speciation-chart" id="auxiliary-chart-{{ forloop.counter }}" style="height: 260px;"></div>
+    {% endfor %}
+</div>
+{{ profile_chart|json_script:"speciation-chart-data" }}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chart = JSON.parse(document.getElementById('speciation-chart-data').textContent);
+    const layout = (xLabel, yLabel) => ({
+        margin: {t: 20, r: 20, b: 50, l: 70},
+        xaxis: {title: xLabel},
+        yaxis: {title: yLabel, exponentformat: 'e'},
+        legend: {orientation: 'h', y: -0.25},
+    });
+    chart.groups.forEach(function(group, index) {
+        // Measured points are drawn as markers only; lines are kept for simulations
+        const traces = group.series.map(series => ({
+            name: series.name,
+            x: series.x,
+            y: series.y,
+            mode: 'markers',
+            marker: {size: 6},
+            error_y: series.error ? {type: 'data', array: series.error, visible: true} : undefined,
+        }));
+        Plotly.newPlot('speciation-chart-' + (index + 1), traces, layout(chart.x_label, group.units),
+                       {responsive: true, displaylogo: false});
+    });
+    chart.auxiliary.forEach(function(profile, index) {
+        Plotly.newPlot('auxiliary-chart-' + (index + 1),
+                       [{name: profile.name, x: profile.x, y: profile.y, mode: 'markers', marker: {size: 6}}],
+                       layout(profile.x_label, profile.name), {responsive: true, displaylogo: false});
+    });
+});
+</script>
+{% endif %}

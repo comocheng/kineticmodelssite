@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+{% load static %}
+{# ChemKED datasets, from the Figma "Prometheus · Experimental datasets" (node 182:4354; 114:3433 where it adds detail) #}
+
+{% block title %}Experimental datasets | ChemKED | Prometheus{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-list">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li aria-current="page">Datasets</li>
+        </ol>
+    </nav>
+
+    <!-- Page heading (Figma 182:4386) -->
+    <header class="ck-heading ck-heading--lg">
+        <div class="ck-heading__intro">
+            <h1>Experimental datasets</h1>
+            <p class="ck-lede">Each dataset is one ChemKED file: a reference, an apparatus and the datapoints measured in it.</p>
+        </div>
+        <a class="app-btn" href="{% url 'chemked_database:dataset-upload' %}"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+    </header>
+
+    <!-- Browse navigation (Figma 182:4396) -->
+    <div class="ck-browse">
+        <nav class="ck-tabs" aria-label="Experimental data">
+            <a class="ck-tab" href="{% url 'chemked_database:apparatus-list' %}">Apparatus</a>
+            <a class="ck-tab is-active" href="{% url 'chemked_database:dataset-list' %}" aria-current="page">Datasets</a>
+        </nav>
+        <span class="ck-browse__summary"><span><strong>{{ filter.queryset.count }}</strong> datasets in ChemKED</span></span>
+    </div>
+
+    <!-- Filters and results (Figma 182:4404); one form, so the toolbar search is a filter too -->
+    <form method="get" id="filter-form" class="ck-list__browser" role="search">
+        <aside class="app-panel ck-filters" aria-labelledby="ck-filters-title">
+            <div class="ck-filters__head">
+                <h2 id="ck-filters-title"><img class="app-icon" src="{% static 'database/images/icons/filter-111827.svg' %}" alt="" width="18" height="18">Filter datasets</h2>
+                <a href="{% url 'chemked_database:dataset-list' %}">Reset</a>
+            </div>
+            <div class="ck-field">
+                <label for="{{ filter.form.experiment_type.id_for_label }}">Experiment type</label>
+                {{ filter.form.experiment_type }}
+            </div>
+            <div class="ck-field">
+                <label for="{{ filter.form.apparatus_kind.id_for_label }}">Apparatus</label>
+                {{ filter.form.apparatus_kind }}
+            </div>
+            <fieldset class="ck-field">
+                <legend>Publication year</legend>
+                <div class="ck-filters__pair">
+                    <label class="visually-hidden" for="{{ filter.form.reference_year_min.id_for_label }}">{{ filter.form.reference_year_min.label }}</label>
+                    {{ filter.form.reference_year_min }}
+                    <label class="visually-hidden" for="{{ filter.form.reference_year_max.id_for_label }}">{{ filter.form.reference_year_max.label }}</label>
+                    {{ filter.form.reference_year_max }}
+                </div>
+            </fieldset>
+            <div class="ck-field">
+                <label for="{{ filter.form.reference_journal.id_for_label }}">Journal contains</label>
+                {# The filter gives this widget no attributes; it gets the auto-submit class here #}
+                <input type="text" class="form-control filter-auto-submit" name="{{ filter.form.reference_journal.html_name }}" id="{{ filter.form.reference_journal.id_for_label }}" value="{{ filter.form.reference_journal.value|default_if_none:'' }}" placeholder="e.g., Combustion and Flame">
+            </div>
+            <div class="ck-field">
+                <label for="{{ filter.form.reference_doi.id_for_label }}">DOI contains</label>
+                {{ filter.form.reference_doi }}
+            </div>
+            <div class="ck-field">
+                <label for="{{ filter.form.institution.id_for_label }}">Institution</label>
+                {{ filter.form.institution }}
+            </div>
+
+            <div id="filter-loading" class="ck-filters__loading d-none" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Filtering…</span>
+            </div>
+
+            <button class="app-btn ck-filters__apply" type="submit">Apply filters</button>
+        </aside>
+
+        <section class="ck-results" aria-labelledby="ck-results-count">
+            <div class="ck-results__toolbar">
+                <div class="ck-search">
+                    <img class="app-icon" src="{% static 'database/images/icons/search-111827-24.svg' %}" alt="" width="20" height="20">
+                    <label class="visually-hidden" for="{{ filter.form.species.id_for_label }}">{{ filter.form.species.label }}</label>
+                    <input type="search" class="filter-auto-submit" name="{{ filter.form.species.html_name }}" id="{{ filter.form.species.id_for_label }}" value="{{ filter.form.species.value|default_if_none:'' }}" placeholder="Search datasets by species, e.g., CH4 or n-heptane">
+                </div>
+                <button class="app-btn" type="submit"><img class="app-icon" src="{% static 'database/images/icons/search-white-18.svg' %}" alt="" width="18" height="18">Search</button>
+            </div>
+
+            <div class="ck-results__body" id="dataset-results">
+                {% include "chemked_database/partials/dataset_table.html" %}
+            </div>
+        </section>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-list__browser {
+    display: grid;
+    grid-template-columns: 254px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    min-width: 0;
+}
+
+/* Filters (Figma 182:4405) */
+.ck-filters {
+    display: grid;
+    gap: 18px;
+    padding: 18px;
+}
+
+.ck-filters__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ck-filters__head h2 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-filters__head a {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.ck-filters__pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ck-filters__loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.ck-filters__loading.d-none {
+    display: none;
+}
+
+.ck-filters__loading .spinner-border {
+    color: var(--color-primary);
+}
+
+.ck-filters__apply {
+    justify-self: start;
+}
+
+/* Results */
+.ck-results {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.ck-results__toolbar {
+    display: flex;
+    gap: 12px;
+}
+
+.ck-results__body {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    transition: opacity var(--transition-fast);
+}
+
+/* Results partial (partials/dataset_table.html) */
+.ck-dsr__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+}
+
+.ck-dsr__count {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-dsr__active {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    font-size: 12px;
+}
+
+.ck-dsr__guide {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+}
+
+.ck-dsr__guide p {
+    margin: 0;
+}
+
+.ck-dsr__guide-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-dsr__guide-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-gray-600);
+}
+
+.ck-dsr__guide-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-self: start;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.ck-dsr__records-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-dsr__table {
+    min-width: 640px;
+}
+
+.ck-dsr__table th {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.ck-dsr__table th:nth-child(2) {
+    width: 190px;
+}
+
+.ck-dsr__file {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 991.98px) {
+    .ck-list__browser {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ck-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ck-filters__head,
+    .ck-filters__loading {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ck-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ck-results__toolbar {
+        flex-direction: column;
+    }
+
+    .ck-results__toolbar .ck-search {
+        flex: none;
+    }
+
+    .ck-browse__summary {
+        padding-top: 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filter-form');
+    const loadingIndicator = document.getElementById('filter-loading');
+    const resultsContainer = document.getElementById('dataset-results');
+    let debounceTimer;
+    let currentRequest = null;
+
+    // AJAX filter function
+    function filterDatasets() {
+        // Cancel any pending request
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+
+        showLoading();
+
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams(formData);
+
+        // Update URL without reload (for bookmarking/sharing)
+        const newUrl = window.location.pathname + '?' + params.toString();
+        window.history.replaceState({}, '', newUrl);
+
+        // Make AJAX request
+        currentRequest = new XMLHttpRequest();
+        currentRequest.open('GET', newUrl, true);
+        currentRequest.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        currentRequest.onload = function() {
+            hideLoading();
+            if (currentRequest.status >= 200 && currentRequest.status < 400) {
+                resultsContainer.innerHTML = currentRequest.responseText;
+                // Re-attach pagination click handlers
+                attachPaginationHandlers();
+            }
+            currentRequest = null;
+        };
+
+        currentRequest.onerror = function() {
+            hideLoading();
+            currentRequest = null;
+        };
+
+        currentRequest.send();
+    }
+
+    // The Apply and Search buttons filter in place too
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearTimeout(debounceTimer);
+        filterDatasets();
+    });
+
+    // Auto-submit on change for select elements (immediate)
+    filterForm.querySelectorAll('select.filter-auto-submit').forEach(function(el) {
+        el.addEventListener('change', function() {
+            filterDatasets();
+        });
+    });
+
+    // Debounced auto-submit for text/number inputs (wait 400ms after typing stops)
+    filterForm.querySelectorAll('input.filter-auto-submit').forEach(function(el) {
+        el.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                filterDatasets();
+            }, 400);
+        });
+
+        // Also submit on Enter key
+        el.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                filterDatasets();
+            }
+        });
+    });
+
+    // Handle pagination clicks via AJAX
+    function attachPaginationHandlers() {
+        resultsContainer.querySelectorAll('.ajax-page').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                showLoading();
+
+                const url = this.getAttribute('href');
+                window.history.replaceState({}, '', url);
+
+                fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    resultsContainer.innerHTML = html;
+                    attachPaginationHandlers();
+                    hideLoading();
+                })
+                .catch(() => hideLoading());
+            });
+        });
+    }
+
+    // Initial attachment
+    attachPaginationHandlers();
+
+    function showLoading() {
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('d-none');
+        }
+        resultsContainer.style.opacity = '0.5';
+    }
+
+    function hideLoading() {
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('d-none');
+        }
+        resultsContainer.style.opacity = '1';
+    }
+});
+</script>
+{% endblock %}

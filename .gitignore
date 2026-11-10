@@ -2,6 +2,15 @@
 *.py[cod]
 **/__pycache__/
 
+# macOS Finder metadata
+.DS_Store
+
+# Generated API artifacts (built from the OpenAPI schema)
+/schema.yaml
+/clients/
+# Built documentation site (MkDocs)
+/docs_site/
+
 # SQLite database files
 *.sqlite3
 postgres/
@@ -15,8 +24,21 @@ postgres/
 ignore/*
 errors.txt
 importer.log
+var/thermo/
+var/backups/
+logs/thermo-*
 
 # Deployment files
 .env
+.env.dev
 /static/
 media/
+*/run_logs
+*/run_results
+*/model_libraries
+*/figures
+*exports
+*run_resultsfixtures/full_database.json
+*kineticmodelssite/chemked_database/results
+*/ipynb
+*kineticmodelssite/analysis/ipynb

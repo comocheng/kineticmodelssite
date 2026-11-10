@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% load static %}
+{# The Prometheus vocabulary hub; no Figma frame, so it takes the detail look of the database pages (database/catalog_styles.html). The term ids are the targets of the term IRIs' fragments. #}
+
+{% block title %}Prometheus vocabulary{% endblock %}
+
+{% block content %}
+<div class="cat-page prov-page prov-vocab">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">Vocabulary</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <h1>Prometheus vocabulary</h1>
+            <p class="cat-lede">The terms Prometheus uses to describe kinetic models, experiments,
+               and species — its own provenance predicates, its experimental-extension
+               ontology, and the OntoKin, OntoChemExp, and OntoSpecies terms it reuses.</p>
+        </div>
+    </header>
+
+    <section class="app-panel" aria-labelledby="prov-promv-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-promv-title">Provenance predicates <span class="cat-pill cat-pill--muted prov-prefix">promv:</span></h2>
+            <span class="app-panel__meta">{{ terms|length }} term{{ terms|length|pluralize }}</span>
+        </div>
+        <div class="cat-panel__body">
+            <p class="cat-iri"><a href="{{ vocab_iri }}">{{ vocab_iri }}</a></p>
+            <p class="prov-text">Domain predicates that connect Prometheus SSSOM nodes — kinetic models,
+               datasets, and species — in the knowledge graph. Minted and owned by Prometheus.</p>
+            <p class="cat-formats">
+                <span>RDF:</span>
+                <a class="app-chip" href="?format=ttl">Turtle</a>
+                <a class="app-chip" href="?format=jsonld">JSON-LD</a>
+                <a class="app-chip" href="?format=xml">RDF/XML</a>
+            </p>
+            <div class="prov-terms">
+                {% for t in terms %}
+                <div class="prov-term{% if focus == t.name %} is-focus{% endif %}" id="{{ t.name }}">
+                    <h3 class="prov-term__name"><code class="cat-code">promv:{{ t.name }}</code></h3>
+                    <p class="cat-iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+                    <p class="prov-term__label">{{ t.label }}</p>
+                    <p class="prov-term__text">{{ t.comment }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    {% if pmtx and pmtx.terms %}
+    <section class="app-panel" aria-labelledby="prov-pmtx-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-pmtx-title">Experimental extension <span class="cat-pill cat-pill--muted prov-prefix">pmtx:</span></h2>
+            <span class="app-panel__meta">{{ pmtx.terms|length }} term{{ pmtx.terms|length|pluralize }}</span>
+        </div>
+        <div class="cat-panel__body">
+            <p class="cat-iri"><a href="{{ pmtx.iri }}">{{ pmtx.iri }}</a></p>
+            <p class="prov-text">Combustion experimental-measurement concepts that OntoKin does not cover
+               (ignition delay, apparatus, datapoints, conditions). Defined by Prometheus.</p>
+            <div class="prov-terms">
+                {% for t in pmtx.terms %}
+                <div class="prov-term" id="{{ t.name }}">
+                    <h3 class="prov-term__name"><code class="cat-code">{{ t.curie }}</code>{% if t.kind %}<span class="prov-tag">{{ t.kind }}</span>{% endif %}</h3>
+                    <p class="cat-iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+                    {% if t.label %}<p class="prov-term__label">{{ t.label }}</p>{% endif %}
+                    {% if t.comment %}<p class="prov-term__text">{{ t.comment }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if ontokin and ontokin.terms %}
+    <section class="app-panel" aria-labelledby="prov-ontokin-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-ontokin-title">Reused from OntoKin <span class="cat-pill cat-pill--muted prov-prefix">ontokin:</span></h2>
+            <span class="app-panel__meta">{{ ontokin.terms|length }} term{{ ontokin.terms|length|pluralize }}</span>
+        </div>
+        <div class="cat-panel__body">
+            <p class="cat-iri"><a href="{{ ontokin.iri }}">{{ ontokin.iri }}</a></p>
+            <p class="prov-text">Mechanism, species, reaction, and publication-provenance terms Prometheus
+               reuses from <a href="http://www.theworldavatar.com/ontology/ontokin/">OntoKin 1.0</a>
+               rather than re-minting. Terms OntoKin defines but Prometheus does not use are omitted.</p>
+            <div class="prov-terms">
+                {% for t in ontokin.terms %}
+                <div class="prov-term" id="ontokin-{{ t.name }}">
+                    <h3 class="prov-term__name"><code class="cat-code">{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="prov-tag">{{ t.kind }}</span>{% endif %}</h3>
+                    <p class="cat-iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+                    {% if t.definition %}<p class="prov-term__text">{{ t.definition }}</p>{% endif %}
+                    {% if t.status or t.mapping %}
+                    <p class="prov-term__meta">
+                        {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+                        {% if t.mapping %}{% if t.status %} <span aria-hidden="true">·</span> {% endif %}<strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if ontochemexp and ontochemexp.terms %}
+    <section class="app-panel" aria-labelledby="prov-ontochemexp-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-ontochemexp-title">Reused from OntoChemExp <span class="cat-pill cat-pill--muted prov-prefix">ontochemexp:</span></h2>
+            <span class="app-panel__meta">{{ ontochemexp.terms|length }} term{{ ontochemexp.terms|length|pluralize }}</span>
+        </div>
+        <div class="cat-panel__body">
+            <p class="cat-iri"><a href="{{ ontochemexp.iri }}">{{ ontochemexp.iri }}</a></p>
+            <p class="prov-text">Experimental concepts (apparatus, conditions, composition, measured quantities)
+               Prometheus aligns to <a href="http://www.theworldavatar.com/ontology/ontochemexp/">OntoChemExp</a>
+               rather than re-minting. Definitions are curated by Prometheus where the source ontology omits them.</p>
+            <div class="prov-terms">
+                {% for t in ontochemexp.terms %}
+                <div class="prov-term" id="ontochemexp-{{ t.name }}">
+                    <h3 class="prov-term__name"><code class="cat-code">{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="prov-tag">{{ t.kind }}</span>{% endif %}</h3>
+                    <p class="cat-iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+                    {% if t.definition %}<p class="prov-term__text">{{ t.definition }}</p>{% endif %}
+                    {% if t.status or t.mapping %}
+                    <p class="prov-term__meta">
+                        {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+                        {% if t.mapping %}{% if t.status %} <span aria-hidden="true">·</span> {% endif %}<strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if ontospecies and ontospecies.terms %}
+    <section class="app-panel" aria-labelledby="prov-ontospecies-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-ontospecies-title">Reused from OntoSpecies <span class="cat-pill cat-pill--muted prov-prefix">ontospecies:</span></h2>
+            <span class="app-panel__meta">{{ ontospecies.terms|length }} term{{ ontospecies.terms|length|pluralize }}</span>
+        </div>
+        <div class="cat-panel__body">
+            <p class="cat-iri"><a href="{{ ontospecies.iri }}">{{ ontospecies.iri }}</a></p>
+            <p class="prov-text">Species and chemical-identifier concepts Prometheus aligns to
+               <a href="http://www.theworldavatar.com/ontology/ontospecies/">OntoSpecies</a>
+               rather than re-minting. Definitions are reused from the source ontology.</p>
+            <div class="prov-terms">
+                {% for t in ontospecies.terms %}
+                <div class="prov-term" id="ontospecies-{{ t.name }}">
+                    <h3 class="prov-term__name"><code class="cat-code">{% if t.curie %}{{ t.curie }}{% else %}{{ t.name }}{% endif %}</code>{% if t.kind %}<span class="prov-tag">{{ t.kind }}</span>{% endif %}</h3>
+                    <p class="cat-iri"><a href="{{ t.iri }}">{{ t.iri }}</a></p>
+                    {% if t.definition %}<p class="prov-term__text">{{ t.definition }}</p>{% endif %}
+                    {% if t.status or t.mapping %}
+                    <p class="prov-term__meta">
+                        {% if t.status %}<strong>Status:</strong> {{ t.status }}{% endif %}
+                        {% if t.mapping %}{% if t.status %} <span aria-hidden="true">·</span> {% endif %}<strong>Prometheus mapping:</strong> {{ t.mapping }}{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if semapv %}
+    <section class="app-panel" aria-labelledby="prov-semapv-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="prov-semapv-title">Mapping justifications <span class="cat-pill cat-pill--muted prov-prefix">semapv:</span></h2>
+        </div>
+        <div class="cat-panel__body">
+            <p class="prov-text">The SSSOM mapping set records why each cross-reference was asserted using the
+               <a href="{{ semapv.docs }}">Semantic Mapping Vocabulary (SEMAPV)</a> —
+               e.g. <code class="cat-code">semapv:LexicalMatching</code>, <code class="cat-code">semapv:ManualMappingCuration</code>.
+               The namespace base <span class="prov-inline-iri">{{ semapv.iri }}</span> is not a web page,
+               but each term IRI resolves to its definition in the docs above.</p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+<style>
+.prov-vocab .prov-prefix {
+    font-family: var(--font-mono);
+    font-weight: 500;
+}
+
+.prov-text {
+    max-width: 920px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-gray-700);
+}
+
+.prov-inline-iri {
+    color: var(--color-gray-500);
+    overflow-wrap: anywhere;
+}
+
+/* Term cards, in as many columns as fit */
+.prov-terms {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: 12px;
+}
+
+.prov-term {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    background: var(--color-white);
+    /* The sticky header would cover a term reached by its #fragment */
+    scroll-margin-top: 96px;
+}
+
+.prov-term.is-focus,
+.prov-term:target {
+    border-color: var(--color-primary);
+    background: var(--color-primary-bg);
+}
+
+.prov-term p {
+    margin: 0;
+}
+
+.prov-term__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.prov-tag {
+    display: inline-flex;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-gray-100);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-gray-600);
+}
+
+.prov-term__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.prov-term__text {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+}
+
+.prov-term__meta {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-gray-500);
+}
+
+.prov-term__meta strong {
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+</style>
+{% endblock %}

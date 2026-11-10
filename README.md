@@ -9,8 +9,8 @@ A django site for kinetic models
 ### Using Docker for App and Database
 Clone the project and set up [docker](https://www.docker.com/products/docker-desktop) and [docker-compose](https://docs.docker.com/compose/install/) (on desktop systems like Docker Desktop for Mac and Windows, Docker Compose is included as part of the Docker Desktop install). Be sure to launch the Docker.app (or ensure the docker daemon is running) before trying to run docker-compose commands.
 
-For the first time, you need to run the initial migrations, which use [RMG-models](https://github.com/comocheng/RMG-models).
-To do this, first clone the RMG-models repo via ssh or https (ssh shown below):
+The kinetic models are imported from [RMG-models](https://github.com/comocheng/RMG-models).
+First clone the RMG-models repo via ssh or https (ssh shown below):
 
 ```git clone git@github.com:comocheng/RMG-models.git```
 
@@ -28,6 +28,10 @@ busybox cp -av "/source/." "/target/"
 Then run:
 
 ```docker-compose up -d```
+
+The container applies the migrations when it starts. Migrations do not import data, so import the models once the database is up:
+
+```docker-compose exec web python manage.py import_rmg_models```
 
 If you get an error ending `...returned a non-zero code: 137` then probably your Docker needs more RAM. On MacOS or Windows you can configure this using your Docker Dashboard app settings. In our experience 2GB is not enough but 4GB is.
 
@@ -72,17 +76,34 @@ When you build the docker container, it automatically applies all current migrat
 If you make changes to your code and need to migrate again, either rebuild the image (slow!)
 or attach a shell to your running container and run the migrate command:
 
+For debug configuration:
+```docker-compose exec debug bash```
+
+For production configuration:
 ```docker-compose exec web sh```
 
 Now in your interactive container shell:
 
+For debug configuration (using hybrid ARM64/x86_64 environment):
+```bash
+# Set up environment for RMG + Django compatibility
+export PYTHONPATH=/opt/conda/envs/kms_arm64/lib/python3.9/site-packages:/kms_env/lib/python3.9/site-packages:/app
+export DJANGO_SETTINGS_MODULE=kms.settings
+
+# Run Django commands (note: RMG integration has architecture compatibility issues)
+/opt/conda/envs/kms_arm64/bin/python manage.py migrate
+```
+
+**Note for Apple Silicon (ARM64) users**: Due to architecture compatibility issues between x86_64 RMG libraries and ARM64 containers, you may need to temporarily comment out RMG imports in model files for initial database setup, then use platform emulation for full functionality.
+
+For production configuration:
 ```python manage.py migrate```
 
 Similarly, if you want to nuke your migrations, you can run this in your interactive shell:
 
 ```python manage.py reset_db```
 
-This is useful if RMG-models gets updated and you want to reset your database and migrate again.
+This is useful if RMG-models gets updated and you want to reset your database, migrate again and re-import the models with `python manage.py import_rmg_models`.
 
 
 ## REST API:

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+{# Compare two kinetic models; no Figma frame, so it uses the kinetic model pages' look (170:6885) #}
+
+{% block title %}Compare two models | Prometheus{% endblock %}
+
+{% block content %}
+<div class="km-page km-compare">
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'kinetic-model-similarity' %}">Shared chemistry</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">Compare</span></li>
+        </ol>
+    </nav>
+
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <h1>Compare two models</h1>
+        </div>
+    </header>
+
+    <form method="get" class="app-panel km-filter">
+        <div class="km-filter__field km-filter__field--grow">
+            <label for="model-a">Model A</label>
+            <select id="model-a" name="a" class="form-select">
+                {% for m in all_models %}<option value="{{ m.pk }}" {% if model_a and m.pk == model_a.pk %}selected{% endif %}>{{ m.model_name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="km-filter__field km-filter__field--grow">
+            <label for="model-b">Model B</label>
+            <select id="model-b" name="b" class="form-select">
+                {% for m in all_models %}<option value="{{ m.pk }}" {% if model_b and m.pk == model_b.pk %}selected{% endif %}>{{ m.model_name }}</option>{% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="app-btn">Compare</button>
+    </form>
+
+    {% if model_a and model_b %}
+    <p class="km-note">A: <a href="{% url 'kinetic-model-detail' model_a.pk %}">{{ model_a.model_name }}</a> · B: <a href="{% url 'kinetic-model-detail' model_b.pk %}">{{ model_b.model_name }}</a></p>
+
+    <section class="app-panel" aria-labelledby="km-compare-layers">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="km-compare-layers">By layer</h2>
+        </div>
+        <div class="km-table-wrap">
+            <table class="km-table km-compare__table">
+                <thead>
+                    <tr>
+                        <th scope="col">Layer</th>
+                        <th scope="col" class="is-end">{{ model_a.model_name }} reactions</th>
+                        <th scope="col" class="is-end">identical in {{ model_b.model_name }}</th>
+                        <th scope="col" class="is-end">{{ model_b.model_name }} reactions</th>
+                        <th scope="col" class="is-end">identical in {{ model_a.model_name }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in layers %}
+                    <tr>
+                        <td>{% if row.layer == "all" %}all{% else %}<a href="{% url 'sub-mechanism-list' %}?layer={{ row.layer|urlencode }}">{{ row.layer }}</a>{% endif %}</td>
+                        <td class="is-number">{{ row.a.reactions|default:"–" }}</td>
+                        <td class="is-number">{% if row.a %}{{ row.a.identical }} <span class="is-muted">({% widthratio row.a.identical row.a.reactions 100 %}%)</span>{% else %}–{% endif %}</td>
+                        <td class="is-number">{{ row.b.reactions|default:"–" }}</td>
+                        <td class="is-number">{% if row.b %}{{ row.b.identical }} <span class="is-muted">({% widthratio row.b.identical row.b.reactions 100 %}%)</span>{% else %}–{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="km-empty">These models share no reactions.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="km-panel-note">{{ shared_total }} reactions in both; {{ only_a }} only in {{ model_a.model_name }}; {{ only_b }} only in {{ model_b.model_name }}.</p>
+    </section>
+
+    <section class="app-panel" aria-labelledby="km-compare-differing">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="km-compare-differing">Shared reactions with different rates ({{ differing_total }})</h2>
+        </div>
+        <div class="km-table-wrap">
+            <table class="km-table km-compare__table">
+                <thead>
+                    <tr>
+                        <th scope="col">Reaction</th>
+                        <th scope="col">Layer</th>
+                        <th scope="col" class="is-end">{{ model_b.model_name }} / {{ model_a.model_name }} at 1000 K</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in differing %}
+                    <tr>
+                        <td class="is-mono"><a href="{% url 'reaction-detail' row.reaction_id %}">{{ row.reaction.equation|default:row.reaction_id }}</a></td>
+                        <td><a href="{% url 'sub-mechanism-list' %}?layer={{ row.layer|urlencode }}">{{ row.layer }}</a></td>
+                        <td class="is-number">{% if row.ratio %}{{ row.ratio_text }}{% else %}<span class="is-muted">written the other way</span>{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="3" class="km-empty">Every shared reaction has the same rate in both models.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if differing_total > differing|length %}<p class="km-panel-note">Largest {{ differing|length }} differences shown.</p>{% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
+<style>
+.km-compare__table {
+    min-width: 560px;
+}
+
+.km-compare__table th {
+    white-space: normal;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+{# ChemKED species, from the Figma "Prometheus · ChemKED species database" (node 125:2259) #}
+
+{% block title %}Species | ChemKED | Prometheus{% endblock %}
+
+{% block content %}
+<div class="ck-page ck-species">
+    <nav class="ck-crumbs" aria-label="Breadcrumb">
+        <ol>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'chemked_database:home' %}">ChemKED</a></li>
+            <li aria-current="page">Species</li>
+        </ol>
+    </nav>
+
+    <!-- Page heading (Figma 125:2292) -->
+    <header class="ck-heading">
+        <div class="ck-heading__intro">
+            <h1>Species in ChemKED</h1>
+            <p class="ck-lede">Search the species that appear in ChemKED datasets by name, InChI or SMILES.</p>
+        </div>
+        <a class="app-btn" href="{% url 'chemked_database:dataset-upload' %}"><img class="app-icon" src="{% static 'database/images/icons/plus-white-16.svg' %}" alt="" width="15" height="15">Upload data</a>
+    </header>
+
+    <!-- Search (Figma 125:2299) -->
+    <form class="app-panel ck-species__search" method="get" role="search">
+        <label class="ck-species__label" for="ck-species-q">Search species by name, InChI, or SMILES</label>
+        <div class="ck-species__controls">
+            <div class="ck-search">
+                <img class="app-icon" src="{% static 'database/images/icons/search-111827-24.svg' %}" alt="" width="19" height="19">
+                <input type="search" name="q" id="ck-species-q" placeholder="e.g., CH4, methane, InChI=1S/CH4/h1H4" value="{{ query }}">
+            </div>
+            <button type="submit" class="app-btn">Search</button>
+            {% if query %}
+            <a class="ck-btn" href="{% url 'chemked_database:species-search' %}"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Species register (Figma 125:2315) -->
+    <section class="app-panel" aria-labelledby="ck-register-title">
+        <div class="ck-panel__head">
+            <h2 id="ck-register-title" class="ck-panel__title"><i class="bi bi-table" aria-hidden="true"></i>{% if query %}Results for “{{ query }}”{% else %}All species{% endif %} <span class="ck-count">{{ page_obj.paginator.count|default:0 }} species</span></h2>
+            <span class="ck-panel__meta">Sorted by occurrences, most first</span>
+        </div>
+        {% if species_list %}
+        <div class="ck-table-wrap">
+            <table class="ck-table ck-species__table">
+                <thead>
+                    <tr>
+                        <th scope="col">Species name</th>
+                        <th scope="col">InChI</th>
+                        <th scope="col">SMILES</th>
+                        <th scope="col" class="is-end">Occurrences <img class="app-icon" src="{% static 'database/images/icons/arrow-down-ce4801-12.svg' %}" alt="" width="12" height="12"></th>
+                        <th scope="col"><span class="visually-hidden">Open</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for species in species_list %}
+                    <tr>
+                        <td><a href="{% url 'chemked_database:species-datapoints' species.species_name %}">{{ species.species_name }}</a></td>
+                        <td>{% if species.inchi %}<span class="ck-id" title="{{ species.inchi }}">{{ species.inchi }}</span>{% else %}<span class="is-muted">—</span>{% endif %}</td>
+                        <td>{% if species.smiles %}<span class="ck-id" title="{{ species.smiles }}">{{ species.smiles }}</span>{% else %}<span class="is-muted">—</span>{% endif %}</td>
+                        <td class="is-number">{{ species.occurrence_count }}</td>
+                        <td class="is-end"><a class="ck-species__open" href="{% url 'chemked_database:species-datapoints' species.species_name %}" aria-label="View datapoints for {{ species.species_name }}"><img class="app-icon" src="{% static 'database/images/icons/arrow-right.svg' %}" alt="" width="16" height="16"></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "chemked_database/partials/ck_pager.html" with page=page_obj noun="species" label="Species pages" %}
+        {% else %}
+        <div class="ck-empty">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            {% if query %}
+            <p class="mb-2">No species found matching “{{ query }}”.</p>
+            <a class="ck-btn ck-btn--sm" href="{% url 'chemked_database:species-search' %}">Clear search</a>
+            {% else %}
+            <p class="mb-0">No species in the database yet.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        <p class="ck-panel__foot ck-species__guide"><span class="ck-note"><img class="app-icon" src="{% static 'database/images/icons/info-607185-14.svg' %}" alt="" width="15" height="15"><span>Each row is one species name with one InChI and SMILES pair, as the ChemKED files write them; a name can appear on several rows.</span></span></p>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "chemked_database/partials/ck_styles.html" %}
+<style>
+.ck-species__search {
+    display: grid;
+    gap: 12px;
+    padding: 20px;
+}
+
+.ck-species__label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ck-species__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ck-species__controls .ck-search {
+    flex-basis: 320px;
+    height: 44px;
+}
+
+.ck-species__controls .app-btn,
+.ck-species__controls .ck-btn {
+    height: 44px;
+}
+
+.ck-species__controls .app-btn {
+    min-width: 108px;
+}
+
+.ck-species__table {
+    min-width: 760px;
+}
+
+.ck-species__table th:nth-child(2) {
+    width: 50%;
+}
+
+.ck-species__table th:nth-child(3) {
+    width: 18%;
+}
+
+.ck-species__open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+.ck-species__open:hover {
+    background: var(--color-primary-bg);
+}
+
+.ck-species__guide {
+    margin: 0;
+}
+
+@media (max-width: 575.98px) {
+    .ck-species__search {
+        padding: 16px;
+    }
+
+    .ck-species__controls .ck-search {
+        flex-basis: 100%;
+    }
+
+    .ck-species__controls .app-btn {
+        flex: 1;
+    }
+}
+</style>
+{% endblock %}

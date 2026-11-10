@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load static %}
+{# One sub-mechanism and its variants; no Figma frame, so it uses the kinetic model pages' look (170:6885) #}
+
+{% block title %}{{ sub_mechanism }} | Sub-mechanisms | Prometheus{% endblock %}
+
+{% block extra_css %}
+{% include "database/kineticmodel_styles.html" %}
+<style>
+    .rate-grid td.rate-cell { text-align: center; font-weight: 600; min-width: 2.2rem; }
+    .rate-grid th.rate-col { text-align: center; min-width: 2.2rem; }
+    /* A is the reference's rate (neutral); B, C … follow the validated categorical order. */
+    .rate-tone-0 { --tone: color-mix(in srgb, #8c8c8c 18%, transparent); }
+    .rate-tone-1 { --tone: color-mix(in srgb, #eb6834 32%, transparent); }
+    .rate-tone-2 { --tone: color-mix(in srgb, #1baf7a 32%, transparent); }
+    .rate-tone-3 { --tone: color-mix(in srgb, #eda100 32%, transparent); }
+    .rate-tone-4 { --tone: color-mix(in srgb, #e87ba4 32%, transparent); }
+    .rate-tone-5 { --tone: color-mix(in srgb, #008300 32%, transparent); }
+    .rate-tone-6 { --tone: color-mix(in srgb, #4a3aa7 32%, transparent); }
+    .rate-tone-7 { --tone: color-mix(in srgb, #e34948 32%, transparent); }
+    .rate-tone-8 { --tone: color-mix(in srgb, #5c5c5c 32%, transparent); }
+    .rate-chip, .rate-grid > tbody > tr > td.rate-cell { background-color: var(--tone, transparent); --bs-table-bg: var(--tone, transparent); }
+    .rate-grid sup { font-weight: 400; margin-left: 1px; }
+    .rate-chip { display: inline-block; min-width: 1.6rem; text-align: center; font-weight: 600; border-radius: 3px; padding: 0 .3rem; }
+
+.km-submech__head {
+    flex-wrap: wrap;
+}
+
+.km-submech__head .form-check-label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-gray-600);
+}
+
+.km-submech__reference {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.km-submech__reference label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-900);
+}
+
+.km-submech__reference .form-select {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 36px;
+    border-color: var(--color-gray-300);
+    font-size: 13px;
+}
+
+.km-submech__variants {
+    min-width: 860px;
+}
+
+.km-submech__variant {
+    font-weight: 600;
+}
+
+.km-submech__variants .is-reference td {
+    background: var(--color-gray-50);
+}
+
+.km-submech__plot-note,
+.km-submech__grid-note {
+    padding-top: 0;
+}
+
+.km-submech__plot {
+    padding: 0 16px 16px;
+    overflow: hidden;
+}
+
+.km-submech__grid {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.km-submech .rate-grid th {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-gray-600);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="km-page km-submech">
+    <nav aria-label="Breadcrumb">
+        <ol class="km-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'sub-mechanism-list' %}">Sub-mechanisms</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><a href="{% url 'sub-mechanism-list' %}?layer={{ sub_mechanism.layer|urlencode }}">{{ sub_mechanism.layer }}</a></li>
+            <li><img class="app-icon" src="{% static 'database/images/icons/chevron-right-78879a-12.svg' %}" alt="" width="12" height="12"><span aria-current="page">{{ sub_mechanism }}</span></li>
+        </ol>
+    </nav>
+
+    <header class="km-heading">
+        <div class="km-heading__intro">
+            <div class="km-heading__title">
+                <h1>{{ sub_mechanism }}</h1>
+                <a class="km-pill" href="{% url 'sub-mechanism-list' %}?layer={{ sub_mechanism.layer|urlencode }}">{{ sub_mechanism.layer }}</a>
+            </div>
+            <p class="km-lede">
+                {% if sub_mechanism.name %}{{ sub_mechanism.default_name }} · {% endif %}
+                Origin {% if sub_mechanism.origin %}<a href="{% url 'kinetic-model-detail' sub_mechanism.origin_id %}">{{ sub_mechanism.origin.model_name }}</a>
+                ({{ sub_mechanism.origin.source.publication_year|default:"year unknown" }}){% else %}unknown{% endif %}
+                · {{ sub_mechanism.model_count }} model{{ sub_mechanism.model_count|pluralize }} · {{ sub_mechanism.variant_count }} variant{{ sub_mechanism.variant_count|pluralize }}
+                · {{ sub_mechanism.reactions }} reactions{% if sub_mechanism.variant_count > 1 %}, {{ sub_mechanism.core }} with the same rate in every variant{% endif %}
+                {% if user.is_staff %}· <a href="{% url 'admin:database_submechanism_change' sub_mechanism.pk %}">Rename</a>{% endif %}
+            </p>
+        </div>
+    </header>
+
+    <section class="app-panel" aria-labelledby="km-variants-title">
+        <div class="app-panel__head km-submech__head">
+            <h2 class="app-panel__title" id="km-variants-title">Variants</h2>
+            {% if variants|length > 1 %}
+            <form method="get" class="km-submech__reference">
+                <label for="reference">Compare with</label>
+                <select id="reference" name="reference" class="form-select" onchange="this.form.submit()">
+                    {% for row in variants %}<option value="{{ row.variant.number }}" {% if row.variant.number == reference.number %}selected{% endif %}>v{{ row.variant.number }} {{ row.variant.representative.model_name }}</option>{% endfor %}
+                </select>
+            </form>
+            {% endif %}
+        </div>
+        <div class="km-table-wrap">
+            <table class="km-table km-submech__variants">
+                <thead>
+                    <tr>
+                        <th scope="col">Variant</th>
+                        <th scope="col">Used by</th>
+                        <th scope="col" class="is-end">Reactions</th>
+                        <th scope="col" class="is-end">Same rate as v{{ reference.number }}</th>
+                        <th scope="col" class="is-end">Different rate</th>
+                        <th scope="col" class="is-end">Not in v{{ reference.number }}</th>
+                        <th scope="col" class="is-end">Lacks from v{{ reference.number }}</th>
+                        <th scope="col" class="is-end" title="Reactions with identical rates over the reactions in either">Similarity</th>
+                        <th scope="col"><span class="visually-hidden">Compare</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in variants %}
+                    <tr id="variant-{{ row.variant.number }}"{% if row.variant.number == reference.number %} class="is-reference"{% endif %}>
+                        <td class="km-submech__variant">v{{ row.variant.number }}</td>
+                        <td>{% for m in row.models %}<a href="{% url 'kinetic-model-detail' m.pk %}">{{ m.model_name }}</a> <span class="is-muted">{{ m.source.publication_year|default:"?" }}</span>{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
+                        <td class="is-number">{{ row.reactions }}</td>
+                        <td class="is-number">{{ row.identical }}</td>
+                        <td class="is-number">{{ row.changed }}</td>
+                        <td class="is-number">{{ row.added }}</td>
+                        <td class="is-number">{{ row.missing }}</td>
+                        <td class="is-number">{% widthratio row.similarity 1 100 %}%</td>
+                        <td class="is-end">{% if row.variant.number != reference.number %}<a class="app-link" href="{% url 'kinetic-model-compare' %}?a={{ reference.representative_id }}&amp;b={{ row.variant.representative_id }}">Compare models</a>{% else %}<span class="is-muted">reference</span>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if variants|length > 1 %}
+    <section class="app-panel" data-plot-section aria-labelledby="km-variant-plot-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="km-variant-plot-title">How alike the variants are</h2>
+        </div>
+        <p class="km-panel-note km-submech__plot-note">Each cell is the share of the row variant's {{ sub_mechanism.layer }} reactions whose rate is identical in the column variant. Click a cell to compare the two models.</p>
+        <div class="km-submech__plot">
+            <div id="variant-plot" style="height: {% if variants|length > 12 %}720{% else %}520{% endif %}px;" role="img" aria-label="Heatmap of identical rates between variants"></div>
+        </div>
+    </section>
+    {{ matrix|json_script:"variant-data" }}
+    {% endif %}
+
+    <section class="app-panel" aria-labelledby="km-grid-title">
+        <div class="app-panel__head km-submech__head">
+            <h2 class="app-panel__title" id="km-grid-title">Reaction by reaction</h2>
+            {% if agreeing and variants|length > 1 %}
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="show-agreeing">
+                <label class="form-check-label" for="show-agreeing">Show the {{ agreeing }} reactions every variant shares</label>
+            </div>
+            {% endif %}
+        </div>
+        <p class="km-panel-note km-submech__grid-note">Each column is a variant; the same letter in a row is the same rate.
+            <span class="rate-chip rate-tone-0">A</span> is v{{ reference.number }}'s rate,
+            <span class="rate-chip rate-tone-1">B</span> <span class="rate-chip rate-tone-2">C</span> … are other rates, and a blank cell means the variant lacks the reaction.
+            <sup>+M</sup> marks a third-body or falloff rate where most variants have a plain one, and <sup>⇄</sup> a rate written in the other direction; neither can be compared with the others.
+            Hover a cell for its rate at 1000 K relative to v{{ reference.number }}. Spread is the largest ratio between the variants' rates at 500, 1000 or 1500 K, among variants writing the reaction the most common way.
+            {% if variants|length > 1 %}{{ differing }} of {{ row_total }} reactions differ between variants.{% endif %}</p>
+        {# The rate grid keeps Bootstrap's table: its tone cells set --bs-table-bg #}
+        <div class="table-responsive km-submech__grid" style="max-height: 70vh;">
+        <table class="table table-sm small mb-0 align-middle rate-grid">
+            <thead class="sticky-top bg-body"><tr><th>Reaction</th>
+                {% for row in variants %}<th class="rate-col" title="{% for m in row.models %}{{ m.model_name }}{% if not forloop.last %}, {% endif %}{% endfor %}"><a href="#variant-{{ row.variant.number }}">v{{ row.variant.number }}</a></th>{% endfor %}
+                <th class="text-end">Spread</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr{% if row.agree and variants|length > 1 %} class="agree d-none"{% endif %}>
+                <td style="min-width: 16rem;"><a href="{% url 'reaction-detail' row.reaction_id %}">{{ row.equation }}</a></td>
+                {% for cell in row.cells %}<td class="rate-cell{% if cell.letter %} rate-tone-{{ cell.tone }}{% endif %}" title="{{ cell.title }}">{{ cell.letter|default:"" }}{% if cell.note %}<sup>{{ cell.note }}</sup>{% endif %}</td>{% endfor %}
+                <td class="text-end">{% if row.spread_text %}×{{ row.spread_text }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if row_total > rows|length %}<p class="km-panel-note">The {{ rows|length }} reactions that differ most of {{ row_total }} are shown.</p>{% endif %}
+    </section>
+
+    {% if other_families %}
+    <section class="app-panel" aria-labelledby="km-other-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="km-other-title">Other {{ sub_mechanism.layer }} sub-mechanisms</h2>
+        </div>
+        <ul class="km-panel-list">
+            {% for other in other_families %}<li><a href="{% url 'sub-mechanism-detail' other.pk %}">{{ other }}</a> · {{ other.model_count }} models, {{ other.variant_count }} variants</li>{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if variants|length > 1 %}
+{% include 'database/plot_scripts.html' %}
+<script>renderSimilarityHeatmap("variant-plot", "variant-data", "{% url 'kinetic-model-compare' %}");</script>
+{% endif %}
+<script>
+(function () {
+    const toggle = document.getElementById("show-agreeing");
+    if (!toggle) return;
+    toggle.addEventListener("change", function () {
+        document.querySelectorAll(".rate-grid tr.agree").forEach(function (row) { row.classList.toggle("d-none", !toggle.checked); });
+    });
+})();
+</script>
+{% endblock %}
