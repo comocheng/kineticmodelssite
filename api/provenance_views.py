@@ -12,6 +12,7 @@ from rest_flex_fields import FlexFieldsModelSerializer
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import AllowAny
 
+from api.record_key_fields import RecordKeyFieldsMixin
 from provenance import models
 
 
@@ -24,7 +25,9 @@ class ReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
 # ---------------------------------------------------------------------------
 # Serializers
 # ---------------------------------------------------------------------------
-class InstitutionSerializer(FlexFieldsModelSerializer):
+class InstitutionSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "institution"
+
     ror_uri = serializers.ReadOnlyField()
 
     class Meta:
@@ -36,7 +39,9 @@ class InstitutionSerializer(FlexFieldsModelSerializer):
     }
 
 
-class PersonSerializer(FlexFieldsModelSerializer):
+class PersonSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "person"
+
     name = serializers.ReadOnlyField()
     orcid_uri = serializers.ReadOnlyField()
 

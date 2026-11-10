@@ -194,6 +194,8 @@ REST_FRAMEWORK = {
         "api.filter_backends.StrictDjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "api.filter_backends.StrictOrderingFilter",
+        # ?key= finds a record by its canonical key (provenance.record_keys).
+        "api.filter_backends.RecordKeyFilter",
     ],
     # Paginate list responses so endpoints never return an entire table at once;
     # ?page_size= asks for up to 1000 records on a page.
@@ -411,6 +413,9 @@ GITHUB_APP_CLIENT_ID = os.getenv('GITHUB_APP_CLIENT_ID', '')
 # The site's public address (e.g. https://pr.omethe.us), for the App's callback URL and the job links
 # in pull requests. Without it the address of the request is used, which behind nginx can be http.
 PUBLIC_SITE_URL = os.getenv('PUBLIC_SITE_URL', '')
+# Base of the canonical URLs of the records, e.g. https://w3id.org/prometheus once that address
+# redirects here; blank gives PUBLIC_SITE_URL + /id (provenance.record_keys).
+CANONICAL_ID_BASE = os.getenv('CANONICAL_ID_BASE', '')
 GITHUB_APP_CLIENT_SECRET = os.getenv('GITHUB_APP_CLIENT_SECRET', '')
 GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
 # The webhook secret of the Prometheus GitHub App. A push to RMG_MODELS_GITHUB_REPO's base branch then

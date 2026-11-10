@@ -3,6 +3,7 @@ from rest_flex_fields.serializers import FlexFieldsSerializerMixin
 from rest_framework import serializers
 from drf_writable_nested.serializers import NestedCreateMixin
 
+from api.record_key_fields import RecordKeyFieldsMixin
 from database import models
 from database.scripts.import_rmg_models import get_species_hash, get_reaction_hash
 from database.models.kinetic_data import validate_kinetics_data
@@ -39,7 +40,9 @@ class IsomerSerializer(FlexFieldsModelSerializer):
     }
 
 
-class SpeciesSerializer(FlexFieldsModelSerializer):
+class SpeciesSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "species"
+
     class Meta:
         model = models.Species
         exclude = ["hash"]
@@ -61,7 +64,9 @@ class StoichiometrySerializer(serializers.ModelSerializer):
         exclude = ["reaction"]
 
 
-class ReactionSerializer(NestedModelSerializer):
+class ReactionSerializer(RecordKeyFieldsMixin, NestedModelSerializer):
+    record_kind = "reaction"
+
     stoichiometry_set = StoichiometrySerializer(many=True)
     models = [models.Stoichiometry]
 
@@ -78,7 +83,9 @@ class ReactionSerializer(NestedModelSerializer):
         return super().create(validated_data)
 
 
-class ThermoSerializer(FlexFieldsModelSerializer):
+class ThermoSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "thermo"
+
     provider_record = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -86,7 +93,9 @@ class ThermoSerializer(FlexFieldsModelSerializer):
         fields = "__all__"
 
 
-class ThermoRecordSerializer(serializers.ModelSerializer):
+class ThermoRecordSerializer(RecordKeyFieldsMixin, serializers.ModelSerializer):
+    record_kind = "thermo-record"
+
     provider_name = serializers.CharField(source="get_provider_display", read_only=True)
 
     class Meta:
@@ -112,7 +121,9 @@ class EfficiencySerializer(serializers.ModelSerializer):
         exclude = ["kinetics"]
 
 
-class KineticsSerializer(NestedModelSerializer):
+class KineticsSerializer(RecordKeyFieldsMixin, NestedModelSerializer):
+    record_kind = "kinetics"
+
     efficiency_set = EfficiencySerializer(many=True)
     models = [models.Efficiency]
     data = serializers.JSONField(source="raw_data", validators=[validate_kinetics_data])
@@ -165,7 +176,9 @@ class KineticsCommentSerializer(serializers.ModelSerializer):
 
 
 # FlexFieldsSerializerMixin: ?fields= and ?omit= leave out the long species, thermo and rate lists.
-class KineticModelSerializer(FlexFieldsSerializerMixin, NestedModelSerializer):
+class KineticModelSerializer(RecordKeyFieldsMixin, FlexFieldsSerializerMixin, NestedModelSerializer):
+    record_kind = "kineticmodel"
+
     speciesname_set = SpeciesNameSerializer(many=True)
     thermocomment_set = ThermoCommentSerializer(many=True)
     transportcomment_set = TransportCommentSerializer(many=True)
@@ -197,7 +210,9 @@ class AuthorSerializer(FlexFieldsModelSerializer):
         fields = "__all__"
 
 
-class SourceSerializer(FlexFieldsModelSerializer):
+class SourceSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "source"
+
     class Meta:
         model = models.Source
         fields = "__all__"
@@ -207,7 +222,9 @@ class SourceSerializer(FlexFieldsModelSerializer):
     }
 
 
-class StructureSerializer(FlexFieldsModelSerializer):
+class StructureSerializer(RecordKeyFieldsMixin, FlexFieldsModelSerializer):
+    record_kind = "structure"
+
     class Meta:
         model = models.Structure
         fields = "__all__"

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{# A canonical URL that several records share (HTTP 300), or the tombstone of a removed record (HTTP 410). No Figma frame: the detail look of the database pages (database/catalog_styles.html), as provenance/node.html. #}
+
+{% block title %}{% if mode == "retired" %}Removed record{% else %}Records with this key{% endif %} — Prometheus{% endblock %}
+
+{% block content %}
+<div class="cat-page prov-page">
+    <nav aria-label="Breadcrumb">
+        <ol class="cat-crumbs">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><span aria-current="page">Canonical URL</span></li>
+        </ol>
+    </nav>
+
+    <header class="cat-heading">
+        <div class="cat-heading__intro">
+            <p class="cat-eyebrow">{{ kind }}</p>
+            {% if mode == "retired" %}
+            <h1>{{ row.label|default:"Removed record" }}</h1>
+            {% else %}
+            <h1>{{ records|length }} records have this key</h1>
+            {% endif %}
+            <p class="cat-iri"><code class="cat-code rk-key">{{ key }}</code></p>
+        </div>
+    </header>
+
+    {% if mode == "retired" %}
+    <section class="app-panel" aria-labelledby="rk-tombstone-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-tombstone-title">This record is no longer in the database</h2>
+        </div>
+        <dl class="rk-facts">
+            <dt>Kind</dt><dd>{{ kind }}</dd>
+            <dt>Record</dt><dd>{{ row.label|default:"—" }}</dd>
+            <dt>Reason</dt><dd>{{ row.reason|default:"—" }}</dd>
+            <dt>Removed</dt><dd>{% if row.changed_at %}{{ row.changed_at|date:"j F Y" }}{% else %}—{% endif %}</dd>
+        </dl>
+    </section>
+    {% else %}
+    <section class="app-panel" aria-labelledby="rk-records-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-records-title">Records <span class="cat-pill cat-pill--count">{{ records|length }}</span></h2>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table cat-table--wide">
+                <thead>
+                    <tr><th scope="col">Record</th><th scope="col">Address</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td><a class="app-link" href="{{ r.url }}">{{ r.label|default:r.key }}</a></td>
+                        {# The same key as this page: the record's own address; another key (a reaction direction): its canonical URL. #}
+                        {% if r.key == key %}
+                        <td><a class="app-link rk-key" href="{{ r.url }}">{{ r.url }}</a></td>
+                        {% else %}
+                        <td><a class="app-link rk-key" href="{{ r.canonical_url }}">{{ r.canonical_url }}</a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{% include "database/catalog_styles.html" %}
+<style>
+    .rk-key { word-break: break-all; }
+    .rk-facts { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; margin: 16px 0; }
+    .rk-facts dt { font-weight: 600; }
+    .rk-facts dd { margin: 0; }
+</style>
+{% endblock %}
