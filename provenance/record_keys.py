@@ -9,8 +9,8 @@ species            InChIKey-multiplicity of each structure (joined by ","), "@st
 structure          InChIKey-multiplicity; the resonance forms of a molecule share it
 reaction           the species keys of the direction-insensitive reaction, A+B=C+D, and
                    "/f" or "/r" for the direction in which the record is written
-kinetics           the reaction key and a digest of the rate parameters, the collider and
-                   the collider efficiencies
+kinetics           the reaction key and a digest of the rate parameters, the collider, the
+                   collider efficiencies and, for a Chebyshev rate, the T and P range
 thermo             the species key and a digest of the NASA polynomials and the reference
                    state; for the NASA copy of a provider record, the provider's key
 thermo-record      provider:provider ID:provider version
@@ -125,14 +125,17 @@ def reaction_keys():
 
 def kinetics_keys():
     from database.models import Efficiency, Kinetics
+    from database.models.kinetic_data import range_identity
 
     reactions = _reaction_rows()
     species, _ = _species_keys()
     efficiencies = defaultdict(list)
     for kinetics_id, species_id, value in Efficiency.objects.values_list("kinetics_id", "species_id", "efficiency").iterator():
         efficiencies[kinetics_id].append((species.get(species_id, f"unkeyed-{species_id}"), value))
-    fields = ("id", "reaction_id", "raw_data", "reverse", "specific_collider_id")
-    for kid, reaction_id, data, reverse, collider_id in Kinetics.objects.values_list(*fields).iterator(chunk_size=2000):
+    fields = ("id", "reaction_id", "raw_data", "reverse", "specific_collider_id",
+              "min_temp", "max_temp", "min_pressure", "max_pressure")
+    for kid, reaction_id, data, reverse, collider_id, *ranges in (Kinetics.objects.values_list(*fields)
+                                                                   .iterator(chunk_size=2000)):
         if reaction_id not in reactions:
             continue
         if any(key.startswith("unkeyed-") for key, _ in efficiencies.get(kid, [])):
@@ -143,6 +146,9 @@ def kinetics_keys():
         content = {"data": data, "reverse": reverse,
                    "collider": species.get(collider_id, "") if collider_id else "",
                    "efficiencies": sorted(efficiencies.get(kid, []))}
+        # As in the database (range_identity): the range is part of a Chebyshev rate only.
+        if range_identity(data, *ranges):
+            content["ranges"] = range_identity(data, *ranges)
         yield kid, f"{reaction_key}/{digest(content)}", label
 
 
