@@ -42,9 +42,9 @@ file's value and unit in `<field>_quantity` and its SI value in `<field>`.
 | `/api/composition-species/` | `species_name`, `cas`, `inchi`, `smiles`, `amount__gte/lte` (search across all) |
 | `/api/apparatus/` | `kind`, `mode`, `institution`, `facility` |
 
-Each dataset's `license` is the licence of the ChemKED-database repository, from the `license:` of its
-`CITATION.cff` (CC-BY-4.0): `sync_chemked` sets it, and `backfill_dataset_licences --apply` sets it on
-older datasets. In the JSON-LD (`/api/experiment-dataset/<id>/metadata/`), `schema:identifier` is the
+Every dataset carries the licence of the data that the site curates, `DATA_LICENSE_SPDX` in
+`kms/settings.py` (CC-BY-4.0): `sync_chemked` sets it, and `assign_data_licence --apply` sets it on older
+datasets. A kinetic model keeps the terms of its source publication, so its `license` stays empty. In the JSON-LD (`/api/experiment-dataset/<id>/metadata/`), `schema:identifier` is the
 dataset's own DOI when it has one, else its record URL; the DOI of the paper is `schema:citation`.
 
 ## Example: ignition-delay datapoints for a high-temperature window

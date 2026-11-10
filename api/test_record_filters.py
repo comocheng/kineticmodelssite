@@ -1,14 +1,14 @@
 """Filters of the record endpoints (species, reaction, kinetics, thermo), fields on the model list,
 the documented rate fingerprint, and the licence and identifier of the datasets."""
-import shutil
-import tempfile
-from pathlib import Path
+import io
 
+from django.conf import settings
 from django.core.management import call_command
 from django.test import TestCase
 
 from chemked_database.models import ExperimentDataset
 from database import models as db
+from provenance.models import License
 from database.tests.test_database_cleanup import FIELDS, RATE, provider_copy, reaction
 
 
@@ -106,19 +106,27 @@ class RecordFilterTests(TestCase):
         self.assertIn("log10 of the rate coefficient in SI units", schema)
 
 
-class DatasetLicenceTests(TestCase):
+class DataLicenceTests(TestCase):
     def setUp(self):
-        self.repo = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, self.repo)
-        (self.repo / "CITATION.cff").write_text("cff-version: 1.2.0\ntitle: x\nlicense: CC-BY-4.0\n")
         self.dataset = ExperimentDataset.objects.create(
             chemked_file_path="test/a.yaml", experiment_type="ignition delay", reference_doi="10.1000/paper")
+        self.model = db.KineticModel.objects.create(model_name="Licence model")
 
-    def test_dry_run_then_apply(self):
-        call_command("backfill_dataset_licences", "--path", str(self.repo), stdout=open("/dev/null", "w"))
+    def test_dry_run_then_apply_to_datasets_only(self):
+        out = io.StringIO()
+        call_command("assign_data_licence", stdout=out)
         self.dataset.refresh_from_db()
         self.assertIsNone(self.dataset.license)
-        call_command("backfill_dataset_licences", "--path", str(self.repo), "--apply", stdout=open("/dev/null", "w"))
+        self.assertIn("would give 1 experiment datasets", out.getvalue().lower())
+        call_command("assign_data_licence", "--apply", stdout=io.StringIO())
+        self.dataset.refresh_from_db()
+        self.model.refresh_from_db()
+        self.assertEqual(self.dataset.license.spdx_id, settings.DATA_LICENSE_SPDX)
+        self.assertIsNone(self.model.license)  # a model keeps the terms of its source
+
+    def test_one_licence_replaces_another_on_a_dataset(self):
+        ExperimentDataset.objects.filter(pk=self.dataset.pk).update(license=License.objects.create(spdx_id="MIT"))
+        call_command("assign_data_licence", "--apply", stdout=io.StringIO())
         self.dataset.refresh_from_db()
         self.assertEqual(self.dataset.license.spdx_id, "CC-BY-4.0")
 

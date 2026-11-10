@@ -469,6 +469,11 @@ GITHUB_REPO_NAME = os.getenv('GITHUB_REPO_NAME', 'ChemKED-database')
 # Local git clone of the ChemKED-database repository. sync_chemked reads it, and the
 # chemked-ingest workflow pulls it before it syncs merged files. Default: a sibling of
 # this project directory.
+# The licence of the data that the site curates (an SPDX id): every experimental dataset, and the
+# species identifications and metadata. A kinetic model keeps the terms of its source publication,
+# so no licence is set on models. provenance.data_licence applies it; the code is under the MIT licence.
+DATA_LICENSE_SPDX = "CC-BY-4.0"
+
 CHEMKED_DATABASE_PATH = os.getenv(
     'CHEMKED_DATABASE_PATH',
     os.path.join(os.path.dirname(BASE_DIR), 'ChemKED-database'),
