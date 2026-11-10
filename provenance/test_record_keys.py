@@ -88,6 +88,21 @@ class RecordKeyTests(TestCase):
         self.assertEqual(response.status_code, 303)
         self.assertEqual(response["Location"], f"/species/{again.pk}")
 
+    def test_chebyshev_range_is_part_of_the_key(self):
+        # PCI2017/111-Jin writes the coefficients of CombFlame2013/1939-Cai with 270-3000 K, not 290-3000 K.
+        cheb = {"type": "chebyshev", "coefficient_matrix": [[11.5, 0.52], [-0.62, 0.31]], "units": "cm^3/(mol*s)"}
+        bar = {"min_pressure": 1e3, "max_pressure": 1e7}
+        a = db.Kinetics.objects.create(reaction=self.forward, raw_data=cheb, min_temp=290.0, max_temp=3000.0, **bar)
+        b = db.Kinetics.objects.create(reaction=self.forward, raw_data=cheb, min_temp=270.0, max_temp=3000.0, **bar)
+        assign("kinetics", apply=True)
+        self.assertNotEqual(self.key_of("kinetics", a), self.key_of("kinetics", b))
+
+    def test_other_rate_keeps_its_key_when_its_range_changes(self):
+        key = self.key_of("kinetics", self.rate)
+        db.Kinetics.objects.filter(pk=self.rate.pk).update(min_temp=200.0, max_temp=2500.0)
+        assign("kinetics", apply=True)
+        self.assertEqual(self.key_of("kinetics", self.rate), key)
+
     def test_dry_run_writes_nothing(self):
         db.Source.objects.create(doi="10.1/new")
         before = RecordKey.objects.count()

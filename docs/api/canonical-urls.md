@@ -15,7 +15,7 @@ rebuild of the database gives the same URL. The API record gives it as `key` and
 | `species` | InChIKey and spin multiplicity of each structure (joined by `,`); `@state` for an excited state | `/id/species/XLYOFNOQVPJJNP-UHFFFAOYSA-N-1` (H2O) |
 | `structure` | InChIKey and spin multiplicity; the resonance forms of a molecule share it | `/id/structure/TUJKJAMUKRIRHC-UHFFFAOYSA-N-2` (OH) |
 | `reaction` | species keys of the reaction, `A+B=C+D`, and `/f` or `/r` for the direction of the record | `/id/reaction/<A>+<B>=<C>+<D>/f` |
-| `kinetics` | the reaction key and a digest of the rate parameters, the collider and the efficiencies | `/id/kinetics/<reaction key>/<digest>` |
+| `kinetics` | the reaction key and a digest of the rate parameters, the collider, the efficiencies and, for a Chebyshev rate, the T and P range | `/id/kinetics/<reaction key>/<digest>` |
 | `thermo` | the species key and a digest of the NASA polynomials and the reference state; the provider key for the NASA copy of a provider record | `/id/thermo/<species key>/<digest>` |
 | `thermo-record` | `provider:provider ID:provider version` | `/id/thermo-record/atct:100-41-4*0:1.220` |
 | `kineticmodel` | the model name (its folder in RMG-models) | `/id/kineticmodel/PCI2013/325-Husson` |
