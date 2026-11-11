@@ -207,6 +207,7 @@
                     <div><dt>File DOI</dt><dd><a class="ck-dataset__doi" href="https://doi.org/{{ dataset.file_doi }}" target="_blank" rel="noopener">{{ dataset.file_doi|truncatechars:28 }}<img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a></dd></div>
                     {% endif %}
                     <div><dt>File version</dt><dd class="is-mono">{{ dataset.file_version }}</dd></div>
+                    {% with url=dataset.source_file_url %}{% if url %}<div><dt>Source file</dt><dd><a class="ck-dataset__doi is-mono" href="{{ url }}" target="_blank" rel="noopener">ChemKED-database {{ dataset.source_commit|slice:":10" }}<img class="app-icon" src="{% static 'database/images/icons/external-link-ce4801-12.svg' %}" alt="" width="12" height="12"></a></dd></div>{% endif %}{% endwith %}
                     <div><dt>Experiment type</dt><dd>{{ dataset.experiment_type|capfirst }}</dd></div>
                     <div><dt>Datapoints</dt><dd class="is-mono">{{ datapoints.paginator.count }}</dd></div>
                     <div><dt>Valid</dt><dd>{% if dataset.is_valid %}<span class="ck-dataset__yes"><i class="bi bi-check-circle" aria-hidden="true"></i>Yes</span>{% else %}<span class="ck-dataset__no"><i class="bi bi-x-circle" aria-hidden="true"></i>No</span>{% endif %}</dd></div>

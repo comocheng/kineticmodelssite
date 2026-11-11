@@ -12,11 +12,15 @@ Usage:
     python manage.py split_chebyshev_ranges --apply --model PCI2017/111-Jin
 """
 import json
+import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from database.services.chebyshev_ranges import split_chebyshev_ranges
+from database.models import KineticModel
+from database.scripts.import_rmg_models import record_source_commits
+from database.services.cleanup import MODELS
 
 
 class Command(BaseCommand):
@@ -29,7 +33,12 @@ class Command(BaseCommand):
         parser.add_argument("--report", help="Write the counts and each changed record to this JSON file.")
 
     def handle(self, *args, **options):
-        report = split_chebyshev_ranges(options["path"], apply=options["apply"], models=set(options["model"] or []))
+        wanted = set(options["model"] or [])
+        report = split_chebyshev_ranges(options["path"], apply=options["apply"], models=wanted)
+        if options["apply"]:
+            record_source_commits([(model, os.path.join(options["path"], model.model_name))
+                                   for model in KineticModel.objects.all()
+                                   if not wanted or model.model_name in wanted], MODELS)
         for row in report["records"]:
             kept = f"kept {row['kept']['range']} ({', '.join(row['kept']['models'])})" if row["kept"] else "kept none"
             moved = "; ".join(f"{m['range']} ({', '.join(m['models'])}) to {'new ' if m['new'] else ''}record {m['to']}"

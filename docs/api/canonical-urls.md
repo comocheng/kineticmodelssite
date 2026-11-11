@@ -33,10 +33,25 @@ no canonical URL yet.
 | 303 | One record has the key: the web page of the record, or its API record when the request asks for JSON (`Accept: application/json` or `?format=json`). |
 | 300 | Several records have the key: a reaction key without `/f` or `/r` when both directions are records, the resonance forms of a structure, or records with the same content. The answer lists them. |
 | 301 | The identity of the record changed (a corrected identification): the canonical URL of the new key. Also for another spelling of a key: other letter case (`/id/source/10.1016/J.COMBUSTFLAME.2020.01.001`), a `/` at the end, or a DOI, ORCID iD or ROR ID written as a URL; the answer is the key as stored. When the spelling matches several keys, the answer is 300 with the list. |
-| 410 | The record was removed: a page that keeps what the record was, the reason and the date. |
+| 200 | A `kinetics` or `thermo` key whose values were corrected: the values the key stood for, the models that gave them with a link to each model's source file at its RMG-models commit, and the canonical URL of the current record (also in a `Link: <…>; rel="successor-version"` header). |
+| 410 | The record was removed: a page that keeps what the record was, the reason and the date; for `kinetics` and `thermo`, also its values, the models that gave them, and what those models give now for the same reaction or species. |
 | 404 | No record ever had the key. |
 
 A key is never given to another record, and a key that a record had is never deleted.
+
+## Old values and source files
+
+The key of a rate or a thermo entry is made from its values, so a corrected value gives a new key.
+Each such key keeps a snapshot of its values and of the models that gave them, with each model's
+RMG-models commit. While the key is current, `assign_record_keys` keeps the snapshot up to date;
+when the key moves or its record is removed, the snapshot stays as it was. The old canonical URL
+then still shows what it stood for (200 or 410 above). When only the identity changed (a
+species was identified again) and the values are the same, the old URL redirects (301).
+
+A model keeps the RMG-models commit its files were read from (`source_commit`: the last commit that
+changed the model's folder), and a ChemKED dataset the ChemKED-database commit of its file. The
+importers and `sync_chemked` record it; a folder or file with uncommitted changes gets none. The
+record pages link to the files at that commit.
 
 ## Keeping the keys current
 
@@ -47,5 +62,15 @@ python manage.py assign_record_keys --apply --kind species --kind reaction
 ```
 
 Run it after an import, after a clean-up that merges or removes records, and after a rebuild.
+Run it also before a clean-up that changes values: the snapshots then hold the values as they were.
+
+For models and datasets read before the commits were recorded, with the clones at the state they
+were read in:
+
+```
+python manage.py record_source_commits            # dry run
+python manage.py record_source_commits --apply
+python manage.py assign_record_keys --apply       # the snapshots then name the commits
+```
 `CANONICAL_ID_BASE` sets the base of the canonical URLs (for example a w3id.org address that
 redirects here); blank gives `PUBLIC_SITE_URL` + `/id`.

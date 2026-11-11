@@ -176,6 +176,7 @@
                             <small>ID: {{ tc.kinetic_model.pk }}</small>
                             <p>{{ tc.comment }}</p>
                         </a>
+                        {% with url=tc.kinetic_model.thermo_library_url %}{% if url %}<a class="th-source" href="{{ url }}">Source file: RMG-models {{ tc.kinetic_model.source_commit|slice:":10" }}</a>{% endif %}{% endwith %}
                     </li>
                     {% endfor %}
                 </ul>

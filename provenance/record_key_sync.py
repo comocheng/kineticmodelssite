@@ -7,6 +7,10 @@
   its label, so that the old canonical URL gives a tombstone page (HTTP 410). When another
   record has the same key (two records merged into one), the URL resolves to that record.
 
+A key made from values (kinetics, thermo) keeps a snapshot of the values and of the models that
+gave them (record_keys.snapshots): refreshed while the key is current, left as it was when the key
+moves or the record is removed, so that the old URL can show what it stood for.
+
 Rows are never deleted, and a key is never given to another kind of record.
 """
 from collections import Counter
@@ -18,7 +22,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from provenance.models import RecordKey
-from provenance.record_keys import KINDS, build_keys
+from provenance.record_keys import KINDS, build_keys, same_snapshot, snapshots
 
 BATCH = 2000
 
@@ -35,12 +39,13 @@ class Result:
     unchanged: int = 0
     shared_keys: int = 0          # keys that more than one current record has
     shared_records: int = 0       # the records with such a key
+    snapshots: int = 0            # current rows whose snapshot of the values was written
     examples: list = field(default_factory=list)
 
     def line(self):
         return (f"{self.kind}: {self.records} records, {self.keyed} with a key; "
                 f"new {self.created}, moved {self.moved}, retired {self.retired}, "
-                f"back {self.reactivated}, unchanged {self.unchanged}; "
+                f"back {self.reactivated}, unchanged {self.unchanged}, snapshots written {self.snapshots}; "
                 f"{self.shared_keys} keys shared by {self.shared_records} records")
 
 
@@ -66,16 +71,24 @@ def assign(kind, apply=False, now=None):
     by_identity = {(row.key, row.object_id): row for row in rows}
     existing_ids = set(model.objects.values_list("pk", flat=True))
 
+    values = snapshots(kind)
     create, update = [], []
     for object_id, (key, label) in desired.items():
+        snapshot = values.get(object_id)
         row = current.pop(object_id, None)
         if row is not None and row.key == key:
-            if row.label != label:
-                row.label = label
+            changed = row.label != label
+            row.label = label
+            if snapshot is not None and not same_snapshot(row.snapshot, snapshot):
+                row.snapshot = snapshot
+                result.snapshots += 1
+                changed = True
+            if changed:
                 update.append(row)
             result.unchanged += 1
             continue
         if row is not None:                       # the identity of the record changed
+            # The row keeps the snapshot it has: the values that its key stood for.
             row.status, row.successor, row.changed_at = RecordKey.Status.MOVED, key, now
             row.reason = "the identity of the record changed"
             update.append(row)
@@ -84,12 +97,16 @@ def assign(kind, apply=False, now=None):
         if old is not None:                       # the record has its earlier key again
             old.status, old.successor, old.label, old.changed_at = RecordKey.Status.CURRENT, "", label, now
             old.reason = ""
+            if snapshot is not None:
+                old.snapshot = snapshot
             update.append(old)
             result.reactivated += 1
         else:
             create.append(RecordKey(kind=kind, key=key, content_type=content_type, object_id=object_id,
-                                    label=label))
+                                    label=label, snapshot=snapshot))
             result.created += 1
+            if snapshot is not None:
+                result.snapshots += 1
     for object_id, row in current.items():        # no key now
         row.status, row.changed_at = RecordKey.Status.RETIRED, now
         row.reason = "record removed" if object_id not in existing_ids else "the record has no identity now"
@@ -99,8 +116,8 @@ def assign(kind, apply=False, now=None):
     if apply:
         with transaction.atomic():
             RecordKey.objects.bulk_create(create, batch_size=BATCH)
-            RecordKey.objects.bulk_update(update, ["status", "successor", "label", "reason", "changed_at"],
-                                          batch_size=BATCH)
+            RecordKey.objects.bulk_update(update, ["status", "successor", "label", "reason", "changed_at",
+                                                   "snapshot"], batch_size=BATCH)
     return result
 
 
