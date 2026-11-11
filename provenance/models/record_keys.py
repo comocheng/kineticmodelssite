@@ -1,6 +1,8 @@
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import F
+from django.db.models.functions import Upper
 
 
 class RecordKey(models.Model):
@@ -36,6 +38,8 @@ class RecordKey(models.Model):
         indexes = [
             models.Index(fields=["kind", "key"]),
             models.Index(fields=["content_type", "object_id", "status"]),
+            # The resolver finds a key typed in another letter case (provenance.record_keys.spellings).
+            models.Index(F("kind"), Upper("key"), name="provenance_record_key_ikey"),
         ]
         constraints = [
             models.UniqueConstraint(fields=["kind", "key", "content_type", "object_id"],

@@ -32,7 +32,7 @@ no canonical URL yet.
 |---|---|
 | 303 | One record has the key: the web page of the record, or its API record when the request asks for JSON (`Accept: application/json` or `?format=json`). |
 | 300 | Several records have the key: a reaction key without `/f` or `/r` when both directions are records, the resonance forms of a structure, or records with the same content. The answer lists them. |
-| 301 | The identity of the record changed (a corrected identification): the canonical URL of the new key. |
+| 301 | The identity of the record changed (a corrected identification): the canonical URL of the new key. Also for another spelling of a key: other letter case (`/id/source/10.1016/J.COMBUSTFLAME.2020.01.001`), a `/` at the end, or a DOI, ORCID iD or ROR ID written as a URL; the answer is the key as stored. When the spelling matches several keys, the answer is 300 with the list. |
 | 410 | The record was removed: a page that keeps what the record was, the reason and the date. |
 | 404 | No record ever had the key. |
 
