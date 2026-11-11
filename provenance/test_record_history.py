@@ -237,18 +237,42 @@ class SnapshotTests(TestCase):
     def test_api_gives_the_source_commit(self):
         self.assertEqual(self.client.get(f"/api/kineticmodel/{self.model.pk}/").json()["source_commit"], COMMIT)
 
-    def test_record_page_links_to_the_source_file(self):
-        # A rate the page can draw (the fixture rate of the key tests is only a value to hash).
+    def drawable(self):
+        """A rate and structures the record pages can draw (the key tests' fixture rate is only a
+        value to hash, and their structures have no adjacency lists)."""
         db.Kinetics.objects.filter(pk=self.rate.pk).update(raw_data={
             "type": "arrhenius", "a": 1e14, "a_si": 1e8, "a_units": "cm^3/(mol*s)", "n": 0, "e": 0, "e_si": 0,
             "e_units": "kcal/mol"})
-        # Structures the page can draw (the key tests' fixtures have no adjacency lists).
         for record, adjacency in (
                 (self.h2, "1 H u0 p0 c0 {2,S}\n2 H u0 p0 c0 {1,S}"),
                 (self.oh, "multiplicity 2\n1 O u1 p2 c0 {2,S}\n2 H u0 p0 c0 {1,S}"),
                 (self.h2o, "1 O u0 p2 c0 {2,S} {3,S}\n2 H u0 p0 c0 {1,S}\n3 H u0 p0 c0 {1,S}"),
                 (self.h, "multiplicity 2\n1 H u1 p0 c0")):
             db.Structure.objects.filter(isomer__species=record).update(adjacency_list=adjacency)
+        self.rate.refresh_from_db()
+        assign("kinetics", apply=True)
+
+    def test_record_page_lists_the_earlier_values(self):
+        self.drawable()
+        old = self.row("kinetics", self.rate).key
+        self.rate.raw_data = {**self.rate.raw_data, "a": 2e14, "a_si": 2e8}
+        self.rate.save()
+        assign("kinetics", apply=True)
+        response = self.client.get(f"/kinetics/{self.rate.pk}")
+        self.assertContains(response, "Earlier values")
+        self.assertContains(response, f"/id/kinetics/{old}")
+        response = self.client.get(f"/id/kinetics/{old}")
+        self.assertContains(response, "2e+14")                     # the current value, next to the old one
+        self.assertContains(response, "1e+14")
+        thermo_key = self.row("thermo", self.thermo).key
+        db.Thermo.objects.filter(pk=self.thermo.pk).update(coeffs_poly1=[3.6, 0, 0, 0, 0, 100.0, 1.0])
+        assign("thermo", apply=True)
+        response = self.client.get(f"/thermo/{self.thermo.pk}")
+        self.assertContains(response, "Earlier values")
+        self.assertContains(response, f"/id/thermo/{thermo_key}")
+
+    def test_record_page_links_to_the_source_file(self):
+        self.drawable()
         response = self.client.get(f"/kinetics/{self.rate.pk}")
         self.assertContains(response, f"/blob/{COMMIT}/Fixture/model%20one/RMG-Py-kinetics-library/reactions.py")
         response = self.client.get(f"/thermo/{self.thermo.pk}")

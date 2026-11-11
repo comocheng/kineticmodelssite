@@ -176,7 +176,7 @@
                             <small>ID: {{ tc.kinetic_model.pk }}</small>
                             <p>{{ tc.comment }}</p>
                         </a>
-                        {% with url=tc.kinetic_model.thermo_library_url %}{% if url %}<a class="th-source" href="{{ url }}">Source file: RMG-models {{ tc.kinetic_model.source_commit|slice:":10" }}</a>{% endif %}{% endwith %}
+                        {% with url=tc.kinetic_model.thermo_library_url %}{% if url %}<a class="th-source" href="{{ url }}">Source file <small>RMG-models {{ tc.kinetic_model.source_commit|slice:":10" }}</small></a>{% endif %}{% endwith %}
                     </li>
                     {% endfor %}
                 </ul>
@@ -185,6 +185,23 @@
                 {% endif %}
             </div>
         </details>
+        {% if earlier_keys %}
+        <details class="app-panel th-collapse" open>
+            <summary>
+                <img class="app-icon" src="{% static 'database/images/icons/link.svg' %}" alt="" width="17" height="17">
+                <strong>Earlier values</strong>
+                <span>{{ earlier_keys|length|pluralize:"correction" }}</span>
+                <img class="app-icon th-chevron" src="{% static 'database/images/icons/chevron-down-lg.svg' %}" alt="" width="18" height="18">
+            </summary>
+            <div class="th-collapse__body">
+                <ul class="th-models">
+                    {% for k in earlier_keys %}
+                    <li><a href="{{ k.url }}"><strong>{{ k.text }}</strong><small>{{ k.date|date:"j F Y" }}</small><p>The values before this correction, at their own address.</p></a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </details>
+        {% endif %}
     </section>
 </div>
 {% endwith %}

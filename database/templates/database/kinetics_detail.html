@@ -169,6 +169,24 @@
             </table>
         </div>
     </section>
+    {% if earlier_keys %}
+    <section class="app-panel rx-kin-models" aria-labelledby="rx-earlier-title">
+        <div class="rx-panel-head">
+            <h2 class="app-panel__title" id="rx-earlier-title">Earlier values</h2>
+            <span class="app-panel__meta">{{ earlier_keys|length|pluralize:"correction" }}</span>
+        </div>
+        <div class="rx-table-wrap rx-kin-models__table">
+            <table class="rx-table">
+                <thead><tr><th scope="col">Corrected</th><th scope="col">The values before, at their own address</th></tr></thead>
+                <tbody>
+                    {% for k in earlier_keys %}
+                    <tr><td>{{ k.date|date:"j F Y" }}</td><td><a href="{{ k.url }}">{{ k.text }}</a></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 

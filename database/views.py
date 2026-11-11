@@ -40,6 +40,7 @@ from .models import (
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm, SourceForm, AuthorshipFormSet, KineticModelForm, AuthorForm
 from database.templatetags import renders
+from provenance.record_keys import earlier_keys
 from database.services import exports
 from provenance import resolver
 
@@ -350,6 +351,7 @@ class ThermoDetail(DetailView):
         thermo_comments = thermo.thermocomment_set.all()
         context["thermo_comments"] = thermo_comments
         context["thermo_plot"] = curves.single_thermo_plot(thermo, f"Thermo {thermo.pk}")
+        context["earlier_keys"] = earlier_keys("thermo", thermo.pk, self.request)
         return context
 
 
@@ -547,6 +549,8 @@ class KineticsDetail(DetailView):
         context["table_data"] = kinetics.data.table_data() if hasattr(kinetics.data, "table_data") else []
         context["kinetics_comments"] = kinetics.kineticscomment_set.order_by("kinetic_model__id")
         context["rate_plot"] = curves.single_rate_plot(kinetics, f"Kinetics {kinetics.pk}")
+        # The canonical URLs of this record's values before they were corrected.
+        context["earlier_keys"] = earlier_keys("kinetics", kinetics.pk, self.request)
 
         return context
 

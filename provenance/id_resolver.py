@@ -12,16 +12,14 @@
 * The key is another spelling of a stored key (other letter case, a "/" at the end, a DOI
   written as a URL): HTTP 301 to the canonical URL as stored, or 300 when it matches several.
 """
-import json
-
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.cache import patch_cache_control
 
 from provenance.models import RecordKey
-from provenance.record_keys import (SNAPSHOTS, KINDS, canonical_url, model_files, readable, same_values,
-                                    spellings)
+from provenance.record_keys import (SNAPSHOTS, KINDS, canonical_url, compared_rows, model_files, readable,
+                                    same_values, short_key, spellings, value_rows)
 
 
 def wants_json(request):
@@ -107,7 +105,7 @@ def _resolve(request, kind, key):
         if kind in SNAPSHOTS and row.snapshot:
             end_key, end_row = _follow(kind, row.successor)
             if end_row is not None and end_row.snapshot and not same_values(row.snapshot, end_row.snapshot):
-                return _corrected(request, kind, key, row, end_key, as_json)
+                return _corrected(request, kind, key, row, end_key, end_row, as_json)
         return HttpResponseRedirect(local_id_url(kind, row.successor), status=301)
 
     row = max(rows, key=lambda r: r.changed_at or r.created_at)
@@ -141,15 +139,16 @@ def _follow(kind, key, hops=50):
 
 def _snapshot_context(kind, snapshot):
     values = readable(snapshot.get("values"))
-    return {"values": values, "values_text": json.dumps(values, indent=1, sort_keys=True),
-            "files": model_files(kind, snapshot.get("models"))}
+    return {"values": values, "value_rows": value_rows(values), "files": model_files(kind, snapshot.get("models"))}
 
 
-def _corrected(request, kind, key, row, current_key, as_json):
-    """The values a key stood for before they were corrected, with the current record's address."""
+def _corrected(request, kind, key, row, current_key, current_row, as_json):
+    """The values a key stood for before they were corrected, next to the current record's."""
     current_url = canonical_url(kind, current_key, request)
     context = {"mode": "corrected", "kind": kind, "key": key, "row": row, "current_url": current_url,
-               **_snapshot_context(kind, row.snapshot)}
+               "current_text": short_key(kind, current_key), **_snapshot_context(kind, row.snapshot),
+               "compared": compared_rows(readable(row.snapshot.get("values")),
+                                         readable(current_row.snapshot.get("values")))}
     data = {"kind": kind, "key": key, "status": "corrected", "label": row.label,
             "corrected_at": row.changed_at.isoformat() if row.changed_at else None,
             "values": context["values"], "models": context["files"], "current": current_url}
@@ -175,6 +174,7 @@ def _what_the_models_give_now(request, kind, key, snapshot):
     else:
         links = ThermoComment.objects.filter(thermo_id__in=keys).values_list("thermo_id", "kinetic_model__model_name")
     rows = {(name, record_id) for record_id, name in links.filter(kinetic_model__model_name__in=names)}
-    return [{"model": name, "key": keys[record_id], "canonical_url": canonical_url(kind, keys[record_id], request),
+    return [{"model": name, "key": keys[record_id], "text": short_key(kind, keys[record_id]),
+             "canonical_url": canonical_url(kind, keys[record_id], request),
              "url": request.build_absolute_uri(record_url(kind, record_id))}
             for name, record_id in sorted(rows)]

@@ -393,3 +393,82 @@ def model_files(kind, models):
         url = github_blob(repository, row.get("commit"), f"{row['model']}/{library}") if library else ""
         rows.append({**row, "url": url})
     return rows
+
+
+def number_text(value):
+    """A number as stored, with every digit: 1.04e+14 rather than 104000000000000.0, 1500 rather
+    than 1500.0. Large integers that PostgreSQL made of floats are written the same way."""
+    from decimal import Decimal
+
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    exact = Decimal(repr(value)) if isinstance(value, float) else Decimal(value)
+    if exact == 0:
+        return "0"
+    if abs(exact) >= 100000 or abs(exact) < Decimal("0.001"):
+        return f"{exact.normalize():e}".replace("E", "e")
+    text = format(exact.normalize(), "f")
+    return text
+
+
+def value_rows(values):
+    """[(name, text)] of a snapshot's values for a table: a rate's parameters first, nested names
+    joined by " › ", the SI copies the importer adds (*_si) and empty fields left out, numbers by
+    number_text."""
+    rows = []
+
+    def walk(prefix, value):
+        if value is None or value == "" or value == {} or value == []:
+            return
+        if isinstance(value, dict):
+            for name in sorted(value):
+                if name.endswith("_si"):
+                    continue
+                walk(f"{prefix} › {name}" if prefix else name, value[name])
+        elif isinstance(value, list) and prefix.startswith("coeffs_poly"):
+            # One row per NASA coefficient, a0 to a6, as the thermo page names them.
+            rows.extend((f"{prefix} › a{index}", str(number_text(v))) for index, v in enumerate(value))
+        elif isinstance(value, list) and value and all(not isinstance(v, (dict, list)) for v in value):
+            rows.append((prefix, ", ".join(str(number_text(v)) for v in value)))
+        elif isinstance(value, list):
+            for index, item in enumerate(value, 1):
+                if isinstance(item, list) and len(item) == 2 and isinstance(item[0], str):
+                    rows.append((f"{prefix} › {item[0]}", str(number_text(item[1]))))   # efficiency
+                else:
+                    walk(f"{prefix} › {index}", item)
+        elif isinstance(value, bool):
+            rows.append((prefix, "yes" if value else "no"))
+        else:
+            rows.append((prefix, str(number_text(value))))
+
+    values = dict(values or {})
+    # A rate's parameters are the rows themselves, without a "data" prefix.
+    data = values.pop("data", None)
+    walk("", data if isinstance(data, dict) else {})
+    walk("", values)
+    return rows
+
+
+def compared_rows(old, new):
+    """[{"name", "old", "new", "changed"}] of two snapshots' values, in the order of the old ones."""
+    before, after = dict(value_rows(old)), dict(value_rows(new))
+    names = list(before) + [name for name in after if name not in before]
+    return [{"name": name, "old": before.get(name, "—"), "new": after.get(name, "—"),
+             "changed": before.get(name) != after.get(name)} for name in names]
+
+
+def short_key(kind, key):
+    """kinetics …/81a8e1c045a2: the end of a long key, for a link text."""
+    end = key.rsplit("/", 1)[-1]
+    return f"{kind} …/{end}" if end != key else f"{kind} {key}"
+
+
+def earlier_keys(kind, object_id, request=None):
+    """[{"date", "url", "text"}] of the keys this record had before its values were corrected,
+    newest first, each the canonical URL that still shows those values."""
+    from provenance.models import RecordKey
+
+    rows = (RecordKey.objects.filter(kind=kind, object_id=object_id, status=RecordKey.Status.MOVED)
+            .exclude(snapshot=None).order_by("-changed_at"))
+    return [{"date": row.changed_at, "url": canonical_url(kind, row.key, request), "text": short_key(kind, row.key)}
+            for row in rows]
