@@ -470,6 +470,9 @@ class ExperimentDataset(models.Model):
         related_name="datasets",
     )
     data_repository_url = models.URLField(blank=True)
+    # The last ChemKED-database commit that changed the file when sync_chemked read it
+    # (provenance.git_sources). Blank: a file with uncommitted changes, or read before this was recorded.
+    source_commit = models.CharField(max_length=40, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -482,6 +485,15 @@ class ExperimentDataset(models.Model):
     def __str__(self):
         return f"{self.chemked_file_path} ({self.datapoints.count()} points)"
     
+    @property
+    def source_file_url(self):
+        """The ChemKED file at the commit the dataset was read from, or ""."""
+        from django.conf import settings
+
+        from provenance.git_sources import github_blob
+
+        return github_blob(getattr(settings, "CHEMKED_GITHUB_REPO", ""), self.source_commit, self.chemked_file_path)
+
     @property
     def short_name(self):
         """Return a shortened display name for the dataset."""

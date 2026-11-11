@@ -202,6 +202,8 @@ class KineticModelSerializer(RecordKeyFieldsMixin, FlexFieldsSerializerMixin, Ne
             "thermo",
             "transport",
         ]
+        # Set by the importers from the RMG-models clone (provenance.git_sources), not by clients.
+        read_only_fields = ["source_commit"]
 
 
 class AuthorSerializer(FlexFieldsModelSerializer):

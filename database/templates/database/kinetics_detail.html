@@ -152,7 +152,7 @@
         <div class="rx-table-wrap rx-kin-models__table">
             <table class="rx-table">
                 <thead>
-                    <tr><th scope="col">Model</th><th scope="col">ID</th><th scope="col">Comment</th></tr>
+                    <tr><th scope="col">Model</th><th scope="col">ID</th><th scope="col">Comment</th><th scope="col">Source file</th></tr>
                 </thead>
                 <tbody>
                     {% for kc in kinetics_comments %}
@@ -160,14 +160,33 @@
                         <td><a class="fw-semibold" href="{% url 'kinetic-model-detail' kc.kinetic_model.pk %}">{{ kc.kinetic_model.model_name }}</a></td>
                         <td class="is-mono rx-muted">{{ kc.kinetic_model.pk }}</td>
                         <td class="rx-kin-models__comment">{% if kc.comment %}{{ kc.comment }}{% else %}<span class="rx-muted">–</span>{% endif %}</td>
+                        <td>{% with url=kc.kinetic_model.kinetics_library_url %}{% if url %}<a href="{{ url }}">RMG-models {{ kc.kinetic_model.source_commit|slice:":10" }}</a>{% else %}<span class="rx-muted">–</span>{% endif %}{% endwith %}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="rx-empty">No kinetic model uses this record.</td></tr>
+                    <tr><td colspan="4" class="rx-empty">No kinetic model uses this record.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </section>
+    {% if earlier_keys %}
+    <section class="app-panel rx-kin-models" aria-labelledby="rx-earlier-title">
+        <div class="rx-panel-head">
+            <h2 class="app-panel__title" id="rx-earlier-title">Earlier values</h2>
+            <span class="app-panel__meta">{{ earlier_keys|length|pluralize:"correction" }}</span>
+        </div>
+        <div class="rx-table-wrap rx-kin-models__table">
+            <table class="rx-table">
+                <thead><tr><th scope="col">Corrected</th><th scope="col">The values before, at their own address</th></tr></thead>
+                <tbody>
+                    {% for k in earlier_keys %}
+                    <tr><td>{{ k.date|date:"j F Y" }}</td><td><a href="{{ k.url }}">{{ k.text }}</a></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 

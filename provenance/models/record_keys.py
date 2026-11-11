@@ -30,6 +30,11 @@ class RecordKey(models.Model):
     successor = models.CharField(max_length=1000, blank=True, help_text="The new key of a moved record.")
     label = models.CharField(max_length=500, blank=True, help_text="What the record is, kept after it is removed.")
     reason = models.CharField(max_length=500, blank=True)
+    # For a key made from values (kinetics, thermo): the values and the models that gave them, with
+    # each model's source commit (provenance.record_keys.snapshots). Kept up to date while the key
+    # is current, and kept as it was when the key moves or the record is removed, so that the old
+    # canonical URL can still show what it stood for.
+    snapshot = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     changed_at = models.DateTimeField(null=True, blank=True)
 

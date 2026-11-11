@@ -4,8 +4,11 @@
   for JSON (``Accept: application/json`` or ``?format=json``).
 * Several records have the key (the two directions of a reaction given without "/f" or "/r",
   the resonance forms of a structure, records with the same content): HTTP 300 with the list.
-* The record has a new key: HTTP 301 to the canonical URL of the new key.
-* The record was removed: HTTP 410 with a tombstone that keeps what the record was.
+* The record has a new key: HTTP 301 to the canonical URL of the new key. For a key made from
+  values (kinetics, thermo) whose values were corrected: HTTP 200 with the values the key stood
+  for, the models that gave them and their source files, and a link to the current record.
+* The record was removed: HTTP 410 with a tombstone that keeps what the record was, and for a key
+  made from values, the values, the models that gave them, and what those models give now.
 * The key is another spelling of a stored key (other letter case, a "/" at the end, a DOI
   written as a URL): HTTP 301 to the canonical URL as stored, or 300 when it matches several.
 """
@@ -15,7 +18,8 @@ from django.urls import reverse
 from django.utils.cache import patch_cache_control
 
 from provenance.models import RecordKey
-from provenance.record_keys import KINDS, canonical_url, spellings
+from provenance.record_keys import (SNAPSHOTS, KINDS, canonical_url, compared_rows, model_files, readable,
+                                    same_values, short_key, spellings, value_rows)
 
 
 def wants_json(request):
@@ -97,10 +101,80 @@ def _resolve(request, kind, key):
     moved = sorted((row for row in rows if row.status == RecordKey.Status.MOVED and row.successor),
                    key=lambda row: row.changed_at or row.created_at)
     if moved:
-        return HttpResponseRedirect(local_id_url(kind, moved[-1].successor), status=301)
+        row = moved[-1]
+        if kind in SNAPSHOTS and row.snapshot:
+            end_key, end_row = _follow(kind, row.successor)
+            if end_row is not None and end_row.snapshot and not same_values(row.snapshot, end_row.snapshot):
+                return _corrected(request, kind, key, row, end_key, end_row, as_json)
+        return HttpResponseRedirect(local_id_url(kind, row.successor), status=301)
 
     row = max(rows, key=lambda r: r.changed_at or r.created_at)
     data = {"kind": kind, "key": key, "status": "retired", "label": row.label, "reason": row.reason,
             "retired_at": row.changed_at.isoformat() if row.changed_at else None}
-    return _respond(request, 410, {"mode": "retired", "kind": kind, "key": key, "row": row, "data": data},
-                    as_json)
+    context = {"mode": "retired", "kind": kind, "key": key, "row": row, "data": data}
+    if kind in SNAPSHOTS and row.snapshot:
+        now = _what_the_models_give_now(request, kind, key, row.snapshot)
+        context.update(_snapshot_context(kind, row.snapshot), now=now)
+        data.update(values=readable(row.snapshot.get("values")), models=context["files"], now=now)
+    return _respond(request, 410, context, as_json)
+
+
+def _follow(kind, key, hops=50):
+    """(key, current row) at the end of the successors of a moved key; the row is None when the end
+    is not one current record."""
+    seen = set()
+    while key and key not in seen and len(seen) < hops:
+        seen.add(key)
+        rows = list(RecordKey.objects.filter(kind=kind, key=key))
+        current = [row for row in rows if row.status == RecordKey.Status.CURRENT]
+        if current:
+            return key, current[0] if len(current) == 1 else None
+        moved = sorted((row for row in rows if row.status == RecordKey.Status.MOVED and row.successor),
+                       key=lambda row: row.changed_at or row.created_at)
+        if not moved:
+            return key, None
+        key = moved[-1].successor
+    return key, None
+
+
+def _snapshot_context(kind, snapshot):
+    values = readable(snapshot.get("values"))
+    return {"values": values, "value_rows": value_rows(values), "files": model_files(kind, snapshot.get("models"))}
+
+
+def _corrected(request, kind, key, row, current_key, current_row, as_json):
+    """The values a key stood for before they were corrected, next to the current record's."""
+    current_url = canonical_url(kind, current_key, request)
+    context = {"mode": "corrected", "kind": kind, "key": key, "row": row, "current_url": current_url,
+               "current_text": short_key(kind, current_key), **_snapshot_context(kind, row.snapshot),
+               "compared": compared_rows(readable(row.snapshot.get("values")),
+                                         readable(current_row.snapshot.get("values")))}
+    data = {"kind": kind, "key": key, "status": "corrected", "label": row.label,
+            "corrected_at": row.changed_at.isoformat() if row.changed_at else None,
+            "values": context["values"], "models": context["files"], "current": current_url}
+    context["data"] = data
+    response = _respond(request, 200, context, as_json)
+    response["Link"] = f'<{current_url}>; rel="successor-version"'
+    return response
+
+
+def _what_the_models_give_now(request, kind, key, snapshot):
+    """[{"model", "key", "canonical_url", "url"}]: the current records of the same reaction (kinetics)
+    or species (thermo) in the models that gave the removed values."""
+    from database.models import KineticsComment, ThermoComment
+
+    names = [row["model"] for row in snapshot.get("models") or []]
+    if "/" not in key or not names:
+        return []
+    base = key.rsplit("/", 1)[0] + "/"
+    keys = dict(RecordKey.objects.filter(kind=kind, status=RecordKey.Status.CURRENT, key__startswith=base)
+                .values_list("object_id", "key"))
+    if kind == "kinetics":
+        links = KineticsComment.objects.filter(kinetics_id__in=keys).values_list("kinetics_id", "kinetic_model__model_name")
+    else:
+        links = ThermoComment.objects.filter(thermo_id__in=keys).values_list("thermo_id", "kinetic_model__model_name")
+    rows = {(name, record_id) for record_id, name in links.filter(kinetic_model__model_name__in=names)}
+    return [{"model": name, "key": keys[record_id], "text": short_key(kind, keys[record_id]),
+             "canonical_url": canonical_url(kind, keys[record_id], request),
+             "url": request.build_absolute_uri(record_url(kind, record_id))}
+            for name, record_id in sorted(rows)]

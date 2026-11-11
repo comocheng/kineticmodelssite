@@ -483,6 +483,9 @@ CHEMKED_DATABASE_PATH = os.getenv(
     'CHEMKED_DATABASE_PATH',
     os.path.join(os.path.dirname(BASE_DIR), 'ChemKED-database'),
 )
+# The GitHub repository ("owner/name") that holds the commits of CHEMKED_DATABASE_PATH: the record
+# pages link to each dataset's file at its source commit there. A clone of a fork needs the fork.
+CHEMKED_GITHUB_REPO = os.getenv('CHEMKED_GITHUB_REPO', 'pr-omethe-us/ChemKED-database')
 
 # Silence noisy RDKit warnings during imports/tests (e.g., unusual valence warnings)
 try:

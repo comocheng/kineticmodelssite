@@ -45,6 +45,7 @@ from chemked_database.management.commands.sync_chemked import (
     move_renamed_datasets,
     store_chemked_data,
 )
+from provenance.git_sources import Checkout
 
 SimulationRun = apps.get_model("analysis", "SimulationRun")
 
@@ -77,7 +78,7 @@ class Command(BaseCommand):
                     continue
                 try:
                     data = yaml.safe_load((base / new).read_text(encoding="utf-8"))
-                    store_chemked_data(data, new, self.stderr.write)
+                    store_chemked_data(data, new, self.stderr.write, Checkout(base).commit(base / new))
                 except (OSError, ValueError, yaml.YAMLError) as exc:
                     # The dataset is at its new path with the old content, as after a failed re-ingest
                     self.stderr.write(f"Failed to re-ingest {new}: {exc}")
