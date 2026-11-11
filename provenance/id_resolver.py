@@ -6,6 +6,8 @@
   the resonance forms of a structure, records with the same content): HTTP 300 with the list.
 * The record has a new key: HTTP 301 to the canonical URL of the new key.
 * The record was removed: HTTP 410 with a tombstone that keeps what the record was.
+* The key is another spelling of a stored key (other letter case, a "/" at the end, a DOI
+  written as a URL): HTTP 301 to the canonical URL as stored, or 300 when it matches several.
 """
 from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -13,7 +15,7 @@ from django.urls import reverse
 from django.utils.cache import patch_cache_control
 
 from provenance.models import RecordKey
-from provenance.record_keys import KINDS, canonical_url
+from provenance.record_keys import KINDS, canonical_url, spellings
 
 
 def wants_json(request):
@@ -44,6 +46,20 @@ def _respond(request, status, context, as_json):
     return render(request, "provenance/record_key.html", context, status=status)
 
 
+def _respelled(request, kind, key, as_json):
+    """A key that is not stored as written: redirect to the stored spelling, if there is one."""
+    found = spellings(kind, key)
+    if not found:
+        raise Http404("no record has this key")
+    if len(found) == 1:
+        return HttpResponseRedirect(local_id_url(kind, found[0]), status=301)
+    records = [{"label": "", "key": stored, "canonical_url": canonical_url(kind, stored, request),
+                "url": request.build_absolute_uri(local_id_url(kind, stored))} for stored in found]
+    data = {"kind": kind, "key": key, "status": "multiple", "records": records}
+    return _respond(request, 300, {"mode": "multiple", "kind": kind, "key": key, "records": records,
+                                   "data": data}, as_json)
+
+
 def resolve(request, kind, key):
     response = _resolve(request, kind, key)
     # A key can be merged, moved or given back later: only the move of a key is cached, for a day.
@@ -56,13 +72,15 @@ def resolve(request, kind, key):
 
 def _resolve(request, kind, key):
     if kind not in KINDS:
+        if kind.lower() in KINDS:
+            return HttpResponseRedirect(local_id_url(kind.lower(), key), status=301)
         raise Http404("unknown kind of record")
     as_json = wants_json(request)
     rows = list(RecordKey.objects.filter(kind=kind, key=key).order_by("object_id"))
     if not rows and kind == "reaction" and not key.endswith(("/f", "/r")):
         rows = list(RecordKey.objects.filter(kind=kind, key__in=[f"{key}/f", f"{key}/r"]).order_by("key"))
     if not rows:
-        raise Http404("no record has this key")
+        return _respelled(request, kind, key, as_json)
 
     current = [row for row in rows if row.status == RecordKey.Status.CURRENT]
     if len(current) == 1:

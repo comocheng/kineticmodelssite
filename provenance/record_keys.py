@@ -259,3 +259,28 @@ def id_base(request=None):
 
 def canonical_url(kind, key, request=None):
     return f"{id_base(request)}/{kind}/{quote(key, safe=URL_SAFE)}"
+
+
+def spellings(kind, key):
+    """The stored keys of which ``key`` is another spelling, so that a hand-typed or copied
+    canonical URL still resolves: other letter case (DOIs and InChIKeys are case-insensitive,
+    and publishers print DOIs in capitals), a "/" at the end, a DOI, ORCID iD or ROR ID written
+    as a URL. For a reaction key without "/f" or "/r", the stored key without the direction."""
+    from django.db.models import Q
+
+    from provenance.models import RecordKey
+
+    text = key.strip().rstrip("/")
+    if kind == "source":
+        text = normal_doi(text) or text
+    elif kind in ("person", "institution"):
+        text = text.rsplit("/", 1)[-1]
+    if not text:
+        return []
+    rows = RecordKey.objects.filter(kind=kind)
+    found = set(rows.filter(key__iexact=text).values_list("key", flat=True))
+    if not found and kind == "reaction" and not text.lower().endswith(("/f", "/r")):
+        found = {stored[:-2] for stored in rows.filter(Q(key__iexact=f"{text}/f") | Q(key__iexact=f"{text}/r"))
+                 .values_list("key", flat=True)}
+    found.discard(key)
+    return sorted(found)

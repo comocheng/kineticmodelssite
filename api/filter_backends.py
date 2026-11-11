@@ -95,7 +95,7 @@ def record_kind_of(view):
 
 class RecordKeyFilter(BaseFilterBackend):
     """``?key=`` returns the record with this canonical key (a reaction key without "/f" or "/r"
-    gives both directions)."""
+    gives both directions), in any letter case."""
 
     def filter_queryset(self, request, queryset, view):
         value = request.query_params.get(KEY_PARAM)
@@ -106,9 +106,14 @@ class RecordKeyFilter(BaseFilterBackend):
 
         from provenance.models import RecordKey
 
-        keys = [value]
-        if kind == "reaction" and not value.endswith(("/f", "/r")):
-            keys += [f"{value}/f", f"{value}/r"]
+        from provenance.record_keys import spellings
+
+        keys = []
+        # The key as written, and the stored keys it is another spelling of (letter case, a DOI as a URL).
+        for key in [value, *spellings(kind, value)]:
+            keys.append(key)
+            if kind == "reaction" and not key.endswith(("/f", "/r")):
+                keys += [f"{key}/f", f"{key}/r"]
         ids = RecordKey.objects.filter(kind=kind, key__in=keys, status=RecordKey.Status.CURRENT,
                                        content_type=ContentType.objects.get_for_model(queryset.model)
                                        ).values("object_id")
