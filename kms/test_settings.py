@@ -15,3 +15,7 @@ DATABASES["livequery"] = {**DATABASES["default"], "TEST": {"MIRROR": "default"}}
 # Tests that need drafts (git worktrees of RMG-models) turn them on with their own temporary
 # repositories; the others must not touch the developer's RMG-models clone.
 IMPORTER_WORKSPACES = False
+
+# A fast-forward of the read copy in a test must not queue a reload of the models on Celery
+# (importer_dashboard/model_reload.py); the tests of the reload run it directly.
+RMG_MODELS_AUTO_RELOAD = False

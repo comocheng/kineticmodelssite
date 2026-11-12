@@ -477,3 +477,26 @@ def commit_identifications(job, final=False):
     except Exception:
         logger.exception(f"Could not commit the identifications of {job.name}")
         return None
+
+
+@shared_task(name='importer_dashboard.reload_changed_models')
+def reload_changed_models(old, new):
+    """
+    Reload into the database the models whose folders changed when the read copy moved from old
+    to new (importer_dashboard/model_reload.py). read_copy_sync.sync queues it after a fast-forward.
+    """
+    from .model_reload import reload_changed
+    return [{'model': r.model_name, 'status': r.status, 'message': r.message} for r in reload_changed(old, new)]
+
+
+@shared_task(name='importer_dashboard.apply_model_reload')
+def apply_model_reload(reload_id, user_id=None):
+    """Apply on the Settings page: run a held reload again and keep it, then update the keys."""
+    from .model_reload import reload, update_keys
+    from .models import ModelReload
+    record = ModelReload.objects.get(pk=reload_id)
+    record.applied_by_id = user_id
+    reload(record, force=True)
+    if record.status == ModelReload.Status.APPLIED:
+        update_keys()
+    return {'model': record.model_name, 'status': record.status, 'message': record.message}

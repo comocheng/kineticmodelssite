@@ -854,3 +854,39 @@ class ChemkinThermo(models.Model):
     
     def __str__(self):
         return f"Thermo for {self.species.chemkin_label} ({self.temp_low}-{self.temp_high} K)"
+
+
+class ModelReload(models.Model):
+    """
+    One reload into the database of a kinetic model whose files changed in RMG-models: a push to
+    the base branch moved the read copy from old_commit to new_commit (read_copy_sync.py), and
+    model_reload.py replaced the model's names, thermo links and kinetics links with what the
+    importer makes from the new libraries (database.services.cleanup.rebuild_model_links).
+
+    A reload is applied when both libraries load and every entry imports; otherwise it is held,
+    the database keeps the model as it was, and the Settings page offers Apply.
+    """
+
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'Queued'
+        APPLIED = 'applied', 'Applied'
+        HELD = 'held', 'Held'
+        FAILED = 'failed', 'Failed'
+
+    model_name = models.CharField(max_length=200, db_index=True)
+    old_commit = models.CharField(max_length=40)
+    new_commit = models.CharField(max_length=40)
+    files = models.JSONField(default=list, help_text="The model's files that the push changed")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.QUEUED, db_index=True)
+    message = models.TextField(blank=True)
+    report = models.JSONField(null=True, blank=True, help_text='The result of rebuild_model_links')
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    applied_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+                                   help_text='Who applied a held reload; empty for an automatic one')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.model_name} {self.old_commit[:8]}..{self.new_commit[:8]} ({self.status})'

@@ -421,6 +421,9 @@ GITHUB_TOKEN_ENCRYPTION_KEY = os.getenv('GITHUB_TOKEN_ENCRYPTION_KEY', '')
 # The webhook secret of the Prometheus GitHub App. A push to RMG_MODELS_GITHUB_REPO's base branch then
 # fast-forwards the read copy (POST /importer/github/webhook/). Empty: the webhook address is off.
 GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
+# After the read copy moves to a new commit, reload into the database the models whose folders the
+# push changed (importer_dashboard/model_reload.py). False: the files change, the database does not.
+RMG_MODELS_AUTO_RELOAD = os.getenv('RMG_MODELS_AUTO_RELOAD', 'True') == 'True'
 # The committer of draft commits (the author is the person, when known)
 IMPORTER_GIT_NAME = os.getenv('IMPORTER_GIT_NAME', 'Prometheus Importer')
 IMPORTER_GIT_EMAIL = os.getenv('IMPORTER_GIT_EMAIL', 'importer@pr.omethe.us')

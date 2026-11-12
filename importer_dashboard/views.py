@@ -16,7 +16,7 @@ import logging
 import os
 from django.conf import settings
 
-from .models import ClusterJob, DraftStatus, ImportJobConfig, JobLog, ImportJobStatus, VotingReaction
+from .models import ClusterJob, DraftStatus, ImportJobConfig, JobLog, ImportJobStatus, ModelReload, VotingReaction
 from .manager_factory import get_job_manager
 from .logger import dashboard_logger, setup_dashboard_logging
 from .importer_files import apply_progress
@@ -1036,6 +1036,8 @@ def _rmg_models_status(request):
         'last': last,
         'webhook_on': bool(getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')),
         'webhook_url': github.public_url(request, reverse('importer_dashboard:github_webhook')),
+        'auto_reload': bool(getattr(settings, 'RMG_MODELS_AUTO_RELOAD', True)),
+        'reloads': list(ModelReload.objects.order_by('-created_at')[:20]),
     }
 
 
@@ -1111,6 +1113,20 @@ def git_pull(request):
         messages.success(request, result['message'])
     else:
         messages.error(request, result['message'])
+    return redirect('importer_dashboard:settings')
+
+
+@require_http_methods(["POST"])
+@superuser_required('reload models into the database', 'importer_dashboard:index')
+def model_reload_apply(request, reload_id):
+    """Apply on the Settings page: run a held reload of a model again and keep it (model_reload.py)."""
+    from .tasks import apply_model_reload
+    record = get_object_or_404(ModelReload, pk=reload_id)
+    if record.status != ModelReload.Status.HELD:
+        messages.error(request, f'The reload of {record.model_name} is {record.get_status_display().lower()}, not held.')
+    else:
+        apply_model_reload.delay(record.pk, request.user.pk)
+        messages.success(request, f'Reloading {record.model_name}; the list below shows the result when it ends.')
     return redirect('importer_dashboard:settings')
 
 
