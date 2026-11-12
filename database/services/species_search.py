@@ -71,3 +71,67 @@ def search_species(queryset, value):
     if matches.exists():
         return matches
     return queryset.filter(name_query(value, "icontains")).distinct()
+
+
+def _structure_terms(value):
+    """(kind, term) of a search that names structures: ("structure", id), ("smiles", text) or
+    ("inchi", text); None for a search by name, formula, CAS number or species id."""
+    value = value.strip()
+    prefix, separator, term = value.partition(":")
+    prefix = prefix.lower()
+    term = term.strip()
+    if separator and prefix == "structure":
+        return ("structure", int(term)) if term.isascii() and term.isdigit() and len(term) <= 18 else None
+    if separator and prefix in {"smiles", "inchi"}:
+        return (prefix, term) if term else None
+    if separator and prefix in {"formula", "name", "id", "isomer"}:
+        return None
+    if value.startswith("InChI="):
+        return ("inchi", value)
+    if not normalize_formula(value) and canonical_smiles(value):
+        return ("smiles", value)
+    return None
+
+
+def matched_structures(value):
+    """species id -> [Structure] that a structure search matched (the drawing the user searched
+    for, which may be one of several resonance structures of the species), or None for a search
+    that does not name a structure."""
+    from collections import defaultdict
+
+    from database.models import Structure
+
+    found = _structure_terms(value)
+    if found is None:
+        return None
+    kind, term = found
+    if kind == "structure":
+        structures = Structure.objects.filter(pk=term)
+    else:
+        canonical = canonical_inchi(term) if kind == "inchi" else canonical_smiles(term)
+        condition = Q(isomer__inchi=term) if kind == "inchi" else Q(smiles=term)
+        if canonical:
+            condition |= Q(canonical_smiles=canonical)
+        structures = Structure.objects.filter(condition)
+    matched = defaultdict(list)
+    for structure in structures.select_related("isomer").prefetch_related("isomer__species_set").order_by("pk"):
+        for species in structure.isomer.species_set.all():
+            matched[species.pk].append(structure)
+    return matched
+
+
+def id_kind_hint(value):
+    """For structure:N or isomer:N that names no structure or isomer but is a species id: the
+    species, so that the page can say which kind of id N is. None otherwise."""
+    from database.models import Isomer, Species, Structure
+
+    prefix, separator, term = value.strip().partition(":")
+    prefix, term = prefix.lower(), term.strip()
+    if not separator or prefix not in {"structure", "isomer"} or not (term.isascii() and term.isdigit()):
+        return None
+    number = int(term)
+    model = Structure if prefix == "structure" else Isomer
+    if model.objects.filter(pk=number).exists():
+        return None
+    species = Species.objects.filter(pk=number).first()
+    return {"kind": prefix, "number": number, "species": species} if species else None

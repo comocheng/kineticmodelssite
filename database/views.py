@@ -215,13 +215,24 @@ class SpeciesFilterView(FilterView):
     )
 
     def get_context_data(self, **kwargs):
+        from database.services.species_search import id_kind_hint, matched_structures
+
         context = super().get_context_data(**kwargs)
+        query = (self.request.GET.get("q") or "").strip()
+        # A search by SMILES, InChI or structure id shows the structure it matched: one species can
+        # have several resonance structures, and the first one drawn may not be the one searched for.
+        matched = matched_structures(query) if query else None
         # Build result summaries from page-sized prefetches, avoiding per-row queries.
         for species in context["object_list"]:
             isomers = list(species.isomers.all())
             structures = [s for isomer in isomers for s in isomer.structure_set.all()]
             species.search_formula = isomers[0].formula.formula if isomers else ""
             species.search_structure = structures[0] if structures else None
+            species.search_matched = (matched or {}).get(species.pk, [])
+            if species.search_matched:
+                species.search_structure = species.search_matched[0]
+                key = species.search_structure.structure_key
+                species.search_resonance = sum(1 for s in structures if key and s.structure_key == key)
             species.search_pubchem_cids = sorted({s.pubchem_cid for s in structures if s.pubchem_cid})
             iupac_names = sorted({s.iupac_name for s in structures if s.iupac_name})
             model_names = sorted({n.name for n in species.speciesname_set.all() if n.name})
@@ -233,6 +244,8 @@ class SpeciesFilterView(FilterView):
                     species.search_enthalpy = f"{thermo.enthalpy298:,.0f}"
                 except (ValueError, TypeError):
                     pass
+        if not context["object_list"] and query:
+            context["id_hint"] = id_kind_hint(query)
         context["legacy_filters"] = any(self.request.GET.get(key) for key in (
             "prime_id", "cas_number", "speciesname__name", "isomers", "isomers__structures"
         ))
@@ -317,6 +330,13 @@ class SpeciesDetail(DetailView):
                 pass
         context["transport_list"] = Transport.objects.filter(species=species)
         context["structures"] = structures
+        # Structures with one InChIKey and multiplicity are resonance structures of one molecule:
+        # the thermo, names and reactions belong to the molecule, not to one drawing.
+        keys = [s.structure_key for s in structures]
+        for structure in structures:
+            structure.resonance_count = keys.count(structure.structure_key) if structure.structure_key else 1
+        context["all_resonance"] = len(keys) > 1 and len(set(keys)) == 1 and bool(keys[0])
+        context["some_resonance"] = any(s.resonance_count > 1 for s in structures)
 
         paginator = Paginator(reactions, self.paginate_per_page)
         page = self.request.GET.get("page", 1)

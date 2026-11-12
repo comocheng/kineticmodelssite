@@ -78,14 +78,22 @@
             <div class="app-panel spd-card">
                 <div class="spd-card__head">
                     <h2 class="app-panel__title">Structure and identifiers</h2>
-                    <span class="app-panel__meta">{{ structures|length|pluralize:"structure" }}</span>
+                    <span class="app-panel__meta">{% if all_resonance %}{{ structures|length|pluralize:"resonance structure" }}{% else %}{{ structures|length|pluralize:"structure" }}{% endif %}</span>
                 </div>
+                {% if some_resonance %}
+                <p class="spd-resonance-note">
+                    {% if all_resonance %}These are resonance structures of one molecule{% else %}Structures with the same InChIKey and multiplicity are resonance structures of one molecule{% endif %}:
+                    the same molecule drawn with its electrons in other places, with one InChIKey and multiplicity.
+                    The thermochemistry, names and reactions on this page belong to the molecule, not to one drawing.
+                </p>
+                {% endif %}
                 {% for structure in structures %}
                 <div class="spd-structure">
                     <div class="spd-structure__preview">
                         <img src="{% url 'draw-structure' structure.pk %}" alt="{{ species.formula }}">
                     </div>
                     <dl class="spd-ids">
+                        <div><dt>Structure ID</dt><dd><a class="spd-structure-id" href="{% url 'species-search' %}?q=structure:{{ structure.pk }}">{{ structure.pk }}</a>{% if structure.resonance_count > 1 %} <span class="spd-resonance-tag">one of {{ structure.resonance_count }} resonance structures</span>{% endif %}</dd></div>
                         {% if structure.iupac_name %}
                         <div><dt>IUPAC name</dt><dd>{{ structure.iupac_name }}</dd></div>
                         {% endif %}
@@ -488,6 +496,26 @@
 .spd-structure + .spd-structure {
     padding-top: 20px;
     border-top: 1px solid var(--color-gray-200);
+}
+
+/* Resonance structures: one molecule drawn more than one way. */
+.spd-resonance-note {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--color-gray-50, #f8fafc);
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-structure-id {
+    font-family: var(--font-mono);
+}
+
+.spd-resonance-tag {
+    margin-left: 6px;
+    font-size: 12px;
+    color: var(--color-gray-600);
 }
 
 .spd-structure__preview {
