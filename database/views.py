@@ -230,9 +230,11 @@ class SpeciesFilterView(FilterView):
             species.search_structure = structures[0] if structures else None
             species.search_matched = (matched or {}).get(species.pk, [])
             if species.search_matched:
+                from database.services.chemical_identity import resonance_groups
+
                 species.search_structure = species.search_matched[0]
-                key = species.search_structure.structure_key
-                species.search_resonance = sum(1 for s in structures if key and s.structure_key == key)
+                group = next((g for g in resonance_groups(structures) if species.search_structure in g), [])
+                species.search_resonance = len(group)
             species.search_pubchem_cids = sorted({s.pubchem_cid for s in structures if s.pubchem_cid})
             iupac_names = sorted({s.iupac_name for s in structures if s.iupac_name})
             model_names = sorted({n.name for n in species.speciesname_set.all() if n.name})
@@ -332,11 +334,27 @@ class SpeciesDetail(DetailView):
         context["structures"] = structures
         # Structures with one InChIKey and multiplicity are resonance structures of one molecule:
         # the thermo, names and reactions belong to the molecule, not to one drawing.
-        keys = [s.structure_key for s in structures]
-        for structure in structures:
-            structure.resonance_count = keys.count(structure.structure_key) if structure.structure_key else 1
-        context["all_resonance"] = len(keys) > 1 and len(set(keys)) == 1 and bool(keys[0])
-        context["some_resonance"] = any(s.resonance_count > 1 for s in structures)
+        from database.services.chemical_identity import resonance_groups
+
+        groups = resonance_groups(list(structures))
+        for group in groups:
+            for structure in group:
+                structure.resonance_count = len(group)
+        context["all_resonance"] = len(groups) == 1 and len(groups[0]) > 1
+        context["some_resonance"] = any(len(group) > 1 for group in groups)
+        # Resonance structures that InChI tells apart, so that their InChIKeys differ.
+        context["resonance_keys_differ"] = any(len({s.structure_key for s in group}) > 1 for group in groups)
+        # A species is one molecule: structures in more than one group need their identification checked.
+        context["not_one_molecule"] = len(groups) > 1 and not species.electronic_state
+        # An electronic excitation cannot be written in InChI or SMILES: an excited state has the
+        # structures of its ground state and is a separate species; each page links the other.
+        keys = {s.structure_key for s in structures if s.structure_key}
+        same_molecule = (Species.objects.filter(isomers__structure__structure_key__in=keys).exclude(pk=species.pk)
+                         .distinct().order_by("pk")) if keys else Species.objects.none()
+        if species.electronic_state:
+            context["ground_states"] = list(same_molecule.filter(electronic_state=""))
+        else:
+            context["excited_states"] = list(same_molecule.exclude(electronic_state=""))
 
         paginator = Paginator(reactions, self.paginate_per_page)
         page = self.request.GET.get("page", 1)

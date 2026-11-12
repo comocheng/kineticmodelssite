@@ -98,7 +98,7 @@
                                 <span class="sp-faint">—</span>
                                 {% endif %}
                             </td>
-                            <td><a href="{% url 'species-detail' species.pk %}" class="sp-formula">{{ species.search_formula|default:"View species" }}</a></td>
+                            <td><a href="{% url 'species-detail' species.pk %}" class="sp-formula">{{ species.search_formula|default:"View species" }}</a>{% if species.electronic_state %} <span class="sp-state">excited state{% if species.electronic_state != "excited" %}: {{ species.electronic_state }}{% endif %}</span>{% endif %}</td>
                             <td>
                                 {% if species.search_names %}
                                 {% with species.search_names as names_list %}
@@ -556,6 +556,12 @@
 .sp-match code {
     font-family: var(--font-mono);
     color: var(--color-gray-900);
+}
+
+.sp-state {
+    display: block;
+    font-size: 12px;
+    color: var(--color-gray-600);
 }
 
 .sp-hint {

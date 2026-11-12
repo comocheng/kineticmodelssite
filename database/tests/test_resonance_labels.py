@@ -59,3 +59,72 @@ class ResonanceLabelTests(TestCase):
         self.assertContains(response, f"href=\"/species/{species.pk}\"")
         response = self.search("structure:999999")
         self.assertNotContains(response, "No structure has the ID")       # not a species id either
+
+
+CARBOXYMETHYL = (
+    ("[CH2]C(=O)O", "RSKSXHOOZARWIX-UHFFFAOYSA-N-2",
+     "multiplicity 2\n1 C u1 p0 c0 {2,S} {5,S} {6,S}\n2 C u0 p0 c0 {1,S} {3,D} {4,S}\n3 O u0 p2 c0 {2,D}\n"
+     "4 O u0 p2 c0 {2,S} {7,S}\n5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {1,S}\n7 H u0 p0 c0 {4,S}"),
+    ("C=C([O])O", "YPDDEXGOBNLPGT-UHFFFAOYSA-N-2",
+     "multiplicity 2\n1 C u0 p0 c0 {2,D} {5,S} {6,S}\n2 C u0 p0 c0 {1,D} {3,S} {4,S}\n3 O u1 p2 c0 {2,S}\n"
+     "4 O u0 p2 c0 {2,S} {7,S}\n5 H u0 p0 c0 {1,S}\n6 H u0 p0 c0 {1,S}\n7 H u0 p0 c0 {4,S}"),
+)
+NOT_ONE = (
+    ("[H][H]", "UFHFLCQGNIYNRP-UHFFFAOYSA-N-1", "1 H u0 p0 c0 {2,S}\n2 H u0 p0 c0 {1,S}"),
+    ("O", "XLYOFNOQVPJJNP-UHFFFAOYSA-N-1", "1 O u0 p2 c0 {2,S} {3,S}\n2 H u0 p0 c0 {1,S}\n3 H u0 p0 c0 {1,S}"),
+)
+
+
+def species_with(name, rows, multiplicity=2, state=""):
+    record = db.Species.objects.create(hash=f"hash-{name}", electronic_state=state)
+    for index, (smiles, key, adjacency) in enumerate(rows):
+        formula, _ = db.Formula.objects.get_or_create(formula=f"F{name}{index}")
+        isomer = db.Isomer.objects.create(formula=formula, inchi=f"InChI=1S/{name}/{index}")
+        record.isomers.add(isomer)
+        structure = db.Structure.objects.create(isomer=isomer, multiplicity=multiplicity, smiles=smiles,
+                                                adjacency_list=adjacency)
+        db.Structure.objects.filter(pk=structure.pk).update(structure_key=key)
+    return record
+
+
+class ResonanceAcrossKeysTests(TestCase):
+    def test_resonance_structures_with_two_inchikeys_are_one_molecule(self):
+        record = species_with("carboxymethyl", CARBOXYMETHYL)
+        response = self.client.get(f"/species/{record.pk}")
+        self.assertContains(response, "2 resonance structures")
+        self.assertContains(response, "Their InChIKeys differ because InChI tells some resonance structures apart")
+        self.assertNotContains(response, "needs to be checked")
+
+    def test_two_molecules_in_one_species_are_flagged(self):
+        record = species_with("mixed", NOT_ONE, multiplicity=1)
+        response = self.client.get(f"/species/{record.pk}")
+        self.assertContains(response, "The identification of this species needs to be checked")
+        self.assertNotContains(response, "These are resonance structures")
+
+
+class ExcitedStateTests(TestCase):
+    def setUp(self):
+        formula = db.Formula.objects.create(formula="HO")
+        isomer = db.Isomer.objects.create(formula=formula, inchi="InChI=1S/HO/h1H")
+        db.Structure.objects.create(isomer=isomer, multiplicity=2, smiles="[OH]", adjacency_list="fixture OH")
+        db.Structure.objects.filter(isomer=isomer).update(structure_key="TUJKJAMUKRIRHC-UHFFFAOYSA-N-2")
+        self.ground = db.Species.objects.create(hash="hash-OH")
+        self.excited = db.Species.objects.create(hash="hash-OH*", electronic_state="excited")
+        for record in (self.ground, self.excited):
+            record.isomers.add(isomer)
+
+    def test_excited_state_page_says_so_and_links_the_ground_state(self):
+        response = self.client.get(f"/species/{self.excited.pk}")
+        self.assertContains(response, "This species is an electronically excited state.")
+        self.assertContains(response, f"<a href=\"/species/{self.ground.pk}\">species {self.ground.pk}</a>")
+        self.assertNotContains(response, "needs to be checked")
+        self.assertNotContains(response, "excited: excited")
+
+    def test_ground_state_page_links_its_excited_states(self):
+        response = self.client.get(f"/species/{self.ground.pk}")
+        self.assertContains(response, "Electronically excited states of this molecule are separate species")
+        self.assertContains(response, f"<a href=\"/species/{self.excited.pk}\">species {self.excited.pk}</a>")
+
+    def test_search_marks_the_excited_state(self):
+        response = self.client.get("/species_search/?q=smiles:[OH]")
+        self.assertContains(response, "excited state</span>", count=1)
