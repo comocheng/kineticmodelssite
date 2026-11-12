@@ -98,7 +98,7 @@
                                 <span class="sp-faint">—</span>
                                 {% endif %}
                             </td>
-                            <td><a href="{% url 'species-detail' species.pk %}" class="sp-formula">{{ species.search_formula|default:"View species" }}</a></td>
+                            <td><a href="{% url 'species-detail' species.pk %}" class="sp-formula">{{ species.search_formula|default:"View species" }}</a>{% if species.electronic_state %} <span class="sp-state">excited state{% if species.electronic_state != "excited" %}: {{ species.electronic_state }}{% endif %}</span>{% endif %}</td>
                             <td>
                                 {% if species.search_names %}
                                 {% with species.search_names as names_list %}
@@ -110,6 +110,9 @@
                                 </span>
                                 {% endwith %}
                                 {% else %}<span class="sp-faint">—</span>{% endif %}
+                                {% for structure in species.search_matched %}
+                                <span class="sp-match">Matched structure <span class="sp-match__id">{{ structure.pk }}</span> <code>{{ structure.smiles }}</code>{% if species.search_resonance > 1 %}, one of {{ species.search_resonance }} resonance structures of this species{% endif %}</span>
+                                {% endfor %}
                             </td>
                             <td>
                                 {% for cid in species.search_pubchem_cids %}
@@ -129,6 +132,9 @@
                             <td colspan="7" class="sp-empty">
                                 <img class="app-icon" src="{% static 'database/images/icons/search-607185-18.svg' %}" alt="" width="18" height="18">
                                 No species found. Try another name, formula, or structure.
+                                {% if id_hint %}
+                                <span class="sp-hint">No {{ id_hint.kind }} has the ID {{ id_hint.number }}. {{ id_hint.number }} is the ID of species <a href="{% url 'species-detail' id_hint.species.pk %}">{{ id_hint.species.pk }}</a>; its page lists its {{ id_hint.kind }} IDs.</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -537,6 +543,31 @@
     padding: 32px 20px;
     text-align: center;
     color: var(--color-gray-600);
+}
+
+.sp-match {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-match__id,
+.sp-match code {
+    font-family: var(--font-mono);
+    color: var(--color-gray-900);
+}
+
+.sp-state {
+    display: block;
+    font-size: 12px;
+    color: var(--color-gray-600);
+}
+
+.sp-hint {
+    display: block;
+    margin-top: 8px;
+    font-size: 13px;
 }
 
 .sp-empty .app-icon {

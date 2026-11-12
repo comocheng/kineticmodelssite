@@ -188,3 +188,42 @@ def rate_class(kinetics_type):
     """'M' for third-body and falloff rates, 'plain' otherwise. Reaction identity leaves out M,
     so A = B and A (+M) = B (+M) share a reaction; they are different rates, never summed."""
     return "M" if kinetics_type in THIRD_BODY_TYPES else "plain"
+
+
+def _resonance_of(first, second):
+    """True when RMG's resonance structures of one structure include the other."""
+    try:
+        one, other = first.to_rmg(), second.to_rmg()
+        return any(form.is_isomorphic(other) for form in one.generate_resonance_structures(keep_isomorphic=False))
+    except Exception:
+        return False
+
+
+def resonance_groups(structures):
+    """The structures of one species in groups of resonance structures of one molecule.
+
+    Structures with one structure_key (InChIKey and multiplicity) are one group. InChI tells some
+    resonance structures apart (CCC[CH]C(=O)O and CCCC=C([O])O, a radical drawn on a carbon or on
+    an oxygen), so groups with other keys and the same multiplicity are joined when RMG's
+    resonance structures of one include the other. A structure without a key is a group of its own.
+    More than one group means the species holds structures that are not one molecule."""
+    by_key, groups = {}, []
+    for structure in structures:
+        key = structure.structure_key
+        if key and key in by_key:
+            by_key[key].append(structure)
+            continue
+        group = [structure]
+        groups.append(group)
+        if key:
+            by_key[key] = group
+    joined = []
+    for group in groups:
+        partner = next((other for other in joined if other[0].structure_key and group[0].structure_key
+                        and other[0].multiplicity == group[0].multiplicity
+                        and _resonance_of(other[0], group[0])), None)
+        if partner is None:
+            joined.append(group)
+        else:
+            partner.extend(group)
+    return joined
