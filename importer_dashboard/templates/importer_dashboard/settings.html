@@ -40,6 +40,7 @@
             <div><dt>Now at</dt><dd>{% if rmg_models.sha %}<code>{{ rmg_models.sha|slice:":8" }}</code> on {% if rmg_models.branch %}<code>{{ rmg_models.branch }}</code>{% else %}a detached HEAD{% endif %}{% else %}<span class="im-faint">Not a git repository</span>{% endif %}</dd></div>
             <div><dt>GitHub webhook</dt><dd>{% if rmg_models.webhook_on %}On, at <code>{{ rmg_models.webhook_url }}</code>{% else %}Off: set <code>GITHUB_WEBHOOK_SECRET</code> in <code>.env</code> to the App's webhook secret{% endif %}</dd></div>
             <div><dt>Also checked</dt><dd>Every 15 minutes, by Celery Beat</dd></div>
+            <div><dt>Database</dt><dd>{% if rmg_models.auto_reload %}After an update, the models whose folders changed are reloaded into the database{% else %}Not reloaded after an update: <code>RMG_MODELS_AUTO_RELOAD</code> is off{% endif %}</dd></div>
         </dl>
         {% with last=rmg_models.last %}
         {% if last %}
@@ -52,6 +53,27 @@
         <p class="im-note">{% include "importer_dashboard/im_icon.html" with icon="info" %}<span>Not checked yet. Select Update now, or wait for the next check.</span></p>
         {% endif %}
         {% endwith %}
+        {% if rmg_models.reloads %}
+        <div class="im-reloads">
+            <h3 class="im-reloads__title" id="im-reloads-title">Models reloaded into the database</h3>
+            <div class="im-table-wrap" tabindex="0" role="region" aria-labelledby="im-reloads-title">
+                <table class="im-table">
+                    <thead><tr><th scope="col">Model</th><th scope="col">Commits</th><th scope="col">Result</th><th scope="col">When</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+                    <tbody>
+                        {% for r in rmg_models.reloads %}
+                        <tr>
+                            <td>{{ r.model_name }}</td>
+                            <td><code>{{ r.old_commit|slice:":8" }}..{{ r.new_commit|slice:":8" }}</code></td>
+                            <td><span class="im-status im-status--{% if r.status == 'applied' %}completed{% elif r.status == 'held' or r.status == 'queued' %}pending{% else %}failed{% endif %}">{{ r.get_status_display }}</span> <span class="im-reloads__message">{{ r.message }}</span></td>
+                            <td class="im-faint">{{ r.finished_at|default:r.created_at|date:"M d, Y H:i" }}{% if r.applied_by %} · {{ r.applied_by.username }}{% endif %}</td>
+                            <td>{% if r.status == 'held' %}<form method="post" action="{% url 'importer_dashboard:model_reload_apply' r.pk %}">{% csrf_token %}<button type="submit" class="im-btn">Apply</button></form>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     </section>
 
     <div class="im-settings__layout">
@@ -440,6 +462,10 @@
 @media (max-width: 575.98px) {
     .im-sync__facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
+.im-reloads { display: grid; gap: 10px; }
+.im-reloads__title { margin: 0; font-size: 14px; font-weight: 600; }
+.im-reloads__message { display: block; margin-top: 4px; font-size: 12px; color: var(--color-gray-600); }
+.im-reloads form { margin: 0; }
 
 /* Form beside a support column, as on the kinetic model form */
 .im-settings__layout {

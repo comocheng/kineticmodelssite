@@ -34,6 +34,7 @@ urlpatterns = [
     path('refresh-progress/', views.refresh_progress, name='refresh_progress'),
     path('reconnect/', views.reconnect, name='reconnect'),
     path('git-pull/', views.git_pull, name='git_pull'),
+    path('model-reload/<int:reload_id>/apply/', views.model_reload_apply, name='model_reload_apply'),
     path('settings/', views.settings_view, name='settings'),
     
     # Log streaming

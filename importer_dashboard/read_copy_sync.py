@@ -14,6 +14,9 @@ It never merges, resets or discards anything. When it cannot fast-forward, it sa
 next run tries again. The last result is kept in .rmg-models-sync.json next to the read copy, so
 the Settings page shows it whichever process ran the sync.
 
+After a fast-forward, the models of the database whose folders changed are reloaded from the new
+libraries (model_reload.py, RMG_MODELS_AUTO_RELOAD).
+
 Three things run it: the webhook of the Prometheus GitHub App on a push to master
 (draft_views.github_webhook), Celery Beat every 15 minutes in case a delivery is lost
 (tasks.sync_rmg_models_read_copy), and Update now on the Settings page (views.git_pull).
@@ -192,8 +195,21 @@ def sync(reason='schedule'):
 
     if status == UPDATED:
         logger.info(message)
-        from .tasks import schedule_evidence_index_refresh
+        from .tasks import reload_changed_models, schedule_evidence_index_refresh
         schedule_evidence_index_refresh()
+        # The database follows the files: the models whose folders changed are reloaded
+        # (model_reload.py), and the Settings page lists each reload.
+        from .model_reload import enabled
+        if enabled():
+            try:
+                reload_changed_models.delay(old, new)
+            except Exception as e:       # no broker: the files are updated, the database is not
+                logger.warning(f'Could not queue the reload of the changed models: {e}')
+                result['message'] += f' The changed models were not reloaded into the database: {e}'
+                try:
+                    _save_status(result)
+                except OSError:
+                    pass
     elif status == CURRENT or (previous.get('status'), previous.get('message')) == (status, message):
         logger.debug(message)  # every 15 minutes: say a refusal once, not each time
     else:
