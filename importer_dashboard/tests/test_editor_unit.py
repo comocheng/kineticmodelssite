@@ -60,6 +60,14 @@ class EditTests(EditorTestCase):
         self.assertEqual(open(os.path.join(self.folder, 'SMILES.txt'), 'rb').read(),
                          b'N2\tN#N\nAR\t[Ar]\nCH4\tC\t! Confirmed by lekia\n')
 
+    def test_a_message_of_several_lines_keeps_its_subject_and_body(self):
+        message = ('Identify C4H5-2 as 2-butyn-1-yl\r\n\r\nThe model writes C4H6-2 <=> H + C4H5-2.\r\n'
+                   '- second line of the body\r\n')
+        self.edit('SMILES.txt', 'N2\tN#N\r\nAR\t[Ar]\r\nCH4\tC\r\n', message=message)
+        self.assertEqual(self.head(), f'{self.model}: Identify C4H5-2 as 2-butyn-1-yl')
+        self.assertEqual(self.head('%b').strip(), 'The model writes C4H6-2 <=> H + C4H5-2.\n'
+                         '- second line of the body\n\nEdited on Prometheus.')
+
     def test_crlf_and_latin1_files_stay_as_they_are(self):
         with open(os.path.join(self.folder, 'source.txt'), 'wb') as f:
             f.write('Somers, K. P., Curran, H. J., Galway\r\nÉcole\r\n'.encode('latin-1'))
