@@ -10,11 +10,13 @@ import os
 import re
 import urllib.parse
 import urllib.request
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy
 
 BASE = os.environ.get("PROMETHEUS_API", "https://pr.omethe.us")
 FIGURES = Path(os.environ.get("PROMETHEUS_FIGURES", "."))
@@ -56,8 +58,10 @@ def get_text(path, **params):
 
 def get_all(path, **params):
     """All records of a list endpoint. The API gives at most 1,000 records a page;
-    this function follows `next` until it is null."""
+    this function follows `next` until it is null. Without an ordering, the pages can overlap
+    (some records come two times and others never), so the records are ordered by ID."""
     params.setdefault("page_size", 1000)
+    params.setdefault("ordering", "id")
     data = get(path, **params)
     rows = list(data["results"])
     while data["next"]:
@@ -73,6 +77,54 @@ def species_id(inchi, **filters):
     if len(found) != 1:
         raise ValueError(f"{inchi}: {len(found)} species records")
     return found[0]["id"]
+
+
+def model_record(name, fields="id,model_name"):
+    """The model record whose model_name is exactly `name`."""
+    return next(m for m in get_all("/api/kineticmodel/", search=name, fields=fields) if m["model_name"] == name)
+
+
+def model_names(model_id):
+    """{species record ID: the name that this model uses for the species}. A few models give two or
+    more species for one species record (Shamel-Propane: H, HEG, HCFG and Halt); then the first name counts."""
+    names = {}
+    for n in get(f"/api/kineticmodel/{model_id}/", fields="speciesname_set")["speciesname_set"]:
+        names.setdefault(n["species"], n["name"])
+    return names
+
+
+def find_reaction(reactants, products):
+    """The reaction record with exactly these reactants and products (species record IDs; give a
+    species two times when the reaction has it two times, as in CH3 + CH3)."""
+    want = Counter(products)
+    want.subtract(Counter(reactants))
+    want = {sid: n for sid, n in want.items() if n}
+    for r in get_all("/api/reaction/", species=sorted(set(reactants) | set(products))):
+        if {s["species"]: s["coeff"] for s in r["stoichiometry_set"]} == want:
+            return r
+    raise ValueError(f"no reaction record for {reactants} = {products}")
+
+
+def links(kind, species=()):
+    """{model name: the IDs of the records that the model links to}, for the models that contain all
+    the species given (all models when none is given). kind: "kinetics" (rate records) or "thermo"
+    (thermochemistry entries)."""
+    field = {"kinetics": "kineticscomment_set", "thermo": "thermocomment_set"}[kind]
+    models = get_all("/api/kineticmodel/", species=list(species), fields=f"id,model_name,{field}")
+    return {m["model_name"]: {c[kind] for c in m[field]} for m in models}
+
+
+def equation(reaction, names):
+    """The equation of a reaction record, with the species names of one model ({species record ID: name})."""
+    def side(sign):
+        return " + ".join((f"{int(abs(s['coeff']))} " if abs(s["coeff"]) > 1 else "") + names.get(s["species"], str(s["species"]))
+                          for s in reaction["stoichiometry_set"] if s["coeff"] * sign > 0)
+    return f"{side(-1)} = {side(1)}"
+
+
+def paper(dataset):
+    """The paper folder of a dataset (first author and year), from chemked_file_path: "Cheng 1984"."""
+    return dataset["chemked_file_path"].split("/")[-2].replace("_", " ")
 
 
 def formula(name):
@@ -105,6 +157,14 @@ def style():
         "legend.frameon": False, "figure.dpi": 110, "savefig.dpi": 300, "savefig.bbox": "tight",
         "savefig.pad_inches": 0.06, "svg.fonttype": "path", "svg.hashsalt": "prometheus-use-cases",
     })
+
+
+def temperature_axis(ax, ticks):
+    """A temperature axis (K) on top of a plot against 1000 K / T."""
+    inverse = lambda x: 1000 / numpy.maximum(x, 1e-6)
+    top = ax.secondary_xaxis("top", functions=(inverse, inverse))
+    top.set_xticks(ticks)
+    top.set_xlabel("Temperature (K)", fontsize=8.5)
 
 
 def save(fig, name):

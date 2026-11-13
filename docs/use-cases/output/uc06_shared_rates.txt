@@ -1,7 +1,7 @@
-reaction record 10207: 88 model links to 16 different rate records
-  rate record 51560: 32 models | A = 5.83e+04 cm3/(mol s), n = 2.6, Ea = 9.16 kJ/mol | k(1000 K) = 1.222e+12 cm3/(mol s) | for example AramcoMech_2.0, CombFlame2013/1541-Zhang, CombFlame2013/2291-Somers
-  rate record 50042: 20 models | A = 1e+08 cm3/(mol s), n = 1.6, Ea = 13.05 kJ/mol | k(1000 K) = 1.313e+12 cm3/(mol s) | for example C1_C3_hydrofluorocarbons_NIST, CombFlame2013/1939-Cai, CombFlame2014/657-Jin
-  rate record 67661:  7 models | A = 1e+08 cm3/(mol s), n = 1.6, Ea = 13.05 kJ/mol | k(1000 K) = 1.313e+12 cm3/(mol s) | for example CombFlame2013/2680-Vranckx, CombFlame2014/405-Cai, Narayanaswamy
-  rate record 61690:  6 models | A = 5.72e+06 cm3/(mol s), n = 1.96, Ea = 11.04 kJ/mol | k(1000 K) = 1.150e+12 cm3/(mol s) | for example CombFlame2013/1315-Chang, CombFlame2013/17-Malewicki, Shamel-Propane
-  rate record 67585:  4 models | A = 1.6e+07 cm3/(mol s), n = 1.83, Ea = 11.30 kJ/mol | k(1000 K) = 1.271e+12 cm3/(mol s) | for example CombFlame2013/2319-Serinyel, PCI2013/325-Husson, PCI2017/047-Rodriguez
-  rate record 54810:  4 models | A = 2.8e+06 cm3/(mol s), n = 2, Ea = 6.55 kJ/mol | k(1000 K) = 1.271e+12 cm3/(mol s) | for example PCI2013/289-Dagaut, Biomass, PCI2017/051-Pelucchi
+reaction record 10207: 88 model links to 16 rate records
+  rate record 51560: 32 models | A = 5.83e+04, n = 2.6, Ea = 9.16 kJ/mol | k(1000 K) = 1.222e+12 cm3/(mol s) | for example n-Heptane, AramcoMech_1.3, MB-Dooley
+  rate record 50042: 20 models | A = 1e+08, n = 1.6, Ea = 13.05 kJ/mol | k(1000 K) = 1.313e+12 cm3/(mol s) | for example CH2F2, GRI-17-species-mech, 2-BTP
+  rate record 67661:  7 models | A = 1e+08, n = 1.6, Ea = 13.05 kJ/mol | k(1000 K) = 1.313e+12 cm3/(mol s) | for example Narayanaswamy, CombFlame2013/2680-Vranckx, PCI2019/789-Lapointe1
+  rate record 61690:  6 models | A = 5.72e+06, n = 1.96, Ea = 11.04 kJ/mol | k(1000 K) = 1.150e+12 cm3/(mol s) | for example Shamel-Propane, CombFlame2013/17-Malewicki, CombFlame2013/1315-Chang
+  rate record 54810:  4 models | A = 2.8e+06, n = 2, Ea = 6.55 kJ/mol | k(1000 K) = 1.271e+12 cm3/(mol s) | for example Biomass, PCI2013/289-Dagaut, PCI2017/051-Pelucchi
+  rate record 67585:  4 models | A = 1.6e+07, n = 1.83, Ea = 11.30 kJ/mol | k(1000 K) = 1.271e+12 cm3/(mol s) | for example CombFlame2013/2319-Serinyel, PCI2013/297-Herbinet, PCI2013/325-Husson

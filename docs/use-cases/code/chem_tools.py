@@ -45,7 +45,9 @@ def _plog(d, T, P):
     lo = ps[ps.index(hi) - 1]
     k_lo, k_hi = by_p[lo], by_p[hi]
     f = math.log(P / lo) / math.log(hi / lo)
-    return k_lo * (k_hi / k_lo) ** f
+    if k_lo > 0 and k_hi > 0:
+        return k_lo * (k_hi / k_lo) ** f       # log k is linear in log p, as in Cantera
+    return k_lo + (k_hi - k_lo) * f            # a sum with negative parts: interpolate k itself
 
 
 def rate_k(record, T, P=1e5):

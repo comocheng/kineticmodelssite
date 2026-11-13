@@ -1,7 +1,0 @@
-dataset 1: Bec_2014 (ignition delay)
-  identifier (schema:identifier)                https://pr.omethe.us/api/experiment-dataset/1/
-  paper (schema:citation)                       https://doi.org/10.1002/kin.20859
-  licence (schema:license)                      https://spdx.org/licenses/CC-BY-4.0.html
-  catalogue (schema:includedInDataCatalog)      https://pr.omethe.us/api/metadata/
-  source file (prom:filePath)                   butanol/2-butanol/Bec_2014/Bec_2014_2-b_20atm.yaml
-  contributor: Morgan Mayer                     https://orcid.org/0000-0001-7137-5721
