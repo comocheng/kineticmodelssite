@@ -103,13 +103,13 @@ def style():
         "axes.prop_cycle": matplotlib.cycler(color=COLOURS), "lines.linewidth": 1.4,
         "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white",
         "legend.frameon": False, "figure.dpi": 110, "savefig.dpi": 300, "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.06, "svg.fonttype": "path",
+        "savefig.pad_inches": 0.06, "svg.fonttype": "path", "svg.hashsalt": "prometheus-use-cases",
     })
 
 
 def save(fig, name):
     """Save the figure as FIGURES/<name>.svg (vector, for the web pages) and FIGURES/<name>.png (300 dpi)."""
     FIGURES.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURES / f"{name}.svg")
-    fig.savefig(FIGURES / f"{name}.png")
+    fig.savefig(FIGURES / f"{name}.svg", metadata={"Date": None})   # no date: the same data give the same file
+    fig.savefig(FIGURES / f"{name}.png", metadata={"Software": None})
     plt.close(fig)
