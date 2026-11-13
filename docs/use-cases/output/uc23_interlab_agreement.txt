@@ -1,9 +1,0 @@
-593 fuel-air burning velocities with a reported uncertainty; 90 flames (same fuel, T, p and phi) measured by 2 or more papers, 223 values
-  |z| > 2 for 27.4 % of the values (about 5 % if the uncertainties are right); median |z| 1.04 (0.67 for a normal distribution)
-  48 reported uncertainties are less than 1 % of the value
-  C2H5OH         95 values; |z| > 2 for  46.3 %; median |z| 1.80
-  IC4H9OH        44 values; |z| > 2 for   6.8 %; median |z| 0.42
-  NC4H9OH        32 values; |z| > 2 for   0.0 %; median |z| 0.04
-  CH4            28 values; |z| > 2 for  14.3 %; median |z| 0.68
-  CH3OH          12 values; |z| > 2 for  58.3 %; median |z| 2.00
-  NH3            12 values; |z| > 2 for  25.0 %; median |z| 1.00

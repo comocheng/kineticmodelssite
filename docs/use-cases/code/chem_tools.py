@@ -28,25 +28,6 @@ def h_kj(entry, T=298.15):
     return R * T * (a[0] + a[1] * T / 2 + a[2] * T**2 / 3 + a[3] * T**3 / 4 + a[4] * T**4 / 5 + a[5] / T) / 1000
 
 
-def s_over_r(entry, T):
-    """Standard entropy S/R at T."""
-    a = nasa(entry, T)
-    return a[0] * math.log(T) + a[1] * T + a[2] * T**2 / 2 + a[3] * T**3 / 3 + a[4] * T**4 / 4 + a[6]
-
-
-def g_over_rt(entry, T):
-    """Standard Gibbs energy G/(RT) at T (the enthalpy scale of the NASA polynomials)."""
-    return h_kj(entry, T) * 1000 / (R * T) - s_over_r(entry, T)
-
-
-def log_kc(entries, coeffs, T):
-    """ln Kc of a reaction at T, Kc in mol and m3 (as the SI rate coefficients). `coeffs` gives
-    {species record ID: stoichiometric coefficient} (negative for a reactant), and `entries` gives
-    {species record ID: thermochemistry entry} of one model."""
-    dg = sum(n * g_over_rt(entries[s], T) for s, n in coeffs.items())
-    return -dg + sum(coeffs.values()) * math.log(1e5 / (R * T))
-
-
 def _arrhenius(d, T):
     if d["type"] == "multi_arrhenius":
         return sum(_arrhenius(x, T) for x in d["arrhenius_set"])

@@ -1,4 +1,4 @@
-"""Use case 26. Two hydrogen models predict different ignition delays for the same shock-tube
+"""Use case 21. Two hydrogen models predict different ignition delays for the same shock-tube
 experiments. Which reactions cause the difference? The species records map each reaction of one
 model to the same reaction in the other model. The script gives model A the rate expression of
 model B for one reaction at a time, and simulates the experiments again in PyTeCK."""
@@ -13,7 +13,7 @@ import numpy as np
 from prometheus_api import COLOURS, get_text, model_names, model_record, save, style
 from pyteck_tools import run_pyteck, species_key
 
-DATASET, A, B = 1733, "CombFlame2014/711-Allen", "CombFlame2017/45-Olm"   # from use case 25
+DATASET, A, B = 1733, "CombFlame2014/711-Allen", "CombFlame2017/45-Olm"   # from use case 20
 
 # %% The dataset, and the Cantera file and the species names of each model
 chemked = get_text(f"/chemked/dataset/{DATASET}/export/", format="yaml")
@@ -79,4 +79,4 @@ ax.grid(axis="y", visible=False)
 ax.tick_params(axis="y", length=0)
 ax.set_xlabel("Change of the mean ln(ignition delay) when model A takes the rate of model B")
 ax.set_title(f"Dataset {DATASET}: model A = {A}, model B = {B}")
-save(fig, "uc26_reactions_behind_a_difference")
+save(fig, "uc21_reactions_behind_a_difference")

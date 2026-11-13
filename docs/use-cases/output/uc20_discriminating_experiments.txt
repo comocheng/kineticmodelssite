@@ -1,0 +1,17 @@
+45 datasets simulated with 5 models (689 datapoints); left out 4 datasets in which a model gives no ignition: [1613, 1614, 1615, 1747]
+model spread larger than the data scatter (D > 1) in 21 datasets, at 940 to 1314 K (median temperature of a dataset)
+  D < 1 in 24 datasets; their median temperatures (K): [1000, 1022, 1038, 1061, 1069, 1077, 1082, 1082, 1092, 1176, 1202, 1204, 1220, 1265, 1304, 1390, 1445, 1700, 1709, 1712, 1738, 1792, 1794, 1816]
+in the datasets with D > 1, the model's median delay is within the data scatter of the measured delay in:
+  CombFlame2015/3755-Konnov     5 of 21 datasets (mean E over all datasets 31.4)
+  CombFlame2017/45-Olm          5 of 21 datasets (mean E over all datasets 26.0)
+  CombFlame2014/711-Allen       4 of 21 datasets (mean E over all datasets 30.2)
+  PCI2015/0153-Marshall         2 of 21 datasets (mean E over all datasets 43.1)
+  H2-3                          2 of 21 datasets (mean E over all datasets 41.4)
+model with the shortest delay of the five: CombFlame2014/711-Allen in 19, CombFlame2017/45-Olm in 2
+closest two models: PCI2015/0153-Marshall and H2-3, median difference of their delays 1.5 %
+  dataset 1690 (Herzler 2009, 4.1 bar, 998 K): D = 8.04; simulated / measured: Konnov 1.33, Marshall 4.32, Olm 0.76, Allen 0.58, H2-3 4.35
+  dataset 1733 (Naumann 2011, 15.7 bar, 1182 K): D = 4.00; simulated / measured: Konnov 1.16, Marshall 0.95, Olm 1.26, Allen 0.42, H2-3 0.95
+  dataset 1688 (Herzler 2009, 16.2 bar, 1082 K): D = 3.17; simulated / measured: Konnov 1.57, Marshall 2.00, Olm 1.29, Allen 0.82, H2-3 2.02
+  dataset 1742 (Pang 2009, 3.6 bar, 967 K): D = 3.08; simulated / measured: Konnov 4.91, Marshall 8.62, Olm 2.72, Allen 1.35, H2-3 8.53
+  dataset 1757 (Skinner 1965, 5.1 bar, 1004 K): D = 3.02; simulated / measured: Konnov 1.62, Marshall 2.64, Olm 1.05, Allen 0.81, H2-3 2.70
+  dataset 1748 (Petersen 1996, 64.8 bar, 1314 K): D = 2.65; simulated / measured: Konnov 0.93, Marshall 1.13, Olm 0.84, Allen 0.53, H2-3 1.21
