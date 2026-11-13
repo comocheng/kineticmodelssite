@@ -38,16 +38,16 @@ def ignition(T0, P=10 * ct.one_atm):
 
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 3.8))
+fig, ax = plt.subplots(figsize=(7.0, 3.6))
 for T0, colour in zip((1300, 1200, 1100), COLOURS):
     t, T, tau = ignition(T0)
     print(f"  T0 = {T0} K, 10 atm, phi = 1: ignition delay {tau * 1e3:.3f} ms")
-    ax.plot(t * 1e3, T, color=colour, label=f"$T_0$ = {T0} K: {tau * 1e3:.2f} ms")
-    ax.axvline(tau * 1e3, color=colour, lw=0.8, ls=":")
+    ax.plot(t * 1e3, T, color=colour, lw=1.6, label=f"$T_0$ = {T0} K: ignition delay {tau * 1e3:.2f} ms")
+    ax.axvline(tau * 1e3, color=colour, lw=0.8, ls=(0, (2, 2)))
 ax.set_xscale("log")
 ax.set_xlim(1e-3, None)
 ax.set_xlabel("Time (ms)")
 ax.set_ylabel("Temperature (K)")
-ax.set_title(f"CH$_4$-air, 10 atm, constant pressure; model {model['model_name']}", loc="left", fontsize=10)
-ax.legend(title="ignition delay (dotted line)", fontsize=8)
+ax.set_title(f"Stoichiometric CH$_4$-air at 10 atm, constant pressure, model {model['model_name']}")
+ax.legend(loc="upper left")
 save(fig, "uc10_download_and_simulate")

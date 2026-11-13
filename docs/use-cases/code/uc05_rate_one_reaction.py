@@ -47,14 +47,18 @@ worst = max(max(c / m, m / c) for curve in k.values() for c, m in zip(curve, med
 print(f"from {T[0]:.0f} to {T[-1]:.0f} K: the largest factor between a model and the median is {worst:.2f}")
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 4))
-ax.fill_between(1000 / T, med_curve / 2, med_curve * 2, color="0.92", label="factor of 2 around the median")
+fig, ax = plt.subplots(figsize=(7.0, 3.9))
+x = 1000 / T
+ax.fill_between(x, med_curve / 2, med_curve * 2, color="#eaf1f8", lw=0, label="factor of 2 around the median")
 for i, curve in enumerate(k.values()):
-    ax.plot(1000 / T, curve, color="0.55", lw=0.6, label=f"{len(k)} models" if i == 0 else None)
-ax.plot(1000 / T, med_curve, color=COLOURS[1], lw=2, label="median of the models")
+    ax.plot(x, curve, color="#8f8f8f", lw=0.5, alpha=0.8, label=f"{len(k)} models" if i == 0 else None)
+ax.plot(x, med_curve, color=COLOURS[1], lw=2, label="median of the models")
 ax.set_yscale("log")
 ax.set_xlabel("1000 K / T")
 ax.set_ylabel("k (cm$^3$ mol$^{-1}$ s$^{-1}$)")
-ax.set_title("H + O$_2$ = O + OH", loc="left")
+top = ax.secondary_xaxis("top", functions=(lambda v: 1000 / v, lambda t: 1000 / t))
+top.set_xticks([2500, 2000, 1500, 1200, 1000, 900, 800])
+top.set_xlabel("Temperature (K)", fontsize=8.5)
+ax.set_title("H + O$_2$ = O + OH", pad=30)
 ax.legend(loc="lower left")
 save(fig, "uc05_rate_one_reaction")

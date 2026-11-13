@@ -22,13 +22,21 @@ for name, inchi in FUELS.items():
     print(f"  {name:10s} species record {sid:6d}: {n_datasets:5d} experimental datasets, {n_models:3d} kinetic models")
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 4.4))
-for name, d, m in rows:
-    ax.scatter(d, m, s=30, color=COLOURS[0])
-    ax.annotate(formula(name) if name[0] != "n" and "-" not in name else name, (d, m), xytext=(4, 3),
-                textcoords="offset points", fontsize=8)
-ax.set_xscale("symlog", linthresh=1)
-ax.set_xlabel("Experimental datasets whose mixture contains the species")
-ax.set_ylabel("Kinetic models that contain the species")
-ax.set_title("One species record links the experiments and the models", loc="left", fontsize=10)
+order = sorted(rows, key=lambda r: (r[1], r[2]))
+labels = [formula(name) if name[0] != "n" and "-" not in name and name != "toluene" else name for name, _, _ in order]
+fig, (left, right) = plt.subplots(1, 2, figsize=(7.0, 4.2), sharey=True, gridspec_kw={"wspace": 0.06})
+y = range(len(order))
+for ax, values, colour, title in ((left, [d for _, d, _ in order], COLOURS[0], "Experimental datasets"),
+                                  (right, [m for _, _, m in order], COLOURS[2], "Kinetic models")):
+    bars = ax.barh(y, values, color=colour, height=0.65)
+    ax.bar_label(bars, padding=3, fontsize=7.5)
+    ax.set_xlim(0, max(values) * 1.18)
+    ax.set_title(title, fontsize=9.5)
+    ax.grid(axis="y", visible=False)
+    ax.tick_params(axis="y", length=0)
+left.set_yticks(list(y), labels)
+left.set_xlabel("Datasets whose mixture contains the species")
+right.set_xlabel("Models that contain the species")
+fig.suptitle("One species record selects the experiments and the models of a fuel", x=0.12, ha="left",
+             fontsize=10, fontweight="bold", y=1.0)
 save(fig, "uc15_fuels_experiments_models")

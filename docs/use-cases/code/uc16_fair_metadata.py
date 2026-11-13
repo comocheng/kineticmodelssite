@@ -25,13 +25,19 @@ used = {licences.get(d["license"], d["license"]) for d in datasets if d["license
 print(f"  licences given: {', '.join(sorted(map(str, used))) or 'none'}")
 
 style()
-fig, ax = plt.subplots(figsize=(7, 3.6))
+from matplotlib.patches import Patch
+fig, ax = plt.subplots(figsize=(7.0, 3.3))
 principles = sorted({p for p, _, _ in counts})
 colour = {p: COLOURS[i] for i, p in enumerate(principles)}
-bars = ax.barh([f"{item} ({p})" for p, item, _ in counts], [100 * c / n for _, _, c in counts],
-               color=[colour[p] for p, _, _ in counts])
+bars = ax.barh(range(len(counts)), [100 * c / n for _, _, c in counts], color=[colour[p] for p, _, _ in counts],
+               height=0.65)
 ax.bar_label(bars, labels=[f"{100 * c / n:.1f} %" for _, _, c in counts], padding=3, fontsize=8)
-ax.invert_yaxis()
-ax.set_xlim(0, 110)
+ax.set_yticks(range(len(counts)), [item for _, item, _ in counts])
+ax.set_ylim(len(counts) - 0.5, -0.5)
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", length=0)
+ax.set_xlim(0, 112)
 ax.set_xlabel(f"Datasets that give the item (% of {n})")
+ax.legend(handles=[Patch(color=colour[p], label=f"FAIR {p}") for p in principles], ncol=len(principles),
+          loc="lower left", bbox_to_anchor=(0, 1.0), borderaxespad=0.2)
 save(fig, "uc16_fair_metadata")

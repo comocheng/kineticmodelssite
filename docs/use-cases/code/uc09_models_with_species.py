@@ -15,16 +15,19 @@ for mid, name in sorted(both.items(), key=lambda kv: size[kv[0]]):
 
 style()
 order = sorted(size, key=size.get)
-fig, ax = plt.subplots(figsize=(8, 3.6))
-ax.bar(range(len(order)), [size[m] for m in order],
-       color=[COLOURS[1] if m in both else "0.75" for m in order], width=0.85)
+fig, ax = plt.subplots(figsize=(7.0, 3.4))
+ax.bar(range(len(order)), [size[m] for m in order], width=0.8,
+       color=[COLOURS[1] if m in both else "#c9c9c9" for m in order])
 for x, m in enumerate(order):
     if m in both:
         ax.annotate(both[m], (x, size[m]), xytext=(0, 4), textcoords="offset points", rotation=90,
-                    ha="center", va="bottom", fontsize=8)
+                    ha="center", va="bottom", fontsize=7.5, color=COLOURS[1])
 ax.set_yscale("log")
 ax.set_xticks([])
+ax.grid(axis="x", visible=False)
+ax.set_xlim(-1, len(order))
+ax.set_ylim(top=max(size.values()) * 6)
 ax.set_xlabel(f"The {len(models)} models of the database, from the smallest to the largest")
 ax.set_ylabel("Species in the model")
-ax.set_title("Models that contain both NH$_3$ and H$_2$ (vermilion)", loc="left")
+ax.set_title("The models that contain both NH$_3$ and H$_2$ (vermilion)")
 save(fig, "uc09_models_with_species")

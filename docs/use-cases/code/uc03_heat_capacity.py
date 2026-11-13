@@ -34,16 +34,16 @@ for e in odd:
           f"{h_kj(e):.1f} kJ/mol, used by {', '.join(users[e['id']])}")
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 4))
+fig, ax = plt.subplots(figsize=(7.0, 3.6))
 for k, e in enumerate(x for x in entries if x not in odd):
-    ax.plot(T, [cp_over_r(e, t) * R for t in T], color="0.6", lw=0.8,
+    ax.plot(T, [cp_over_r(e, t) * R for t in T], color="#a8a8a8", lw=0.7,
             label=f"{len(entries) - len(odd)} entries of the models" if k == 0 else None)
-for e in odd:
-    ax.plot(T, [cp_over_r(e, t) * R for t in T], color=COLOURS[1], lw=1.6, label="; ".join(users[e["id"]]))
 for f in group_additivity:
-    ax.plot(T, [cp_over_r(f, t) * R for t in T], color=COLOURS[0], lw=2, ls="--", label="group additivity")
+    ax.plot(T, [cp_over_r(f, t) * R for t in T], color=COLOURS[0], lw=1.8, ls=(0, (4, 2)), label="group additivity")
+for e in odd:
+    ax.plot(T, [cp_over_r(e, t) * R for t in T], color=COLOURS[1], lw=1.8, label="; ".join(users[e["id"]]))
 ax.set_xlabel("Temperature (K)")
 ax.set_ylabel("Heat capacity $C_p$ (J mol$^{-1}$ K$^{-1}$)")
-ax.set_title("Allyl radical, C$_3$H$_5$", loc="left")
-ax.legend(loc="center right", fontsize=8)
+ax.set_title("Allyl radical, C$_3$H$_5$")
+ax.legend(loc="lower right")
 save(fig, "uc03_heat_capacity")

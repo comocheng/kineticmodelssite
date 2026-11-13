@@ -33,17 +33,19 @@ for rid, names in ranked[:6]:
           f"for example {', '.join(names[:3])}")
 
 style()
-fig, ax = plt.subplots(figsize=(7, 3.8))
+fig, ax = plt.subplots(figsize=(7.0, 0.26 * len(ranked) + 1.0))
 labels = []
 for rid, names in ranked:
     d = records[rid]["data"]
     # one set of units for every label: A in cm3/(mol s), Ea in kJ/mol
     labels.append(f"A = {to_cgs(d['a_si'], 2):.3g}, n = {d['n']:.3g}, Ea = {d['e_si'] / 1000:.2f} kJ/mol"
                   if d["type"] == "arrhenius" else d["type"])
-bars = ax.barh(range(len(ranked)), [len(v) for _, v in ranked], color=COLOURS[0])
+bars = ax.barh(range(len(ranked)), [len(v) for _, v in ranked], color=COLOURS[0], height=0.65)
 ax.bar_label(bars, padding=3, fontsize=8)
-ax.set_yticks(range(len(ranked)), labels, fontsize=7)
-ax.invert_yaxis()
+ax.set_yticks(range(len(ranked)), labels, fontsize=7.5)
+ax.set_ylim(len(ranked) - 0.5, -0.5)
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", length=0)
 ax.set_xlabel("Models that use this rate record")
-ax.set_title("CH$_4$ + OH = CH$_3$ + H$_2$O: one bar per rate record", loc="left")
+ax.set_title("CH$_4$ + OH = CH$_3$ + H$_2$O: one bar for each rate record")
 save(fig, "uc06_shared_rates")

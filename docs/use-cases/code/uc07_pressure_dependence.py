@@ -57,16 +57,18 @@ for p_bar in (0.1, 1, 10, 100):
     print(f"  k(1000 K, {p_bar:5g} bar): {min(v):.2e} to {max(v):.2e} cm3/(mol s), ratio {max(v) / min(v):.1f}")
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 4))
-colour = {f: COLOURS[i % len(COLOURS)] for i, (f, _) in enumerate(Counter(form.values()).most_common())}
-seen = set()
-for name, curve in k.items():
-    f = form[name]
-    ax.plot(P / 1e5, curve, color=colour[f], lw=0.9, alpha=0.8, label=f if f not in seen else None)
-    seen.add(f)
+fig, ax = plt.subplots(figsize=(7.0, 3.9))
+order = [f for f, _ in Counter(form.values()).most_common()]
+colour = {f: COLOURS[i % len(COLOURS)] for i, f in enumerate(order)}
+count = Counter(form[n] for n in k)
+for f in reversed(order):   # the largest group first, so the small groups stay visible on top
+    for i, name in enumerate(n for n in k if form[n] == f):
+        ax.plot(P / 1e5, k[name], color=colour[f], lw=1.6 if f != order[0] else 0.8,
+                alpha=1 if f != order[0] else 0.7, label=f"{f} ({count[f]} models)" if i == 0 else None)
 ax.set_xscale("log"); ax.set_yscale("log")
 ax.set_xlabel("Pressure (bar)")
 ax.set_ylabel("k at 1000 K (cm$^3$ mol$^{-1}$ s$^{-1}$)")
-ax.set_title("CH$_3$ + CH$_3$ (+M) = C$_2$H$_6$ (+M), bath gas of collision efficiency 1", loc="left", fontsize=9)
-ax.legend(title="rate form in the model", fontsize=8)
+ax.set_title("CH$_3$ + CH$_3$ (+M) = C$_2$H$_6$ (+M), bath gas with a collision efficiency of 1")
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles[::-1], labels[::-1], title="rate form in the model", loc="lower right", title_fontsize=8)
 save(fig, "uc07_pressure_dependence")

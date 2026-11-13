@@ -23,13 +23,15 @@ print(f"  pressures {min(p):.1f} to {max(p):.1f} bar; temperatures "
       f"{min(d['datapoint']['temperature'] for d in shock):.0f} to {max(d['datapoint']['temperature'] for d in shock):.0f} K")
 
 style()
-fig, ax = plt.subplots(figsize=(6.5, 4.2))
+fig, ax = plt.subplots(figsize=(7.0, 4.0))
 sc = ax.scatter([1000 / d["datapoint"]["temperature"] for d in shock], [d["ignition_delay"] * 1e3 for d in shock],
-                c=p, cmap="viridis", norm=LogNorm(), s=16, edgecolors="black", linewidths=0.3)
-fig.colorbar(sc, ax=ax, label="Pressure (bar)")
+                c=p, cmap="viridis", norm=LogNorm(), s=18, edgecolors="white", linewidths=0.3, zorder=3)
+fig.colorbar(sc, ax=ax, label="Pressure (bar)", pad=0.02)
 ax.set_yscale("log")
 ax.set_xlabel("1000 K / T")
 ax.set_ylabel("Ignition delay (ms)")
-ax.set_title(f"n-Heptane, $\\phi$ = 0.9 to 1.1, shock tubes: {len(shock)} datapoints, {len(papers)} papers",
-             loc="left", fontsize=10)
+top = ax.secondary_xaxis("top", functions=(lambda v: 1000 / v, lambda t: 1000 / t))
+top.set_xticks([1600, 1400, 1200, 1000, 900, 800, 700])
+top.set_xlabel("Temperature (K)", fontsize=8.5)
+ax.set_title(f"n-Heptane, $\\phi$ = 0.9 to 1.1, shock tubes: {len(shock)} datapoints from {len(papers)} papers", pad=30)
 save(fig, "uc12_ignition_delays")

@@ -37,18 +37,22 @@ for spread, sid, v in top:
     print(f"  {label:12s} species record {sid:6d}: {len(v):3d} models, {min(v):8.1f} to {max(v):8.1f} kJ/mol")
 
 style()
-fig, ax = plt.subplots(figsize=(7.5, 4.6))
+fig, ax = plt.subplots(figsize=(7.0, 4.2))
+ax.axvspan(-4.184, 4.184, color="#eaf1f8", zorder=0, lw=0)
 for i, (spread, sid, v) in enumerate(top):
     med = statistics.median(v)
     d = [x - med for x in v]
-    ax.scatter(d, [i] * len(d), s=16, alpha=0.6, color=COLOURS[0], edgecolors="none")
-ax.axvline(0, color="black", lw=0.8)
+    ax.scatter(d, [i] * len(d), s=15, alpha=0.65, color=COLOURS[0], edgecolors="white", linewidths=0.3, zorder=3)
+ax.axvline(0, color="#1a1a1a", lw=0.9, zorder=2)
 # the labels are the names that most models use (model names, not formulas)
-ax.set_yticks(range(len(top)), [names[sid].most_common(1)[0][0] for _, sid, _ in top])
-ax.invert_yaxis()
+ax.set_yticks(range(len(top)), [names[sid].most_common(1)[0][0] for _, sid, _ in top], fontfamily="monospace",
+              fontsize=8)
+ax.set_ylim(len(top) - 0.5, -0.5)
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", length=0)
 ax.set_xscale("symlog", linthresh=10)
 ticks = [-500, -100, -10, 0, 10, 100, 500]
 ax.set_xticks(ticks, [str(t) for t in ticks])
-ax.set_xlabel("Enthalpy of formation at 298.15 K: model minus median of the models (kJ/mol)")
-ax.set_title("The 12 species with the largest spread between the models", loc="left")
+ax.set_xlabel("Enthalpy of formation at 298.15 K, model minus the median of the models (kJ mol$^{-1}$)")
+ax.set_title("The 12 species with the largest spread between the models")
 save(fig, "uc04_enthalpy_spread")

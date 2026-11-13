@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 
-from prometheus_api import get_all, save, style
+from prometheus_api import COLOURS, get_all, save, style
 
 CH4, O2, N2 = "1S/CH4/h1H4", "1S/O2/c1-2", "1S/N2/c1-2"
 # Burning velocities of mixtures with CH4, at 0.9 to 1.1 bar and 290 to 305 K (SI values: Pa and K)
@@ -37,13 +37,14 @@ near1 = [v for pts in by_paper.values() for phi, v in pts if abs(phi - 1) < 0.02
 print(f"  at phi = 0.98 to 1.02: {len(near1)} values from {min(near1):.1f} to {max(near1):.1f} cm/s")
 
 style()
-fig, ax = plt.subplots(figsize=(6.8, 4.2))
-markers = "osD^v<>ph*X"
+fig, ax = plt.subplots(figsize=(7.0, 4.2))
+markers = "osD^v<>ph*XPd8"
 for k, (paper, pts) in enumerate(sorted(by_paper.items(), key=lambda kv: -len(kv[1]))):
     phi, v = zip(*sorted(pts))
-    ax.plot(phi, v, markers[k % len(markers)], ms=4, alpha=0.8, label=paper if k < 12 else None)
-ax.set_xlabel("Equivalence ratio $\\phi$ (from the mixture)")
-ax.set_ylabel("Laminar burning velocity (cm/s)")
-ax.set_title(f"Methane-air, 1 atm, 298 K: {n} values from {len(by_paper)} papers", loc="left", fontsize=10)
-ax.legend(fontsize=7, ncol=2, title="paper (the 12 with the most values)", title_fontsize=7)
+    ax.plot(phi, v, markers[k % len(markers)], ms=4.5, mec="white", mew=0.4, color=COLOURS[k % len(COLOURS)],
+            alpha=0.9, label=paper)
+ax.set_xlabel("Equivalence ratio $\\phi$ (calculated from the mixture)")
+ax.set_ylabel("Laminar burning velocity (cm s$^{-1}$)")
+ax.set_title(f"Methane-air at 1 atm and 298 K: {n} values from {len(by_paper)} papers")
+ax.legend(ncol=1, loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=7.5)
 save(fig, "uc13_burning_velocity")

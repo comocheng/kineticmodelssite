@@ -30,13 +30,14 @@ for g, n in groups.most_common():
           f"{max(p['pressure'] for p in sel) / 1e5:6.1f} bar")
 
 style()
-fig, ax = plt.subplots(figsize=(6.8, 4.4))
+fig, ax = plt.subplots(figsize=(7.0, 4.3))
 for (g, _), colour in zip(groups.most_common(), COLOURS):
     sel = [p for p in points if group(datasets[p["dataset"]]) == g and p["temperature"] and p["pressure"]]
-    ax.scatter([p["temperature"] for p in sel], [p["pressure"] / 1e5 for p in sel], s=4, alpha=0.4,
-               color=colour, edgecolors="none", label=f"{g} ({len(sel)})")
+    # rasterized: the points are an image inside the vector file, so the file stays small
+    ax.scatter([p["temperature"] for p in sel], [p["pressure"] / 1e5 for p in sel], s=4, alpha=0.45,
+               color=colour, edgecolors="none", label=f"{g} ({len(sel)})", rasterized=True)
 ax.set_yscale("log")
 ax.set_xlabel("Temperature of the datapoint (K)")
 ax.set_ylabel("Pressure of the datapoint (bar)")
-ax.legend(markerscale=4, fontsize=7, loc="upper left", bbox_to_anchor=(0, 1.32))
+ax.legend(markerscale=3, loc="lower left", bbox_to_anchor=(0, 1.0), borderaxespad=0.2)
 save(fig, "uc11_experiment_coverage")

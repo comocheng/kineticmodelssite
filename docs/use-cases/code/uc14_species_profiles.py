@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 
-from prometheus_api import get, get_all, save, style
+from prometheus_api import COLOURS, get, get_all, save, style
 
 JSR = "jet stirred reactor"
 # All speciation measurements of jet-stirred reactors, and all their concentration profiles (2 requests)
@@ -34,23 +34,24 @@ for p in profiles[best["id"]]:
     print(f"  {p['species']['species_name']:8s} {len(x):3d} values, largest mole fraction {max(x):.2e}")
 
 style()
-fig, ax = plt.subplots(figsize=(6.8, 4.2))
+fig, ax = plt.subplots(figsize=(7.0, 4.0))
 major = sorted(profiles[best["id"]], key=lambda p: -max(row[col] for row in p["values"]))[:8]
-for p in major:   # the 8 species with the largest mole fractions
-    T = [row[0] for row in p["values"]]
-    X = [row[col] for row in p["values"]]
-    if all(len(row) > col + 1 for row in p["values"]):
-        sd = [row[col + 1] for row in p["values"]]          # the uncertainty of each row
+for p, colour in zip(major, COLOURS):   # the 8 species with the largest mole fractions
+    rows = [row for row in p["values"] if row[col] > 0]   # a logarithmic axis cannot show zero
+    T = [row[0] for row in rows]
+    X = [row[col] for row in rows]
+    if all(len(row) > col + 1 for row in rows):
+        sd = [row[col + 1] for row in rows]          # the uncertainty of each row
     elif p["evaluated_standard_deviation_type"] == "absolute":
-        sd = p["evaluated_standard_deviation"]               # one uncertainty for the profile
+        sd = p["evaluated_standard_deviation"]       # one uncertainty for the profile
     else:
         sd = None
-    ax.errorbar(T, X, yerr=sd, marker="o", ms=3, lw=1, capsize=2, elinewidth=0.6,
-                label=p["species"]["species_name"])
+    ax.errorbar(T, X, yerr=sd, marker="o", ms=3.5, lw=1.2, capsize=2, elinewidth=0.6, color=colour,
+                mec="white", mew=0.3, label=p["species"]["species_name"])
 ax.set_yscale("log")
 ax.set_xlabel("Temperature (K)")
 ax.set_ylabel("Mole fraction")
 paper = dataset["chemked_file_path"].split("/")[-2].replace("_", " ")   # the paper folder: first author and year
-ax.set_title(f"Jet-stirred reactor, {paper} (dataset {dataset['id']}): the 8 largest profiles", loc="left", fontsize=10)
-ax.legend(fontsize=7, ncol=2)
+ax.set_title(f"Jet-stirred reactor, {paper} (dataset {dataset['id']}): the 8 largest profiles", pad=34)
+ax.legend(ncol=4, loc="lower left", bbox_to_anchor=(0, 1.0), borderaxespad=0.3)
 save(fig, "uc14_species_profiles")

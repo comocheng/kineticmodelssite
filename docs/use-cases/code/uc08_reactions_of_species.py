@@ -37,12 +37,16 @@ for v, eq, t in rows[:10]:
 
 style()
 top = rows[:20]
-fig, ax = plt.subplots(figsize=(7, 5))
-ax.barh(range(len(top)), [v for v, _, _ in top], color=COLOURS[2])
-ax.set_yticks(range(len(top)), [eq for _, eq, _ in top], fontsize=8)
-ax.invert_yaxis()
+fig, ax = plt.subplots(figsize=(7.0, 5.0))
+ax.barh(range(len(top)), [v for v, _, _ in top], color=COLOURS[2], height=0.65)
+ax.set_yticks(range(len(top)), [eq for _, eq, _ in top], fontfamily="monospace", fontsize=7.5)
+ax.set_ylim(len(top) - 0.5, -0.5)
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", length=0)
 ax.set_xscale("log")
-ax.xaxis.set_minor_formatter(plt.NullFormatter())   # label the powers of ten only
+ticks = [t for t in (1e11, 2e11, 5e11, 1e12, 2e12, 5e12, 1e13, 2e13, 5e13, 1e14) if top[-1][0] / 1.5 <= t <= top[0][0] * 1.5]
+ax.set_xticks(ticks, [f"{t / 10 ** int(f'{t:e}'.split('e')[1]):g}×10$^{{{int(f'{t:e}'.split('e')[1])}}}$" for t in ticks])
+ax.xaxis.set_minor_formatter(plt.NullFormatter())
 ax.set_xlabel("k at 1000 K and 1 bar (cm$^3$ mol$^{-1}$ s$^{-1}$)")
-ax.set_title(f"The 20 fastest reactions of NH$_2$ + X in {model['model_name']}", loc="left", fontsize=10)
+ax.set_title(f"The 20 fastest reactions NH$_2$ + X in {model['model_name']}")
 save(fig, "uc08_reactions_of_species")

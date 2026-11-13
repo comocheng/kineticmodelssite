@@ -27,16 +27,22 @@ for name, inchi in SPECIES.items():
           f"range {min(values):.1f} to {max(values):.1f} kJ/mol | {off} models off by more than 1 kcal/mol")
 
 style()
-fig, ax = plt.subplots(figsize=(8, 3.6))
-ax.axvspan(-KCAL, KCAL, color="0.92", label="within 1 kcal/mol of ATcT")
+from matplotlib.lines import Line2D
+fig, ax = plt.subplots(figsize=(7.0, 3.3))
+ax.axvspan(-KCAL, KCAL, color="#eaf1f8", zorder=0, lw=0)
 for i, (name, (values, ref, unc)) in enumerate(rows.items()):
     d = [v - ref for v in values]
     colours = [COLOURS[1] if abs(x) > KCAL else COLOURS[0] for x in d]
-    jitter = [i + 0.25 * ((k * 0.618) % 1 - 0.5) for k in range(len(d))]
-    ax.scatter(d, jitter, s=14, c=colours, alpha=0.7, edgecolors="none")
-ax.axvline(0, color="black", lw=0.8)
+    jitter = [i + 0.28 * ((k * 0.618) % 1 - 0.5) for k in range(len(d))]
+    ax.scatter(d, jitter, s=15, c=colours, alpha=0.8, edgecolors="white", linewidths=0.3, zorder=3)
+ax.axvline(0, color="#1a1a1a", lw=0.9, zorder=2)
 ax.set_yticks(range(len(rows)), [formula(n) for n in rows])
-ax.invert_yaxis()
-ax.set_xlabel("Enthalpy of formation at 298.15 K: model minus ATcT (kJ/mol)")
-ax.legend(loc="upper right", bbox_to_anchor=(1.0, 1.12))
+ax.set_ylim(len(rows) - 0.5, -0.5)
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", length=0)
+ax.set_xlabel("Enthalpy of formation at 298.15 K, model minus ATcT (kJ mol$^{-1}$)")
+ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True, steps=[1, 2, 5, 10]))
+handles = [Line2D([], [], ls="", marker="o", color=COLOURS[0], label="within 1 kcal/mol of ATcT (shaded band)"),
+           Line2D([], [], ls="", marker="o", color=COLOURS[1], label="more than 1 kcal/mol from ATcT")]
+ax.legend(handles=handles, loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, borderaxespad=0.2)
 save(fig, "uc02_enthalpy_vs_atct")
