@@ -1,3 +1,4 @@
 allyl: species record 13848; 24 thermochemistry entries in 78 models
+  reference record 144 (group_additivity, [CH2]C=C): enthalpy of formation 170.5 kJ/mol, entropy 259.7 J/(mol K), NASA polynomials 9292
   Cp at 300 K: median of the entries 63.7 J/(mol K); group additivity 62.1 J/(mol K)
   entry 8427: Cp(300 K) = 136.9 J/(mol K), enthalpy of formation -282.0 kJ/mol, used by PCI2017/047-Rodriguez (RC3H5Y)

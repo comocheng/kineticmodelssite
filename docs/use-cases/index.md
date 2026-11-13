@@ -21,9 +21,19 @@ These terms appear on every page.
   name for the species, for example `CH3O` or `ch3o`. The database links each of these names to the
   same species record. The experiments use the same species records for the components of their
   mixtures.
-- **Thermochemistry entry** (`/api/thermo/`). The NASA polynomials that a model gives for one
-  species. When two models give identical polynomials, the database stores them as one entry, and
-  both models link to it.
+- **Thermochemistry entry** (`/api/thermo/`). One set of NASA polynomials for one species: the heat
+  capacity, enthalpy and entropy as functions of temperature. Most entries belong to kinetic models.
+  When two models give identical polynomials, the database stores them as one entry, and both models
+  link to it. Other entries belong to a reference record; their field `provider_record` gives that
+  record. `reference=false` selects the entries of the models, and `reference=true` the entries of the
+  reference records.
+- **Reference record** (`/api/thermo-record/`). The thermochemistry of one species from one outside
+  source. The field `provider` names the source: `atct` (Active Thermochemical Tables), `burcat`,
+  `group_additivity`, `rmg_thermo_library`, or `atct_constrained` (the ATcT enthalpy with the heat
+  capacity and entropy of group additivity). A reference record gives the enthalpy of formation at
+  0 K and at 298.15 K with its uncertainty, the entropy at 298.15 K, the version and the provenance.
+  When the source gives a full curve, the field `nasa_thermo` gives the ID of its thermochemistry
+  entry. ATcT gives only enthalpies, so an ATcT record has no thermochemistry entry.
 - **Reaction record** (`/api/reaction/`). Each reaction has one reaction record. The reaction record
   identifies the reaction by the species records of its reactants and products. A reaction in the
   opposite direction is a second reaction record with the same `canonical_key`.
@@ -40,7 +50,7 @@ model and every experiment that use it.
 | **Species and thermochemistry** | | |
 | [1](uc01.md) | Which species record is each of two radicals with the same formula, and which names do the models use for it? | `species`, `kineticmodel` |
 | [2](uc02.md) | Which models use an enthalpy of formation that differs from ATcT? | `thermo`, `thermo-record` |
-| [3](uc03.md) | How much does the heat capacity of the allyl radical differ between the models? | `thermo` |
+| [3](uc03.md) | How much does the heat capacity of the allyl radical differ between the models? | `thermo`, `thermo-record` |
 | [4](uc04.md) | For which species do the models disagree most on the enthalpy of formation? | `thermo`, `kineticmodel` |
 | **Reactions and rate coefficients** | | |
 | [5](uc05.md) | Do the models agree on the rate coefficient of H + O<sub>2</sub> = O + OH? | `reaction`, `kinetics` |
