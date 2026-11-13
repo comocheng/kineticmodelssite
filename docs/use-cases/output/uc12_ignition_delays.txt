@@ -1,0 +1,3 @@
+402 ignition delays of n-heptane at phi = 0.9 to 1.1 in 39 datasets
+  387 from shock tubes, in 34 datasets of 12 papers
+  pressures 0.9 to 60.6 bar; temperatures 664 to 1718 K

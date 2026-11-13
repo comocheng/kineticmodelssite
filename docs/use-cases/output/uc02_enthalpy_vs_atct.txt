@@ -1,0 +1,6 @@
+CH3O    ATcT    21.60 ± 0.26 kJ/mol | 82 models, 18 entries, range 16.3 to 21.5 kJ/mol | 34 models off by more than 1 kcal/mol
+CH2OH   ATcT   -16.41 ± 0.28 kJ/mol | 82 models, 19 entries, range -26.0 to -9.7 kJ/mol | 10 models off by more than 1 kcal/mol
+CH2CHO  ATcT    16.11 ± 0.53 kJ/mol | 81 models, 20 entries, range 6.4 to 26.8 kJ/mol | 22 models off by more than 1 kcal/mol
+HCO     ATcT    41.76 ± 0.09 kJ/mol | 84 models, 16 entries, range 37.6 to 43.5 kJ/mol | 0 models off by more than 1 kcal/mol
+HO2     ATcT    12.16 ± 0.14 kJ/mol | 94 models, 19 entries, range 10.5 to 15.9 kJ/mol | 0 models off by more than 1 kcal/mol
+OH      ATcT    37.52 ± 0.02 kJ/mol | 96 models, 18 entries, range 37.2 to 39.7 kJ/mol | 0 models off by more than 1 kcal/mol

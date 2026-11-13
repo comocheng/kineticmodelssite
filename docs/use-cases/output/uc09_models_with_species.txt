@@ -1,0 +1,5 @@
+4 of 100 models contain both NH3 and H2:
+  GRI-mech-3.0                 model   41:    59 species
+  NitrogenGlarborg2018         model   37:   148 species
+  PCI2019/789-Lapointe1        model  170:   174 species
+  PCI2017/024-Bohon            model  149:   279 species

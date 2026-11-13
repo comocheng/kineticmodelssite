@@ -1,0 +1,11 @@
+model 37 NitrogenGlarborg2018: 115 rate records contain NH2; 71 are bimolecular reactions that consume NH2
+   7.000e+13 cm3/(mol s)  NH2 + N = N2 + 2 H  (arrhenius)
+   6.828e+13 cm3/(mol s)  NH2 + NH = N2H2 + H  (arrhenius)
+   5.000e+13 cm3/(mol s)  NNH + NH2 = N2 + NH3  (arrhenius)
+   4.752e+13 cm3/(mol s)  C2H5 + NH2 = CH3CH2NH2  (lindemann)
+   3.000e+13 cm3/(mol s)  N2H3 + NH2 = H2NN + NH3  (arrhenius)
+   3.000e+13 cm3/(mol s)  CH2NO + NH2 = CH2NH2 + NO  (arrhenius)
+   2.892e+13 cm3/(mol s)  HNOH + NH2 = H2NN + H2O  (arrhenius)
+   2.087e+13 cm3/(mol s)  NH2 + O = H + HNO  (arrhenius)
+   2.010e+13 cm3/(mol s)  NH2 + HO2 = H2NO + OH  (arrhenius)
+   1.162e+13 cm3/(mol s)  CH3 + NH2 = CH3NH2  (pdep_arrhenius)

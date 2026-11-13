@@ -1,0 +1,17 @@
+165 jet-stirred-reactor measurements with 943 profiles
+measurement 225 of dataset 1225 (butanol/n-butanol/Sarathy_2009/Sarathy_2009_jsr_p1atm.yaml, doi 10.1016/j.combustflame.2008.11.019): 15 species profiles against temperature
+  H2O       15 values, largest mole fraction 4.79e-03
+  CO2       15 values, largest mole fraction 1.97e-03
+  CO        15 values, largest mole fraction 2.53e-03
+  CH2O      15 values, largest mole fraction 1.84e-04
+  CH4       15 values, largest mole fraction 2.64e-04
+  C2H2      15 values, largest mole fraction 8.45e-05
+  C2H4      15 values, largest mole fraction 7.50e-04
+  C2H6      15 values, largest mole fraction 7.47e-05
+  C3H6      15 values, largest mole fraction 1.18e-04
+  nC4H8     15 values, largest mole fraction 4.56e-05
+  CH3CHO    15 values, largest mole fraction 8.40e-05
+  nC4H9OH   15 values, largest mole fraction 1.00e-03
+  C3H7CHO   15 values, largest mole fraction 2.72e-05
+  H2        15 values, largest mole fraction 1.50e-03
+  O2        15 values, largest mole fraction 6.00e-03
