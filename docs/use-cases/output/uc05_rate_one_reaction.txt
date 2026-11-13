@@ -1,0 +1,4 @@
+reaction record 10177 (canonical_key MYMOFIZGZYHOMD-UHFFFAOYS...)
+90 models give H + O2 = O + OH with 25 different rate records; 1 model gives only the reverse reaction
+at 1000 K: median 4.746e+10 cm3/(mol s); factors from 0.85 to 1.24; 90 models within a factor of 2
+from 800 to 2500 K: the largest factor between a model and the median is 1.70

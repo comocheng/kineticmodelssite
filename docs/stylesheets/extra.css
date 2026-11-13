@@ -48,3 +48,18 @@
 .md-copyright__highlight a {
   text-decoration: underline;
 }
+
+/* Use-case figures (docs/assets/use-cases/*.svg): the full width of the text column, on white
+   in both colour schemes, because the figures have a white background. */
+.md-typeset img[src*="assets/use-cases/"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0.4rem;
+  box-sizing: border-box;
+}
+[data-md-color-scheme="slate"] .md-typeset img[src*="assets/use-cases/"] {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}

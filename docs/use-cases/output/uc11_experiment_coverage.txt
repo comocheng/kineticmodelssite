@@ -1,0 +1,5 @@
+18371 datapoints in 2783 datasets
+  ignition delay, shock tube and others                                   10406 datapoints; T   653 to  2870 K; p   0.070 to  487.8 bar
+  laminar burning velocity measurement                                     5333 datapoints; T   293 to   718 K; p   0.200 to   29.7 bar
+  ignition delay, rapid compression machine (state before compression)     1973 datapoints; T   274 to  1145 K; p   0.033 to   16.8 bar
+  speciation measurement                                                    659 datapoints; T   293 to  2100 K; p   0.027 to   20.3 bar
