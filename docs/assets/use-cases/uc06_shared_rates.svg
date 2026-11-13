@@ -937,8 +937,52 @@ z
     <g id="ytick_5">
      <g id="line2d_19"/>
      <g id="text_13">
+      <!-- A = 2.8e+06, n = 2, Ea = 6.55 kJ/mol -->
+      <g style="fill: #333333" transform="translate(23.082891 103.5573) scale(0.075 -0.075)">
+       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(180.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(236.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(264.09375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(319.6875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(375.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(433.6875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(489.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(544.875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(600.46875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(656.0625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(683.859375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(742.265625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(770.0625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(825.65625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(853.453125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(881.25 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(947.953125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1003.546875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1031.34375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1089.75 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(1117.546875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1173.140625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(1200.9375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(1256.53125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1312.125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1339.921875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1389.921875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1439.921875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1467.71875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1551.015625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1606.609375 0)"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_20"/>
+     <g id="text_14">
       <!-- A = 1.6e+07, n = 1.83, Ea = 11.30 kJ/mol -->
-      <g style="fill: #333333" transform="translate(8.489531 103.5573) scale(0.075 -0.075)">
+      <g style="fill: #333333" transform="translate(8.489531 121.4367) scale(0.075 -0.075)">
        <use xlink:href="#TeXGyreHeros-Regular-1c"/>
        <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
@@ -979,50 +1023,6 @@ z
        <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1662.296875 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1745.59375 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1801.1875 0)"/>
-      </g>
-     </g>
-    </g>
-    <g id="ytick_6">
-     <g id="line2d_20"/>
-     <g id="text_14">
-      <!-- A = 2.8e+06, n = 2, Ea = 6.55 kJ/mol -->
-      <g style="fill: #333333" transform="translate(23.082891 121.4367) scale(0.075 -0.075)">
-       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(180.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(236.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(264.09375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(319.6875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(375.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(433.6875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(489.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(544.875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(600.46875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(656.0625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(683.859375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(742.265625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(770.0625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(825.65625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(853.453125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(881.25 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(947.953125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1003.546875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1031.34375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1089.75 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(1117.546875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1173.140625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(1200.9375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(1256.53125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1312.125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1339.921875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1389.921875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1439.921875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1467.71875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1551.015625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1606.609375 0)"/>
       </g>
      </g>
     </g>
@@ -1220,57 +1220,8 @@ z
     <g id="ytick_11">
      <g id="line2d_25"/>
      <g id="text_19">
-      <!-- A = 1.57e+07, n = 1.83, Ea = 11.64 kJ/mol -->
-      <g style="fill: #333333" transform="translate(4.32 210.8337) scale(0.075 -0.075)">
-       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(236.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(264.09375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-65" transform="translate(319.6875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(375.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(430.875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(489.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-65" transform="translate(544.875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(600.46875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(628.265625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(656.0625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(711.65625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(739.453125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(797.859375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(825.65625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(881.25 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(909.046875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(964.640625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(1020.234375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1048.03125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(1075.828125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1142.53125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1198.125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1225.921875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1284.328125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1312.125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1367.71875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1423.3125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(1451.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-3a" transform="translate(1506.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1562.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1590.09375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1640.09375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1690.09375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1717.890625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1801.1875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1856.78125 0)"/>
-      </g>
-     </g>
-    </g>
-    <g id="ytick_12">
-     <g id="line2d_26"/>
-     <g id="text_20">
       <!-- A = 1.54, n = 3.95, Ea = 2.30 kJ/mol -->
-      <g style="fill: #333333" transform="translate(25.378594 228.7131) scale(0.075 -0.075)">
+      <g style="fill: #333333" transform="translate(25.378594 210.8337) scale(0.075 -0.075)">
        <use xlink:href="#TeXGyreHeros-Regular-1c"/>
        <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
@@ -1307,6 +1258,52 @@ z
        <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1437.109375 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1520.40625 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1576 0)"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_26"/>
+     <g id="text_20">
+      <!-- A = 1e+06, n = 2.18, Ea = 10.23 kJ/mol -->
+      <g style="fill: #333333" transform="translate(14.743828 228.7131) scale(0.075 -0.075)">
+       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(236.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(291.890625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(350.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(405.890625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(461.484375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(489.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(517.078125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(600.46875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(658.875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(686.671875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(742.265625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(770.0625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(825.65625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(881.25 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(909.046875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(936.84375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1003.546875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1059.140625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1086.9375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1145.34375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1173.140625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(1228.734375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1284.328125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(1312.125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1367.71875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1423.3125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1451.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1501.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1551.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1578.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1662.203125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1717.796875 0)"/>
       </g>
      </g>
     </g>
@@ -1359,8 +1356,103 @@ z
     <g id="ytick_14">
      <g id="line2d_28"/>
      <g id="text_22">
+      <!-- A = 1e+06, n = 2.18, Ea = 20.33 kJ/mol -->
+      <g style="fill: #333333" transform="translate(14.743828 264.4719) scale(0.075 -0.075)">
+       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(236.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(291.890625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(350.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(405.890625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(461.484375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(489.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(517.078125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(600.46875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(658.875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(686.671875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(742.265625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(770.0625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(825.65625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(881.25 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(909.046875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(936.84375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1003.546875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1059.140625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1086.9375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1145.34375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(1173.140625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(1228.734375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1284.328125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1312.125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1367.71875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1423.3125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1451.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1501.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1551.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1578.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1662.203125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1717.796875 0)"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_15">
+     <g id="line2d_29"/>
+     <g id="text_23">
+      <!-- A = 1.57e+07, n = 1.83, Ea = 11.64 kJ/mol -->
+      <g style="fill: #333333" transform="translate(4.32 282.3513) scale(0.075 -0.075)">
+       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(236.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-39" transform="translate(264.09375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-65" transform="translate(319.6875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(375.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(430.875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(489.28125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-65" transform="translate(544.875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(600.46875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(628.265625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(656.0625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(711.65625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(739.453125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(797.859375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(825.65625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(881.25 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(909.046875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(964.640625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(1020.234375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1048.03125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(1075.828125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1142.53125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1198.125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1225.921875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1284.328125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1312.125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1367.71875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1423.3125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(1451.109375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-3a" transform="translate(1506.703125 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1562.296875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1590.09375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1640.09375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1690.09375 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1717.890625 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1801.1875 0)"/>
+       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1856.78125 0)"/>
+      </g>
+     </g>
+    </g>
+    <g id="ytick_16">
+     <g id="line2d_30"/>
+     <g id="text_24">
       <!-- A = 5.72e+06, n = 1.96, Ea = 11.04 kJ/mol -->
-      <g style="fill: #333333" transform="translate(4.32 264.4719) scale(0.075 -0.075)">
+      <g style="fill: #333333" transform="translate(4.32 300.2307) scale(0.075 -0.075)">
        <use xlink:href="#TeXGyreHeros-Regular-1c"/>
        <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
@@ -1402,98 +1494,6 @@ z
        <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1717.890625 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1801.1875 0)"/>
        <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1856.78125 0)"/>
-      </g>
-     </g>
-    </g>
-    <g id="ytick_15">
-     <g id="line2d_29"/>
-     <g id="text_23">
-      <!-- A = 1e+06, n = 2.18, Ea = 10.23 kJ/mol -->
-      <g style="fill: #333333" transform="translate(14.743828 282.3513) scale(0.075 -0.075)">
-       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(236.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(291.890625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(350.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(405.890625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(461.484375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(489.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(517.078125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(600.46875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(658.875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(686.671875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(742.265625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(770.0625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(825.65625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(881.25 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(909.046875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(936.84375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1003.546875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1059.140625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1086.9375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1145.34375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(1173.140625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(1228.734375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1284.328125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(1312.125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1367.71875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1423.3125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1451.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1501.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1551.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1578.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1662.203125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1717.796875 0)"/>
-      </g>
-     </g>
-    </g>
-    <g id="ytick_16">
-     <g id="line2d_30"/>
-     <g id="text_24">
-      <!-- A = 1e+06, n = 2.18, Ea = 20.33 kJ/mol -->
-      <g style="fill: #333333" transform="translate(14.743828 300.2307) scale(0.075 -0.075)">
-       <use xlink:href="#TeXGyreHeros-Regular-1c"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(66.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(94.5 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(152.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(180.703125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(236.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-5a" transform="translate(291.890625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(350.296875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-66" transform="translate(405.890625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(461.484375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(489.28125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4e" transform="translate(517.078125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(572.671875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(600.46875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(658.875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(686.671875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(742.265625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(770.0625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(825.65625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-2e" transform="translate(881.25 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(909.046875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-32" transform="translate(936.84375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-1d" transform="translate(1003.546875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1059.140625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-35" transform="translate(1086.9375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1145.34375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(1173.140625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-7a" transform="translate(1228.734375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-59" transform="translate(1284.328125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1312.125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-6b" transform="translate(1367.71875 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(1423.3125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-47" transform="translate(1451.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-44" transform="translate(1501.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-67" transform="translate(1551.109375 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-4c" transform="translate(1578.90625 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-52" transform="translate(1662.203125 0)"/>
-       <use xlink:href="#TeXGyreHeros-Regular-49" transform="translate(1717.796875 0)"/>
       </g>
      </g>
     </g>

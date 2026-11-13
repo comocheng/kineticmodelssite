@@ -1,2 +1,2 @@
-methoxy: species record 33, in 82 models, 3 different names: CH3O, ch3o, R7CH3O
-hydroxymethyl: species record 13838, in 83 models, 4 different names: CH2OH, CH3O(89), ch2oh, R6CH2OH
+methoxy, CH$_3$O: species record 33, in 82 models, names: CH3O, ch3o, R7CH3O
+hydroxymethyl, CH$_2$OH: species record 13838, in 83 models, names: ch2oh, CH2OH, CH3O(89), R6CH2OH

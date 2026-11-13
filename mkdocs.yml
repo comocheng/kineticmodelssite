@@ -114,6 +114,15 @@ nav:
       - "15. Join the experiments and the models of a fuel": use-cases/uc15.md
       - "16. Count the FAIR metadata of the experiments": use-cases/uc16.md
       - "17. Read the identifiers of one dataset": use-cases/uc17.md
+      - "18. Find the models that were built from the same parts": use-cases/uc18.md
+      - "19. Compare the enthalpies of old and new models with ATcT": use-cases/uc19.md
+      - "20. Compare the rate coefficients of the models by reaction family": use-cases/uc20.md
+      - "21. Check the detailed balance of reactions given in both directions": use-cases/uc21.md
+      - "22. Find the effect of thermochemistry on reverse rates": use-cases/uc22.md
+      - "23. Compare the laboratories with their reported uncertainties": use-cases/uc23.md
+      - "24. Compare the signals that define ignition": use-cases/uc24.md
+      - "25. Find the experiments that discriminate between models": use-cases/uc25.md
+      - "26. Find the reactions that make two models differ": use-cases/uc26.md
   - Client SDKs: clients.md
   - API reference: reference.md
   - Contributing data: contributing-data.md

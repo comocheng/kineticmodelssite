@@ -1,41 +1,41 @@
 """Use case 11. At which temperatures and pressures did the experiments of the collection measure
 their data?"""
-from collections import Counter
+# %% Imports
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 
 from prometheus_api import COLOURS, get_all, save, style
 
-# fields= keeps the responses small: only the conditions and the dataset of each datapoint
+# %% The conditions of every datapoint, and the type and apparatus of every dataset (fields= keeps them small)
 points = get_all("/api/experiment-datapoint/", fields="id,temperature,pressure,dataset")
 datasets = {d["id"]: d for d in get_all("/api/experiment-dataset/", fields="id,experiment_type,apparatus")}
 
-
+# %% Group the datapoints by experiment type; ignition delays also by apparatus
 def group(dataset):
-    """The experiment type, with ignition delays divided by apparatus. Most rapid-compression-machine
-    datapoints give the temperature and pressure before compression, not the compressed state."""
-    t, kind = dataset["experiment_type"], (dataset["apparatus"] or {}).get("kind", "")
-    if t == "ignition delay":
-        return ("ignition delay, rapid compression machine (state before compression)"
-                if kind == "rapid compression machine" else "ignition delay, shock tube and others")
-    return t
+    """Most rapid-compression-machine datapoints give T and p before compression, not the compressed state."""
+    if dataset["experiment_type"] != "ignition delay":
+        return dataset["experiment_type"]
+    if (dataset["apparatus"] or {}).get("kind") == "rapid compression machine":
+        return "ignition delay, rapid compression machine (state before compression)"
+    return "ignition delay, shock tube and others"
 
-
-groups = Counter(group(datasets[p["dataset"]]) for p in points)
+groups = defaultdict(list)
+for p in points:
+    if p["temperature"] and p["pressure"]:
+        groups[group(datasets[p["dataset"]])].append((p["temperature"], p["pressure"] / 1e5))
+groups = dict(sorted(groups.items(), key=lambda kv: -len(kv[1])))
 print(f"{len(points)} datapoints in {len(datasets)} datasets")
-for g, n in groups.most_common():
-    sel = [p for p in points if group(datasets[p["dataset"]]) == g and p["temperature"] and p["pressure"]]
-    print(f"  {g:70s} {n:6d} datapoints; T {min(p['temperature'] for p in sel):5.0f} to "
-          f"{max(p['temperature'] for p in sel):5.0f} K; p {min(p['pressure'] for p in sel) / 1e5:7.3f} to "
-          f"{max(p['pressure'] for p in sel) / 1e5:6.1f} bar")
+for g, tp in groups.items():
+    T, P = zip(*tp)
+    print(f"  {g:70s} {len(tp):6d} datapoints; T {min(T):5.0f} to {max(T):5.0f} K; p {min(P):7.3f} to {max(P):6.1f} bar")
 
+# %% Plot the conditions (rasterized: the points are an image inside the vector file)
 style()
 fig, ax = plt.subplots(figsize=(7.0, 4.3))
-for (g, _), colour in zip(groups.most_common(), COLOURS):
-    sel = [p for p in points if group(datasets[p["dataset"]]) == g and p["temperature"] and p["pressure"]]
-    # rasterized: the points are an image inside the vector file, so the file stays small
-    ax.scatter([p["temperature"] for p in sel], [p["pressure"] / 1e5 for p in sel], s=4, alpha=0.45,
-               color=colour, edgecolors="none", label=f"{g} ({len(sel)})", rasterized=True)
+for (g, tp), colour in zip(groups.items(), COLOURS):
+    T, P = zip(*tp)
+    ax.scatter(T, P, s=4, alpha=0.45, color=colour, edgecolors="none", label=f"{g} ({len(tp)})", rasterized=True)
 ax.set_yscale("log")
 ax.set_xlabel("Temperature of the datapoint (K)")
 ax.set_ylabel("Pressure of the datapoint (bar)")

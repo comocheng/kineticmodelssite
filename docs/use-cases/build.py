@@ -7,7 +7,8 @@
 Each script code/ucNN_*.py runs in code/ with the API in PROMETHEUS_API. Its printed result goes to
 output/ucNN_*.txt, its plot to ../assets/use-cases/ucNN_*.svg and .png, and every request to
 output/api_log.csv (URL, status, bytes, SHA-256). output/run.txt gives the date, the API and the
-number of requests. The pages include these files, so they show what the code printed.
+number of requests. The pages include these files, so they show what the code printed. At the end,
+pages.py writes the code of each script into its page, one block for each cell.
 Needs matplotlib and numpy. Use case 10 needs PyTeCK, PyKED and Cantera 3.1 or newer; give its
 interpreter with --pyteck-python when the current one does not have them.
 """
@@ -18,6 +19,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pages
 
 HERE = Path(__file__).resolve().parent
 CODE, OUT, FIG = HERE / "code", HERE / "output", HERE.parent / "assets" / "use-cases"
@@ -57,6 +60,7 @@ def main():
         f"{len(rows)} GET requests ({sum(int(r['bytes']) for r in rows) / 1e6:.0f} MB), statuses "
         f"{', '.join(sorted({r['status'] for r in rows}))}.\n")
     print((OUT / "run.txt").read_text().strip())
+    pages.main()
     return 1 if failed else 0
 
 

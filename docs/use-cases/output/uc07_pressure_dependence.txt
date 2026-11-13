@@ -1,5 +1,5 @@
-reaction record 15263: 36 rate records in both directions; 35 of 35 agree with rate_fingerprint
-76 models give a rate for a bath gas; forms: {'Troe falloff': 72, 'PLOG': 2, 'Chebyshev': 1, 'Arrhenius': 1}
+reaction record 15263: 36 rate records; 35 of 35 agree with rate_fingerprint
+76 models give a rate for a bath gas; forms: {'Troe falloff': 72, 'PLOG': 2, 'Chebyshev': 1}
   rate coefficient zero (A = 0 in the model): Reduced-DRG-GRI-mech
   no rate record for this reaction: CombFlame2013/2319-Serinyel, PCI2013/599-Veloo, PCI2017/012-Felsmann, PCI2019/751-Chang
   only the reverse direction, C2H6 (+M) = 2 CH3 (+M): CombFlame2013/2680-Vranckx, CombFlame2014/405-Cai, MB-Dooley, MatheuCH4, Narayanaswamy, PCI2013/401-Liu, PCI2017/025-Sudholt, PCI2019/639-Cai, PCI2019/789-Lapointe1, PCI2019/789-Lapointe2

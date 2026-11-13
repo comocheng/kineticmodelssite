@@ -1,0 +1,11 @@
+4403 pairs in 54 models give both directions of a reaction
+  3535 pairs include a reaction record with reversible = true (the flag belongs to the reaction record, which all models share)
+  at 1000 K: within a factor of 1.1 of detailed balance 15.5 %, outside a factor of 2 46.2 %, outside 10 19.3 %
+  PCI2017/036-Rashidi                  2062 pairs; median |log10| 0.134; outside a factor of 2: 574
+  CombFlame2013/2680-Vranckx            630 pairs; median |log10| 0.223; outside a factor of 2: 273
+  Biomass                               477 pairs; median |log10| 0.602; outside a factor of 2: 343
+  PCI2017/051-Pelucchi                  438 pairs; median |log10| 0.473; outside a factor of 2: 284
+  PCI2013/289-Dagaut                    427 pairs; median |log10| 0.485; outside a factor of 2: 290
+  PCI2017/052-Stagni                     85 pairs; median |log10| 0.646; outside a factor of 2: 69
+  MatheuCH4                              64 pairs; median |log10| 0.374; outside a factor of 2: 42
+  PCI2015/0325-Nawdiyal                  45 pairs; median |log10| 0.404; outside a factor of 2: 23

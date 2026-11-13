@@ -1,0 +1,6 @@
+left out 2 delays longer than 50 ms, from datasets [1770]
+514 shock-tube ignition delays of H2/O2/diluent above the crossover temperature, in 46 datasets
+  correlation: activation energy 74 kJ/mol, pressure exponent -0.73; scatter of ln(tau) around it 0.57
+  OH*        22 datasets: median of the dataset values 1.12 times the correlation; from 0.49 to 3.29
+  OH         19 datasets: median of the dataset values 0.88 times the correlation; from 0.40 to 3.82
+  pressure    5 datasets: median of the dataset values 0.74 times the correlation; from 0.41 to 1.16

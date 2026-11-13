@@ -1,0 +1,8 @@
+305 ATcT records; 74 core species; 39 models with a year in the name (61 without a year or with too few core species)
+Spearman correlation of the year and the share off by more than 1 kcal/mol: -0.31 (p = 0.06)
+  2012:  1 models, median |difference| 0.61 kJ/mol, 14.9 % of the core species off by more than 1 kcal/mol
+  2013: 17 models, median |difference| 1.94 kJ/mol, 24.3 % of the core species off by more than 1 kcal/mol
+  2014:  2 models, median |difference| 0.60 kJ/mol, 14.2 % of the core species off by more than 1 kcal/mol
+  2015:  1 models, median |difference| 1.24 kJ/mol, 25.4 % of the core species off by more than 1 kcal/mol
+  2017: 13 models, median |difference| 0.60 kJ/mol, 16.1 % of the core species off by more than 1 kcal/mol
+  2019:  5 models, median |difference| 1.01 kJ/mol, 19.1 % of the core species off by more than 1 kcal/mol

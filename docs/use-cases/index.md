@@ -70,17 +70,31 @@ model and every experiment that use it.
 | **FAIR metadata** | | |
 | [16](uc16.md) | How many datasets give each item of FAIR metadata? | `experiment-dataset`, `license` |
 | [17](uc17.md) | Which persistent identifiers link one dataset to its paper, its authors and its licence? | `experiment-dataset/<id>/metadata/` |
+| **Models against models** | | |
+| [18](uc18.md) | Which models share most of their rate expressions and their thermochemistry? | `kineticmodel` |
+| [19](uc19.md) | Do newer models use enthalpies of formation that are closer to ATcT? | `thermo-record`, `thermo` |
+| [20](uc20.md) | For which reaction families do the models disagree most on the same reaction? | `reaction`, `kinetics` |
+| [21](uc21.md) | Do the reactions that a model gives in both directions obey detailed balance? | `reaction`, `kinetics`, `thermo` |
+| [22](uc22.md) | How much does the thermochemistry of the models change their reverse rates? | `reaction`, `thermo` |
+| **Experiments against experiments** | | |
+| [23](uc23.md) | Do the laboratories agree within the uncertainties that they report? | `laminar-burning-velocity` |
+| [24](uc24.md) | Do H<sub>2</sub> ignition delays depend on the signal that defines ignition? | `ignition-delay` |
+| **Models against experiments (PyTeCK)** | | |
+| [25](uc25.md) | Which experiments discriminate between five hydrogen models? | `chemked/dataset/<id>/export/`, `kineticmodel/<id>/download/cantera` |
+| [26](uc26.md) | Which reactions cause the difference between two hydrogen models? | `kineticmodel/<id>/download/cantera`, `kineticmodel` |
 
 ## Running the scripts
 
 Each script needs Python 3, `matplotlib` and `numpy`; the requests use only the Python standard
-library. Use case 10 also needs [PyTeCK](https://github.com/pr-omethe-us/PyTeCK) (0.2.6),
+library. Use cases 18 and 19 also need `scipy`. Use cases 10, 25 and 26 also need [PyTeCK](https://github.com/pr-omethe-us/PyTeCK) (0.2.6),
 [PyKED](https://github.com/pr-omethe-us/PyKED) (0.5.0) and [Cantera](https://cantera.org) 3.1 or
-newer. The scripts import two small helper files; put them in the same folder as the scripts.
+newer. The scripts import small helper files (below); put them in the same folder as the scripts.
+Each script is divided into cells by lines that start with `# %%`, so VS Code, PyCharm or Jupyter
+can run it one cell at a time.
 
 ```bash
-pip install matplotlib numpy
-pip install pyteck pyked "cantera>=3.1"     # only for use case 10
+pip install matplotlib numpy scipy
+pip install pyteck pyked "cantera>=3.1"     # only for use cases 10, 25 and 26
 python uc05_rate_one_reaction.py            # prints the result and writes uc05_rate_one_reaction.svg and .png
 ```
 
@@ -103,4 +117,12 @@ scripts again and updates the results and the plots.
 
     ```python
     --8<-- "code/chem_tools.py"
+    ```
+
+??? example "pyteck_tools.py: simulate a ChemKED dataset in PyTeCK (use cases 10, 25 and 26)"
+
+    [Download pyteck_tools.py](code/pyteck_tools.py)
+
+    ```python
+    --8<-- "code/pyteck_tools.py"
     ```

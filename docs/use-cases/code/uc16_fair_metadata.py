@@ -1,12 +1,17 @@
 """Use case 16. How many experimental datasets give each item of FAIR metadata?"""
+# %% Imports
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
 from prometheus_api import COLOURS, get_all, save, style
 
+# %% The metadata fields of every dataset (3 requests), and the licence records
 datasets = get_all("/api/experiment-dataset/", fields="id,reference_doi,file_doi,license,file_authors,"
-                   "reference_authors,apparatus,chemked_file_path,source_commit,is_valid")   # 3 requests
+                   "reference_authors,apparatus,chemked_file_path,source_commit,is_valid")
 licences = {l["id"]: l["spdx_id"] for l in get_all("/api/license/")}
-ITEMS = [  # (FAIR principle, item, test on one dataset)
+
+# %% One test for each item of metadata: (FAIR principle, item, test on one dataset)
+ITEMS = [
     ("F1", "Persistent identifier of the dataset itself", lambda d: bool(d["file_doi"])),
     ("R1.1", "Licence", lambda d: d["license"] is not None),
     ("R1.2", "DOI of the paper that published the data", lambda d: bool(d["reference_doi"])),
@@ -24,13 +29,12 @@ for p, item, c in counts:
 used = {licences.get(d["license"], d["license"]) for d in datasets if d["license"] is not None}
 print(f"  licences given: {', '.join(sorted(map(str, used))) or 'none'}")
 
+# %% Plot the share of datasets that give each item, one colour for each FAIR principle
 style()
-from matplotlib.patches import Patch
-fig, ax = plt.subplots(figsize=(7.0, 3.3))
 principles = sorted({p for p, _, _ in counts})
-colour = {p: COLOURS[i] for i, p in enumerate(principles)}
-bars = ax.barh(range(len(counts)), [100 * c / n for _, _, c in counts], color=[colour[p] for p, _, _ in counts],
-               height=0.65)
+colour = dict(zip(principles, COLOURS))
+fig, ax = plt.subplots(figsize=(7.0, 3.3))
+bars = ax.barh(range(len(counts)), [100 * c / n for _, _, c in counts], color=[colour[p] for p, _, _ in counts], height=0.65)
 ax.bar_label(bars, labels=[f"{100 * c / n:.1f} %" for _, _, c in counts], padding=3, fontsize=8)
 ax.set_yticks(range(len(counts)), [item for _, item, _ in counts])
 ax.set_ylim(len(counts) - 0.5, -0.5)
