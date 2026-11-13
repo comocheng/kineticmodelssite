@@ -1,56 +1,57 @@
 """GET requests to the Prometheus API, and the plot style of the use-case examples.
 
-Every use case imports this file. It needs the `requests` and `matplotlib` packages.
+Every use case imports this file. It uses only the Python standard library for the requests;
+the plots need `matplotlib`.
 """
 import csv
 import hashlib
+import json
 import os
 import re
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
-import requests
 
 BASE = os.environ.get("PROMETHEUS_API", "https://pr.omethe.us")
 FIGURES = Path(os.environ.get("PROMETHEUS_FIGURES", "."))
 LOG = os.environ.get("PROMETHEUS_LOG")  # optional: a CSV file that records every request
-
-SESSION = requests.Session()
-SESSION.headers["User-Agent"] = "prometheus-use-case-examples/1.0"
+USER_AGENT = "prometheus-use-case-examples/1.0"
 
 # Okabe-Ito colours (readable with colour-blind vision)
 COLOURS = ["#0072B2", "#D55E00", "#009E73", "#E69F00", "#CC79A7", "#56B4E9", "#F0E442", "#000000"]
 
 
-def _log(resp):
-    if not LOG:
-        return
-    new = not Path(LOG).exists()
-    with open(LOG, "a", newline="") as fh:
-        w = csv.writer(fh)
-        if new:
-            w.writerow(["utc_time", "url", "status", "bytes", "sha256"])
-        w.writerow([datetime.now(timezone.utc).isoformat(timespec="seconds"), resp.url, resp.status_code,
-                    len(resp.content), hashlib.sha256(resp.content).hexdigest()])
+def _request(path, params):
+    """One GET request; returns the body. A list value, such as species=[5, 9], repeats the parameter."""
+    url = path if path.startswith("http") else BASE + path
+    if params:
+        url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, doseq=True)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=300) as resp:   # raises HTTPError for a status >= 400
+        body, status = resp.read(), resp.status
+    if LOG:
+        new = not Path(LOG).exists()
+        with open(LOG, "a", newline="") as fh:
+            w = csv.writer(fh)
+            if new:
+                w.writerow(["utc_time", "url", "status", "bytes", "sha256"])
+            w.writerow([datetime.now(timezone.utc).isoformat(timespec="seconds"), url, status, len(body),
+                        hashlib.sha256(body).hexdigest()])
+    return body
 
 
 def get(path, **params):
-    """One GET request. `path` is a path such as "/api/species/" or a full URL.
-    A list value, such as species=[5, 9], repeats the parameter."""
-    resp = SESSION.get(path if path.startswith("http") else BASE + path, params=params, timeout=300)
-    _log(resp)
-    resp.raise_for_status()
-    return resp.json()
+    """One GET request to a JSON endpoint. `path` is a path such as "/api/species/" or a full URL."""
+    return json.loads(_request(path, params))
 
 
 def get_text(path, **params):
     """One GET request whose response is a file, such as a model download."""
-    resp = SESSION.get(path if path.startswith("http") else BASE + path, params=params, timeout=300)
-    _log(resp)
-    resp.raise_for_status()
-    return resp.text
+    return _request(path, params).decode("utf-8")
 
 
 def get_all(path, **params):

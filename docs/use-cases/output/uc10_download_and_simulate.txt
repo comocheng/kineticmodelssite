@@ -1,4 +1,0 @@
-model 41 GRI-mech-3.0: 59 species, 346 reactions; Cantera gave 4 warnings on loading
-  T0 = 1300 K, 10 atm, phi = 1: ignition delay 0.689 ms
-  T0 = 1200 K, 10 atm, phi = 1: ignition delay 1.851 ms
-  T0 = 1100 K, 10 atm, phi = 1: ignition delay 5.441 ms

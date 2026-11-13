@@ -59,7 +59,7 @@ model and every experiment that use it.
 | [8](uc08.md) | In one model, which reactions consume NH<sub>2</sub>, and which are the fastest? | `kinetics`, `reaction` |
 | **Kinetic models** | | |
 | [9](uc09.md) | Which models contain both NH<sub>3</sub> and H<sub>2</sub>? | `kineticmodel` |
-| [10](uc10.md) | How do I download a model and calculate an ignition delay with it? | `kineticmodel/<id>/download/cantera` |
+| [10](uc10.md) | How well does a model reproduce the ignition delays of one dataset (PyTeCK)? | `chemked/dataset/<id>/export/`, `kineticmodel/<id>/download/cantera` |
 | **Experiments** | | |
 | [11](uc11.md) | At which temperatures and pressures did the experiments measure their data? | `experiment-datapoint` |
 | [12](uc12.md) | Which shock-tube ignition delays of n-heptane does the collection hold? | `ignition-delay` |
@@ -73,13 +73,15 @@ model and every experiment that use it.
 
 ## Running the scripts
 
-Each script needs Python 3, `requests`, `matplotlib` and `numpy`. Use case 10 also needs
-[Cantera](https://cantera.org). The scripts import two small helper files; put them in the same
-folder as the scripts.
+Each script needs Python 3, `matplotlib` and `numpy`; the requests use only the Python standard
+library. Use case 10 also needs [PyTeCK](https://github.com/pr-omethe-us/PyTeCK) (0.2.6),
+[PyKED](https://github.com/pr-omethe-us/PyKED) (0.5.0) and [Cantera](https://cantera.org) 3.1 or
+newer. The scripts import two small helper files; put them in the same folder as the scripts.
 
 ```bash
-pip install requests matplotlib numpy cantera
-python uc05_rate_one_reaction.py        # prints the result and writes uc05_rate_one_reaction.png
+pip install matplotlib numpy
+pip install pyteck pyked "cantera>=3.1"     # only for use case 10
+python uc05_rate_one_reaction.py            # prints the result and writes uc05_rate_one_reaction.svg and .png
 ```
 
 The scripts send their requests to `https://pr.omethe.us`. To use another instance, set

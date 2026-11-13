@@ -1,0 +1,4 @@
+dataset 1616 (hydrogen/Cheng_1984/Cheng_1984_st.yaml, doi 10.1016/0010-2180(84)90088-9)
+model 125 CombFlame2015/3755-Konnov; species key from the species records: {'Ar': 'AR', 'H2': 'H2', 'O2': 'O2'}
+57 datapoints, 1012 to 1427 K, 1.4 to 2.9 bar
+PyTeCK error function E = 2.17; simulated / measured ignition delay: median 1.31, from 0.48 to 2.00

@@ -106,7 +106,7 @@ nav:
       - "7. Compare the pressure dependence of a rate coefficient": use-cases/uc07.md
       - "8. List the reactions of one species in one model": use-cases/uc08.md
       - "9. Find the models that contain two species": use-cases/uc09.md
-      - "10. Download a model and simulate an ignition": use-cases/uc10.md
+      - "10. Simulate a dataset with a model in PyTeCK": use-cases/uc10.md
       - "11. Map the conditions of the experiments": use-cases/uc11.md
       - "12. Collect the ignition delays of one fuel": use-cases/uc12.md
       - "13. Compare the burning velocities of several laboratories": use-cases/uc13.md
