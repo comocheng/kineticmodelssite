@@ -2191,7 +2191,7 @@ Q 291.888236 75.998442 285.127356 75.998442
 " style="fill: none; stroke: #999999; stroke-width: 0.6; stroke-linecap: round"/>
    </g>
    <g id="text_30">
-    <!-- use case 21 -->
+    <!-- use case 18 -->
     <g style="fill: #555555" transform="translate(302.648179 78.128442) scale(0.075 -0.075)">
      <use xlink:href="#TeXGyreHeros-Regular-6e"/>
      <use xlink:href="#TeXGyreHeros-Regular-63" transform="translate(55.59375 0)"/>
@@ -2202,8 +2202,8 @@ Q 291.888236 75.998442 285.127356 75.998442
      <use xlink:href="#TeXGyreHeros-Regular-63" transform="translate(294.578125 0)"/>
      <use xlink:href="#TeXGyreHeros-Regular-33" transform="translate(344.578125 0)"/>
      <use xlink:href="#TeXGyreHeros-Regular-68" transform="translate(400.171875 0)"/>
-     <use xlink:href="#TeXGyreHeros-Regular-6c" transform="translate(427.96875 0)"/>
-     <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(483.5625 0)"/>
+     <use xlink:href="#TeXGyreHeros-Regular-53" transform="translate(427.96875 0)"/>
+     <use xlink:href="#TeXGyreHeros-Regular-34" transform="translate(483.5625 0)"/>
     </g>
    </g>
    <g id="legend_1">

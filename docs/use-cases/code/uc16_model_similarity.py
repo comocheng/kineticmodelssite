@@ -1,4 +1,4 @@
-"""Use case 18. Which kinetic models share most of their rate expressions and their thermochemistry,
+"""Use case 16. Which kinetic models share most of their rate expressions and their thermochemistry,
 that is, which models were built from the same parts?"""
 # %% Imports
 import matplotlib.pyplot as plt
@@ -44,4 +44,4 @@ ax.set_yticks(range(len(order)), [models[i] for i in order], fontsize=5.5)
 ax.tick_params(length=0)
 ax.grid(False)
 ax.set_title("Shared rate records (lower left) and thermochemistry entries (upper right)")
-save(fig, "uc18_model_similarity")
+save(fig, "uc16_model_similarity")

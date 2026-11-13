@@ -44,7 +44,7 @@ model and every experiment that use it.
 ## Running the scripts
 
 Each script needs Python 3, `matplotlib` and `numpy`; the requests use only the Python standard
-library. Use cases 18 and 19 also need `scipy`. Use cases 10, 20 and 21 also need [PyTeCK](https://github.com/pr-omethe-us/PyTeCK) (0.2.6),
+library. Use case 16 also needs `scipy`. Use cases 10, 17 and 18 also need [PyTeCK](https://github.com/pr-omethe-us/PyTeCK) (0.2.6),
 [PyKED](https://github.com/pr-omethe-us/PyKED) (0.5.0) and [Cantera](https://cantera.org) 3.1 or
 newer. The scripts import small helper files (below); put them in the same folder as the scripts.
 Each script is divided into cells by lines that start with `# %%`, so VS Code, PyCharm or Jupyter
@@ -52,7 +52,7 @@ can run it one cell at a time.
 
 ```bash
 pip install matplotlib numpy scipy
-pip install pyteck pyked "cantera>=3.1"     # only for use cases 10, 20 and 21
+pip install pyteck pyked "cantera>=3.1"     # only for use cases 10, 17 and 18
 python uc05_rate_one_reaction.py            # prints the result and writes uc05_rate_one_reaction.svg and .png
 ```
 
@@ -77,7 +77,7 @@ scripts again and updates the results and the plots.
     --8<-- "code/chem_tools.py"
     ```
 
-??? example "pyteck_tools.py: simulate a ChemKED dataset in PyTeCK (use cases 10, 20 and 21)"
+??? example "pyteck_tools.py: simulate a ChemKED dataset in PyTeCK (use cases 10, 17 and 18)"
 
     [Download pyteck_tools.py](code/pyteck_tools.py)
 

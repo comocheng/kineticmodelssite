@@ -1,4 +1,4 @@
-"""Use case 20. Five small hydrogen models are simulated in PyTeCK for every shock-tube dataset of
+"""Use case 17. Five small hydrogen models are simulated in PyTeCK for every shock-tube dataset of
 H2/O2 ignition. Which experiments give the largest differences between the models, compared with
 the scatter of the data, and can thus show which model is right?"""
 # %% Imports
@@ -88,8 +88,8 @@ ax.axvline(1, color="#333333", lw=0.8, zorder=2)
 for m, colour, marker in zip(MODELS, COLOURS, "osD^v"):
     ax.scatter([r["ratio"][m] for r in strong], y, color=colour, marker=marker, s=22, edgecolors="white",
                linewidths=0.4, zorder=3, label=f"{m}: {inside[m]}")
-case21 = next(i for i, r in enumerate(strong) if r["id"] == 1733)
-ax.annotate("use case 21", (1.45, case21), xytext=(1.9, case21), va="center", fontsize=7.5, color="#555555",
+linked = next(i for i, r in enumerate(strong) if r["id"] == 1733)
+ax.annotate("use case 18", (1.45, linked), xytext=(1.9, linked), va="center", fontsize=7.5, color="#555555",
             arrowprops=dict(arrowstyle="-", color="#999999", lw=0.6))
 ax.set_xscale("log")
 ticks = [0.25, 0.5, 1, 2, 4, 8, 16]
@@ -110,4 +110,4 @@ bx.tick_params(axis="y", length=0)
 ax.legend(loc="lower left", bbox_to_anchor=(-0.02, 1.0), ncol=3, columnspacing=1.0, handletextpad=0.2,
           borderaxespad=0.3, title=f"Model: number of the {len(strong)} datasets in which it is inside the grey band",
           title_fontproperties=dict(size=8), alignment="left")
-save(fig, "uc20_discriminating_experiments")
+save(fig, "uc17_discriminating_experiments")

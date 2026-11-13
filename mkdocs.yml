@@ -112,12 +112,9 @@ nav:
       - "13. Compare the burning velocities of several laboratories": use-cases/uc13.md
       - "14. Plot the species profiles of one experiment": use-cases/uc14.md
       - "15. Join the experiments and the models of a fuel": use-cases/uc15.md
-      - "16. Count the FAIR metadata of the experiments": use-cases/uc16.md
-      - "17. Read the identifiers of one dataset": use-cases/uc17.md
-      - "18. Find the models that were built from the same parts": use-cases/uc18.md
-      - "19. Compare the enthalpies of old and new models with ATcT": use-cases/uc19.md
-      - "20. Find the experiments that discriminate between models": use-cases/uc20.md
-      - "21. Find the reactions that make two models differ": use-cases/uc21.md
+      - "16. Find the models that were built from the same parts": use-cases/uc16.md
+      - "17. Find the experiments that discriminate between models": use-cases/uc17.md
+      - "18. Find the reactions that make two models differ": use-cases/uc18.md
   - Client SDKs: clients.md
   - API reference: reference.md
   - Contributing data: contributing-data.md
