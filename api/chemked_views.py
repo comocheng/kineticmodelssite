@@ -112,6 +112,8 @@ class ExperimentDatasetSerializer(FlexFieldsModelSerializer):
     class Meta:
         model = models.ExperimentDataset
         fields = "__all__"
+        # Set by sync_chemked from the ChemKED-database clone (provenance.git_sources), not by clients.
+        read_only_fields = ["source_commit"]
 
     expandable_fields = {
         # The literature source lives in the database app.

@@ -43,6 +43,10 @@ class KineticModel(models.Model):
     version = models.CharField(max_length=80, blank=True)
     zenodo_doi = models.CharField(max_length=255, blank=True, db_index=True)
     repository_url = models.URLField(blank=True)
+    # The last RMG-models commit that changed the model's folder when its files were last read (the
+    # importers, provenance.git_sources): the values can be checked against, and recovered from,
+    # these files. Blank: read from files with uncommitted changes, or before this was recorded.
+    source_commit = models.CharField(max_length=40, blank=True)
     model_format = models.CharField(max_length=80, blank=True, default="CHEMKIN")
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
@@ -53,6 +57,31 @@ class KineticModel(models.Model):
 
     def __str__(self):
         return "{s.id} {s.model_name}".format(s=self)
+
+    def _source(self, path=""):
+        from django.conf import settings
+
+        from provenance.git_sources import github_blob, github_tree
+
+        repository = getattr(settings, "RMG_MODELS_GITHUB_REPO", "")
+        if not path:
+            return github_tree(repository, self.source_commit, self.model_name)
+        return github_blob(repository, self.source_commit, f"{self.model_name}/{path}")
+
+    @property
+    def source_folder_url(self):
+        """The model's folder in RMG-models at its source commit, or ""."""
+        return self._source()
+
+    @property
+    def kinetics_library_url(self):
+        """The kinetics library the model's rates were read from, at its source commit, or ""."""
+        return self._source("RMG-Py-kinetics-library/reactions.py")
+
+    @property
+    def thermo_library_url(self):
+        """The thermo library the model's thermo was read from, at its source commit, or ""."""
+        return self._source("RMG-Py-thermo-library/ThermoLibrary.py")
 
 
 class SpeciesName(models.Model):

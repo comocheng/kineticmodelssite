@@ -1,0 +1,10 @@
+97 models, 4656 pairs; 78 pairs share more than half of their rate records, 2057 pairs less than 1 %
+  rate records 1.00, thermochemistry 1.00: CombFlame2013/2343-Hansen and butanol/1907-Merchant
+  rate records 1.00, thermochemistry 1.00: CombFlame2013/1907-Merchant and butanol/1907-Merchant
+  rate records 1.00, thermochemistry 1.00: CombFlame2013/1907-Merchant and CombFlame2013/2343-Hansen
+  rate records 1.00, thermochemistry 1.00: CombFlame2012/2028-Sarathy and butanol/2028-Sarathy
+  rate records 0.98, thermochemistry 0.99: AramcoMech_2.0 and PCI2019/555-Sun
+  rate records 0.95, thermochemistry 0.96: AramcoMech_2.0 and PCI2017/052-Li
+  rate records 0.93, thermochemistry 0.95: PCI2017/052-Li and PCI2019/555-Sun
+  rate records 0.89, thermochemistry 0.90: AramcoMech_1.3 and PCI2017/058-Sun
+64 models share at least 30 % of their rate records with another model

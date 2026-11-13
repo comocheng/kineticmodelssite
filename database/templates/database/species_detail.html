@@ -26,6 +26,7 @@
                     <img class="app-icon" src="{% static 'database/images/icons/flask-conical-sm.svg' %}" alt="" width="18" height="18">
                     Species record
                     <span class="spd-badge">ID {{ species.pk }}</span>
+                    {% if species.electronic_state %}<span class="spd-badge spd-badge--state">Excited state{% if species.electronic_state != "excited" %}: {{ species.electronic_state }}{% endif %}</span>{% endif %}
                 </p>
                 <h1 id="spd-title" class="spd-name">
                     {% if structure.iupac_name %}{{ structure.iupac_name|capfirst }} <span class="spd-formula">{{ species.formula }}</span>{% else %}<span class="spd-name__formula">{{ species.formula }}</span>{% endif %}
@@ -68,6 +69,7 @@
                 <ul class="spd-more">
                     <li>Database ID <strong>{{ species.pk }}</strong></li>
                     {% if structures %}<li>Structures <strong>{{ structures|length }}</strong></li>{% endif %}
+                    {% if species.electronic_state %}<li>Electronic state <strong>{{ species.electronic_state }}</strong></li>{% endif %}
                     {% if species.prime_id %}<li>PrIMe ID <strong>{{ species.prime_id }}</strong></li>{% endif %}
                     {% if species.cas_number %}<li>CAS <strong>{{ species.cas_number }}</strong></li>{% endif %}
                 </ul>
@@ -78,14 +80,40 @@
             <div class="app-panel spd-card">
                 <div class="spd-card__head">
                     <h2 class="app-panel__title">Structure and identifiers</h2>
-                    <span class="app-panel__meta">{{ structures|length|pluralize:"structure" }}</span>
+                    <span class="app-panel__meta">{% if all_resonance %}{{ structures|length|pluralize:"resonance structure" }}{% else %}{{ structures|length|pluralize:"structure" }}{% endif %}</span>
                 </div>
+                {% if species.electronic_state %}
+                <p class="spd-resonance-note">
+                    This species is an electronically excited state{% if species.electronic_state != "excited" %} ({{ species.electronic_state }}){% endif %}.
+                    InChI and SMILES cannot write an electronic excitation, so it has the structure of the ground state{% if ground_states %},
+                    {% for ground in ground_states %}<a href="{% url 'species-detail' ground.pk %}">species {{ ground.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.
+                    It is a separate species, with its own thermochemistry and reactions.
+                </p>
+                {% elif excited_states %}
+                <p class="spd-resonance-note">
+                    Electronically excited states of this molecule are separate species, with their own thermochemistry and reactions:
+                    {% for excited in excited_states %}<a href="{% url 'species-detail' excited.pk %}">species {{ excited.pk }}</a>{% if excited.electronic_state != "excited" %} ({{ excited.electronic_state }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}.
+                </p>
+                {% endif %}
+                {% if not_one_molecule %}
+                <p class="spd-resonance-note spd-resonance-note--warn">
+                    These structures are not all resonance structures of one molecule, but a species is one molecule.
+                    The identification of this species needs to be checked.
+                </p>
+                {% elif some_resonance %}
+                <p class="spd-resonance-note">
+                    These are resonance structures of one molecule: the same molecule drawn with its electrons in other places.
+                    {% if resonance_keys_differ %}Their InChIKeys differ because InChI tells some resonance structures apart (a radical drawn on a carbon or on an oxygen); RMG finds each one among the resonance structures of the other.{% else %}They have one InChIKey and multiplicity.{% endif %}
+                    The thermochemistry, names and reactions on this page belong to the molecule, not to one drawing.
+                </p>
+                {% endif %}
                 {% for structure in structures %}
                 <div class="spd-structure">
                     <div class="spd-structure__preview">
                         <img src="{% url 'draw-structure' structure.pk %}" alt="{{ species.formula }}">
                     </div>
                     <dl class="spd-ids">
+                        <div><dt>Structure ID</dt><dd><a class="spd-structure-id" href="{% url 'species-search' %}?q=structure:{{ structure.pk }}">{{ structure.pk }}</a>{% if structure.resonance_count > 1 %} <span class="spd-resonance-tag">one of {{ structure.resonance_count }} resonance structures</span>{% endif %}</dd></div>
                         {% if structure.iupac_name %}
                         <div><dt>IUPAC name</dt><dd>{{ structure.iupac_name }}</dd></div>
                         {% endif %}
@@ -488,6 +516,35 @@
 .spd-structure + .spd-structure {
     padding-top: 20px;
     border-top: 1px solid var(--color-gray-200);
+}
+
+/* Resonance structures: one molecule drawn more than one way. */
+.spd-resonance-note {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--color-gray-50, #f8fafc);
+    font-size: 13px;
+    color: var(--color-gray-600);
+}
+
+.spd-resonance-note--warn {
+    background: var(--color-warning-bg, #fff7e6);
+    color: var(--color-gray-900);
+}
+
+.spd-badge--state {
+    margin-left: 6px;
+}
+
+.spd-structure-id {
+    font-family: var(--font-mono);
+}
+
+.spd-resonance-tag {
+    margin-left: 6px;
+    font-size: 12px;
+    color: var(--color-gray-600);
 }
 
 .spd-structure__preview {

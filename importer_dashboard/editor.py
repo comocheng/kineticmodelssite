@@ -219,11 +219,15 @@ def check_smiles_text(draft, text, previous=''):
 def save(draft, changes, message, user):
     """
     Write `changes` ({file name: bytes}) in the draft's model folder and commit them with
-    `message`. Returns the commit, or None if the files did not change.
+    `message`: its first line is the subject (after the model folder), the rest the body.
+    Returns the commit, or None if the files did not change.
     """
-    message = (message or '').strip()
+    message = (message or '').replace('\r\n', '\n').replace('\r', '\n').strip()
     if not message:
         raise EditError('Say what you changed: the message goes into the commit.')
+    # The first line is the subject; the lines after it, the body (a git message, as typed).
+    subject, _, body = message.partition('\n')
+    subject, body = subject.strip(), body.strip('\n')
     paths = []
     with drafts.draft_lock(draft):
         for name, data in changes.items():
@@ -240,7 +244,8 @@ def save(draft, changes, message, user):
                 'commit',
                 '--quiet',
                 '-m',
-                f'{draft.model_folder}: {message}',
+                f'{draft.model_folder}: {subject}',
+                *(['-m', body] if body.strip() else []),
                 '-m',
                 'Edited on Prometheus.',
             ],

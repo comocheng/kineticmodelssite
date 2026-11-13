@@ -40,6 +40,7 @@ from .models import (
 from .filters import SpeciesFilter, ReactionFilter, SourceFilter
 from .forms import RegistrationForm, SourceForm, AuthorshipFormSet, KineticModelForm, AuthorForm
 from database.templatetags import renders
+from provenance.record_keys import earlier_keys
 from database.services import exports
 from provenance import resolver
 
@@ -214,13 +215,26 @@ class SpeciesFilterView(FilterView):
     )
 
     def get_context_data(self, **kwargs):
+        from database.services.species_search import id_kind_hint, matched_structures
+
         context = super().get_context_data(**kwargs)
+        query = (self.request.GET.get("q") or "").strip()
+        # A search by SMILES, InChI or structure id shows the structure it matched: one species can
+        # have several resonance structures, and the first one drawn may not be the one searched for.
+        matched = matched_structures(query) if query else None
         # Build result summaries from page-sized prefetches, avoiding per-row queries.
         for species in context["object_list"]:
             isomers = list(species.isomers.all())
             structures = [s for isomer in isomers for s in isomer.structure_set.all()]
             species.search_formula = isomers[0].formula.formula if isomers else ""
             species.search_structure = structures[0] if structures else None
+            species.search_matched = (matched or {}).get(species.pk, [])
+            if species.search_matched:
+                from database.services.chemical_identity import resonance_groups
+
+                species.search_structure = species.search_matched[0]
+                group = next((g for g in resonance_groups(structures) if species.search_structure in g), [])
+                species.search_resonance = len(group)
             species.search_pubchem_cids = sorted({s.pubchem_cid for s in structures if s.pubchem_cid})
             iupac_names = sorted({s.iupac_name for s in structures if s.iupac_name})
             model_names = sorted({n.name for n in species.speciesname_set.all() if n.name})
@@ -232,6 +246,8 @@ class SpeciesFilterView(FilterView):
                     species.search_enthalpy = f"{thermo.enthalpy298:,.0f}"
                 except (ValueError, TypeError):
                     pass
+        if not context["object_list"] and query:
+            context["id_hint"] = id_kind_hint(query)
         context["legacy_filters"] = any(self.request.GET.get(key) for key in (
             "prime_id", "cas_number", "speciesname__name", "isomers", "isomers__structures"
         ))
@@ -316,6 +332,29 @@ class SpeciesDetail(DetailView):
                 pass
         context["transport_list"] = Transport.objects.filter(species=species)
         context["structures"] = structures
+        # Structures with one InChIKey and multiplicity are resonance structures of one molecule:
+        # the thermo, names and reactions belong to the molecule, not to one drawing.
+        from database.services.chemical_identity import resonance_groups
+
+        groups = resonance_groups(list(structures))
+        for group in groups:
+            for structure in group:
+                structure.resonance_count = len(group)
+        context["all_resonance"] = len(groups) == 1 and len(groups[0]) > 1
+        context["some_resonance"] = any(len(group) > 1 for group in groups)
+        # Resonance structures that InChI tells apart, so that their InChIKeys differ.
+        context["resonance_keys_differ"] = any(len({s.structure_key for s in group}) > 1 for group in groups)
+        # A species is one molecule: structures in more than one group need their identification checked.
+        context["not_one_molecule"] = len(groups) > 1 and not species.electronic_state
+        # An electronic excitation cannot be written in InChI or SMILES: an excited state has the
+        # structures of its ground state and is a separate species; each page links the other.
+        keys = {s.structure_key for s in structures if s.structure_key}
+        same_molecule = (Species.objects.filter(isomers__structure__structure_key__in=keys).exclude(pk=species.pk)
+                         .distinct().order_by("pk")) if keys else Species.objects.none()
+        if species.electronic_state:
+            context["ground_states"] = list(same_molecule.filter(electronic_state=""))
+        else:
+            context["excited_states"] = list(same_molecule.exclude(electronic_state=""))
 
         paginator = Paginator(reactions, self.paginate_per_page)
         page = self.request.GET.get("page", 1)
@@ -350,6 +389,7 @@ class ThermoDetail(DetailView):
         thermo_comments = thermo.thermocomment_set.all()
         context["thermo_comments"] = thermo_comments
         context["thermo_plot"] = curves.single_thermo_plot(thermo, f"Thermo {thermo.pk}")
+        context["earlier_keys"] = earlier_keys("thermo", thermo.pk, self.request)
         return context
 
 
@@ -547,6 +587,8 @@ class KineticsDetail(DetailView):
         context["table_data"] = kinetics.data.table_data() if hasattr(kinetics.data, "table_data") else []
         context["kinetics_comments"] = kinetics.kineticscomment_set.order_by("kinetic_model__id")
         context["rate_plot"] = curves.single_rate_plot(kinetics, f"Kinetics {kinetics.pk}")
+        # The canonical URLs of this record's values before they were corrected.
+        context["earlier_keys"] = earlier_keys("kinetics", kinetics.pk, self.request)
 
         return context
 

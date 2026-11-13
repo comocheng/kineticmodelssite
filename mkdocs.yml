@@ -64,6 +64,10 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
+  # The use-case pages include their scripts and results from docs/use-cases/
+  - pymdownx.snippets:
+      base_path: [docs/use-cases]
+      check_paths: true
 
 plugins:
   - search
@@ -91,6 +95,26 @@ nav:
       - MATLAB: examples/matlab.md
       - JavaScript: examples/javascript.md
       - Java: examples/java.md
+  - Use cases:
+      - Overview: use-cases/index.md
+      - "1. Find a species by its structure": use-cases/uc01.md
+      - "2. Compare the enthalpy of formation with ATcT": use-cases/uc02.md
+      - "3. Compare the heat capacity of one species": use-cases/uc03.md
+      - "4. Find the species that models disagree on": use-cases/uc04.md
+      - "5. Compare one rate coefficient in all models": use-cases/uc05.md
+      - "6. Find the rate expressions that models share": use-cases/uc06.md
+      - "7. Compare the pressure dependence of a rate coefficient": use-cases/uc07.md
+      - "8. List the reactions of one species in one model": use-cases/uc08.md
+      - "9. Find the models that contain two species": use-cases/uc09.md
+      - "10. Simulate a dataset with a model in PyTeCK": use-cases/uc10.md
+      - "11. Map the conditions of the experiments": use-cases/uc11.md
+      - "12. Collect the ignition delays of one fuel": use-cases/uc12.md
+      - "13. Compare the burning velocities of several laboratories": use-cases/uc13.md
+      - "14. Plot the species profiles of one experiment": use-cases/uc14.md
+      - "15. Join the experiments and the models of a fuel": use-cases/uc15.md
+      - "16. Find the models that were built from the same parts": use-cases/uc16.md
+      - "17. Find the experiments that discriminate between models": use-cases/uc17.md
+      - "18. Find the reactions that make two models differ": use-cases/uc18.md
   - Client SDKs: clients.md
   - API reference: reference.md
   - Contributing data: contributing-data.md

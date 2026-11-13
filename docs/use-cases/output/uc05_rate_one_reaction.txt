@@ -1,0 +1,2 @@
+reaction record 10177: 90 models use 25 different rate records
+median at 1000 K: 4.751e+10 cm3/(mol s); largest factor between a model and the median, 800 to 2500 K: 1.70

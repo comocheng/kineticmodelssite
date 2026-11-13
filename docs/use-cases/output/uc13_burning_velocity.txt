@@ -1,0 +1,2 @@
+577 burning velocities with CH4 at about 1 atm and 298 K; 184 are methane-air, from 14 papers
+  at phi = 0.98 to 1.02: 24 values from 31.2 to 40.5 cm/s

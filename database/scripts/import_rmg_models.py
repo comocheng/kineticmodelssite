@@ -206,6 +206,21 @@ def has_field(model, name):
     return any(field.name == name for field in model._meta.get_fields())
 
 
+def record_source_commits(pairs, models, checkout=None):
+    """Keeps on each kinetic model of pairs ((model, model folder), ...) the RMG-models commit its
+    files were read from: the last commit that changed the folder, or "" for a folder with
+    uncommitted changes (provenance.git_sources). Every command that reads a model's files calls it."""
+    if not has_field(models.KineticModel, "source_commit"):
+        return
+    from provenance.git_sources import Checkout
+
+    for kinetic_model, folder in pairs:
+        commit = (checkout or Checkout(folder)).commit(folder)
+        if commit != kinetic_model.source_commit:
+            kinetic_model.source_commit = commit
+            models.KineticModel.objects.filter(pk=kinetic_model.pk).update(source_commit=commit)
+
+
 def has_structure_keys(models):
     return has_field(models.Structure, "structure_key")
 
@@ -939,6 +954,7 @@ def import_kinetics(kinetics_path, kinetic_model, models, only_types=None, state
     if merged.moved:
         counts["moved_terms"] = merged.moved
     model_dir = os.path.dirname(os.path.dirname(os.path.abspath(kinetics_path)))
+    record_source_commits([(kinetic_model, model_dir)], models)
     # The authors' digits, which the library rounded to 6 significant digits. Before the reverse
     # rates, which are paired with the forward rate as the line writes it.
     if author_digits.can_restore(models):
@@ -1081,6 +1097,8 @@ def import_thermo(thermo_path, kinetic_model, models, states=None):
         except Exception:
             counts["failed"] += 1
             logger.exception(f"Failed to import thermo entry {species_name}")
+    record_source_commits([(kinetic_model, os.path.dirname(os.path.dirname(os.path.abspath(thermo_path))))],
+                          models)
     return counts
 
 

@@ -20,6 +20,7 @@ from django.core.management.base import BaseCommand
 
 from database import models as db
 from database.scripts import author_digits
+from database.scripts.import_rmg_models import record_source_commits
 from database.services.cleanup import MODELS
 
 
@@ -38,6 +39,8 @@ class Command(BaseCommand):
                   for model in db.KineticModel.objects.order_by("model_name")
                   if not wanted or model.model_name in wanted]
         report = author_digits.restore(models, MODELS, apply=options["apply"])
+        if options["apply"]:
+            record_source_commits(models, MODELS)
         for row in report["models"]:
             if row["numbers"] or row["other"]:
                 numbers = ", ".join(f"{k} {v}" for k, v in sorted(row["numbers"].items()))

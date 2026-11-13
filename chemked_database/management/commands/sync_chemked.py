@@ -37,6 +37,7 @@ from chemked_database.models import (
 )
 from chemked_database.species_links import SpeciesLinker
 from chemked_database.units import UnitConversionError, quantity_to_si
+from provenance.git_sources import Checkout
 from chemked_database.utils.chemistry import infer_smiles_and_atomic_composition
 from provenance.data_licence import apply_data_licence
 
@@ -391,6 +392,7 @@ def move_renamed_datasets(base, since: str, report: Callable[[str], None]):
     re-ingests the files moved with changed content.
     """
     moves = []
+    checkout = Checkout(base)
     for similarity, old, new in renamed_files(base, since):
         dataset = ExperimentDataset.objects.filter(chemked_file_path=old).first()
         at_new = ExperimentDataset.objects.filter(chemked_file_path=new).first()
@@ -407,7 +409,9 @@ def move_renamed_datasets(base, since: str, report: Callable[[str], None]):
                 at_new.delete()
             dataset.chemked_file_path = new
             dataset.data_repository_url = moved_url(dataset.data_repository_url, old, new)
-            dataset.save(update_fields=["chemked_file_path", "data_repository_url", "updated_at"])
+            # The commit of the file at its new path: the old commit does not have that path.
+            dataset.source_commit = checkout.commit(Path(base) / new)
+            dataset.save(update_fields=["chemked_file_path", "data_repository_url", "source_commit", "updated_at"])
             outcome = MOVED if similarity == 100 else MOVED_CHANGED
         kept = dataset or at_new
         moves.append((old, new, similarity, outcome, kept.pk if kept else None))
@@ -625,11 +629,13 @@ def store_speciation_datapoint(
     return measurement
 
 
-def store_chemked_data(data: Dict[str, Any], rel_path: str, report: Callable[[str], None]):
+def store_chemked_data(data: Dict[str, Any], rel_path: str, report: Callable[[str], None],
+                       source_commit: str = ""):
     """Store a ChemKED file's contents as the dataset at *rel_path*, replacing its datapoints.
 
     Problems that leave part of the file out are given to *report*; a file that cannot be
-    stored raises ValueError and changes nothing.
+    stored raises ValueError and changes nothing. *source_commit* is the ChemKED-database commit
+    the file was read from ("" for a file that is not in a commit, such as a web upload).
     """
     try:
         experiment_type = experiment_type_of(data)
@@ -657,6 +663,7 @@ def store_chemked_data(data: Dict[str, Any], rel_path: str, report: Callable[[st
         # appending a second copy.
         if not created:
             clear_dataset(dataset)
+        dataset.source_commit = source_commit
 
         apparatus_data = data.get("apparatus") or {}
         if apparatus_data:
@@ -1010,6 +1017,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Renamed {old} -> {new} (R{similarity:03d}): {outcome}{dataset}")
         # The datasets of these files hold their content already
         stored = {new for _, new, similarity, outcome, _ in moves if similarity == 100 and outcome in (MOVED, ALREADY_MOVED)}
+        # The commit each file is read from (provenance.git_sources), one git log for the run.
+        checkout = Checkout(base_path)
         changed = [new for _, new, _, outcome, _ in moves if outcome == MOVED_CHANGED]
 
         failed = 0
@@ -1037,7 +1046,7 @@ class Command(BaseCommand):
             if options["dry_run"]:
                 continue
             try:
-                self._import_file(yaml_path, base_path)
+                self._import_file(yaml_path, base_path, checkout)
             except Exception as exc:
                 self.stderr.write(f"Failed to import {yaml_path}: {exc}")
                 failed += 1
@@ -1049,8 +1058,9 @@ class Command(BaseCommand):
         if failed:
             raise CommandError(f"{failed} file(s) were not imported")
 
-    def _import_file(self, yaml_path: Path, base_path: str):
+    def _import_file(self, yaml_path: Path, base_path: str, checkout=None):
         with open(yaml_path, "r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle)
 
-        store_chemked_data(data, str(yaml_path.relative_to(base_path)), self.stderr.write)
+        commit = (checkout or Checkout(base_path)).commit(yaml_path)
+        store_chemked_data(data, str(yaml_path.relative_to(base_path)), self.stderr.write, commit)

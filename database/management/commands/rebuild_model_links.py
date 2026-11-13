@@ -12,6 +12,7 @@ Usage:
     python manage.py rebuild_model_links --apply --model GRI-mech-3.0
 """
 import json
+import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -20,6 +21,8 @@ from django.db import transaction
 from database.management.commands.import_rmg_models import get_models
 from database.models import KineticModel
 from database.services.cleanup import rebuild_model_links
+from database.services.cleanup import MODELS
+from database.scripts.import_rmg_models import record_source_commits
 
 
 class Command(BaseCommand):
@@ -42,6 +45,7 @@ class Command(BaseCommand):
             found.add(name)
             with transaction.atomic():
                 result = rebuild_model_links(models[name], thermo_path, kinetics_path)
+                record_source_commits([(models[name], os.path.join(options["path"], name))], MODELS)
                 if not options["apply"]:
                     transaction.set_rollback(True)
             self.stdout.write(

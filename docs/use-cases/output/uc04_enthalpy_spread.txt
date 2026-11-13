@@ -1,0 +1,13 @@
+671 species are in ten or more models; spread larger than 1 kcal/mol: 485; larger than 40 kJ/mol: 87
+  SC3H5CO      species record  16994:  60 models,     11.3 to    566.2 kJ/mol
+  C4H8-2       species record  16253:  52 models,   -541.7 to      0.2 kJ/mol
+  C3H5-A       species record  13848:  74 models,   -282.0 to    176.1 kJ/mol
+  C4H71-3      species record  17080:  61 models,   -282.0 to    141.9 kJ/mol
+  C5H92-4      species record  17302:  18 models,   -282.0 to    116.7 kJ/mol
+  C3H6CHO-2    species record  16983:  40 models,    -15.9 to    247.3 kJ/mol
+  C2H5CO       species record  16947:  58 models,   -282.0 to    -25.4 kJ/mol
+  C6H5CHOH     species record  19000:  13 models,     38.5 to    264.0 kJ/mol
+  H            species record      6: 101 models,      8.3 to    218.2 kJ/mol
+  C3H2         species record  16949:  45 models,    445.7 to    651.0 kJ/mol
+  C10H10       species record  17224:  12 models,    125.0 to    320.6 kJ/mol
+  C6H2         species record  13912:  36 models,    525.1 to    709.9 kJ/mol

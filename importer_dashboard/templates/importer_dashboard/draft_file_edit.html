@@ -59,8 +59,8 @@ fields and actions are those of the kinetic model form (170:7072).
             {% else %}
             <div class="km-form__field">
                 <label for="im-edit-message">What you changed <span class="km-form__star">*</span></label>
-                <input class="form-control" type="text" name="message" id="im-edit-message" value="{{ message }}" required placeholder="e.g. CH2(S) is singlet methylene, as the authors' thermo comment says">
-                <div class="km-form__hint"><span>The commit message, on the draft's branch with your name.</span></div>
+                <textarea class="form-control" name="message" id="im-edit-message" rows="4" required placeholder="e.g. CH2(S) is singlet methylene, as the authors' thermo comment says">{{ message }}</textarea>
+                <div class="km-form__hint"><span>The commit message, on the draft's branch with your name. The first line is the subject. Leave a blank line, then explain the change, as in a git commit.</span></div>
             </div>
             <div class="km-form__actions">
                 <p>{% if preview is not None and preview and not errors %}Commit the change shown above, or edit it and preview again.{% else %}Preview the change before you commit it.{% endif %}</p>

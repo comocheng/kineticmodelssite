@@ -1,0 +1,2 @@
+allyl: species record 13848, 24 thermochemistry entries of the models; reference record 144 (group_additivity): enthalpy of formation 170.5 kJ/mol
+  entry 8427: Cp(300 K) = 136.9 J/(mol K) (median of the entries 63.7), enthalpy of formation -282.0 kJ/mol, used by PCI2017/047-Rodriguez (RC3H5Y)

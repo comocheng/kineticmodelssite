@@ -259,3 +259,216 @@ def id_base(request=None):
 
 def canonical_url(kind, key, request=None):
     return f"{id_base(request)}/{kind}/{quote(key, safe=URL_SAFE)}"
+
+
+def spellings(kind, key):
+    """The stored keys of which ``key`` is another spelling, so that a hand-typed or copied
+    canonical URL still resolves: other letter case (DOIs and InChIKeys are case-insensitive,
+    and publishers print DOIs in capitals), a "/" at the end, a DOI, ORCID iD or ROR ID written
+    as a URL. For a reaction key without "/f" or "/r", the stored key without the direction."""
+    from django.db.models import Q
+
+    from provenance.models import RecordKey
+
+    text = key.strip().rstrip("/")
+    if kind == "source":
+        text = normal_doi(text) or text
+    elif kind in ("person", "institution"):
+        text = text.rsplit("/", 1)[-1]
+    if not text:
+        return []
+    rows = RecordKey.objects.filter(kind=kind)
+    found = set(rows.filter(key__iexact=text).values_list("key", flat=True))
+    if not found and kind == "reaction" and not text.lower().endswith(("/f", "/r")):
+        found = {stored[:-2] for stored in rows.filter(Q(key__iexact=f"{text}/f") | Q(key__iexact=f"{text}/r"))
+                 .values_list("key", flat=True)}
+    found.discard(key)
+    return sorted(found)
+
+
+# --- what a key made from values stood for ------------------------------------------------------
+#
+# The key of a rate or a thermo entry is made from its values, so a corrected value gives a new
+# key. The RecordKey row of each such key keeps a snapshot of the values and of the models that
+# gave them, with each model's RMG-models commit (KineticModel.source_commit): kept up to date while
+# the key is current, kept as it was when the key moves or the record is removed. The old canonical
+# URL then shows what it stood for, and the commit gives the files the values were read from.
+
+RANGE_FIELDS = ("min_temp", "max_temp", "min_pressure", "max_pressure")
+THERMO_FIELDS = ("coeffs_poly1", "coeffs_poly2", "temp_min_1", "temp_max_1", "temp_min_2", "temp_max_2",
+                 "reference_temp", "reference_pressure")
+
+
+def _models_of(link_model, record_field):
+    """record id -> [{"model", "commit"}] of the kinetic models linked to it, by model name."""
+    models = defaultdict(dict)
+    rows = link_model.objects.values_list(record_field, "kinetic_model__model_name",
+                                          "kinetic_model__source_commit")
+    for record_id, name, commit in rows.iterator(chunk_size=5000):
+        models[record_id][name] = commit or ""
+    return {record_id: [{"model": name, "commit": named[name]} for name in sorted(named)]
+            for record_id, named in models.items()}
+
+
+def kinetics_snapshots():
+    from database.models import Efficiency, Kinetics, KineticsComment
+
+    species, _ = _species_keys()
+    efficiencies = defaultdict(list)
+    for kinetics_id, species_id, value in Efficiency.objects.values_list("kinetics_id", "species_id", "efficiency").iterator():
+        efficiencies[kinetics_id].append([species.get(species_id, ""), value])
+    models = _models_of(KineticsComment, "kinetics_id")
+    fields = ("id", "raw_data", "reverse", "specific_collider_id", *RANGE_FIELDS)
+    for kid, data, reverse, collider_id, *ranges in Kinetics.objects.values_list(*fields).iterator(chunk_size=2000):
+        values = {"data": data, "reverse": reverse,
+                  "collider": species.get(collider_id, "") if collider_id else "",
+                  "efficiencies": sorted(efficiencies.get(kid, [])),
+                  "range": {name: value for name, value in zip(RANGE_FIELDS, ranges) if value is not None}}
+        yield kid, {"values": values, "models": models.get(kid, [])}
+
+
+def thermo_snapshots():
+    from database.models import Thermo, ThermoComment
+
+    models = _models_of(ThermoComment, "thermo_id")
+    for tid, *content in Thermo.objects.values_list("id", *THERMO_FIELDS).iterator(chunk_size=2000):
+        yield tid, {"values": dict(zip(THERMO_FIELDS, content)), "models": models.get(tid, [])}
+
+
+SNAPSHOTS = {"kinetics": kinetics_snapshots, "thermo": thermo_snapshots}
+
+
+def snapshots(kind):
+    """record id -> snapshot ({"values", "models"}) of every record of kind, or {} for a kind whose
+    keys are not made from values."""
+    return dict(SNAPSHOTS[kind]()) if kind in SNAPSHOTS else {}
+
+
+def comparable(value):
+    """value with every number a float: PostgreSQL gives 1.233e66 back from JSON as an integer, and
+    the same number must compare equal."""
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, dict):
+        return {k: comparable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [comparable(v) for v in value]
+    return value
+
+
+def same_snapshot(a, b):
+    return comparable(a) == comparable(b)
+
+
+def same_values(a, b):
+    """True when two snapshots hold the same values (the models may differ)."""
+    return bool(a) and bool(b) and comparable(a.get("values")) == comparable(b.get("values"))
+
+
+def readable(value):
+    """value for display: integers that PostgreSQL made of large floats written as floats again."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and abs(value) >= 10 ** 16:
+        return float(value)
+    if isinstance(value, dict):
+        return {k: readable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [readable(v) for v in value]
+    return value
+
+
+def model_files(kind, models):
+    """[{"model", "commit", "url"}]: where the values of each model's record were read, at the
+    model's source commit: its folder in RMG-models (the kinetics or thermo library in it)."""
+    library = {"kinetics": "RMG-Py-kinetics-library/reactions.py",
+               "thermo": "RMG-Py-thermo-library/ThermoLibrary.py"}.get(kind)
+    from provenance.git_sources import github_blob
+
+    repository = getattr(settings, "RMG_MODELS_GITHUB_REPO", "")
+    rows = []
+    for row in models or []:
+        url = github_blob(repository, row.get("commit"), f"{row['model']}/{library}") if library else ""
+        rows.append({**row, "url": url})
+    return rows
+
+
+def number_text(value):
+    """A number as stored, with every digit: 1.04e+14 rather than 104000000000000.0, 1500 rather
+    than 1500.0. Large integers that PostgreSQL made of floats are written the same way."""
+    from decimal import Decimal
+
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    exact = Decimal(repr(value)) if isinstance(value, float) else Decimal(value)
+    if exact == 0:
+        return "0"
+    if abs(exact) >= 100000 or abs(exact) < Decimal("0.001"):
+        return f"{exact.normalize():e}".replace("E", "e")
+    text = format(exact.normalize(), "f")
+    return text
+
+
+def value_rows(values):
+    """[(name, text)] of a snapshot's values for a table: a rate's parameters first, nested names
+    joined by " › ", the SI copies the importer adds (*_si) and empty fields left out, numbers by
+    number_text."""
+    rows = []
+
+    def walk(prefix, value):
+        if value is None or value == "" or value == {} or value == []:
+            return
+        if isinstance(value, dict):
+            for name in sorted(value):
+                if name.endswith("_si"):
+                    continue
+                walk(f"{prefix} › {name}" if prefix else name, value[name])
+        elif isinstance(value, list) and prefix.startswith("coeffs_poly"):
+            # One row per NASA coefficient, a0 to a6, as the thermo page names them.
+            rows.extend((f"{prefix} › a{index}", str(number_text(v))) for index, v in enumerate(value))
+        elif isinstance(value, list) and value and all(not isinstance(v, (dict, list)) for v in value):
+            rows.append((prefix, ", ".join(str(number_text(v)) for v in value)))
+        elif isinstance(value, list):
+            for index, item in enumerate(value, 1):
+                if isinstance(item, list) and len(item) == 2 and isinstance(item[0], str):
+                    rows.append((f"{prefix} › {item[0]}", str(number_text(item[1]))))   # efficiency
+                else:
+                    walk(f"{prefix} › {index}", item)
+        elif isinstance(value, bool):
+            rows.append((prefix, "yes" if value else "no"))
+        else:
+            rows.append((prefix, str(number_text(value))))
+
+    values = dict(values or {})
+    # A rate's parameters are the rows themselves, without a "data" prefix.
+    data = values.pop("data", None)
+    walk("", data if isinstance(data, dict) else {})
+    walk("", values)
+    return rows
+
+
+def compared_rows(old, new):
+    """[{"name", "old", "new", "changed"}] of two snapshots' values, in the order of the old ones."""
+    before, after = dict(value_rows(old)), dict(value_rows(new))
+    names = list(before) + [name for name in after if name not in before]
+    return [{"name": name, "old": before.get(name, "—"), "new": after.get(name, "—"),
+             "changed": before.get(name) != after.get(name)} for name in names]
+
+
+def short_key(kind, key):
+    """kinetics …/81a8e1c045a2: the end of a long key, for a link text."""
+    end = key.rsplit("/", 1)[-1]
+    return f"{kind} …/{end}" if end != key else f"{kind} {key}"
+
+
+def earlier_keys(kind, object_id, request=None):
+    """[{"date", "url", "text"}] of the keys this record had before its values were corrected,
+    newest first, each the canonical URL that still shows those values."""
+    from provenance.models import RecordKey
+
+    rows = (RecordKey.objects.filter(kind=kind, object_id=object_id, status=RecordKey.Status.MOVED)
+            .exclude(snapshot=None).order_by("-changed_at"))
+    return [{"date": row.changed_at, "url": canonical_url(kind, row.key, request), "text": short_key(kind, row.key)}
+            for row in rows]

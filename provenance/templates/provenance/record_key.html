@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{# A canonical URL that several records share (HTTP 300), or the tombstone of a removed record (HTTP 410). No Figma frame: the detail look of the database pages (database/catalog_styles.html), as provenance/node.html. #}
+{# A canonical URL that several records share (HTTP 300), the values of a key that were corrected (200), or the tombstone of a removed record (HTTP 410). No Figma frame: the detail look of the database pages (database/catalog_styles.html), as provenance/node.html. #}
 
-{% block title %}{% if mode == "retired" %}Removed record{% else %}Records with this key{% endif %} — Prometheus{% endblock %}
+{% block title %}{% if mode == "retired" %}Removed record{% elif mode == "corrected" %}Corrected values{% else %}Records with this key{% endif %} — Prometheus{% endblock %}
 
 {% block content %}
 <div class="cat-page prov-page">
@@ -17,6 +17,8 @@
             <p class="cat-eyebrow">{{ kind }}</p>
             {% if mode == "retired" %}
             <h1>{{ row.label|default:"Removed record" }}</h1>
+            {% elif mode == "corrected" %}
+            <h1>{{ row.label|default:"Corrected values" }}</h1>
             {% else %}
             <h1>{{ records|length }} records have this key</h1>
             {% endif %}
@@ -29,14 +31,104 @@
         <div class="app-panel__head">
             <h2 class="app-panel__title" id="rk-tombstone-title">This record is no longer in the database</h2>
         </div>
-        <dl class="rk-facts">
-            <dt>Kind</dt><dd>{{ kind }}</dd>
-            <dt>Record</dt><dd>{{ row.label|default:"—" }}</dd>
-            <dt>Reason</dt><dd>{{ row.reason|default:"—" }}</dd>
-            <dt>Removed</dt><dd>{% if row.changed_at %}{{ row.changed_at|date:"j F Y" }}{% else %}—{% endif %}</dd>
-        </dl>
+        <div class="cat-panel__body">
+            <dl class="rk-facts">
+                <dt>Kind</dt><dd>{{ kind }}</dd>
+                <dt>Record</dt><dd>{{ row.label|default:"—" }}</dd>
+                <dt>Reason</dt><dd>{{ row.reason|default:"—" }}</dd>
+                <dt>Removed</dt><dd>{% if row.changed_at %}{{ row.changed_at|date:"j F Y" }}{% else %}—{% endif %}</dd>
+            </dl>
+        </div>
     </section>
-    {% else %}
+    {% if now %}
+    <section class="app-panel" aria-labelledby="rk-now-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-now-title">What these models give now</h2>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table rk-table">
+                <thead><tr><th scope="col">Model</th><th scope="col">Record</th></tr></thead>
+                <tbody>
+                    {% for r in now %}
+                    <tr>
+                        <td>{{ r.model }}</td>
+                        <td><a class="app-link rk-key" href="{{ r.canonical_url }}">{{ r.text }}</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+    {% elif mode == "corrected" %}
+    <section class="app-panel" aria-labelledby="rk-corrected-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-corrected-title">These values were corrected</h2>
+        </div>
+        <div class="cat-panel__body">
+            <p class="rk-note">This address names the values below. The record now has other values, at its own address.</p>
+            <dl class="rk-facts">
+                <dt>Kind</dt><dd>{{ kind }}</dd>
+                <dt>Record</dt><dd>{{ row.label|default:"—" }}</dd>
+                <dt>Corrected</dt><dd>{% if row.changed_at %}{{ row.changed_at|date:"j F Y" }}{% else %}—{% endif %}</dd>
+                <dt>Current record</dt><dd><a class="app-link rk-key" href="{{ current_url }}">{{ current_text }}</a></dd>
+            </dl>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if value_rows %}
+    <section class="app-panel" aria-labelledby="rk-values-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-values-title">Values of this key</h2>
+            <a class="app-link rk-json" href="?format=json">JSON</a>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table rk-table">
+                {% if compared %}
+                <thead><tr><th scope="col">Parameter</th><th scope="col">This key</th><th scope="col">Current record</th></tr></thead>
+                <tbody>
+                    {% for r in compared %}
+                    <tr{% if r.changed %} class="rk-changed"{% endif %}>
+                        <td class="rk-param">{{ r.name }}</td><td class="rk-num">{{ r.old }}</td><td class="rk-num">{{ r.new }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% else %}
+                <thead><tr><th scope="col">Parameter</th><th scope="col">Value</th></tr></thead>
+                <tbody>
+                    {% for name, text in value_rows %}
+                    <tr><td class="rk-param">{{ name }}</td><td class="rk-num">{{ text }}</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% endif %}
+            </table>
+        </div>
+        {% if compared %}<p class="rk-legend">Highlighted rows are the values that were corrected.</p>{% endif %}
+    </section>
+    <section class="app-panel" aria-labelledby="rk-files-title">
+        <div class="app-panel__head">
+            <h2 class="app-panel__title" id="rk-files-title">Models that gave these values</h2>
+        </div>
+        <div class="cat-table-wrap">
+            <table class="app-table rk-table">
+                <thead><tr><th scope="col">Model</th><th scope="col">Source files</th></tr></thead>
+                <tbody>
+                    {% for f in files %}
+                    <tr>
+                        <td>{{ f.model }}</td>
+                        <td>{% if f.url %}<a class="app-link" href="{{ f.url }}">RMG-models {{ f.commit|slice:":10" }}</a>{% else %}<span class="rk-muted">commit not recorded</span>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="rk-muted">No model gave these values.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if mode == "multiple" %}
     <section class="app-panel" aria-labelledby="rk-records-title">
         <div class="app-panel__head">
             <h2 class="app-panel__title" id="rk-records-title">Records <span class="cat-pill cat-pill--count">{{ records|length }}</span></h2>
@@ -73,5 +165,17 @@
     .rk-facts { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; margin: 16px 0; }
     .rk-facts dt { font-weight: 600; }
     .rk-facts dd { margin: 0; }
+    .rk-note { margin: 0; }
+    .rk-table { width: 100%; }
+    .rk-muted { color: var(--color-gray-600); }
+    .rk-num { font-family: var(--font-mono); white-space: nowrap; }
+    @media (max-width: 600px) {
+        .rk-table th, .rk-table td { padding-left: 10px; padding-right: 10px; }
+        .rk-param { overflow-wrap: anywhere; }
+    }
+    .rk-param { font-family: var(--font-mono); color: var(--color-gray-600); }
+    .rk-changed td { background: var(--color-primary-50, #fff4ec); font-weight: 600; }
+    .rk-json { margin-left: auto; font-size: 13px; }
+    .rk-legend { margin: 0; padding: 10px 20px 16px; font-size: 13px; color: var(--color-gray-600); }
 </style>
 {% endblock %}

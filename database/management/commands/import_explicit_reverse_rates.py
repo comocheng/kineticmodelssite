@@ -21,6 +21,7 @@ from django.db import transaction
 
 from database import models as db
 from database.scripts import explicit_reverse
+from database.scripts.import_rmg_models import record_source_commits
 from database.services.cleanup import MODELS
 
 
@@ -42,6 +43,8 @@ class Command(BaseCommand):
             folder = os.path.join(options["path"], model.model_name)
             with transaction.atomic():
                 report = explicit_reverse.attach(model, folder, MODELS, apply=options["apply"])
+                if options["apply"]:
+                    record_source_commits([(model, folder)], MODELS)
             rows.extend(report["lines"])
             totals.update(report["status"])
             totals.update({k: report[k] for k in ("set", "cleared", "unchanged")})

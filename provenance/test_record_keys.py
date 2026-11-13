@@ -182,6 +182,48 @@ class RecordKeyTests(TestCase):
     def test_unknown_kind_or_key_is_404(self):
         self.assertEqual(self.client.get("/id/planet/earth").status_code, 404)
         self.assertEqual(self.client.get("/id/species/NOPE").status_code, 404)
+        self.assertEqual(self.client.get("/id/species/nope/").status_code, 404)
+
+    # --- other spellings of a key -----------------------------------------------------------
+    def assertMovesTo(self, url, location):
+        response = self.client.get(url)
+        self.assertEqual((response.status_code, response["Location"]), (301, location))
+        self.assertEqual(self.client.get(location).status_code, 303)
+
+    def test_doi_in_capitals_or_as_a_url_resolves(self):
+        stored = "/id/source/10.1016/j.combustflame.2020.01.001"
+        self.assertMovesTo("/id/source/10.1016/J.COMBUSTFLAME.2020.01.001", stored)
+        self.assertMovesTo("/id/source/doi:10.1016/J.Combustflame.2020.01.001", stored)
+
+    def test_inchikey_in_small_letters_resolves(self):
+        self.assertMovesTo(f"/id/species/{OH.lower()}", f"/id/species/{OH}")
+        reaction = self.key_of("reaction", self.forward)
+        self.assertMovesTo(f"/id/reaction/{reaction.lower()}", f"/id/reaction/{reaction}")
+        kinetics = self.key_of("kinetics", self.rate)
+        self.assertMovesTo(f"/id/kinetics/{kinetics.upper()}", f"/id/kinetics/{kinetics}")
+
+    def test_reaction_without_direction_in_small_letters_lists_both(self):
+        chemistry = self.key_of("reaction", self.forward)[:-2]
+        response = self.client.get(f"/id/reaction/{chemistry.lower()}")
+        self.assertEqual((response.status_code, response["Location"]), (301, f"/id/reaction/{chemistry}"))
+        self.assertEqual(self.client.get(response["Location"]).status_code, 300)
+
+    def test_slash_at_the_end_resolves(self):
+        self.assertMovesTo(f"/id/species/{OH}/", f"/id/species/{OH}")
+        self.assertMovesTo("/id/kineticmodel/Fixture/model%20one/", "/id/kineticmodel/Fixture/model%20one")
+
+    def test_kind_in_capitals_resolves(self):
+        response = self.client.get(f"/id/Species/{OH}")
+        self.assertEqual((response.status_code, response["Location"]), (301, f"/id/species/{OH}"))
+
+    def test_keys_that_differ_only_in_case_are_listed(self):
+        db.KineticModel.objects.create(model_name="fixture/MODEL one")
+        assign("kineticmodel", apply=True)
+        self.assertEqual(self.client.get("/id/kineticmodel/Fixture/model%20one").status_code, 303)
+        response = self.client.get("/id/kineticmodel/FIXTURE/MODEL%20ONE")
+        self.assertEqual(response.status_code, 300)
+        data = self.client.get("/id/kineticmodel/FIXTURE/MODEL%20ONE?format=json").json()
+        self.assertEqual([r["key"] for r in data["records"]], ["Fixture/model one", "fixture/MODEL one"])
 
     # --- the API ----------------------------------------------------------------------------
     def test_api_record_gives_key_and_canonical_url(self):
@@ -197,6 +239,10 @@ class RecordKeyTests(TestCase):
         chemistry = self.key_of("reaction", self.forward)[:-2]
         rows = self.client.get("/api/reaction/", {"key": chemistry}).json()["results"]
         self.assertEqual({row["id"] for row in rows}, {self.forward.pk, self.backward.pk})
+        rows = self.client.get("/api/reaction/", {"key": chemistry.lower()}).json()["results"]
+        self.assertEqual({row["id"] for row in rows}, {self.forward.pk, self.backward.pk})
+        rows = self.client.get("/api/source/", {"key": "10.1016/J.COMBUSTFLAME.2020.01.001"}).json()["results"]
+        self.assertEqual([row["id"] for row in rows], [self.source.pk])
         self.assertEqual(self.client.get("/api/species/?kee=x").status_code, 400)
 
     def test_openapi_documents_the_key(self):
